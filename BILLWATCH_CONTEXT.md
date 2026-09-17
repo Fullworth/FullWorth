@@ -56,15 +56,18 @@ Production path: `/opt/billwatch`
 
 ## Current verified production state
 
-The last explicitly verified guarded production deployment is still:
+The last explicitly verified guarded production deployment is:
 
-`71f71a67c5683a9a18ca0ac21ab8f342c38ac08c`
+`7824cc5f6ddb0231c986a793f15654d0314a8ad5`
 
-Do **not** claim production has been deployed to current `master` (`7824cc5...`) unless a new guarded deployment is actually verified.
+On 2026-09-17, the production host was fast-forwarded to that exact verified `master` release and deployed only through `deploy/deploy-production.sh .env.production`.
 
-Production verification at `71f71a...` included configuration/release integrity, permissions/exposure boundaries, API/Web/database/edge health, readiness, HTTP security boundaries, antiforgery/protected logout, and encrypted Restic recovery-point creation.
+- The first guarded attempt stopped at the release-ID preflight before any deployment because `BILLWATCH_RELEASE_ID` still named the prior release. The value was corrected to the checked-out commit and the guarded path was then rerun.
+- The deployment created and verified encrypted Restic recovery snapshot `ba25d867d7444e6dff4ae27b3785b188c94838c98fac8f96692fa826b4ad3ba8` before replacing services.
+- API, web, database, and edge became healthy. Public API/Web readiness, release integrity, permissions/exposure boundaries, no-store/security headers, antiforgery issuance, and protected logout all passed.
+- `verify-production.sh` and `verify-beta-readiness.sh` passed. The backup timer and runtime watchdog are enabled and active; subscription enforcement remains safely disabled.
 
-Production host maintenance and the controlled reboot proof were completed for that release. Docker Buildx 0.30.1 and Compose 2.40.3 were verified, Docker returned after reboot, the release marker/Git HEAD remained unchanged, and post-reboot production verification passed.
+This verifies the guarded release and host prerequisites. It does **not** prove authenticated browser/BFF/API workflows, cross-user isolation, Plaid behavior, statement accuracy, clean-host recovery, external alert delivery, or legal review.
 
 ## Verified P0/private-beta code position
 
@@ -134,25 +137,24 @@ In particular:
 
 Before trusted external beta invitations:
 
-1. Guard-deploy the final green `master` release.
-2. Run authenticated direct API/Web-BFF/admin/access-key/Plaid/statement/subscription smoke with controlled identities and fixtures.
-3. Run objective cross-user Web/BFF ownership smoke with a second controlled identity.
-4. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
-5. Complete human Plaid Hosted Link/update-mode observation and Active/sync verification.
-6. Review representative PDF/scanned-PDF/JPG/PNG extraction/OCR fields and bill-change explanations against operator-known facts.
-7. Run clean-host restore against the actual off-host repository.
-8. Configure and prove provider-enforced immutable/protected backup recovery.
-9. Run independent alert-observation proof and personally confirm both destinations.
-10. Combine same-release technical, alert, Plaid, recovery, and acceptance evidence.
-11. Complete Internal Beta 0 on real controlled bills with explicit expected subscription state where known.
-12. Obtain qualified review of the exact deployed Terms/Privacy version.
-13. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
+1. Run authenticated direct API/Web-BFF/admin/access-key/Plaid/statement/subscription smoke with controlled identities and fixtures against release `7824cc5...`.
+2. Run objective cross-user Web/BFF ownership smoke with a second controlled identity.
+3. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
+4. Complete human Plaid Hosted Link/update-mode observation and Active/sync verification.
+5. Review representative PDF/scanned-PDF/JPG/PNG extraction/OCR fields and bill-change explanations against operator-known facts.
+6. Run clean-host restore against the actual off-host repository.
+7. Configure and prove provider-enforced immutable/protected backup recovery.
+8. Run independent alert-observation proof and personally confirm both destinations.
+9. Combine same-release technical, alert, Plaid, recovery, and acceptance evidence.
+10. Complete Internal Beta 0 on real controlled bills with explicit expected subscription state where known.
+11. Obtain qualified review of the exact deployed Terms/Privacy version.
+12. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
 
 ## Immediate resume point
 
-1. `development` is `847e17a20c97352114aafb7ef407da8a40882591`, including the registration confirmation-link hotfix and the prior secure private-beta smoke hardening.
-2. `master` is `7824cc5f6ddb0231c986a793f15654d0314a8ad5`. Production remains explicitly verified only on `71f71a67c5683a9a18ca0ac21ab8f342c38ac08c`.
-3. Exact PR #100 head `847e17a...` passed the complete three-job CI gate; no post-merge CI claim is being made for `7824cc5...`.
-4. The highest-value next step is the guarded deployment of `master` from the production host using `/opt/billwatch/deploy/deploy-production.sh`, followed by real controlled-account authenticated acceptance.
+1. The guarded production deployment of `master` release `7824cc5f6ddb0231c986a793f15654d0314a8ad5` completed and passed production plus beta-host prerequisite verification on 2026-09-17.
+2. Production has a verified pre-deployment encrypted recovery snapshot `ba25d867...`; append-only backup maintenance remains separate from the production client.
+3. The highest-value next step is real deployed authenticated browser/BFF/direct-API acceptance with controlled identities, followed by the objective cross-user ownership proof.
+4. Do not manufacture acceptance evidence. Human/provider gates remain as listed above.
 5. If acceptance exposes a concrete defect, stop progression, create a focused branch from current `development`, fix it, and require the full three-job CI gate before merge.
 6. Preserve every security invariant above and all user-owned data ownership boundaries.
