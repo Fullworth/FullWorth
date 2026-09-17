@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Encodings.Web;
@@ -180,8 +181,12 @@ public sealed class ResendIdentityEmailSender(
     private string BuildEmailConfirmationLink(
         string generatedConfirmationLink)
     {
+        var decodedConfirmationLink =
+            WebUtility.HtmlDecode(
+                generatedConfirmationLink);
+
         if (!Uri.TryCreate(
-                generatedConfirmationLink,
+                decodedConfirmationLink,
                 UriKind.Absolute,
                 out var generatedUri))
         {
@@ -193,13 +198,22 @@ public sealed class ResendIdentityEmailSender(
             QueryHelpers.ParseQuery(
                 generatedUri.Query);
 
+        if (!query.TryGetValue(
+                "userId",
+                out var userIdValues) ||
+            !query.TryGetValue(
+                "code",
+                out var codeValues))
+        {
+            throw new InvalidOperationException(
+                "Identity generated an incomplete email confirmation URL.");
+        }
+
         var userId =
-            query["userId"]
-                .ToString();
+            userIdValues.ToString();
 
         var code =
-            query["code"]
-                .ToString();
+            codeValues.ToString();
 
         if (string.IsNullOrWhiteSpace(
                 userId) ||
