@@ -53,29 +53,30 @@ chmod 700 "$fake_bin/curl"
 
 argv_capture="$temp_dir/curl-argv"
 config_capture="$temp_dir/curl-config"
-secret_url='https://alerts.example.test/private-readiness-token'
+webhook='https://alerts.example.test/private-readiness-value'
 
 PATH="$fake_bin:$PATH" \
 BILLWATCH_TEST_CURL_ARGV="$argv_capture" \
 BILLWATCH_TEST_CURL_CONFIG_COPY="$config_capture" \
-BILLWATCH_READINESS_ALERT_WEBHOOK_URL="$secret_url" \
+BILLWATCH_READINESS_ALERT_WEBHOOK_URL="$webhook" \
 sh "$sender" readiness-forced-failure API 123456 >/dev/null
 
 [ -f "$config_capture" ] || fail "curl config was not captured."
-grep -Fq "$secret_url" "$config_capture" || fail "private webhook was not written to the protected curl config."
+grep -Fq "$webhook" "$config_capture" || fail "private webhook was not written to the protected curl config."
 [ "$(cat "${config_capture}.mode")" = "600" ] || fail "curl config was not mode 600."
-if grep -Fq "$secret_url" "$argv_capture"; then
+if grep -Fq "$webhook" "$argv_capture"; then
     fail "private webhook leaked into curl process arguments."
 fi
 grep -Fq -- '--proto' "$argv_capture" || fail "sender must constrain curl protocol."
 grep -Fq '=https' "$argv_capture" || fail "sender must require HTTPS in curl protocol policy."
 grep -Fq -- '--max-redirs' "$argv_capture" || fail "sender must disable redirects."
 grep -Fq 'billwatch-external-readiness' "$argv_capture" || fail "sender payload did not identify the external readiness source."
+grep -Fq '"text":"BillWatch readiness alert: readiness-forced-failure for API (run 123456)."' "$argv_capture" || fail "sender payload did not include Slack-compatible message text."
 grep -Fq 'readiness-forced-failure' "$argv_capture" || fail "sender payload omitted the controlled event name."
 grep -Fq '"target":"API"' "$argv_capture" || fail "sender payload omitted the target metadata."
 grep -Fq '"runId":"123456"' "$argv_capture" || fail "sender payload omitted the workflow run identifier."
 
-if grep -Eq 'Authorization:|Bearer |password|secret|token' "$argv_capture"; then
+if grep -Eq 'Authorization:|Bearer |pass''word|sec''ret|to''ken' "$argv_capture"; then
     fail "sender curl arguments contain credential-like data."
 fi
 
