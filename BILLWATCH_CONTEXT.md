@@ -1,6 +1,6 @@
 # BillWatch Current Context
 
-Last updated: 2026-09-14
+Last updated: 2026-09-17
 
 ## Authority / continuation rules
 
@@ -27,13 +27,13 @@ Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `03d757a6328aa237c719012757ad95a614228d9c`
-- `development`: `a5fcdf1b192aa2d2c3960a71797d42730b1dc32f`
-- PR #85 promoted the Slack-compatible readiness-alert payload to `master`.
-- PR #86, **Add secure 2FA support to private-beta smoke harness**, merged into `development` as `a5fcdf1b192aa2d2c3960a71797d42730b1dc32f`.
-- PR #86 feature head was `1a32918cebd1e597bd87e48c1765db04e6459326`.
-- BillWatch CI #521 passed successfully on that exact PR #86 feature head. All three jobs were green: backend build/tests, MAUI Android build, and Linux production container/recovery gate.
-- No post-merge CI run is being claimed for merge commit `a5fcdf1...`; the verified automated gate is the exact PR #86 feature head.
+- `master`: `7824cc5f6ddb0231c986a793f15654d0314a8ad5`
+- `development`: `847e17a20c97352114aafb7ef407da8a40882591`
+- PR #96 synchronized the Slack-compatible readiness-alert payload into `development` as `0253f08581417f9e41293481fccbcaf5da301ede`.
+- PR #98 promoted the secure private-beta acceptance hardening to `master` as `3622b57c84c035c30a63bea070f53195635a62eb`. CI #534 passed all three required jobs on exact head `0253f085...`.
+- PR #99 fixed HTML-encoded ASP.NET Core Identity confirmation-link parsing and merged into `development` as `847e17a20c97352114aafb7ef407da8a40882591`.
+- PR #100 promoted that focused registration hotfix to `master` as `7824cc5f6ddb0231c986a793f15654d0314a8ad5`. Its exact PR head `847e17a...` passed backend build/tests, MAUI Android build, and Linux production container/recovery checks.
+- No post-merge CI run is being claimed for merge commit `7824cc5...`; the verified automated gate is the exact PR #100 head.
 
 Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, encrypted HttpOnly Web/BFF auth, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
 
@@ -60,7 +60,7 @@ The last explicitly verified guarded production deployment is still:
 
 `71f71a67c5683a9a18ca0ac21ab8f342c38ac08c`
 
-Do **not** claim production has been deployed to current `master` (`03d757a...`) unless a new guarded deployment is actually verified.
+Do **not** claim production has been deployed to current `master` (`7824cc5...`) unless a new guarded deployment is actually verified.
 
 Production verification at `71f71a...` included configuration/release integrity, permissions/exposure boundaries, API/Web/database/edge health, readiness, HTTP security boundaries, antiforgery/protected logout, and encrypted Restic recovery-point creation.
 
@@ -104,7 +104,7 @@ These capabilities are code/CI verified. They are **not** proof that the deploye
 
 ## Current machine-verifiable P0 position
 
-The exact PR #86 feature head passed the complete CI gate. No unresolved compile/test/CI/container/recovery failure is known from that change.
+The exact PR #100 promotion head passed the complete CI gate. No unresolved compile/test/CI/container/recovery failure is known from that change.
 
 Most remaining private-beta P0 items are real-environment acceptance gates, not missing generic application code. Do not manufacture synthetic evidence.
 
@@ -150,9 +150,9 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. `development` is currently `a5fcdf1b192aa2d2c3960a71797d42730b1dc32f`, including PR #86's secure private-beta 2FA smoke hardening.
-2. `master` is currently `03d757a6328aa237c719012757ad95a614228d9c`; do not infer production deployment from that branch state.
-3. Exact PR #86 feature-head CI #521 is the verified automated gate for the 2FA smoke change.
-4. The highest-value next step remains real deployed authenticated browser/BFF/direct-API acceptance, followed by cross-user ownership and provider/statement observations.
+1. `development` is `847e17a20c97352114aafb7ef407da8a40882591`, including the registration confirmation-link hotfix and the prior secure private-beta smoke hardening.
+2. `master` is `7824cc5f6ddb0231c986a793f15654d0314a8ad5`. Production remains explicitly verified only on `71f71a67c5683a9a18ca0ac21ab8f342c38ac08c`.
+3. Exact PR #100 head `847e17a...` passed the complete three-job CI gate; no post-merge CI claim is being made for `7824cc5...`.
+4. The highest-value next step is the guarded deployment of `master` from the production host using `/opt/billwatch/deploy/deploy-production.sh`, followed by real controlled-account authenticated acceptance.
 5. If acceptance exposes a concrete defect, stop progression, create a focused branch from current `development`, fix it, and require the full three-job CI gate before merge.
 6. Preserve every security invariant above and all user-owned data ownership boundaries.
