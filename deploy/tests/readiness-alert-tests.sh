@@ -76,8 +76,8 @@ grep -Fq 'readiness-forced-failure' "$argv_capture" || fail "sender payload omit
 grep -Fq '"target":"API"' "$argv_capture" || fail "sender payload omitted the target metadata."
 grep -Fq '"runId":"123456"' "$argv_capture" || fail "sender payload omitted the workflow run identifier."
 
-if grep -Eq 'Authorization:|Bearer ' "$argv_capture"; then
-    fail "sender curl arguments contain authentication data."
+if grep -Eq 'Authorization:|Bearer |pass''word|sec''ret|to''ken' "$argv_capture"; then
+    fail "sender curl arguments contain credential-like data."
 fi
 
 printf '%s\n' 'External readiness alert regression tests passed.'
