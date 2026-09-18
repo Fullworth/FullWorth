@@ -120,7 +120,7 @@
                 <div class="subscription-section-heading">
                     <span class="page-kicker">@L["Simple pricing"]</span>
                     <h2>@L["Choose how you want to pay"]</h2>
-                    <p>@L["Both plans include the same BillWatch bill-monitoring experience. Yearly billing simply renews less often."]</p>
+                    <p>@L["Choose a billing interval. Review the final price and renewal terms in secure checkout before paying."]</p>
                 </div>
 
                 <div class="subscription-plan-grid">
@@ -128,8 +128,8 @@
                     {
                         var isYearly = string.Equals(plan.BillingInterval, "yearly", StringComparison.OrdinalIgnoreCase);
 
-                        <article class="subscription-plan-card @(isYearly ? "featured" : null)">
-                            @if (isYearly)
+                        <article class="subscription-plan-card @(isYearly && YearlyOffersSavings ? "featured" : null)">
+                            @if (isYearly && YearlyOffersSavings)
                             {
                                 <span class="subscription-plan-badge">@L["Best value"]</span>
                             }
@@ -250,6 +250,22 @@
     private bool _loading = true;
     private bool _working;
 
+    private bool YearlyOffersSavings
+    {
+        get
+        {
+            var monthly = _plans.FirstOrDefault(plan =>
+                string.Equals(plan.BillingInterval, "monthly", StringComparison.OrdinalIgnoreCase));
+            var yearly = _plans.FirstOrDefault(plan =>
+                string.Equals(plan.BillingInterval, "yearly", StringComparison.OrdinalIgnoreCase));
+
+            return monthly is not null &&
+                   yearly is not null &&
+                   string.Equals(monthly.Currency, yearly.Currency, StringComparison.OrdinalIgnoreCase) &&
+                   yearly.UnitAmount < monthly.UnitAmount * 12m;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -264,18 +280,31 @@
                 "./js/subscription-bff.js");
 
             var query = new Uri(Navigation.Uri).Query;
+            var refreshed = false;
 
             if (query.Contains("checkout=success", StringComparison.OrdinalIgnoreCase))
             {
                 try
                 {
                     await _module.InvokeAsync<object>("syncPaidSubscription");
-                    SetMessage(L["Payment received. BillWatch refreshed your subscription."], succeeded: true);
+                    await RefreshAsync();
+                    refreshed = true;
+
+                    if (_status?.IsActive == true && _status.IsPaid)
+                    {
+                        SetMessage(L["Your paid BillWatch access is active."], succeeded: true);
+                    }
+                    else
+                    {
+                        SetMessage(
+                            L["Checkout returned, but paid access is not confirmed yet. Refresh this page shortly."],
+                            succeeded: false);
+                    }
                 }
                 catch (JSException)
                 {
                     SetMessage(
-                        L["Checkout completed, but BillWatch is still waiting for the billing confirmation. Refresh this page shortly."],
+                        L["BillWatch could not confirm paid access yet. Refresh this page shortly."],
                         succeeded: false);
                 }
             }
@@ -284,7 +313,10 @@
                 SetMessage(L["Checkout was cancelled. You were not subscribed by BillWatch."], succeeded: false);
             }
 
-            await RefreshAsync();
+            if (!refreshed)
+            {
+                await RefreshAsync();
+            }
         }
         catch (JSException ex)
         {

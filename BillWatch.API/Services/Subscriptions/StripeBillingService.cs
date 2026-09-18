@@ -55,6 +55,13 @@ public sealed class StripeBillingService(
             ? options.YearlyPriceId
             : options.MonthlyPriceId;
 
+        // The direct API path must enforce the same price validation as the
+        // plan display. A stale or miswired Stripe Price must not reach Checkout.
+        await GetPriceAsync(
+            normalizedInterval,
+            priceId,
+            cancellationToken);
+
         var customerId = await GetOrCreateCustomerIdAsync(
             userId,
             email,
@@ -191,6 +198,11 @@ public sealed class StripeBillingService(
         {
             var state = ParseSubscription(item);
 
+            if (!state.IsBillWatchPlan)
+            {
+                continue;
+            }
+
             fallback ??= state;
 
             if (state.IsEntitled(now))
@@ -261,6 +273,11 @@ public sealed class StripeBillingService(
                 subscriptionId,
                 cancellationToken);
 
+            if (!state.IsBillWatchPlan)
+            {
+                return;
+            }
+
             await SyncPaidEntitlementAsync(
                 userId.Value,
                 state,
@@ -280,7 +297,12 @@ public sealed class StripeBillingService(
                 return;
             }
 
-            var state = ParseSubscription(objectElement);
+            // Reconcile provider state instead of trusting delivery order.
+            // A delayed active event must not restore a canceled entitlement.
+            var state = await GetCurrentSubscriptionAsync(
+                userId.Value,
+                email: null,
+                cancellationToken: cancellationToken);
 
             await SyncPaidEntitlementAsync(
                 userId.Value,
@@ -390,28 +412,28 @@ public sealed class StripeBillingService(
             cancellationToken);
 
         var root = document.RootElement;
-        var amount = GetInt64(root, "unit_amount") ?? 0;
-        var currency = GetString(root, "currency") ?? "usd";
-        var interval = billingInterval;
+        var amount = GetInt64(root, "unit_amount");
+        var currency = GetString(root, "currency");
+        var expectedInterval = billingInterval == "yearly" ? "year" : "month";
 
-        if (root.TryGetProperty("recurring", out var recurring) &&
-            recurring.ValueKind == JsonValueKind.Object)
+        if (!string.Equals(GetString(root, "id"), priceId, StringComparison.Ordinal) ||
+            GetBoolean(root, "active") != true ||
+            amount is null or <= 0 ||
+            string.IsNullOrWhiteSpace(currency) ||
+            !root.TryGetProperty("recurring", out var recurring) ||
+            recurring.ValueKind != JsonValueKind.Object ||
+            !string.Equals(
+                GetString(recurring, "interval"),
+                expectedInterval,
+                StringComparison.OrdinalIgnoreCase))
         {
-            var providerInterval = GetString(recurring, "interval");
-
-            if (string.Equals(providerInterval, "year", StringComparison.OrdinalIgnoreCase))
-            {
-                interval = "yearly";
-            }
-            else if (string.Equals(providerInterval, "month", StringComparison.OrdinalIgnoreCase))
-            {
-                interval = "monthly";
-            }
+            throw new StripeBillingException(
+                "The configured billing plan is unavailable or does not match its billing interval.");
         }
 
         return new StripeBillingPlan(
-            interval,
-            amount,
+            billingInterval,
+            amount.Value,
             currency.ToUpperInvariant());
     }
 
@@ -560,6 +582,7 @@ public sealed class StripeBillingService(
         var currentPeriodEnd = FromUnixSeconds(GetInt64(subscription, "current_period_end"));
         var cancelAtPeriodEnd = GetBoolean(subscription, "cancel_at_period_end") ?? false;
         var billingInterval = "monthly";
+        var isBillWatchPlan = false;
 
         if (subscription.TryGetProperty("items", out var items) &&
             items.TryGetProperty("data", out var itemData) &&
@@ -582,17 +605,15 @@ public sealed class StripeBillingService(
 
                 if (string.Equals(priceId, options.YearlyPriceId, StringComparison.Ordinal))
                 {
+                    isBillWatchPlan = true;
                     billingInterval = "yearly";
                     break;
                 }
 
-                if (price.TryGetProperty("recurring", out var recurring) &&
-                    string.Equals(
-                        GetString(recurring, "interval"),
-                        "year",
-                        StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(priceId, options.MonthlyPriceId, StringComparison.Ordinal))
                 {
-                    billingInterval = "yearly";
+                    isBillWatchPlan = true;
+                    billingInterval = "monthly";
                     break;
                 }
             }
@@ -603,7 +624,8 @@ public sealed class StripeBillingService(
             billingInterval,
             currentPeriodStart,
             currentPeriodEnd,
-            cancelAtPeriodEnd);
+            cancelAtPeriodEnd,
+            isBillWatchPlan);
     }
 
     private Guid? GetUserId(JsonElement element)
@@ -666,7 +688,16 @@ public sealed class StripeBillingService(
             return false;
         }
 
-        var eventTime = DateTimeOffset.FromUnixTimeSeconds(timestamp.Value);
+        DateTimeOffset eventTime;
+
+        try
+        {
+            eventTime = DateTimeOffset.FromUnixTimeSeconds(timestamp.Value);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
         var difference = (timeProvider.GetUtcNow() - eventTime).Duration();
 
         if (difference > WebhookTolerance)
@@ -737,28 +768,48 @@ public sealed class StripeBillingService(
 
         request.Content = content;
 
-        using var response = await httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new StripeBillingException(
-                "The billing provider could not complete that request.");
-        }
+        HttpResponseMessage response;
 
         try
         {
-            return JsonDocument.Parse(body);
+            response = await httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
         }
-        catch (JsonException exception)
+        catch (HttpRequestException exception)
         {
             throw new StripeBillingException(
-                "The billing provider returned an invalid response.",
+                "The billing provider is temporarily unavailable.",
                 exception);
+        }
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new StripeBillingException(
+                "The billing provider did not respond in time.",
+                exception);
+        }
+
+        using (response)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new StripeBillingException(
+                    "The billing provider could not complete that request.");
+            }
+
+            try
+            {
+                return JsonDocument.Parse(body);
+            }
+            catch (JsonException exception)
+            {
+                throw new StripeBillingException(
+                    "The billing provider returned an invalid response.",
+                    exception);
+            }
         }
     }
 
@@ -812,9 +863,11 @@ public sealed record StripeSubscriptionState(
     string BillingInterval,
     DateTimeOffset? CurrentPeriodStartUtc,
     DateTimeOffset? CurrentPeriodEndUtc,
-    bool CancelAtPeriodEnd)
+    bool CancelAtPeriodEnd,
+    bool IsBillWatchPlan)
 {
     public bool IsEntitled(DateTimeOffset nowUtc) =>
+        IsBillWatchPlan &&
         (string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(Status, "trialing", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(Status, "past_due", StringComparison.OrdinalIgnoreCase)) &&
