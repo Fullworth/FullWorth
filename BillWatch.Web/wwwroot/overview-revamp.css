@@ -1,0 +1,152 @@
+/* First Overview refresh: clearer status, stronger hierarchy, and a direct next step. */
+.app-shell .overview-page {
+    gap: 24px;
+}
+
+.app-shell .overview-heading {
+    margin-bottom: 4px;
+}
+
+.app-shell .overview-heading p {
+    max-width: 36rem;
+}
+
+.app-shell .overview-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+    gap: clamp(28px, 5vw, 72px);
+    align-items: end;
+    padding: clamp(28px, 4vw, 48px);
+    overflow: hidden;
+    border: 1px solid rgba(115, 133, 255, 0.22);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 96% 8%, rgba(116, 140, 255, 0.24), transparent 38%),
+        linear-gradient(125deg, #182552, #111b3b 62%, #14204a);
+    box-shadow: 0 24px 60px rgba(18, 31, 80, 0.19);
+    color: #f7f9ff;
+}
+
+.app-shell .overview-status-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #c2ceff;
+    font-size: 0.69rem;
+    font-weight: 740;
+    letter-spacing: 0.03em;
+}
+
+.app-shell .overview-status-dot {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 50%;
+    background: #64deb0;
+    box-shadow: 0 0 0 4px rgba(100, 222, 176, 0.14);
+}
+
+.app-shell .overview-intro h2 {
+    margin: 19px 0 12px;
+    font-size: clamp(1.9rem, 3.5vw, 2.9rem);
+    font-weight: 760;
+    letter-spacing: -0.055em;
+    line-height: 1.06;
+}
+
+.app-shell .overview-intro p {
+    max-width: 34rem;
+    margin: 0;
+    color: #c3cbe2;
+    font-size: 0.85rem;
+    line-height: 1.65;
+}
+
+.app-shell .overview-intro-action {
+    display: inline-flex;
+    min-height: 43px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 25px;
+    padding: 0 17px;
+    border-radius: 12px;
+    background: #f4f6ff;
+    color: #172451;
+    font-size: 0.72rem;
+    font-weight: 780;
+    text-decoration: none;
+    transition: background 160ms ease, transform 160ms ease;
+}
+
+.app-shell .overview-intro-action:hover {
+    background: #dfe6ff;
+    transform: translateY(-2px);
+}
+
+.app-shell .overview-intro-aside {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    padding: 21px 0 2px 23px;
+    border-left: 1px solid rgba(219, 226, 255, 0.2);
+}
+
+.app-shell .overview-intro-aside > span {
+    color: #aebbe3;
+    font-size: 0.65rem;
+    font-weight: 680;
+}
+
+.app-shell .overview-intro-aside strong {
+    font-size: 0.94rem;
+    font-weight: 710;
+    line-height: 1.4;
+}
+
+.app-shell .overview-intro-aside small {
+    max-width: 17rem;
+    color: #aebbe3;
+    font-size: 0.64rem;
+    line-height: 1.55;
+}
+
+.app-shell .overview-metrics .metric-card {
+    min-height: 137px;
+}
+
+.app-shell .overview-metrics .metric-card:last-child {
+    border-color: rgba(91, 109, 248, 0.21);
+    background: linear-gradient(145deg, rgba(91, 109, 248, 0.12), rgba(91, 109, 248, 0.035)), var(--bw-surface-soft);
+}
+
+@media (max-width: 800px) {
+    .app-shell .overview-intro {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .app-shell .overview-intro-aside {
+        padding: 20px 0 0;
+        border-top: 1px solid rgba(219, 226, 255, 0.2);
+        border-left: 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .overview-intro {
+        padding: 25px;
+        border-radius: 22px;
+    }
+
+    .app-shell .overview-intro-action {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .overview-intro-action {
+        transition: none;
+    }
+}

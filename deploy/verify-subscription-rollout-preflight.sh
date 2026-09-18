@@ -58,8 +58,8 @@ do
 done
 
 case "$(read_env_value STRIPE_SECRET_KEY)" in
-    sk_live_*|sk_test_*) ;;
-    *) fail "STRIPE_SECRET_KEY does not have a recognized Stripe secret-key prefix." 77 ;;
+    sk_live_*|sk_test_*|rk_live_*|rk_test_*) ;;
+    *) fail "STRIPE_SECRET_KEY does not have a recognized Stripe API-key prefix." 77 ;;
 esac
 
 case "$(read_env_value STRIPE_WEBHOOK_SECRET)" in

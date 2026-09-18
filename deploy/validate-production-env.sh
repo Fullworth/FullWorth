@@ -217,7 +217,7 @@ if [ "$stripe_enabled" = true ]; then
     reject_unsafe_env_value STRIPE_WEBHOOK_SECRET "$stripe_webhook_secret"
     reject_unsafe_env_value STRIPE_MONTHLY_PRICE_ID "$stripe_monthly_price_id"
     reject_unsafe_env_value STRIPE_YEARLY_PRICE_ID "$stripe_yearly_price_id"
-    case "$stripe_secret_key" in sk_live_*|sk_test_*) ;; *) fail "STRIPE_SECRET_KEY must be a Stripe secret key." ;; esac
+    case "$stripe_secret_key" in sk_live_*|sk_test_*|rk_live_*|rk_test_*) ;; *) fail "STRIPE_SECRET_KEY must be a Stripe secret or restricted API key." ;; esac
     case "$stripe_webhook_secret" in whsec_*) ;; *) fail "STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret." ;; esac
     case "$stripe_monthly_price_id" in price_*) ;; *) fail "STRIPE_MONTHLY_PRICE_ID must be a Stripe price ID." ;; esac
     case "$stripe_yearly_price_id" in price_*) ;; *) fail "STRIPE_YEARLY_PRICE_ID must be a Stripe price ID." ;; esac

@@ -42,6 +42,10 @@ run_preflight()
 write_valid_env
 run_preflight >/dev/null || fail "valid guarded preflight was rejected"
 
+write_valid_env
+sed -i 's/^STRIPE_SECRET_KEY=sk_test_/STRIPE_SECRET_KEY=rk_test_/' "$env_file"
+run_preflight >/dev/null || fail "valid restricted Stripe API key was rejected"
+
 grep -q '^BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED=false$' "$env_file" ||
     fail "preflight mutated subscription enforcement"
 

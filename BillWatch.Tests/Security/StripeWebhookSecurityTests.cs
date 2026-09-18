@@ -126,6 +126,26 @@ public sealed class StripeWebhookSecurityTests
     }
 
     [Fact]
+    public async Task ConfiguredWebhook_RejectsOutOfRangeSignatureTimestamp()
+    {
+        using var factory = BillWatchApiFactory.WithStripeBilling();
+        using var client = factory.CreateHttpsClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "/api/subscription/webhooks/stripe")
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        request.Headers.TryAddWithoutValidation(
+            "Stripe-Signature",
+            "t=9223372036854775807,v1=00");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UnconfiguredWebhook_RemainsHidden()
     {
         using var factory =
