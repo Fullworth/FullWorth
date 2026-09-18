@@ -16,11 +16,14 @@
 <link rel="stylesheet"
       href="/onboarding.css" />
 
-<div class="app-page">
-    <header class="page-heading">
+<link rel="stylesheet"
+      href="/overview-revamp.css" />
+
+<div class="app-page overview-page">
+    <header class="page-heading overview-heading">
         <div>
             <span class="page-kicker">
-                @L["Bill intelligence"]
+                @L["Your bill watch"]
             </span>
 
             <h1>
@@ -28,7 +31,7 @@
             </h1>
 
             <p>
-                @L["Your recurring bills and the changes BillWatch can verify from your data."]
+                @L["See what changed, what needs attention, and where the evidence leads."]
             </p>
         </div>
 
@@ -393,7 +396,51 @@
             </div>
         }
 
-        <section class="metric-grid">
+        <section class="overview-intro" aria-label="@L["BillWatch status"]">
+            <div class="overview-intro-copy">
+                <span class="overview-status-label">
+                    <span class="overview-status-dot" aria-hidden="true"></span>
+                    @L["Monitoring your recurring bills"]
+                </span>
+                <h2>@L["Your bills, at a glance."]</h2>
+                <p>
+                    @if (BillsAbovePriorAverage == 1)
+                    {
+                        @L["One bill is above its prior transaction average. Review the details before deciding what changed."]
+                    }
+                    else if (BillsAbovePriorAverage > 1)
+                    {
+                        @L["{0} bills are above their prior transaction average. Review the details before deciding what changed.", BillsAbovePriorAverage]
+                    }
+                    else
+                    {
+                        @L["No latest recognized bill amount is above its available prior transaction average."]
+                    }
+                </p>
+                <a class="overview-intro-action" href="/app/bills">
+                    @L["Explore your bills"]
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="overview-intro-aside">
+                <span>@L["Last successful bank sync"]</span>
+                @if (LatestSuccessfulSync is not null)
+                {
+                    <strong>
+                        <time datetime="@LatestSuccessfulSync.Value.ToString("O")">
+                            @FormatTimestampFallback(LatestSuccessfulSync.Value)
+                        </time>
+                    </strong>
+                }
+                else
+                {
+                    <strong>@L["Not yet available"]</strong>
+                }
+                <small>@L["BillWatch checks for changes as new transactions arrive."]</small>
+            </div>
+        </section>
+
+        <section class="metric-grid overview-metrics" aria-label="@L["Bill summary"]">
             <article class="metric-card">
                 <span class="metric-label">
                     @L["Bills watched"]
@@ -410,7 +457,7 @@
 
             <article class="metric-card">
                 <span class="metric-label">
-                    @L["Current total"]
+                    @L["Latest charges total"]
                 </span>
 
                 <strong class="metric-value">
@@ -425,7 +472,7 @@
 
             <article class="metric-card">
                 <span class="metric-label">
-                    @L["Above prior average"]
+                    @L["Bills to review"]
                 </span>
 
                 <strong class="metric-value">
@@ -433,7 +480,7 @@
                 </strong>
 
                 <span class="metric-footnote">
-                    @L["Based on transaction history"]
+                    @L["Above their prior transaction average"]
                 </span>
             </article>
         </section>
@@ -447,7 +494,7 @@
                         </span>
 
                         <h2>
-                            @L["Latest amounts"]
+                            @L["Your bill watchlist"]
                         </h2>
                     </div>
 

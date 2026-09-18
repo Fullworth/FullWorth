@@ -16,11 +16,14 @@
 <link rel="stylesheet"
       href="/bills.css" />
 
-<div class="app-page">
+<link rel="stylesheet"
+      href="/bills-revamp.css" />
+
+<div class="app-page bills-page">
     <header class="page-heading bills-page-heading">
         <div>
             <span class="page-kicker">
-                @L["Recurring expenses"]
+                @L["Your bill watchlist"]
             </span>
 
             <h1>
@@ -28,7 +31,7 @@
             </h1>
 
             <p>
-                @L["Every recurring bill BillWatch has discovered from your transaction history."]
+                @L["Explore recurring charges, compare recent amounts, and open the evidence behind each bill."]
             </p>
         </div>
 
@@ -51,7 +54,7 @@
                 </strong>
 
                 <span>
-                    @L["current total"]
+                    @L["latest charges"]
                 </span>
             </div>
         }
@@ -118,9 +121,45 @@
     }
     else
     {
-        <div class="bill-filter-bar">
+        @if (IncreasedCount > 0)
+        {
+            <section class="bills-change-focus" aria-label="@L["Bills with increases"]">
+                <div class="bills-change-icon" aria-hidden="true">↗</div>
+                <div>
+                    <span class="bills-change-eyebrow">@L["Worth a closer look"]</span>
+                    <h2>
+                        @if (IncreasedCount == 1)
+                        {
+                            @L["One bill is above its prior average"]
+                        }
+                        else
+                        {
+                            @L["{0} bills are above their prior average", IncreasedCount]
+                        }
+                    </h2>
+                    <p>@L["A higher transaction amount does not establish the cause. Open a bill to review its available history and evidence."]</p>
+                </div>
+                <button type="button"
+                        class="bills-change-action"
+                        @onclick="() => SetFilter(BillFilter.Increased)">
+                    @L["Show increases"]
+                    <span aria-hidden="true">→</span>
+                </button>
+            </section>
+        }
+
+        <div class="bills-filter-heading">
+            <div>
+                <span class="panel-kicker">@L["Browse your bills"]</span>
+                <h2>@L["Filter by change"]</h2>
+            </div>
+            <span aria-live="polite">@L["Showing {0} of {1} bills", FilteredBills.Count, _billStreams.Count]</span>
+        </div>
+
+        <div class="bill-filter-bar" role="group" aria-label="@L["Filter bills by change"]">
             <button type="button"
                     class="@GetFilterClass(BillFilter.All)"
+                    aria-pressed="@(_filter == BillFilter.All)"
                     @onclick="() => SetFilter(BillFilter.All)">
                 @L["All"]
                 <span>@_billStreams.Count</span>
@@ -128,6 +167,7 @@
 
             <button type="button"
                     class="@GetFilterClass(BillFilter.Increased)"
+                    aria-pressed="@(_filter == BillFilter.Increased)"
                     @onclick="() => SetFilter(BillFilter.Increased)">
                 @L["Increased"]
                 <span>@IncreasedCount</span>
@@ -135,6 +175,7 @@
 
             <button type="button"
                     class="@GetFilterClass(BillFilter.Decreased)"
+                    aria-pressed="@(_filter == BillFilter.Decreased)"
                     @onclick="() => SetFilter(BillFilter.Decreased)">
                 @L["Decreased"]
                 <span>@DecreasedCount</span>
@@ -142,6 +183,7 @@
 
             <button type="button"
                     class="@GetFilterClass(BillFilter.NoHistory)"
+                    aria-pressed="@(_filter == BillFilter.NoHistory)"
                     @onclick="() => SetFilter(BillFilter.NoHistory)">
                 @L["Building history"]
                 <span>@NoHistoryCount</span>

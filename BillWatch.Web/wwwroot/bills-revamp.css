@@ -1,0 +1,158 @@
+/* Bills follow-up to the Overview refresh. */
+.app-shell .bills-page {
+    gap: 24px;
+}
+
+.app-shell .bills-page-heading {
+    margin-bottom: 4px;
+}
+
+.app-shell .bills-page-heading p {
+    max-width: 35rem;
+}
+
+.app-shell .bills-change-focus {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 19px;
+    align-items: center;
+    padding: 22px 25px;
+    border: 1px solid rgba(228, 169, 67, 0.24);
+    border-radius: 21px;
+    background: linear-gradient(110deg, rgba(228, 169, 67, 0.13), rgba(228, 169, 67, 0.035)), var(--bw-surface-soft);
+}
+
+.app-shell .bills-change-icon {
+    display: grid;
+    width: 45px;
+    height: 45px;
+    place-items: center;
+    border-radius: 13px;
+    background: rgba(228, 169, 67, 0.16);
+    color: #e4a943;
+    font-size: 1.35rem;
+}
+
+.app-shell .bills-change-eyebrow {
+    color: #d5a44c;
+    font-size: 0.62rem;
+    font-weight: 790;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.app-shell .bills-change-focus h2 {
+    margin: 5px 0 5px;
+    color: var(--bw-text);
+    font-size: 1rem;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+.app-shell .bills-change-focus p {
+    max-width: 41rem;
+    margin: 0;
+    color: var(--bw-text-muted);
+    font-size: 0.7rem;
+    line-height: 1.55;
+}
+
+.app-shell .bills-change-action {
+    display: inline-flex;
+    min-height: 41px;
+    align-items: center;
+    gap: 16px;
+    padding: 0 14px;
+    border: 1px solid rgba(228, 169, 67, 0.26);
+    border-radius: 11px;
+    background: rgba(228, 169, 67, 0.12);
+    color: var(--bw-text);
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 740;
+    white-space: nowrap;
+}
+
+.app-shell .bills-change-action:hover {
+    background: rgba(228, 169, 67, 0.2);
+}
+
+.app-shell .bills-filter-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 5px;
+}
+
+.app-shell .bills-filter-heading h2 {
+    margin: 6px 0 0;
+    color: var(--bw-text);
+    font-size: 1.1rem;
+    font-weight: 730;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .bills-filter-heading > span {
+    color: var(--bw-text-muted);
+    font-size: 0.66rem;
+    white-space: nowrap;
+}
+
+.app-shell .bills-page .bill-filter-bar {
+    margin-top: -8px;
+    gap: 9px;
+}
+
+.app-shell .bills-page .bill-filter {
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+}
+
+.app-shell .bills-page .bill-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.app-shell .bills-page .bill-card:focus-visible {
+    outline: 2px solid #8190ff;
+    outline-offset: 3px;
+}
+
+.app-shell .bills-page .bill-card-footer {
+    border-top: 1px solid var(--bw-border);
+    margin-top: auto;
+    padding-top: 16px;
+}
+
+@media (max-width: 800px) {
+    .app-shell .bills-change-focus {
+        grid-template-columns: 45px minmax(0, 1fr);
+    }
+
+    .app-shell .bills-change-action {
+        grid-column: 2;
+        width: fit-content;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .bills-change-focus {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 20px;
+    }
+
+    .app-shell .bills-change-action {
+        grid-column: 1;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .app-shell .bills-filter-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+}
