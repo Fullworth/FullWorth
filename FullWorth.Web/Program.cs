@@ -1,7 +1,7 @@
 using System.Globalization;
-using BillWatch.Web.Components;
-using BillWatch.Web.Infrastructure;
-using BillWatch.Web.Services;
+using FullWorth.Web.Components;
+using FullWorth.Web.Infrastructure;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
@@ -52,7 +52,7 @@ builder.Services.Configure<RequestLocalizationOptions>(
         /*
          * Keep formatting culture on en-US for now.
          *
-         * BillWatch still has several USD values formatted through the
+         * FullWorth still has several USD values formatted through the
          * current culture. Allowing a browser language to change
          * CurrentCulture could make a USD amount display with the wrong
          * currency symbol. UI language is therefore localized independently
@@ -133,7 +133,7 @@ var authenticationBuilder =
             });
 
 authenticationBuilder
-    .AddBillWatchExternalAuthentication(
+    .AddFullWorthExternalAuthentication(
         builder.Configuration);
 
 builder.Services.AddAuthorization();
@@ -155,10 +155,10 @@ builder.Services.Configure<FormOptions>(
     });
 
 var hostingConfiguration =
-    builder.ConfigureBillWatchWebHosting();
+    builder.ConfigureFullWorthWebHosting();
 
 builder.Services.AddHttpClient(
-    "BillWatchApi",
+    "FullWorthApi",
     client =>
     {
         client.BaseAddress =
@@ -179,7 +179,7 @@ builder.Services.AddScoped<
     WebAuthenticationService>();
 
 builder.Services.AddScoped<
-    BillWatchBffProxyService>();
+    FullWorthBffProxyService>();
 
 builder.Services.AddScoped<
     AdminBffWriteProxyService>();
@@ -200,7 +200,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseBillWatchWebSecurityHeaders();
+app.UseFullWorthWebSecurityHeaders();
 
 app.UseWhen(
     context =>
@@ -211,19 +211,19 @@ app.UseWhen(
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseBillWatchAntiforgeryBoundary();
+app.UseFullWorthAntiforgeryBoundary();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 
-app.MapBillWatchHealthEndpoints();
-app.MapBillWatchAuthEndpoints();
-app.MapBillWatchExternalAuthenticationEndpoints();
-app.MapBillWatchExternalIdentityManagementEndpoints();
-app.MapBillWatchBffEndpoints();
-app.MapBillWatchAdminBffEndpoints();
-app.MapBillWatchAccountPreferenceBffEndpoints();
-app.MapBillWatchAccountSecurityBffEndpoints();
+app.MapFullWorthHealthEndpoints();
+app.MapFullWorthAuthEndpoints();
+app.MapFullWorthExternalAuthenticationEndpoints();
+app.MapFullWorthExternalIdentityManagementEndpoints();
+app.MapFullWorthBffEndpoints();
+app.MapFullWorthAdminBffEndpoints();
+app.MapFullWorthAccountPreferenceBffEndpoints();
+app.MapFullWorthAccountSecurityBffEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

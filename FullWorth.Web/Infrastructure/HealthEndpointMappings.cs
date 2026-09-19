@@ -1,9 +1,9 @@
-﻿namespace BillWatch.Web.Infrastructure;
+﻿namespace FullWorth.Web.Infrastructure;
 
 public static class HealthEndpointMappings
 {
     public static IEndpointRouteBuilder
-        MapBillWatchHealthEndpoints(
+        MapFullWorthHealthEndpoints(
             this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(
@@ -39,7 +39,7 @@ public static class HealthEndpointMappings
                         var client =
                             httpClientFactory
                                 .CreateClient(
-                                    "BillWatchApi");
+                                    "FullWorthApi");
 
                         using var response =
                             await client.GetAsync(

@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class WebHostingExtensions
 {
-    public static BillWatchWebHostingConfiguration
-        ConfigureBillWatchWebHosting(
+    public static FullWorthWebHostingConfiguration
+        ConfigureFullWorthWebHosting(
             this WebApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(
@@ -15,7 +15,7 @@ public static class WebHostingExtensions
 
         var apiBaseUrl =
             builder.Configuration[
-                "BillWatchApi:BaseUrl"];
+                "FullWorthApi:BaseUrl"];
 
         if (string.IsNullOrWhiteSpace(
                 apiBaseUrl))
@@ -24,7 +24,7 @@ public static class WebHostingExtensions
                 .IsDevelopment())
             {
                 throw new InvalidOperationException(
-                    "BillWatchApi:BaseUrl must be configured outside development.");
+                    "FullWorthApi:BaseUrl must be configured outside development.");
             }
 
             apiBaseUrl =
@@ -41,7 +41,7 @@ public static class WebHostingExtensions
                 Uri.UriSchemeHttp))
         {
             throw new InvalidOperationException(
-                "BillWatchApi:BaseUrl must be an absolute HTTP or HTTPS URI.");
+                "FullWorthApi:BaseUrl must be an absolute HTTP or HTTPS URI.");
         }
 
         if (!builder.Environment
@@ -57,7 +57,7 @@ public static class WebHostingExtensions
 
         var apiHostHeader =
             builder.Configuration[
-                "BillWatchApi:HostHeader"]?
+                "FullWorthApi:HostHeader"]?
                 .Trim();
 
         if (!builder.Environment
@@ -78,7 +78,7 @@ public static class WebHostingExtensions
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    "BillWatchApi:HostHeader must be an explicit hostname when production uses an internal HTTP API address.");
+                    "FullWorthApi:HostHeader must be an explicit hostname when production uses an internal HTTP API address.");
             }
         }
 
@@ -189,14 +189,14 @@ public static class WebHostingExtensions
                 "At least one trusted reverse proxy must be configured outside development.");
         }
 
-        return new BillWatchWebHostingConfiguration(
+        return new FullWorthWebHostingConfiguration(
             apiBaseUri,
             apiHostHeader,
             useForwardedHeaders);
     }
 
     public static IApplicationBuilder
-        UseBillWatchWebSecurityHeaders(
+        UseFullWorthWebSecurityHeaders(
             this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(
@@ -283,7 +283,7 @@ public static class WebHostingExtensions
     }
 }
 
-public sealed record BillWatchWebHostingConfiguration(
+public sealed record FullWorthWebHostingConfiguration(
     Uri ApiBaseUri,
     string? ApiHostHeader,
     bool UseForwardedHeaders);

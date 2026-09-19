@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -7,12 +7,12 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class ExternalAuthenticationEndpointMappings
 {
     public const string ExternalCookieScheme =
-        "BillWatch.Web.External";
+        "FullWorth.Web.External";
 
     private const string ExternalIdTokenProperty =
         "billwatch:external-id-token";
@@ -33,7 +33,7 @@ public static class ExternalAuthenticationEndpointMappings
     [
         new(
             Provider: "google",
-            Scheme: "BillWatch.Web.Google",
+            Scheme: "FullWorth.Web.Google",
             DisplayName: "Google",
             Authority: "https://accounts.google.com",
             CallbackPath: "/signin-billwatch-google",
@@ -42,7 +42,7 @@ public static class ExternalAuthenticationEndpointMappings
 
         new(
             Provider: "apple",
-            Scheme: "BillWatch.Web.Apple",
+            Scheme: "FullWorth.Web.Apple",
             DisplayName: "Apple",
             Authority: "https://appleid.apple.com",
             CallbackPath: "/signin-billwatch-apple",
@@ -51,7 +51,7 @@ public static class ExternalAuthenticationEndpointMappings
 
         new(
             Provider: "microsoft",
-            Scheme: "BillWatch.Web.Microsoft",
+            Scheme: "FullWorth.Web.Microsoft",
             DisplayName: "Microsoft",
             Authority: "https://login.microsoftonline.com/consumers/v2.0",
             CallbackPath: "/signin-billwatch-microsoft",
@@ -60,7 +60,7 @@ public static class ExternalAuthenticationEndpointMappings
     ];
 
     public static AuthenticationBuilder
-        AddBillWatchExternalAuthentication(
+        AddFullWorthExternalAuthentication(
             this AuthenticationBuilder authenticationBuilder,
             IConfiguration configuration)
     {
@@ -128,7 +128,7 @@ public static class ExternalAuthenticationEndpointMappings
     }
 
     public static IEndpointRouteBuilder
-        MapBillWatchExternalAuthenticationEndpoints(
+        MapFullWorthExternalAuthenticationEndpoints(
             this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(
@@ -601,7 +601,7 @@ public static class ExternalAuthenticationEndpointMappings
             false;
 
         /*
-         * BillWatch needs only the provider-issued ID token long enough to
+         * FullWorth needs only the provider-issued ID token long enough to
          * validate the linked identity again at the API boundary. Provider
          * access and refresh tokens are deliberately not persisted.
          */

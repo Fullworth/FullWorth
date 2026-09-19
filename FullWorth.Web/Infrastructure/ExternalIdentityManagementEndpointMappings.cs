@@ -1,11 +1,11 @@
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class ExternalIdentityManagementEndpointMappings
 {
-    public static IEndpointRouteBuilder MapBillWatchExternalIdentityManagementEndpoints(
+    public static IEndpointRouteBuilder MapFullWorthExternalIdentityManagementEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -14,7 +14,7 @@ public static class ExternalIdentityManagementEndpointMappings
                 "/bff/account/external",
                 async (
                     HttpContext context,
-                    BillWatchBffProxyService proxyService) =>
+                    FullWorthBffProxyService proxyService) =>
                     await proxyService.ForwardGetAsync(
                         context,
                         "/api/auth/external",
