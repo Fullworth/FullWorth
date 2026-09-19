@@ -3,7 +3,7 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject Microsoft.Extensions.Localization.IStringLocalizer<BillWatch.Web.Components.App> L
 
-<PageTitle>@L[IsTwoFactorStep ? "Two-factor verification — BillWatch" : "Sign in — BillWatch"]</PageTitle>
+<PageTitle>@L[IsTwoFactorStep ? "Two-factor verification — FullWorth" : "Sign in — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/auth.css" />
@@ -20,7 +20,7 @@
             </span>
 
             <strong>
-                BillWatch
+                FullWorth
             </strong>
         </a>
 
@@ -35,12 +35,12 @@
                 <h1>
                     @(IsTwoFactorStep
                         ? L["Two-factor verification"]
-                        : L["Sign in to BillWatch"])
+                        : L["Sign in to FullWorth"])
                 </h1>
 
                 <p>
                     @(ExternalTwoFactor
-                        ? L["Your external identity was verified. Finish signing in with a code from your BillWatch authenticator app or one recovery code."]
+                        ? L["Your external identity was verified. Finish signing in with a code from your FullWorth authenticator app or one recovery code."]
                         : TwoFactor
                             ? L["Your password was accepted. Sign in again with your password plus a code from your authenticator app or one recovery code."]
                             : L["Keep watching the recurring costs that matter."])
@@ -62,7 +62,7 @@
                 <div class="auth-error"
                      role="alert">
                     <span>!</span>
-                    @L["BillWatch could not complete that external sign-in. Try again or sign in with email."]
+                    @L["FullWorth could not complete that external sign-in. Try again or sign in with email."]
                 </div>
             }
             else if (ExternalFactorError)
@@ -299,7 +299,7 @@
             else
             {
                 <p class="auth-switch">
-                    @L["New to BillWatch?"]
+                    @L["New to FullWorth?"]
 
                     <a href="/register">
                         @L["Create an account"]
@@ -310,7 +310,7 @@
 
         <a class="back-home"
            href="/">
-            ← @L["Back to BillWatch"]
+            ← @L["Back to FullWorth"]
         </a>
     </div>
 </div>
