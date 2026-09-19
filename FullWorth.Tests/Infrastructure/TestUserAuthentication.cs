@@ -1,18 +1,18 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Legal;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Legal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Infrastructure;
+namespace FullWorth.Tests.Infrastructure;
 
 public static class TestUserAuthentication
 {
     private const string DefaultPassword =
-        "BillWatch!Tests123";
+        "FullWorth!Tests123";
 
     public static async Task<TestUserSession> RegisterAndLoginAsync(
         HttpClient client,
@@ -34,7 +34,7 @@ public static class TestUserAuthentication
     }
 
     public static async Task<TestUserSession> RegisterWithRoleAndLoginAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         HttpClient client,
         string roleName,
         string? email = null,
@@ -89,7 +89,7 @@ public static class TestUserAuthentication
             string.IsNullOrWhiteSpace(loginResult.AccessToken))
         {
             throw new InvalidOperationException(
-                "BillWatch did not return an access token for the test user.");
+                "FullWorth did not return an access token for the test user.");
         }
 
         return new TestUserSession(
@@ -98,7 +98,7 @@ public static class TestUserAuthentication
     }
 
     public static async Task<Guid> GetUserIdAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email,
         CancellationToken cancellationToken = default)
     {
@@ -109,7 +109,7 @@ public static class TestUserAuthentication
 
         var dbContext =
             scope.ServiceProvider
-                .GetRequiredService<BillWatchDbContext>();
+                .GetRequiredService<FullWorthDbContext>();
 
         return await dbContext.Users
             .Where(user => user.Email == email)
@@ -118,7 +118,7 @@ public static class TestUserAuthentication
     }
 
     public static async Task AssignRoleAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email,
         string roleName,
         CancellationToken cancellationToken = default)
@@ -137,7 +137,7 @@ public static class TestUserAuthentication
 
         var dbContext =
             scope.ServiceProvider
-                .GetRequiredService<BillWatchDbContext>();
+                .GetRequiredService<FullWorthDbContext>();
 
         var user =
             await dbContext.Users.SingleAsync(
@@ -209,7 +209,7 @@ public static class TestUserAuthentication
                     email,
                     password = DefaultPassword,
                     acceptedTermsAndPrivacy = true,
-                    legalTermsVersion = BillWatchLegalDocuments.CurrentVersion
+                    legalTermsVersion = FullWorthLegalDocuments.CurrentVersion
                 },
                 cancellationToken);
 

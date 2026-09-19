@@ -1,4 +1,4 @@
-namespace BillWatch.Tests.Infrastructure;
+namespace FullWorth.Tests.Infrastructure;
 
 internal sealed class ScriptedHttpMessageHandler(
     params HttpResponseMessage[] responses)

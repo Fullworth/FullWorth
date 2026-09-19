@@ -1,7 +1,7 @@
-﻿using BillWatch.Core.Models;
+﻿using FullWorth.Core.Models;
 using Xunit;
 
-namespace BillWatch.Tests.Models;
+namespace FullWorth.Tests.Models;
 
 public sealed class BillAmountTests
 {

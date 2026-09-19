@@ -1,14 +1,14 @@
-using BillWatch.Core.Configuration;
+using FullWorth.Core.Configuration;
 
-namespace BillWatch.Tests.Configuration;
+namespace FullWorth.Tests.Configuration;
 
-public sealed class BillWatchApiEndpointTests
+public sealed class FullWorthApiEndpointTests
 {
     [Fact]
     public void Parse_AcceptsProductionHttpsOrigin()
     {
         var result =
-            BillWatchApiEndpoint.Parse(
+            FullWorthApiEndpoint.Parse(
                 "https://api.billwatch.example",
                 allowLocalDevelopmentEndpoint: false);
 
@@ -21,7 +21,7 @@ public sealed class BillWatchApiEndpointTests
     public void Parse_AllowsLoopbackOnlyForDevelopment()
     {
         var developmentResult =
-            BillWatchApiEndpoint.Parse(
+            FullWorthApiEndpoint.Parse(
                 "https://localhost:7243",
                 allowLocalDevelopmentEndpoint: true);
 
@@ -31,7 +31,7 @@ public sealed class BillWatchApiEndpointTests
 
         Assert.Throws<InvalidOperationException>(
             () =>
-                BillWatchApiEndpoint.Parse(
+                FullWorthApiEndpoint.Parse(
                     "https://localhost:7243",
                     allowLocalDevelopmentEndpoint: false));
     }
@@ -46,7 +46,7 @@ public sealed class BillWatchApiEndpointTests
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                BillWatchApiEndpoint.Parse(
+                FullWorthApiEndpoint.Parse(
                     configuredValue,
                     allowLocalDevelopmentEndpoint: true));
     }
@@ -56,7 +56,7 @@ public sealed class BillWatchApiEndpointTests
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                BillWatchApiEndpoint.Parse(
+                FullWorthApiEndpoint.Parse(
                     "http://localhost:5189",
                     allowLocalDevelopmentEndpoint: true));
     }
@@ -71,7 +71,7 @@ public sealed class BillWatchApiEndpointTests
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                BillWatchApiEndpoint.Parse(
+                FullWorthApiEndpoint.Parse(
                     configuredValue,
                     allowLocalDevelopmentEndpoint: false));
     }
@@ -86,7 +86,7 @@ public sealed class BillWatchApiEndpointTests
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                BillWatchApiEndpoint.Parse(
+                FullWorthApiEndpoint.Parse(
                     configuredValue,
                     allowLocalDevelopmentEndpoint: false));
     }

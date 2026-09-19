@@ -1,6 +1,6 @@
-﻿using BillWatch.API;
-using BillWatch.API.Data;
-using BillWatch.API.Services.Statements;
+﻿using FullWorth.API;
+using FullWorth.API.Data;
+using FullWorth.API.Services.Statements;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -9,19 +9,19 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace BillWatch.Tests.Infrastructure;
+namespace FullWorth.Tests.Infrastructure;
 
-public sealed class BillWatchApiFactory
+public sealed class FullWorthApiFactory
     : WebApplicationFactory<ApiAssemblyMarker>
 {
     private readonly bool _subscriptionEnforcementEnabled;
     private readonly bool _stripeBillingConfigured;
 
-    public BillWatchApiFactory()
+    public FullWorthApiFactory()
     {
     }
 
-    private BillWatchApiFactory(
+    private FullWorthApiFactory(
         bool subscriptionEnforcementEnabled,
         bool stripeBillingConfigured)
     {
@@ -32,27 +32,27 @@ public sealed class BillWatchApiFactory
             stripeBillingConfigured;
     }
 
-    public static BillWatchApiFactory WithSubscriptionEnforcement()
+    public static FullWorthApiFactory WithSubscriptionEnforcement()
     {
-        return new BillWatchApiFactory(
+        return new FullWorthApiFactory(
             subscriptionEnforcementEnabled: true,
             stripeBillingConfigured: false);
     }
 
-    public static BillWatchApiFactory WithStripeBilling()
+    public static FullWorthApiFactory WithStripeBilling()
     {
-        return new BillWatchApiFactory(
+        return new FullWorthApiFactory(
             subscriptionEnforcementEnabled: false,
             stripeBillingConfigured: true);
     }
 
     private readonly string _databaseName =
-        $"BillWatchSecurityTests-{Guid.NewGuid():N}";
+        $"FullWorthSecurityTests-{Guid.NewGuid():N}";
 
     private readonly string _statementStorageRoot =
         Path.Combine(
             Path.GetTempPath(),
-            "BillWatch.Tests",
+            "FullWorth.Tests",
             Guid.NewGuid().ToString("N"));
 
     public HttpClient CreateHttpsClient()
@@ -78,7 +78,7 @@ public sealed class BillWatchApiFactory
          * tests never depend on developer user secrets.
          */
         builder.UseSetting(
-            "ConnectionStrings:BillWatchDatabase",
+            "ConnectionStrings:FullWorthDatabase",
             "Host=localhost;Database=billwatch_tests;Username=test;Password=test");
 
         builder.UseEnvironment(
@@ -90,7 +90,7 @@ public sealed class BillWatchApiFactory
                 var testSettings =
                     new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:BillWatchDatabase"] =
+                        ["ConnectionStrings:FullWorthDatabase"] =
                             "Host=localhost;Database=billwatch_tests;Username=test;Password=test",
 
                         ["Plaid:ClientId"] =
@@ -155,17 +155,17 @@ public sealed class BillWatchApiFactory
             {
                 services.RemoveAll<
                     IDbContextOptionsConfiguration<
-                        BillWatchDbContext>>();
+                        FullWorthDbContext>>();
 
                 services.RemoveAll<
                     DbContextOptions<
-                        BillWatchDbContext>>();
+                        FullWorthDbContext>>();
 
                 services.RemoveAll<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
                 services.AddDbContext<
-                    BillWatchDbContext>(
+                    FullWorthDbContext>(
                     options =>
                         options.UseInMemoryDatabase(
                             _databaseName));

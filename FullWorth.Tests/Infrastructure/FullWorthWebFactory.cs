@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using BillWatch.Web;
+using FullWorth.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -9,11 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Infrastructure;
+namespace FullWorth.Tests.Infrastructure;
 
-public sealed class BillWatchWebFactory : WebApplicationFactory<WebAssemblyMarker>
+public sealed class FullWorthWebFactory : WebApplicationFactory<WebAssemblyMarker>
 {
-    private const string TestAuthenticationScheme = "BillWatch.Tests";
+    private const string TestAuthenticationScheme = "FullWorth.Tests";
 
     public HttpClient CreateHttpsClient()
     {
@@ -28,7 +28,7 @@ public sealed class BillWatchWebFactory : WebApplicationFactory<WebAssemblyMarke
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.UseSetting("BillWatchApi:BaseUrl", "https://api.invalid");
+        builder.UseSetting("FullWorthApi:BaseUrl", "https://api.invalid");
         builder.ConfigureServices(services =>
         {
             services.AddAuthentication(options =>
@@ -51,7 +51,7 @@ public sealed class BillWatchWebFactory : WebApplicationFactory<WebAssemblyMarke
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Request.Headers.ContainsKey("X-BillWatch-Test-Anonymous"))
+            if (Request.Headers.ContainsKey("X-FullWorth-Test-Anonymous"))
             {
                 return Task.FromResult(AuthenticateResult.NoResult());
             }

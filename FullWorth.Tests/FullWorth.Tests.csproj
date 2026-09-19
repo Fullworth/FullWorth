@@ -32,9 +32,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\BillWatch.API\BillWatch.API.csproj" />
-		<ProjectReference Include="..\BillWatch.Core\BillWatch.Core.csproj" />
-		<ProjectReference Include="..\BillWatch.Web\BillWatch.Web.csproj" />
+		<ProjectReference Include="..\FullWorth.API\FullWorth.API.csproj" />
+		<ProjectReference Include="..\FullWorth.Core\FullWorth.Core.csproj" />
+		<ProjectReference Include="..\FullWorth.Web\FullWorth.Web.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

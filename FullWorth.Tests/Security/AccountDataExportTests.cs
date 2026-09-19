@@ -1,17 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Accounts;
-using BillWatch.Core.Models;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Accounts;
+using FullWorth.Core.Models;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AccountDataExportTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
     private const string ProtectedAccessToken =
         "PROTECTED_ACCESS_TOKEN_MUST_NOT_EXPORT";
@@ -40,10 +40,10 @@ public sealed class AccountDataExportTests
     private const string OtherUserMarker =
         "OTHER_USER_DATA_MUST_NOT_EXPORT";
 
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public AccountDataExportTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory = factory;
     }
@@ -156,7 +156,7 @@ public sealed class AccountDataExportTests
         {
             var dbContext =
                 setupScope.ServiceProvider.GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
             var exportingUserId =
                 await GetUserIdAsync(
@@ -500,7 +500,7 @@ public sealed class AccountDataExportTests
     }
 
     private static Task<Guid> GetUserIdAsync(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         string email)
     {
         return dbContext.Users
