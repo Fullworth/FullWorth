@@ -1,4 +1,4 @@
-namespace BillWatch.Web.Services;
+namespace FullWorth.Web.Services;
 
 public static class StatementUploadStatusSemantics
 {

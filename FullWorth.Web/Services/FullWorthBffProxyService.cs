@@ -5,9 +5,9 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace BillWatch.Web.Services;
+namespace FullWorth.Web.Services;
 
-public sealed class BillWatchBffProxyService
+public sealed class FullWorthBffProxyService
 {
     private static readonly TimeSpan
         RefreshBuffer =
@@ -16,7 +16,7 @@ public sealed class BillWatchBffProxyService
     private readonly IHttpClientFactory
         _httpClientFactory;
 
-    public BillWatchBffProxyService(
+    public FullWorthBffProxyService(
         IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory =
@@ -433,7 +433,7 @@ public sealed class BillWatchBffProxyService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var request =
             new HttpRequestMessage(
@@ -473,7 +473,7 @@ public sealed class BillWatchBffProxyService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var request =
             new HttpRequestMessage(
@@ -609,7 +609,7 @@ public sealed class BillWatchBffProxyService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(

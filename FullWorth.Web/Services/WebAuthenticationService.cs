@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace BillWatch.Web.Services;
+namespace FullWorth.Web.Services;
 
 public sealed class WebAuthenticationService
 {
@@ -61,7 +61,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(
@@ -171,7 +171,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(
@@ -232,7 +232,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(
@@ -277,7 +277,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(
@@ -317,7 +317,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.PostAsJsonAsync(
@@ -374,7 +374,7 @@ public sealed class WebAuthenticationService
         var client =
             _httpClientFactory
                 .CreateClient(
-                    "BillWatchApi");
+                    "FullWorthApi");
 
         using var response =
             await client.GetAsync(

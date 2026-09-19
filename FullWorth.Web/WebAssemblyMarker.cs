@@ -1,4 +1,4 @@
-namespace BillWatch.Web;
+namespace FullWorth.Web;
 
 public sealed class WebAssemblyMarker
 {

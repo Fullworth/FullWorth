@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace BillWatch.Web.Services;
+namespace FullWorth.Web.Services;
 
 public sealed class AdminBffWriteProxyService(
     IHttpClientFactory httpClientFactory)
@@ -142,7 +142,7 @@ public sealed class AdminBffWriteProxyService(
         CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient(
-            "BillWatchApi");
+            "FullWorthApi");
 
         using var request = new HttpRequestMessage(
             method,
@@ -244,7 +244,7 @@ public sealed class AdminBffWriteProxyService(
         CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient(
-            "BillWatchApi");
+            "FullWorthApi");
 
         using var response = await client.PostAsJsonAsync(
             "/api/auth/refresh",

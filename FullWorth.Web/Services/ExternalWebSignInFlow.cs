@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace BillWatch.Web.Services;
+namespace FullWorth.Web.Services;
 
 public static class ExternalWebSignInFlow
 {
@@ -40,7 +40,7 @@ public static class ExternalWebSignInFlow
                 "External sign-in could not be completed.");
         }
 
-        var client = httpClientFactory.CreateClient("BillWatchApi");
+        var client = httpClientFactory.CreateClient("FullWorthApi");
 
         using var response = await client.PostAsJsonAsync(
             "/api/auth/external/login",
