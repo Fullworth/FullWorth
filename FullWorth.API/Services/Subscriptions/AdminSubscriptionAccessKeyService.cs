@@ -1,18 +1,18 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Subscriptions;
+namespace FullWorth.API.Services.Subscriptions;
 
 public sealed class AdminSubscriptionAccessKeyService(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     SubscriptionAccessKeyGenerator keyGenerator,
     TimeProvider timeProvider)
 {
     public async Task<CreatedSubscriptionAccessKey> CreateAsync(
         Guid actorUserId,
         SubscriptionAccessKeyPurpose purpose,
-        BillWatchSubscriptionTier tier,
+        FullWorthSubscriptionTier tier,
         int? durationDays,
         bool grantsLifetimeAccess,
         int maxRedemptions,
@@ -192,7 +192,7 @@ public sealed record CreatedSubscriptionAccessKey(
     string DisplayPrefix,
     string? Label,
     SubscriptionAccessKeyPurpose Purpose,
-    BillWatchSubscriptionTier Tier,
+    FullWorthSubscriptionTier Tier,
     int? DurationDays,
     bool GrantsLifetimeAccess,
     int MaxRedemptions,

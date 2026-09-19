@@ -2,7 +2,7 @@
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class PdfBillStatementTextExtractor
 {
@@ -118,7 +118,7 @@ public sealed class PdfBillStatementTextExtractor
         catch (Exception ex)
         {
             throw new BillStatementTextExtractionException(
-                "BillWatch could not safely read this PDF statement.",
+                "FullWorth could not safely read this PDF statement.",
                 ex);
         }
     }

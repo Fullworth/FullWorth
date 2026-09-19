@@ -5,7 +5,7 @@ using TesseractOCR.Enums;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public interface IBillStatementOcrEngine
 {

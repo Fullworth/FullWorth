@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class SecureBillStatementStorageService
 {
@@ -35,7 +35,7 @@ public sealed class SecureBillStatementStorageService
             _rootPath = Path.Combine(
                 Environment.GetFolderPath(
                     Environment.SpecialFolder.LocalApplicationData),
-                "BillWatch",
+                "FullWorth",
                 "StatementStorage");
         }
         else
