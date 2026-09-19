@@ -1,7 +1,7 @@
-using BillWatch.API.Controllers;
+using FullWorth.API.Controllers;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
 public sealed class SubscriptionAccessExemptionConvention
     : IActionModelConvention

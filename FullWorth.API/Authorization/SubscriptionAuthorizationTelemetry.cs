@@ -1,11 +1,11 @@
 using System.Diagnostics.Metrics;
 
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
 public sealed class SubscriptionAuthorizationTelemetry
 {
     private readonly Counter<long> _denials =
-        new Meter("BillWatch.Authorization")
+        new Meter("FullWorth.Authorization")
             .CreateCounter<long>("billwatch.subscription.denials");
 
     public void RecordDenial(string reason)

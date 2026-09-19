@@ -1,10 +1,10 @@
 using System.Security.Cryptography;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Accounts;
-using BillWatch.API.Services.Plaid;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Accounts;
+using FullWorth.API.Services.Plaid;
+using FullWorth.API.Services.Statements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,21 +12,21 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/account")]
 [Authorize]
 public sealed class AccountController : ControllerBase
 {
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly PlaidConnectionDisconnectService _disconnectService;
     private readonly SecureBillStatementStorageService _statementStorage;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
         PlaidConnectionDisconnectService disconnectService,
         SecureBillStatementStorageService statementStorage,
@@ -137,7 +137,7 @@ public sealed class AccountController : ControllerBase
          */
         var roles = await _userManager.GetRolesAsync(user);
 
-        if (roles.Any(BillWatchRoles.IsStaffRole))
+        if (roles.Any(FullWorthRoles.IsStaffRole))
         {
             return Conflict(
                 new

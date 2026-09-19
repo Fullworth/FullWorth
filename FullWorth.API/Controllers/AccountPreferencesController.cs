@@ -1,9 +1,9 @@
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/account/preferences")]
@@ -56,7 +56,7 @@ public sealed class AccountPreferencesController(
         {
             return Problem(
                 statusCode: StatusCodes.Status500InternalServerError,
-                title: "BillWatch could not save your timestamp preference.");
+                title: "FullWorth could not save your timestamp preference.");
         }
 
         return Ok(ToResponse(user));

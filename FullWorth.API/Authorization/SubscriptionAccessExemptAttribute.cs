@@ -1,4 +1,4 @@
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
 [AttributeUsage(
     AttributeTargets.Class | AttributeTargets.Method,
