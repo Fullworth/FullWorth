@@ -1,7 +1,7 @@
 ﻿@page "/register"
-@using BillWatch.Core.Legal
+@using FullWorth.Core.Legal
 
-@inject Microsoft.Extensions.Localization.IStringLocalizer<BillWatch.Web.Components.App> L
+@inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
 <PageTitle>@L["Create account — FullWorth"]</PageTitle>
 
@@ -57,7 +57,7 @@
 
                 <input type="hidden"
                        name="legalTermsVersion"
-                       value="@BillWatchLegalDocuments.CurrentVersion" />
+                       value="@FullWorthLegalDocuments.CurrentVersion" />
 
                 <label class="field">
                     <span>@L["Email address"]</span>
@@ -117,11 +117,11 @@
 
                     <span>
                         @L["I agree to the"]
-                        <a href="@BillWatchLegalDocuments.TermsPath"
+                        <a href="@FullWorthLegalDocuments.TermsPath"
                            target="_blank"
                            rel="noopener noreferrer">@L["Terms"]</a>
                         @L["and acknowledge the"]
-                        <a href="@BillWatchLegalDocuments.PrivacyPath"
+                        <a href="@FullWorthLegalDocuments.PrivacyPath"
                            target="_blank"
                            rel="noopener noreferrer">@L["Privacy Notice"]</a>.
                     </span>

@@ -1,4 +1,4 @@
-﻿@inject Microsoft.Extensions.Localization.IStringLocalizer<BillWatch.Web.Components.Pages.App.Activity> L
+﻿@inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.Pages.App.Activity> L
 
 <article class="@GetCardClass()">
     <div class="@GetIconClass()"
@@ -272,7 +272,7 @@
         if (string.IsNullOrWhiteSpace(
                 value))
         {
-            return L["BillWatch alert"].Value;
+            return L["FullWorth alert"].Value;
         }
 
         return value switch
