@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebAntiforgeryBoundaryTests
 {
@@ -63,7 +63,7 @@ public sealed class WebAntiforgeryBoundaryTests
         string route)
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -96,7 +96,7 @@ public sealed class WebAntiforgeryBoundaryTests
     public async Task AntiforgeryEndpoint_IssuesTokenAndNoStoreHeaders()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -136,7 +136,7 @@ public sealed class WebAntiforgeryBoundaryTests
     public void AuthenticationCookie_IsHostOnlySecureAndNonSliding()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         var cookieOptions =
             factory.Services
@@ -178,7 +178,7 @@ public sealed class WebAntiforgeryBoundaryTests
     public async Task SafeAuthGet_DoesNotRequireAntiforgeryToken()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -196,7 +196,7 @@ public sealed class WebAntiforgeryBoundaryTests
     public async Task UnknownUnsafeBffRoute_IsNotRejectedAsAntiforgeryFailure()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();

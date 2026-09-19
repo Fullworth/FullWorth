@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebBffAuthenticationBoundaryTests
 {
@@ -17,9 +17,9 @@ public sealed class WebBffAuthenticationBoundaryTests
     [InlineData("/bff/account/export")]
     public async Task BffReads_RequireAuthenticatedSession(string route)
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
-        client.DefaultRequestHeaders.Add("X-BillWatch-Test-Anonymous", "true");
+        client.DefaultRequestHeaders.Add("X-FullWorth-Test-Anonymous", "true");
 
         using var response = await client.GetAsync(route);
 
@@ -29,9 +29,9 @@ public sealed class WebBffAuthenticationBoundaryTests
     [Fact]
     public async Task MonitoringRefresh_RequiresAuthenticatedSession()
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
-        client.DefaultRequestHeaders.Add("X-BillWatch-Test-Anonymous", "true");
+        client.DefaultRequestHeaders.Add("X-FullWorth-Test-Anonymous", "true");
 
         using var response =
             await client.PostAsync(
