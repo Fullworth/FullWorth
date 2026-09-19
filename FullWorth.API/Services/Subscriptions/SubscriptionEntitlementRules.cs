@@ -1,6 +1,6 @@
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 
-namespace BillWatch.API.Services.Subscriptions;
+namespace FullWorth.API.Services.Subscriptions;
 
 public static class SubscriptionEntitlementRules
 {
@@ -52,12 +52,12 @@ public static class SubscriptionEntitlementRules
     }
 
     private static int GetTierRank(
-        BillWatchSubscriptionTier tier)
+        FullWorthSubscriptionTier tier)
     {
         return tier switch
         {
-            BillWatchSubscriptionTier.Standard => 200,
-            BillWatchSubscriptionTier.Beta => 100,
+            FullWorthSubscriptionTier.Standard => 200,
+            FullWorthSubscriptionTier.Beta => 100,
             _ => 0
         };
     }

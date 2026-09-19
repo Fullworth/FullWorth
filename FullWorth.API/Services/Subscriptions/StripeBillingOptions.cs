@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Subscriptions;
+namespace FullWorth.API.Services.Subscriptions;
 
 public sealed class StripeBillingOptions
 {

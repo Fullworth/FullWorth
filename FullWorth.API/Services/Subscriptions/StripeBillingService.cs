@@ -3,16 +3,16 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Subscriptions;
+namespace FullWorth.API.Services.Subscriptions;
 
 public sealed class StripeBillingService(
     HttpClient httpClient,
     StripeBillingOptions options,
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     TimeProvider timeProvider)
 {
     private const string StripeApiBaseUrl = "https://api.stripe.com/v1/";
@@ -198,7 +198,7 @@ public sealed class StripeBillingService(
         {
             var state = ParseSubscription(item);
 
-            if (!state.IsBillWatchPlan)
+            if (!state.IsFullWorthPlan)
             {
                 continue;
             }
@@ -273,7 +273,7 @@ public sealed class StripeBillingService(
                 subscriptionId,
                 cancellationToken);
 
-            if (!state.IsBillWatchPlan)
+            if (!state.IsFullWorthPlan)
             {
                 return;
             }
@@ -366,7 +366,7 @@ public sealed class StripeBillingService(
             effective = new SubscriptionEntitlementEntity
             {
                 UserId = userId,
-                Tier = BillWatchSubscriptionTier.Standard,
+                Tier = FullWorthSubscriptionTier.Standard,
                 Source = SubscriptionEntitlementSource.Paid,
                 StartsAtUtc = startsAt,
                 EndsAtUtc = endsAt,
@@ -379,7 +379,7 @@ public sealed class StripeBillingService(
         }
         else
         {
-            effective.Tier = BillWatchSubscriptionTier.Standard;
+            effective.Tier = FullWorthSubscriptionTier.Standard;
             effective.StartsAtUtc = startsAt;
             effective.EndsAtUtc = endsAt;
             effective.IsRevoked = false;
@@ -582,7 +582,7 @@ public sealed class StripeBillingService(
         var currentPeriodEnd = FromUnixSeconds(GetInt64(subscription, "current_period_end"));
         var cancelAtPeriodEnd = GetBoolean(subscription, "cancel_at_period_end") ?? false;
         var billingInterval = "monthly";
-        var isBillWatchPlan = false;
+        var isFullWorthPlan = false;
 
         if (subscription.TryGetProperty("items", out var items) &&
             items.TryGetProperty("data", out var itemData) &&
@@ -605,14 +605,14 @@ public sealed class StripeBillingService(
 
                 if (string.Equals(priceId, options.YearlyPriceId, StringComparison.Ordinal))
                 {
-                    isBillWatchPlan = true;
+                    isFullWorthPlan = true;
                     billingInterval = "yearly";
                     break;
                 }
 
                 if (string.Equals(priceId, options.MonthlyPriceId, StringComparison.Ordinal))
                 {
-                    isBillWatchPlan = true;
+                    isFullWorthPlan = true;
                     billingInterval = "monthly";
                     break;
                 }
@@ -625,7 +625,7 @@ public sealed class StripeBillingService(
             currentPeriodStart,
             currentPeriodEnd,
             cancelAtPeriodEnd,
-            isBillWatchPlan);
+            isFullWorthPlan);
     }
 
     private Guid? GetUserId(JsonElement element)
@@ -818,7 +818,7 @@ public sealed class StripeBillingService(
         if (!IsConfigured)
         {
             throw new StripeBillingException(
-                "Paid billing is not configured for this BillWatch environment.");
+                "Paid billing is not configured for this FullWorth environment.");
         }
     }
 
@@ -864,10 +864,10 @@ public sealed record StripeSubscriptionState(
     DateTimeOffset? CurrentPeriodStartUtc,
     DateTimeOffset? CurrentPeriodEndUtc,
     bool CancelAtPeriodEnd,
-    bool IsBillWatchPlan)
+    bool IsFullWorthPlan)
 {
     public bool IsEntitled(DateTimeOffset nowUtc) =>
-        IsBillWatchPlan &&
+        IsFullWorthPlan &&
         (string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(Status, "trialing", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(Status, "past_due", StringComparison.OrdinalIgnoreCase)) &&

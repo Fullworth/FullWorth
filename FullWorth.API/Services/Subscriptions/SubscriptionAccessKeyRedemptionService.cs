@@ -1,13 +1,13 @@
 using System.Data;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace BillWatch.API.Services.Subscriptions;
+namespace FullWorth.API.Services.Subscriptions;
 
 public sealed class SubscriptionAccessKeyRedemptionService(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     SubscriptionAccessKeyGenerator keyGenerator,
     TimeProvider timeProvider)
 {
@@ -129,7 +129,7 @@ public sealed class SubscriptionAccessKeyRedemptionService(
 public sealed record SubscriptionAccessKeyRedemptionResult(
     bool Succeeded,
     Guid? EntitlementId,
-    BillWatchSubscriptionTier? Tier,
+    FullWorthSubscriptionTier? Tier,
     DateTimeOffset? EndsAtUtc)
 {
     public static SubscriptionAccessKeyRedemptionResult Invalid { get; } =
