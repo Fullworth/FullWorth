@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace BillWatch.API.Data.Migrations
+namespace FullWorth.API.Data.Migrations
 {
     /// <inheritdoc />
     public partial class AddAdminSubscriptionFoundation : Migration
