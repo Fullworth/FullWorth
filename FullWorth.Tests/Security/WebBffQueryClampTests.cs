@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebBffQueryClampTests
 {
@@ -12,7 +12,7 @@ public sealed class WebBffQueryClampTests
     [InlineData("/bff/alerts?take=2147483647")]
     public async Task ExtremeTakeValues_DoNotCauseServerError(string route)
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.GetAsync(route);

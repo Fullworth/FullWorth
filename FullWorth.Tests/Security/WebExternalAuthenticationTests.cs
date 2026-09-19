@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebExternalAuthenticationTests
 {
@@ -9,7 +9,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task Login_HidesUnconfiguredExternalProviders()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -46,7 +46,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task Login_ExternalErrorUsesFixedCopyInsteadOfEchoingErrorQuery()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -82,7 +82,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task Login_ExternalTwoFactorRendersServerSideFactorFormWithoutCredentials()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -134,7 +134,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task Login_ExternalFactorErrorUsesFixedCopyInsteadOfEchoingErrorQuery()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -170,7 +170,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task AccountSettings_HidesUnconfiguredExternalProviderLinks()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -207,7 +207,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task AccountSettings_ExternalErrorUsesFixedCopyInsteadOfEchoingQuery()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -243,7 +243,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task AccountSecurityScript_UsesSafeLinkedProviderStatusSurface()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -289,7 +289,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task AccountSecurityScript_LinkExternalIdentityCarriesDistinctRecoveryCodeField()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -330,7 +330,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task AccountSecurityScript_ExternalLinkUiAcceptsAuthenticatorOrRecoveryCode()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -371,7 +371,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task UnconfiguredKnownProvider_FailsClosedWithoutStartingChallenge()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -396,7 +396,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task UnconfiguredKnownProvider_LinkFailsClosedBackToSettings()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -421,7 +421,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task UnknownProvider_ReturnsNotFound()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -439,7 +439,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task UnknownProvider_LinkReturnsNotFound()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -457,7 +457,7 @@ public sealed class WebExternalAuthenticationTests
     public async Task CompletionWithoutTemporaryExternalSession_FailsClosed()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();

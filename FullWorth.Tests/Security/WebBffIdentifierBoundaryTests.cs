@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebBffIdentifierBoundaryTests
 {
@@ -13,7 +13,7 @@ public sealed class WebBffIdentifierBoundaryTests
     [InlineData("/bff/bill-streams/11111111-1111-1111-1111-111111111111/statement-uploads/00000000-0000-0000-0000-000000000000/file")]
     public async Task EmptyResourceIdentifier_IsRejectedBeforeProxying(string route)
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.GetAsync(route);
@@ -27,7 +27,7 @@ public sealed class WebBffIdentifierBoundaryTests
     [InlineData("/bff/bill-streams/not-a-guid/statement-uploads/not-a-guid/file")]
     public async Task MalformedResourceIdentifier_DoesNotMatchSensitiveRoute(string route)
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.GetAsync(route);

@@ -1,14 +1,14 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text;
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebBffRefreshSecurityTests
 {
@@ -45,7 +45,7 @@ public sealed class WebBffRefreshSecurityTests
                 authentication);
 
         var service =
-            new BillWatchBffProxyService(
+            new FullWorthBffProxyService(
                 factory);
 
         var result =
@@ -174,7 +174,7 @@ public sealed class WebBffRefreshSecurityTests
                 authentication);
 
         var service =
-            new BillWatchBffProxyService(
+            new FullWorthBffProxyService(
                 factory);
 
         var result =
@@ -269,7 +269,7 @@ public sealed class WebBffRefreshSecurityTests
                 authentication);
 
         var service =
-            new BillWatchBffProxyService(
+            new FullWorthBffProxyService(
                 factory);
 
         var result =
@@ -462,7 +462,7 @@ public sealed class WebBffRefreshSecurityTests
             string name)
         {
             Assert.Equal(
-                "BillWatchApi",
+                "FullWorthApi",
                 name);
 
             return _client;
