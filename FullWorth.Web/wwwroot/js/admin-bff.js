@@ -27,13 +27,13 @@ async function readSafeError(response) {
         }
     }
 
-    return `BillWatch request failed with status ${response.status}.`;
+    return `FullWorth request failed with status ${response.status}.`;
 }
 
 async function handleAdminResponse(response) {
     if (response.status === 401) {
         window.location.assign("/login");
-        throw new Error("BillWatch session expired.");
+        throw new Error("FullWorth session expired.");
     }
 
     if (response.status === 403) {
@@ -99,7 +99,7 @@ async function getAntiforgeryToken() {
 
     if (response.status === 401) {
         window.location.assign("/login");
-        throw new Error("BillWatch session expired.");
+        throw new Error("FullWorth session expired.");
     }
 
     if (!response.ok) {
@@ -111,7 +111,7 @@ async function getAntiforgeryToken() {
 
     if (!payload?.requestToken) {
         throw new Error(
-            "BillWatch could not establish a secure request token.");
+            "FullWorth could not establish a secure request token.");
     }
 
     antiforgeryToken = payload.requestToken;

@@ -19,7 +19,7 @@ async function getSafeErrorMessage(response) {
         }
     }
 
-    return `BillWatch request failed with status ${response.status}.`;
+    return `FullWorth request failed with status ${response.status}.`;
 }
 
 async function getAntiforgeryToken() {
@@ -43,13 +43,13 @@ async function getAntiforgeryToken() {
 
     if (!payload?.requestToken) {
         throw new Error(
-            "BillWatch could not establish a secure request token.");
+            "FullWorth could not establish a secure request token.");
     }
 
     return payload.requestToken;
 }
 
-export async function deleteBillWatchAccount(
+export async function deleteFullWorthAccount(
     confirmation,
     currentPassword,
     twoFactorCode) {
