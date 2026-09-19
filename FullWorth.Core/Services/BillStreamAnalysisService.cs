@@ -1,6 +1,6 @@
-﻿using BillWatch.Core.Models;
+﻿using FullWorth.Core.Models;
 
-namespace BillWatch.Core.Services;
+namespace FullWorth.Core.Services;
 
 public sealed class BillStreamAnalysisService
 {
