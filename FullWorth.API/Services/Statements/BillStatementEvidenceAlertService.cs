@@ -1,8 +1,8 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class BillStatementEvidenceAlertService
 {
@@ -12,11 +12,11 @@ public sealed class BillStatementEvidenceAlertService
     private const int MaxMessageLength =
         2000;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public BillStatementEvidenceAlertService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -290,7 +290,7 @@ public sealed class BillStatementEvidenceAlertService
 
             var message =
                 Truncate(
-                    $"{FormatMoney(currentItem.Amount)} labeled \"{currentItem.Description}\" appeared on the latest provider statement. BillWatch is not assuming this fee will recur.",
+                    $"{FormatMoney(currentItem.Amount)} labeled \"{currentItem.Description}\" appeared on the latest provider statement. FullWorth is not assuming this fee will recur.",
                     MaxMessageLength);
 
             results.Add(
@@ -340,7 +340,7 @@ public sealed class BillStatementEvidenceAlertService
 
             var message =
                 Truncate(
-                    $"A {FormatMoney(discountAmount)} discount labeled \"{previousItem.Description}\" was present on the previous provider statement but is absent from the latest statement. BillWatch has not assumed why the discount ended.",
+                    $"A {FormatMoney(discountAmount)} discount labeled \"{previousItem.Description}\" was present on the previous provider statement but is absent from the latest statement. FullWorth has not assumed why the discount ended.",
                     MaxMessageLength);
 
             results.Add(

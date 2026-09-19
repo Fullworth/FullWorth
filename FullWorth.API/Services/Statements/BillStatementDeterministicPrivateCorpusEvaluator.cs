@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Offline deterministic baseline for explicitly selected private corpus

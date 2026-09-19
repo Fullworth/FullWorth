@@ -1,12 +1,12 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Models;
-using BillWatch.Core.Services;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Models;
+using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
 using EntityBillAlertType =
-    BillWatch.API.Data.Entities.BillAlertType;
+    FullWorth.API.Data.Entities.BillAlertType;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class BillStatementChangeDetectionService
 {
@@ -19,7 +19,7 @@ public sealed class BillStatementChangeDetectionService
     private const int MaxAlertMessageLength =
         2000;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly BillAnalysisService
@@ -30,7 +30,7 @@ public sealed class BillStatementChangeDetectionService
         _evidenceAlertService;
 
     public BillStatementChangeDetectionService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -624,7 +624,7 @@ public sealed class BillStatementChangeDetectionService
             0)
         {
             return TruncateDescription(
-                $"{summary} The provider statements confirm the amount change; BillWatch has not identified the cause yet.");
+                $"{summary} The provider statements confirm the amount change; FullWorth has not identified the cause yet.");
         }
 
         var evidence =

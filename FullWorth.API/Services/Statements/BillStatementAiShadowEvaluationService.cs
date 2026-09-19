@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Evaluates AI-assisted extraction without exposing AI facts to the

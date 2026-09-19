@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Pure, offline accuracy gate for a future shadow-mode rollout.
