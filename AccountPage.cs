@@ -1,7 +1,7 @@
-using BillWatch.Services;
+using FullWorth.Services;
 using Microsoft.Maui.Controls.Shapes;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public sealed class AccountPage : ContentPage
 {
@@ -12,7 +12,7 @@ public sealed class AccountPage : ContentPage
     {
         _authenticationService = authenticationService;
         Title = "Account";
-        SetDynamicResource(StyleProperty, "BillWatchPageStyle");
+        SetDynamicResource(StyleProperty, "FullWorthPageStyle");
 
         Content = new ScrollView
         {
@@ -27,12 +27,12 @@ public sealed class AccountPage : ContentPage
                     CreateHeader(),
                     CreateNavigationCard(
                         "Connected banks",
-                        "Review the financial institutions BillWatch is monitoring, connection health, and disconnect controls.",
+                        "Review the financial institutions FullWorth is monitoring, connection health, and disconnect controls.",
                         "Manage connections",
                         () => Shell.Current.GoToAsync(nameof(ConnectBankPage))),
                     CreateNavigationCard(
                         "Transactions",
-                        "Review the bank transactions BillWatch uses to discover recurring bills.",
+                        "Review the bank transactions FullWorth uses to discover recurring bills.",
                         "View transactions",
                         () => Shell.Current.GoToAsync(nameof(TransactionsPage))),
                     CreateInfoCard(),
@@ -54,7 +54,7 @@ public sealed class AccountPage : ContentPage
             Children =
             {
                 title,
-                CreateBodyLabel("Connections, privacy, security, and your BillWatch account.")
+                CreateBodyLabel("Connections, privacy, security, and your FullWorth account.")
             }
         };
     }
@@ -99,8 +99,8 @@ public sealed class AccountPage : ContentPage
             Children =
             {
                 CreateTitleLabel("Your financial data"),
-                CreateBodyLabel("BillWatch uses connected transaction data to identify recurring bills and meaningful changes. Plaid access tokens stay protected on the server and are never returned to this app."),
-                CreateBodyLabel("Uploaded provider statements are stored privately by BillWatch and used as evidence for bill history and change explanations.")
+                CreateBodyLabel("FullWorth uses connected transaction data to identify recurring bills and meaningful changes. Plaid access tokens stay protected on the server and are never returned to this app."),
+                CreateBodyLabel("Uploaded provider statements are stored privately by FullWorth and used as evidence for bill history and change explanations.")
             }
         });
     }
@@ -117,7 +117,7 @@ public sealed class AccountPage : ContentPage
 
             var confirmed = await DisplayAlertAsync(
                 "Sign out",
-                "Sign out of BillWatch on this device? Automatic monitoring will continue in the background.",
+                "Sign out of FullWorth on this device? Automatic monitoring will continue in the background.",
                 "Sign out",
                 "Cancel");
 
@@ -133,7 +133,7 @@ public sealed class AccountPage : ContentPage
             Children =
             {
                 CreateTitleLabel("Sign-in session"),
-                CreateBodyLabel("Signing out removes BillWatch authentication tokens from this device. Server-side monitoring continues for connected banks until you disconnect them or delete your account."),
+                CreateBodyLabel("Signing out removes FullWorth authentication tokens from this device. Server-side monitoring continues for connected banks until you disconnect them or delete your account."),
                 signOut
             }
         });
@@ -162,8 +162,8 @@ public sealed class AccountPage : ContentPage
             Spacing = 12,
             Children =
             {
-                CreateTitleLabel("Delete BillWatch account"),
-                CreateBodyLabel("Permanently deleting your account removes your BillWatch financial data, detected bills, alerts, bill history, subscription state, and stored statement files. BillWatch first attempts to revoke active bank connections."),
+                CreateTitleLabel("Delete FullWorth account"),
+                CreateBodyLabel("Permanently deleting your account removes your FullWorth financial data, detected bills, alerts, bill history, subscription state, and stored statement files. FullWorth first attempts to revoke active bank connections."),
                 new Label
                 {
                     Text = "This cannot be undone.",
@@ -185,7 +185,7 @@ public sealed class AccountPage : ContentPage
 
         var first = await DisplayAlertAsync(
             "Delete your account?",
-            "BillWatch will permanently remove your account and financial history after safely revoking connected banks.",
+            "FullWorth will permanently remove your account and financial history after safely revoking connected banks.",
             "Continue",
             "Cancel");
 
@@ -226,14 +226,14 @@ public sealed class AccountPage : ContentPage
         {
             await DisplayAlertAsync(
                 "Account not deleted",
-                "BillWatch could not reach the server. Your account was not deleted. Check your connection and try again.",
+                "FullWorth could not reach the server. Your account was not deleted. Check your connection and try again.",
                 "OK");
         }
         catch
         {
             await DisplayAlertAsync(
                 "Account not deleted",
-                "BillWatch could not safely complete account deletion. Your account was not deleted.",
+                "FullWorth could not safely complete account deletion. Your account was not deleted.",
                 "OK");
         }
         finally

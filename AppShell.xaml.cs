@@ -1,4 +1,4 @@
-﻿namespace BillWatch;
+﻿namespace FullWorth;
 
 public partial class AppShell : Shell
 {

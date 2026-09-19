@@ -1,6 +1,6 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public partial class BillDetailPage : ContentPage
 {
@@ -187,7 +187,7 @@ public partial class BillDetailPage : ContentPage
             if (IsProcessingUpload)
             {
                 return
-                    "BillWatch is reading and validating your statement…";
+                    "FullWorth is reading and validating your statement…";
             }
 
             return
@@ -463,7 +463,7 @@ public partial class BillDetailPage : ContentPage
             return
                 string.IsNullOrWhiteSpace(
                     description)
-                    ? "BillWatch confirmed the amount changed, but there is not enough provider evidence yet to explain why."
+                    ? "FullWorth confirmed the amount changed, but there is not enough provider evidence yet to explain why."
                     : description;
         }
     }
@@ -566,7 +566,7 @@ public partial class BillDetailPage : ContentPage
             Guid.Empty)
         {
             ErrorMessage =
-                "BillWatch could not determine which bill to open.";
+                "FullWorth could not determine which bill to open.";
 
             return;
         }
@@ -625,12 +625,12 @@ public partial class BillDetailPage : ContentPage
         catch (SessionExpiredException)
         {
             ErrorMessage =
-                "Your BillWatch session expired. Please sign in again.";
+                "Your FullWorth session expired. Please sign in again.";
         }
         catch (HttpRequestException)
         {
             ErrorMessage =
-                "Unable to load this bill from BillWatch.";
+                "Unable to load this bill from FullWorth.";
         }
         catch (Exception)
         {
@@ -745,20 +745,20 @@ public partial class BillDetailPage : ContentPage
         catch (SessionExpiredException)
         {
             SetUploadError(
-                "Your BillWatch session expired. Please sign in again.");
+                "Your FullWorth session expired. Please sign in again.");
         }
         catch (HttpRequestException ex)
         {
             SetUploadError(
                 string.IsNullOrWhiteSpace(
                     ex.Message)
-                    ? "BillWatch could not upload this statement."
+                    ? "FullWorth could not upload this statement."
                     : ex.Message);
         }
         catch (UnauthorizedAccessException)
         {
             SetUploadError(
-                "BillWatch could not access the selected file.");
+                "FullWorth could not access the selected file.");
         }
         catch (Exception)
         {
@@ -825,7 +825,7 @@ public partial class BillDetailPage : ContentPage
             }
 
             SetUploadSuccess(
-                "Statement uploaded securely. BillWatch is continuing to process it in the background.");
+                "Statement uploaded securely. FullWorth is continuing to process it in the background.");
         }
         catch (OperationCanceledException)
             when (cancellationToken
@@ -841,7 +841,7 @@ public partial class BillDetailPage : ContentPage
         catch (HttpRequestException)
         {
             SetUploadSuccess(
-                "Statement uploaded securely. BillWatch will continue processing it in the background.");
+                "Statement uploaded securely. FullWorth will continue processing it in the background.");
         }
     }
 
@@ -862,25 +862,25 @@ public partial class BillDetailPage : ContentPage
         {
             case "ReadyForParsing":
                 SetUploadSuccess(
-                    "BillWatch read the statement, but it needs review before the extracted values can become trusted bill history.");
+                    "FullWorth read the statement, but it needs review before the extracted values can become trusted bill history.");
 
                 return true;
 
             case "NeedsOcr":
                 SetUploadError(
-                    "BillWatch could not confidently read this copy. Try a clearer PDF, screenshot, or photo of the statement.");
+                    "FullWorth could not confidently read this copy. Try a clearer PDF, screenshot, or photo of the statement.");
 
                 return true;
 
             case "Processed":
                 SetUploadSuccess(
-                    "Statement processed. BillWatch updated this bill's evidence and history.");
+                    "Statement processed. FullWorth updated this bill's evidence and history.");
 
                 return true;
 
             case "Failed":
                 SetUploadError(
-                    "The statement was uploaded, but BillWatch could not safely process it. Try a clearer copy or a different file.");
+                    "The statement was uploaded, but FullWorth could not safely process it. Try a clearer copy or a different file.");
 
                 return true;
 

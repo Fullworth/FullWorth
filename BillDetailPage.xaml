@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
 <ContentPage
-    x:Class="BillWatch.BillDetailPage"
+    x:Class="FullWorth.BillDetailPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Shell.NavBarIsVisible="False"
-    Style="{StaticResource BillWatchPageStyle}">
+    Style="{StaticResource FullWorthPageStyle}">
 
     <ScrollView>
 
@@ -328,7 +328,7 @@
                                 Style="{StaticResource SectionTitleStyle}" />
 
                             <Label
-                                Text="Upload the provider's actual statement so BillWatch can explain why the amount changed instead of guessing."
+                                Text="Upload the provider's actual statement so FullWorth can explain why the amount changed instead of guessing."
                                 Style="{StaticResource BodyTextStyle}" />
 
                         </VerticalStackLayout>
@@ -483,7 +483,7 @@
                                 Style="{StaticResource PrimaryTextStyle}" />
 
                             <Label
-                                Text="Transaction monitoring can discover the recurring bill, but provider statements are what allow BillWatch to explain the details behind changes."
+                                Text="Transaction monitoring can discover the recurring bill, but provider statements are what allow FullWorth to explain the details behind changes."
                                 Style="{StaticResource BodyTextStyle}" />
 
                         </VerticalStackLayout>
