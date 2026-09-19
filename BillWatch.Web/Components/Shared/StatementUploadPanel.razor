@@ -17,7 +17,7 @@
         <div>
             <span class="statement-upload-kicker">@L["Provider evidence"]</span>
             <h2>@L["Upload a statement"]</h2>
-            <p>@L["A provider statement gives BillWatch the evidence needed to explain why a bill changed."]</p>
+            <p>@L["A provider statement gives FullWorth the evidence needed to explain why a bill changed."]</p>
         </div>
     </div>
 
@@ -77,7 +77,7 @@
     }
 
     <div class="statement-upload-footnote">
-        @L["BillWatch verifies the document server-side before storing or using extracted facts."]
+        @L["FullWorth verifies the document server-side before storing or using extracted facts."]
     </div>
 </section>
 
@@ -173,7 +173,7 @@
         }
         catch (JSException)
         {
-            SetError(L["Couldn't read file"], L["BillWatch could not inspect the selected file."]);
+            SetError(L["Couldn't read file"], L["FullWorth could not inspect the selected file."]);
         }
     }
 
@@ -221,11 +221,11 @@
         }
         catch (JSException)
         {
-            SetError(L["Upload failed"], L["BillWatch could not upload this statement."]);
+            SetError(L["Upload failed"], L["FullWorth could not upload this statement."]);
         }
         catch (Exception)
         {
-            SetError(L["Upload failed"], L["BillWatch could not upload this statement."]);
+            SetError(L["Upload failed"], L["FullWorth could not upload this statement."]);
         }
         finally
         {
@@ -294,8 +294,8 @@
         _state = "success";
         _statusHeading = L["Statement processed"];
         _message = string.IsNullOrWhiteSpace(ProviderName)
-            ? L["BillWatch validated the statement and updated the bill evidence."]
-            : L["BillWatch validated the {0} statement and updated its bill evidence.", ProviderName];
+            ? L["FullWorth validated the statement and updated the bill evidence."]
+            : L["FullWorth validated the {0} statement and updated its bill evidence.", ProviderName];
 
         _selectedFile = null;
 
@@ -325,19 +325,19 @@
 
             case "Processing":
                 _statusHeading = L["Reading statement"];
-                _message = L["BillWatch is extracting the document contents."];
+                _message = L["FullWorth is extracting the document contents."];
                 break;
 
             case "NeedsOcr":
                 SetError(
                     L["Clearer statement needed"],
-                    L["BillWatch could not confidently read this statement automatically. Try a clearer PDF, screenshot, or photo."]);
+                    L["FullWorth could not confidently read this statement automatically. Try a clearer PDF, screenshot, or photo."]);
                 break;
 
             case "ReadyForParsing":
                 SetError(
                     L["Statement needs review"],
-                    L["BillWatch read the document, but it could not safely validate enough structured bill evidence to update this bill automatically."]);
+                    L["FullWorth read the document, but it could not safely validate enough structured bill evidence to update this bill automatically."]);
                 break;
 
             case "Processed":
@@ -346,12 +346,12 @@
                 break;
 
             case "Failed":
-                SetError(L["Processing failed"], L["BillWatch could not safely process this statement."]);
+                SetError(L["Processing failed"], L["FullWorth could not safely process this statement."]);
                 break;
 
             default:
                 _statusHeading = L["Processing"];
-                _message = L["BillWatch is processing the statement."];
+                _message = L["FullWorth is processing the statement."];
                 break;
         }
     }
