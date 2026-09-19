@@ -167,6 +167,25 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     detectedStream.Category;
             }
 
+            /*
+             * A brand-new monthly subscription may only have two posted
+             * charges in the available history. Promote that early only when
+             * the transactions contain explicit subscription/digital evidence
+             * and are not in a category we deliberately reject. Generic
+             * two-off merchant repeats remain candidates only and are not
+             * persisted.
+             */
+            if (resolvedCategory ==
+                    BillCategory.Unknown &&
+                matchingTransactions.Count ==
+                    2 &&
+                HasStrongTwoOccurrenceSubscriptionEvidence(
+                    matchingTransactions))
+            {
+                resolvedCategory =
+                    BillCategory.Other;
+            }
+
             if (resolvedCategory ==
                     BillCategory.Unknown &&
                 IsStrongUnclassifiedRecurringBill(
@@ -488,6 +507,24 @@ public sealed class RecurringBillDiscoveryPersistenceService
         }
 
         return BillCategory.Unknown;
+    }
+
+    private static bool HasStrongTwoOccurrenceSubscriptionEvidence(
+        IReadOnlyCollection<BankTransactionEntity>
+            transactions)
+    {
+        if (transactions.Count !=
+            2)
+        {
+            return false;
+        }
+
+        return transactions.All(
+                   transaction =>
+                       !IsExplicitlyRejectedFallbackCategory(
+                           transaction)) &&
+               transactions.Any(
+                   HasSubscriptionEvidence);
     }
 
     private static bool IsStrongUnclassifiedRecurringBill(

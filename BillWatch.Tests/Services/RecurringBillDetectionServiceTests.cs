@@ -54,6 +54,43 @@ public sealed class RecurringBillDetectionServiceTests
     }
 
     [Fact]
+    public void Detect_TwoMonthlyOccurrences_ProducesCandidate()
+    {
+        var transactions = new[]
+        {
+            Transaction("New Subscription", 2026, 1, 12, 8.99m),
+            Transaction("New Subscription", 2026, 2, 12, 8.99m)
+        };
+
+        var result =
+            Assert.Single(
+                _service.Detect(
+                    transactions));
+
+        Assert.Equal(
+            RecurringBillFrequency.Monthly,
+            result.Frequency);
+
+        Assert.Equal(
+            2,
+            result.TransactionCount);
+    }
+
+    [Fact]
+    public void Detect_TwoNonMonthlyOccurrences_AreNotPromoted()
+    {
+        var transactions = new[]
+        {
+            Transaction("Repeat Merchant", 2026, 1, 12, 8.99m),
+            Transaction("Repeat Merchant", 2026, 1, 25, 8.99m)
+        };
+
+        Assert.Empty(
+            _service.Detect(
+                transactions));
+    }
+
+    [Fact]
     public void Detect_QuarterlyPattern_IsNotMisclassifiedAsMonthly()
     {
         var transactions = new[]
