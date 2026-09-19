@@ -9,12 +9,12 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Admin> L
 
-<PageTitle>@L["Admin — BillWatch"]</PageTitle>
+<PageTitle>@L["Admin — FullWorth"]</PageTitle>
 
 <div class="app-page admin-page">
     <header class="page-heading admin-heading">
         <div>
-            <span class="page-kicker">@L["BillWatch operations"]</span>
+            <span class="page-kicker">@L["FullWorth operations"]</span>
             <h1>@L["Admin"]</h1>
             <p>@L["Staff access, subscription access keys, and an evidence-limited record of administrative changes."]</p>
         </div>
@@ -55,7 +55,7 @@
             <div>
                 <span class="page-kicker">@L["Restricted surface"]</span>
                 <h2>@L["Admin access required"]</h2>
-                <p>@L["Your BillWatch session is valid, but the API did not authorize this account for the Owner/Admin console. No administrative data was loaded."]</p>
+                <p>@L["Your FullWorth session is valid, but the API did not authorize this account for the Owner/Admin console. No administrative data was loaded."]</p>
             </div>
         </section>
     }
@@ -280,7 +280,7 @@
                     <div>
                         <span class="panel-kicker">@L["One-time access key"]</span>
                         <h2>@L["Save this key now"]</h2>
-                        <p>@L["BillWatch stored only its hash. This plaintext value exists only in this page session and cannot be retrieved again after you dismiss it or leave."]</p>
+                        <p>@L["FullWorth stored only its hash. This plaintext value exists only in this page session and cannot be retrieved again after you dismiss it or leave."]</p>
                     </div>
 
                     <code aria-label="@GetNewKeyAriaLabel()">@GetDisplayedNewKey()</code>
@@ -550,7 +550,7 @@
         }
         catch (JSException)
         {
-            _errorMessage = L["BillWatch could not reach the secure admin API."];
+            _errorMessage = L["FullWorth could not reach the secure admin API."];
         }
         catch (Exception)
         {
@@ -610,7 +610,7 @@
 
             if (result.Value is null || string.IsNullOrWhiteSpace(result.Value.PlaintextKey))
             {
-                _mutationError = L["BillWatch created an invalid access-key response."];
+                _mutationError = L["FullWorth created an invalid access-key response."];
                 return;
             }
 
@@ -623,11 +623,11 @@
         }
         catch (JSException)
         {
-            _mutationError = L["BillWatch could not create the access key."];
+            _mutationError = L["FullWorth could not create the access key."];
         }
         catch (Exception)
         {
-            _mutationError = L["BillWatch could not create the access key."];
+            _mutationError = L["FullWorth could not create the access key."];
         }
         finally
         {
@@ -705,11 +705,11 @@
         }
         catch (JSException)
         {
-            _mutationError = L["BillWatch could not revoke that access key."];
+            _mutationError = L["FullWorth could not revoke that access key."];
         }
         catch (Exception)
         {
-            _mutationError = L["BillWatch could not revoke that access key."];
+            _mutationError = L["FullWorth could not revoke that access key."];
         }
         finally
         {
