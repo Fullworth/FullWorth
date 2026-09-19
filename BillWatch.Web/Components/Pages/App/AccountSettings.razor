@@ -11,7 +11,7 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject Microsoft.Extensions.Localization.IStringLocalizer<AccountSettings> L
 
-<PageTitle>@L["Settings — BillWatch"]</PageTitle>
+<PageTitle>@L["Settings — FullWorth"]</PageTitle>
 <link rel="stylesheet" href="/account-settings.css" />
 
 <div class="app-page settings-page">
@@ -159,7 +159,7 @@
                     <div class="settings-card-icon is-purple" aria-hidden="true">▣</div>
                     <div class="settings-copy">
                         <h2>@L["Password"]</h2>
-                        <p>@L["Change your BillWatch password only when you need to."]</p>
+                        <p>@L["Change your FullWorth password only when you need to."]</p>
                     </div>
                 </div>
 
@@ -180,7 +180,7 @@
                         <div class="settings-card-icon is-blue" aria-hidden="true">◇</div>
                         <div class="settings-copy">
                             <h2>@L["Sign-in methods"]</h2>
-                            <p>@L["Connect a trusted provider to this BillWatch account. Provider tokens stay server-side."]</p>
+                            <p>@L["Connect a trusted provider to this FullWorth account. Provider tokens stay server-side."]</p>
                         </div>
                     </div>
 
@@ -205,7 +205,7 @@
                             <div>
                                 <span class="panel-kicker">@L["Confirm account link"]</span>
                                 <h3>@L["Finish connecting"] @GetExternalProviderDisplayName(_pendingExternalProvider)</h3>
-                                <p>@L["The provider verified you. Re-enter your BillWatch credentials to authorize this sign-in method."]</p>
+                                <p>@L["The provider verified you. Re-enter your FullWorth credentials to authorize this sign-in method."]</p>
                             </div>
                             <div class="settings-grid two-column">
                                 <label class="settings-field">
@@ -233,7 +233,7 @@
                     <div class="settings-card-icon is-muted" aria-hidden="true">◷</div>
                     <div class="settings-copy">
                         <h2>@L["Timestamp display"]</h2>
-                        <p>@L["Choose how BillWatch displays dates and times."]</p>
+                        <p>@L["Choose how FullWorth displays dates and times."]</p>
                     </div>
                 </div>
                 @if (_isLoadingPreference)
@@ -258,7 +258,7 @@
                     <div class="settings-card-icon is-muted" aria-hidden="true">◇</div>
                     <div class="settings-copy">
                         <h2>@L["Privacy"]</h2>
-                        <p>@L["Review how BillWatch handles account, transaction, and statement information."]</p>
+                        <p>@L["Review how FullWorth handles account, transaction, and statement information."]</p>
                     </div>
                 </div>
                 <a href="/privacy" class="secondary-link">@L["View privacy information"] <span aria-hidden="true">→</span></a>
@@ -332,7 +332,7 @@
                         else
                         {
                             <div class="recovery-code-panel" role="status">
-                                <div class="recovery-code-warning"><strong>@L["Store these somewhere safe now."]</strong><span>@L["BillWatch will not show this set again after you close the dialog."]</span></div>
+                                <div class="recovery-code-warning"><strong>@L["Store these somewhere safe now."]</strong><span>@L["FullWorth will not show this set again after you close the dialog."]</span></div>
                                 <div class="recovery-code-grid">@foreach (var recoveryCode in _recoveryCodes) { <code>@recoveryCode</code> }</div>
                             </div>
                             <div class="settings-dialog-actions"><button type="button" class="primary-action" data-dialog-cancel @onclick="CloseDialogAsync">@L["I saved these codes"]</button></div>
@@ -390,7 +390,7 @@
                         else
                         {
                             <div class="recovery-code-panel" role="status">
-                                <div class="recovery-code-warning"><strong>@L["Store these somewhere safe now."]</strong><span>@L["Each code works once. BillWatch will not show this set again after you close the dialog."]</span></div>
+                                <div class="recovery-code-warning"><strong>@L["Store these somewhere safe now."]</strong><span>@L["Each code works once. FullWorth will not show this set again after you close the dialog."]</span></div>
                                 <div class="recovery-code-grid">@foreach (var recoveryCode in _recoveryCodes) { <code>@recoveryCode</code> }</div>
                             </div>
                             <div class="settings-dialog-actions"><button type="button" class="primary-action" data-dialog-cancel @onclick="CloseDialogAsync">@L["I saved these codes"]</button></div>
@@ -449,7 +449,7 @@
         _pendingExternalProvider = NormalizeConfiguredExternalProvider(ExternalLink);
         if (!string.IsNullOrWhiteSpace(ExternalError))
         {
-            SetError(L["BillWatch could not complete that sign-in method. Try again."].Value);
+            SetError(L["FullWorth could not complete that sign-in method. Try again."].Value);
         }
     }
 
@@ -469,7 +469,7 @@
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException)
             {
-                _pageError = L["BillWatch could not load account security settings."].Value;
+                _pageError = L["FullWorth could not load account security settings."].Value;
             }
             finally
             {
@@ -595,7 +595,7 @@
             ExternalError = null;
             await _securityModule.InvokeVoidAsync("clearExternalLinkQuery");
             SetSuccess($"{GetExternalProviderDisplayName(provider)} {L["can now be used to sign in to BillWatch."].Value}");
-        }, L["BillWatch could not link this sign-in method. Start the provider link again and try again."].Value);
+        }, L["FullWorth could not link this sign-in method. Start the provider link again and try again."].Value);
     }
 
     private async Task BeginAuthenticatorSetupAsync()
@@ -691,7 +691,7 @@
             var preference = await _timeModule.InvokeAsync<AccountPreferenceViewModel>("saveTimestampPreference", _selectedMode);
             _selectedMode = NormalizeMode(preference.TimestampDisplayMode);
             SetSuccess(L["Timestamp preference saved."].Value);
-        }, L["BillWatch could not save that preference. Please try again."].Value);
+        }, L["FullWorth could not save that preference. Please try again."].Value);
     }
 
     private async Task RunActionAsync(Func<Task> action, string fallbackMessage)
@@ -712,7 +712,7 @@
             (technicalMessage.Contains("isn’t valid", StringComparison.OrdinalIgnoreCase) || technicalMessage.Contains("isn't valid", StringComparison.OrdinalIgnoreCase) || technicalMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase)))
             return L["That authenticator code isn’t valid. Try the current code from your authenticator app."].Value;
         if (technicalMessage.Contains("email address is already in use", StringComparison.OrdinalIgnoreCase)) return L["That email address is already in use."].Value;
-        if (technicalMessage.Contains("password requirements", StringComparison.OrdinalIgnoreCase)) return L["Your new password doesn’t meet BillWatch’s password requirements."].Value;
+        if (technicalMessage.Contains("password requirements", StringComparison.OrdinalIgnoreCase)) return L["Your new password doesn’t meet FullWorth’s password requirements."].Value;
         if (technicalMessage.Contains("too many attempts", StringComparison.OrdinalIgnoreCase)) return L["Too many attempts. Please wait a little while and try again."].Value;
         return fallbackMessage;
     }
@@ -774,7 +774,7 @@
     {
         SecurityDialog.ChangePassword => L["Confirm your identity only for this password change."],
         SecurityDialog.ChangeEmail => L["Enter the new address and verify this sensitive account change."],
-        SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Verify your identity before BillWatch replaces your current recovery codes."] : L["Each code works once. Store them somewhere safe outside BillWatch."],
+        SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Verify your identity before FullWorth replaces your current recovery codes."] : L["Each code works once. Store them somewhere safe outside BillWatch."],
         SecurityDialog.ReplaceAuthenticator => _twoFactorStep == 1 ? L["Verify your identity before replacing the authenticator currently protecting your account."] : L["Complete the replacement before leaving this flow."],
         SecurityDialog.DisableTwoFactor => L["This is a sensitive security change and requires your current credentials."],
         SecurityDialog.SetupTwoFactor => _twoFactorStep == 1 ? L["Verify your password, then connect any standard authenticator app."] : L["Scan the code and verify one current code from the app."],
