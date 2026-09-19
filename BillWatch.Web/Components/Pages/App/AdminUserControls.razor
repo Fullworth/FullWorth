@@ -203,7 +203,7 @@
 
             if (result.AccessDenied)
             {
-                _errorMessage = L["BillWatch blocked that change because your staff role cannot manage this account."];
+                _errorMessage = L["FullWorth blocked that change because your staff role cannot manage this account."];
                 return;
             }
 
@@ -212,11 +212,11 @@
         }
         catch (JSException)
         {
-            _errorMessage = L["BillWatch could not complete that administrative change."];
+            _errorMessage = L["FullWorth could not complete that administrative change."];
         }
         catch (Exception)
         {
-            _errorMessage = L["BillWatch could not complete that administrative change."];
+            _errorMessage = L["FullWorth could not complete that administrative change."];
         }
         finally
         {
