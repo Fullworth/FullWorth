@@ -148,6 +148,25 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 ResolveBillCategory(
                     matchingTransactions);
 
+            /*
+             * The core discovery layer also contains deterministic
+             * provider-name knowledge for known billers such as
+             * Black Hills Energy, Midco, and Verizon.
+             *
+             * Preserve that evidence when Plaid's category metadata is
+             * missing or outside BillWatch's supported category map. This is
+             * especially important for variable-amount utilities, which
+             * intentionally fail the generic stable-amount fallback.
+             */
+            if (resolvedCategory ==
+                    BillCategory.Unknown &&
+                detectedStream.Category !=
+                    BillCategory.Unknown)
+            {
+                resolvedCategory =
+                    detectedStream.Category;
+            }
+
             if (resolvedCategory ==
                     BillCategory.Unknown &&
                 IsStrongUnclassifiedRecurringBill(
