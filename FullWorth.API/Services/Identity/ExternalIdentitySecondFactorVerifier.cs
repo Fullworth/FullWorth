@@ -1,7 +1,7 @@
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace BillWatch.API.Services.Identity;
+namespace FullWorth.API.Services.Identity;
 
 public sealed class ExternalIdentitySecondFactorVerifier(
     UserManager<ApplicationUser> userManager)

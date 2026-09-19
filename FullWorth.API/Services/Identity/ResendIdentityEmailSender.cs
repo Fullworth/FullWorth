@@ -2,12 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Encodings.Web;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Services.Identity;
+namespace FullWorth.API.Services.Identity;
 
 public sealed class ResendIdentityEmailSender(
     HttpClient httpClient,

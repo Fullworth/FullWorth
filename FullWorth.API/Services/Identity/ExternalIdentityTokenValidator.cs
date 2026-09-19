@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
-namespace BillWatch.API.Services.Identity;
+namespace FullWorth.API.Services.Identity;
 
 public interface IExternalIdentityTokenValidator
 {

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Services.Identity;
+namespace FullWorth.API.Services.Identity;
 
 public sealed class IdentityEmailOptions
 {

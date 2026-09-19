@@ -4,12 +4,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidApiClient
 {
     /*
-     * Plaid responses used by BillWatch are JSON API payloads, not bulk
+     * Plaid responses used by FullWorth are JSON API payloads, not bulk
      * downloads. Bound the response before buffering it into memory.
      */
     private const long MaxResponseBytes =

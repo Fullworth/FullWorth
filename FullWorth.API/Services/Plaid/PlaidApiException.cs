@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidApiException : Exception
 {

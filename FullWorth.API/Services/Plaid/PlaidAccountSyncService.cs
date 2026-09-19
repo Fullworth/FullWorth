@@ -1,10 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidAccountSyncService
 {
@@ -29,7 +29,7 @@ public sealed class PlaidAccountSyncService
     private const int MaxPlaidSubtypeLength =
         100;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly PlaidApiClient
@@ -39,7 +39,7 @@ public sealed class PlaidAccountSyncService
         _tokenProtector;
 
     public PlaidAccountSyncService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         PlaidApiClient plaidApiClient,
         PlaidTokenProtector tokenProtector)
     {
@@ -197,7 +197,7 @@ public sealed class PlaidAccountSyncService
 
         /*
          * A provider account identifier must never silently migrate from
-         * one BillWatch BankConnection to another.
+         * one FullWorth BankConnection to another.
          */
         if (activePlaidAccountIds.Length >
             0)
