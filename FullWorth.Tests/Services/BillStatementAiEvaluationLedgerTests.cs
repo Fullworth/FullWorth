@@ -1,9 +1,9 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementAiEvaluationLedgerTests
 {
@@ -223,20 +223,20 @@ public sealed class BillStatementAiEvaluationLedgerTests
             await dbContext.BillStatementAiEvaluations.CountAsync());
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
         var options =
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     $"ai-evaluation-ledger-{Guid.NewGuid():N}")
                 .Options;
 
-        return new BillWatchDbContext(
+        return new FullWorthDbContext(
             options);
     }
 
     private static BillStatementAiEvaluationLedger CreateLedger(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         return new BillStatementAiEvaluationLedger(
             dbContext,
@@ -244,7 +244,7 @@ public sealed class BillStatementAiEvaluationLedgerTests
     }
 
     private static async Task<Guid> AddUploadAsync(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId)
     {
         var upload =

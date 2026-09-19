@@ -1,10 +1,10 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementAiEvaluationModelTests
 {
@@ -12,13 +12,13 @@ public sealed class BillStatementAiEvaluationModelTests
     public void EvaluationModel_IsOwnershipScopedAndUniquelyCostKeyed()
     {
         var options =
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     $"ai-evaluation-model-{Guid.NewGuid():N}")
                 .Options;
 
         using var dbContext =
-            new BillWatchDbContext(
+            new FullWorthDbContext(
                 options);
 
         var entityType =

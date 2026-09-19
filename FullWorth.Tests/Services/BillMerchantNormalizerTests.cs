@@ -1,7 +1,7 @@
-﻿using BillWatch.Core.Services;
+﻿using FullWorth.Core.Services;
 using Xunit;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillMerchantNormalizerTests
 {

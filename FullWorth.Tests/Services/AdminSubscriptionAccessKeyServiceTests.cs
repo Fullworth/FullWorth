@@ -1,9 +1,9 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class AdminSubscriptionAccessKeyServiceTests
 {
@@ -21,7 +21,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
         var result = await service.CreateAsync(
             actorUserId,
             SubscriptionAccessKeyPurpose.Complimentary,
-            BillWatchSubscriptionTier.Standard,
+            FullWorthSubscriptionTier.Standard,
             durationDays: 30,
             grantsLifetimeAccess: false,
             maxRedemptions: 2,
@@ -46,7 +46,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
         var result = await service.CreateAsync(
             Guid.NewGuid(),
             SubscriptionAccessKeyPurpose.Beta,
-            BillWatchSubscriptionTier.Beta,
+            FullWorthSubscriptionTier.Beta,
             durationDays: null,
             grantsLifetimeAccess: true,
             maxRedemptions: 1,
@@ -70,7 +70,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
             () => service.CreateAsync(
                 Guid.NewGuid(),
                 SubscriptionAccessKeyPurpose.Complimentary,
-                BillWatchSubscriptionTier.Standard,
+                FullWorthSubscriptionTier.Standard,
                 durationDays: 30,
                 grantsLifetimeAccess: false,
                 maxRedemptions: 1,
@@ -92,7 +92,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
             () => service.CreateAsync(
                 Guid.NewGuid(),
                 SubscriptionAccessKeyPurpose.Beta,
-                BillWatchSubscriptionTier.Beta,
+                FullWorthSubscriptionTier.Beta,
                 durationDays: null,
                 grantsLifetimeAccess: true,
                 maxRedemptions: 1,
@@ -114,7 +114,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
             () => service.CreateAsync(
                 Guid.NewGuid(),
                 SubscriptionAccessKeyPurpose.Complimentary,
-                BillWatchSubscriptionTier.Standard,
+                FullWorthSubscriptionTier.Standard,
                 durationDays: 30,
                 grantsLifetimeAccess: true,
                 maxRedemptions: 1,
@@ -133,7 +133,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
         var created = await service.CreateAsync(
             actorUserId,
             SubscriptionAccessKeyPurpose.Beta,
-            BillWatchSubscriptionTier.Beta,
+            FullWorthSubscriptionTier.Beta,
             durationDays: null,
             grantsLifetimeAccess: true,
             maxRedemptions: 10,
@@ -149,7 +149,7 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
     }
 
     private static AdminSubscriptionAccessKeyService CreateService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         SubscriptionAccessKeyGenerator generator)
     {
         return new AdminSubscriptionAccessKeyService(
@@ -158,10 +158,10 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
             new FixedTimeProvider(NowUtc));
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
     }

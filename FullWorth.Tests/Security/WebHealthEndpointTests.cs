@@ -1,16 +1,16 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class WebHealthEndpointTests
 {
     [Fact]
     public async Task Liveness_IsAnonymousAndReturnsBoundedStatus()
     {
-        using var factory = new BillWatchWebFactory();
+        using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
-        client.DefaultRequestHeaders.Add("X-BillWatch-Test-Anonymous", "true");
+        client.DefaultRequestHeaders.Add("X-FullWorth-Test-Anonymous", "true");
 
         using var response = await client.GetAsync("/health/live");
 
