@@ -1,8 +1,8 @@
 using System.Net;
 
-namespace BillWatch.Core.Configuration;
+namespace FullWorth.Core.Configuration;
 
-public static class BillWatchApiEndpoint
+public static class FullWorthApiEndpoint
 {
     public static Uri Parse(
         string? configuredValue,
@@ -12,7 +12,7 @@ public static class BillWatchApiEndpoint
                 configuredValue))
         {
             throw new InvalidOperationException(
-                "The BillWatch API base URL is not configured.");
+                "The FullWorth API base URL is not configured.");
         }
 
         if (!Uri.TryCreate(
@@ -21,7 +21,7 @@ public static class BillWatchApiEndpoint
                 out var endpoint))
         {
             throw new InvalidOperationException(
-                "The BillWatch API base URL must be an absolute URL.");
+                "The FullWorth API base URL must be an absolute URL.");
         }
 
         if (!string.Equals(
@@ -30,7 +30,7 @@ public static class BillWatchApiEndpoint
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "The BillWatch API base URL must use HTTPS.");
+                "The FullWorth API base URL must use HTTPS.");
         }
 
         if (!string.IsNullOrEmpty(
@@ -45,7 +45,7 @@ public static class BillWatchApiEndpoint
                 StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                "The BillWatch API base URL must contain only an HTTPS origin.");
+                "The FullWorth API base URL must contain only an HTTPS origin.");
         }
 
         if (!allowLocalDevelopmentEndpoint &&
@@ -53,7 +53,7 @@ public static class BillWatchApiEndpoint
                 endpoint))
         {
             throw new InvalidOperationException(
-                "A release build cannot use a local or numeric BillWatch API host.");
+                "A release build cannot use a local or numeric FullWorth API host.");
         }
 
         return new Uri(

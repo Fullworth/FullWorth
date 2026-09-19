@@ -1,6 +1,6 @@
-namespace BillWatch.Core.Legal;
+namespace FullWorth.Core.Legal;
 
-public static class BillWatchLegalDocuments
+public static class FullWorthLegalDocuments
 {
     public const string CurrentVersion =
         "2026-09-04-beta";
