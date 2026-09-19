@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
-using BillWatch.API.Services.Plaid;
+using FullWorth.API.Services.Plaid;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class PlaidTokenProtectorTests
 {

@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using System.Text;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Services.Statements;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class PdfBillStatementTextExtractorTests
 {

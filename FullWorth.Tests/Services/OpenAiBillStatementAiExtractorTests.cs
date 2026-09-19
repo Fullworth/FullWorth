@@ -3,10 +3,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Services.Statements;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class OpenAiBillStatementAiExtractorTests
 {

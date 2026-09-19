@@ -1,14 +1,14 @@
 using System.Net;
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Plaid;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Plaid;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class PlaidHostedLinkCompletionServiceTests
 {
@@ -392,10 +392,10 @@ public sealed class PlaidHostedLinkCompletionServiceTests
                 }));
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     Guid.NewGuid()
                         .ToString(

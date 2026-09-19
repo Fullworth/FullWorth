@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
-using BillWatch.API.Services.Plaid;
+using FullWorth.API.Services.Plaid;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class PlaidApiClientTests
 {
