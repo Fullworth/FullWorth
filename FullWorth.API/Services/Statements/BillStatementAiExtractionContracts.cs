@@ -1,9 +1,9 @@
-﻿namespace BillWatch.API.Services.Statements
+﻿namespace FullWorth.API.Services.Statements
 {
     /*
      * Vendor-neutral AI boundary.
      *
-     * OpenAI can implement this first, but the rest of BillWatch must
+     * OpenAI can implement this first, but the rest of FullWorth must
      * never depend directly on an OpenAI SDK or model type.
      */
     public interface IBillStatementAiExtractor
@@ -22,7 +22,7 @@
      * This is candidate information only.
      *
      * Nothing in this record is automatically trusted or persisted.
-     * It must first pass BillWatch's deterministic evidence and
+     * It must first pass FullWorth's deterministic evidence and
      * financial validation pipeline.
      */
     public sealed record BillStatementAiCandidate(
@@ -62,7 +62,7 @@
     /*
      * Model confidence is advisory only.
      *
-     * BillWatch's final confidence is determined by deterministic
+     * FullWorth's final confidence is determined by deterministic
      * validation and comparison, not by this value.
      */
     public enum BillStatementAiModelConfidence

@@ -1,8 +1,8 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Restart-safe cost-control ledger.
@@ -21,12 +21,12 @@ public sealed class BillStatementAiEvaluationLedger
     private const int MaxPromptVersionLength =
         100;
 
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
 
     private readonly TimeProvider _timeProvider;
 
     public BillStatementAiEvaluationLedger(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(

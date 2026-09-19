@@ -1,13 +1,13 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
- * Converts AI candidate output into BillWatch's existing structured
+ * Converts AI candidate output into FullWorth's existing structured
  * statement model only after deterministic evidence validation succeeds.
  *
  * This service is the trust boundary between a model response and the
  * rest of the statement-processing pipeline. A model can propose facts;
  * this service decides whether those proposals are eligible to move
- * deeper into BillWatch.
+ * deeper into FullWorth.
  */
 public sealed class BillStatementAiCandidateConversionService
 {
@@ -162,7 +162,7 @@ public sealed class BillStatementAiCandidateConversionService
         /*
          * ModelConfidence is intentionally NOT consulted here.
          *
-         * BillWatch confidence comes from deterministic completeness and
+         * FullWorth confidence comes from deterministic completeness and
          * source-evidence validation, never from how confident a model says
          * it is.
          */

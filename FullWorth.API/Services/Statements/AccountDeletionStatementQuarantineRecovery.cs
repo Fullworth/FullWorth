@@ -1,10 +1,10 @@
-using BillWatch.API.Data;
+using FullWorth.API.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class AccountDeletionStatementQuarantineRecovery(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     SecureBillStatementStorageService statementStorage,
     ILogger<AccountDeletionStatementQuarantineRecovery> logger)
 {

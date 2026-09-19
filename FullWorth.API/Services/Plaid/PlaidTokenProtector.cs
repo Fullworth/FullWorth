@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidTokenProtector
 {
@@ -9,7 +9,7 @@ public sealed class PlaidTokenProtector
      * Purpose strings are part of the cryptographic isolation boundary.
      *
      * Never reuse either protector for unrelated secrets. Versioning the
-     * purpose also gives BillWatch a deliberate migration path if token
+     * purpose also gives FullWorth a deliberate migration path if token
      * protection needs to change later.
      */
     private const string AccessTokenPurpose =

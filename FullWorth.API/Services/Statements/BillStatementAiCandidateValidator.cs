@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace BillWatch.API.Services.Statements
+namespace FullWorth.API.Services.Statements
 {
     /*
-     * First deterministic gate between an AI model and BillWatch's
+     * First deterministic gate between an AI model and FullWorth's
      * trusted statement pipeline.
      *
      * Passing this validator does NOT mean the candidate is safe to
