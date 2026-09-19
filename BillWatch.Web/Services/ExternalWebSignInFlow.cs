@@ -80,14 +80,14 @@ public static class ExternalWebSignInFlow
         {
             return new AuthOperationResult(
                 false,
-                "BillWatch received an invalid external sign-in response.");
+                "FullWorth received an invalid external sign-in response.");
         }
 
         var claims = new List<Claim>
         {
             new(
                 ClaimTypes.Name,
-                email ?? "BillWatch user"),
+                email ?? "FullWorth user"),
             new(
                 ClaimTypes.NameIdentifier,
                 $"{provider}:{providerSubject}")
