@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 
 <ContentPage
-    x:Class="BillWatch.MainPage"
+    x:Class="FullWorth.MainPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Style="{StaticResource BillWatchPageStyle}">
+    Style="{StaticResource FullWorthPageStyle}">
 
     <ScrollView>
 
@@ -69,7 +69,7 @@
                         Style="{StaticResource PrimaryTextStyle}" />
 
                     <Label
-                        Text="The important things BillWatch has found across your recurring bills."
+                        Text="The important things FullWorth has found across your recurring bills."
                         Style="{StaticResource BodyTextStyle}" />
 
                 </VerticalStackLayout>
@@ -340,7 +340,7 @@
                                         Style="{StaticResource PrimaryTextStyle}" />
 
                                     <Label
-                                        Text="BillWatch hasn't found a warning or critical bill event that needs action."
+                                        Text="FullWorth hasn't found a warning or critical bill event that needs action."
                                         Style="{StaticResource BodyTextStyle}" />
 
                                 </VerticalStackLayout>
@@ -368,7 +368,7 @@
                                         Style="{StaticResource SectionTitleStyle}" />
 
                                     <Label
-                                        Text="Recurring expenses BillWatch is currently monitoring."
+                                        Text="Recurring expenses FullWorth is currently monitoring."
                                         Style="{StaticResource SmallTextStyle}" />
 
                                 </VerticalStackLayout>
@@ -417,7 +417,7 @@
                                 Style="{StaticResource PrimaryTextStyle}" />
 
                             <Label
-                                Text="Once BillWatch discovers recurring transactions, your monitored bills and changes will appear here automatically."
+                                Text="Once FullWorth discovers recurring transactions, your monitored bills and changes will appear here automatically."
                                 Style="{StaticResource BodyTextStyle}" />
 
                         </VerticalStackLayout>
@@ -436,7 +436,7 @@
                                 <VerticalStackLayout Spacing="4">
 
                                     <Label
-                                        Text="BillWatch status"
+                                        Text="FullWorth status"
                                         Style="{StaticResource SectionTitleStyle}" />
 
                                     <Label
