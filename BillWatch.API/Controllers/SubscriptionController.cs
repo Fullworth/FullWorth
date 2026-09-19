@@ -104,7 +104,7 @@ public sealed class SubscriptionController(
         {
             return Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "BillWatch could not load paid subscription plans right now.");
+                title: "FullWorth could not load paid subscription plans right now.");
         }
     }
 
@@ -127,7 +127,7 @@ public sealed class SubscriptionController(
                 new ProblemDetails
                 {
                     Status = StatusCodes.Status400BadRequest,
-                    Title = "Verify your BillWatch email before starting a paid subscription."
+                    Title = "Verify your FullWorth email before starting a paid subscription."
                 });
         }
 
@@ -137,7 +137,7 @@ public sealed class SubscriptionController(
         {
             return Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Paid subscriptions are not available in this BillWatch environment yet.");
+                title: "Paid subscriptions are not available in this FullWorth environment yet.");
         }
 
         try
@@ -179,7 +179,7 @@ public sealed class SubscriptionController(
         {
             return Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Paid subscription management is not available in this BillWatch environment yet.");
+                title: "Paid subscription management is not available in this FullWorth environment yet.");
         }
 
         try
@@ -220,7 +220,7 @@ public sealed class SubscriptionController(
         {
             return Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Paid subscriptions are not configured in this BillWatch environment yet.");
+                title: "Paid subscriptions are not configured in this FullWorth environment yet.");
         }
 
         try
@@ -236,7 +236,7 @@ public sealed class SubscriptionController(
         {
             return Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "BillWatch could not refresh the paid subscription right now.");
+                title: "FullWorth could not refresh the paid subscription right now.");
         }
     }
 

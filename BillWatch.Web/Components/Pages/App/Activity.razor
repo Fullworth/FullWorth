@@ -10,7 +10,7 @@
 @inject NavigationManager Navigation
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Activity> L
 
-<PageTitle>@L["Activity — BillWatch"]</PageTitle>
+<PageTitle>@L["Activity — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/activity-alerts.css" />
@@ -19,7 +19,7 @@
     <header class="page-heading">
         <div>
             <span class="page-kicker">
-                @L["BillWatch alerts"]
+                @L["FullWorth alerts"]
             </span>
 
             <h1>
@@ -164,11 +164,11 @@
                 </span>
 
                 <h2>
-                    @L["No BillWatch alerts yet."]
+                    @L["No FullWorth alerts yet."]
                 </h2>
 
                 <p>
-                    @L["BillWatch will surface meaningful recurring-bill changes and account issues here when evidence supports them."]
+                    @L["FullWorth will surface meaningful recurring-bill changes and account issues here when evidence supports them."]
                 </p>
             </section>
         }
@@ -339,12 +339,12 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not reach the secure API."].Value;
+                L["FullWorth could not reach the secure API."].Value;
         }
         catch (Exception)
         {
             _errorMessage =
-                L["Something went wrong while loading BillWatch activity."].Value;
+                L["Something went wrong while loading FullWorth activity."].Value;
         }
         finally
         {
@@ -542,12 +542,12 @@
         catch (JSException)
         {
             _actionError =
-                L["BillWatch could not update that alert. Try again."].Value;
+                L["FullWorth could not update that alert. Try again."].Value;
         }
         catch (Exception)
         {
             _actionError =
-                L["BillWatch could not update that alert. Try again."].Value;
+                L["FullWorth could not update that alert. Try again."].Value;
         }
         finally
         {

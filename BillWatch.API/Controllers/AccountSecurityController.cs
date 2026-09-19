@@ -263,7 +263,7 @@ public sealed class AccountSecurityController(
             new
             {
                 message =
-                    "Check your email to verify your BillWatch account."
+                    "Check your email to verify your FullWorth account."
             });
     }
 
@@ -308,7 +308,7 @@ public sealed class AccountSecurityController(
         {
             return Problem(
                 statusCode: StatusCodes.Status500InternalServerError,
-                title: "BillWatch could not create an authenticator key.");
+                title: "FullWorth could not create an authenticator key.");
         }
 
         var email = user.Email ?? string.Empty;
@@ -484,7 +484,7 @@ public sealed class AccountSecurityController(
         {
             return Problem(
                 statusCode: StatusCodes.Status500InternalServerError,
-                title: "BillWatch could not reset the authenticator key.");
+                title: "FullWorth could not reset the authenticator key.");
         }
 
         return Ok(
@@ -636,10 +636,10 @@ public sealed class AccountSecurityController(
     {
         var label =
             Uri.EscapeDataString(
-                $"BillWatch:{email}");
+                $"FullWorth:{email}");
 
         return
-            $"otpauth://totp/{label}?secret={Uri.EscapeDataString(sharedKey)}&issuer=BillWatch&digits=6";
+            $"otpauth://totp/{label}?secret={Uri.EscapeDataString(sharedKey)}&issuer=FullWorth&digits=6";
     }
 }
 

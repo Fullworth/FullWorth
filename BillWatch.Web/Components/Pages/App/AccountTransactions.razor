@@ -9,7 +9,7 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<AccountTransactions> L
 
-<PageTitle>@L["Transactions — BillWatch"]</PageTitle>
+<PageTitle>@L["Transactions — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/account-transactions.css" />
@@ -31,7 +31,7 @@
             </h1>
 
             <p>
-                @L["The connected-bank activity BillWatch uses to discover recurring bills."]
+                @L["The connected-bank activity FullWorth uses to discover recurring bills."]
             </p>
         </div>
 
@@ -275,7 +275,7 @@
         }
 
         <div class="transaction-explanation">
-            @L["Plaid reports purchase/outflow amounts as positive transaction values. BillWatch displays those as money leaving the account and credits as money returning."]
+            @L["Plaid reports purchase/outflow amounts as positive transaction values. FullWorth displays those as money leaving the account and credits as money returning."]
         </div>
     }
 </div>
@@ -420,7 +420,7 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not refresh your bank data."];
+                L["FullWorth could not refresh your bank data."];
         }
         catch (Exception)
         {
@@ -478,7 +478,7 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not reach the secure API."];
+                L["FullWorth could not reach the secure API."];
         }
         catch (Exception)
         {

@@ -15,7 +15,7 @@
 
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
-		<ApplicationTitle>BillWatch</ApplicationTitle>
+		<ApplicationTitle>FullWorth</ApplicationTitle>
 		<ApplicationId>com.companyname.billwatch</ApplicationId>
 
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

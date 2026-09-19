@@ -114,7 +114,7 @@ public sealed class LoginPageViewModel : INotifyPropertyChanged
         ? "Start monitoring recurring bills and the changes that cost you money."
         : "Sign in to continue monitoring your bills.";
     public string PrimaryActionText => IsCreateAccount ? "Create account" : "Sign in";
-    public string TogglePromptText => IsCreateAccount ? "Already have an account?" : "New to BillWatch?";
+    public string TogglePromptText => IsCreateAccount ? "Already have an account?" : "New to FullWorth?";
     public string ToggleActionText => IsCreateAccount ? "Sign in" : "Create account";
     public string PasswordHelpText => "12+ characters · uppercase · lowercase · number · symbol";
 
@@ -173,7 +173,7 @@ public sealed class LoginPageViewModel : INotifyPropertyChanged
 
         if (IsCreateAccount && !HasAcceptedTermsAndPrivacy)
         {
-            ErrorMessage = "Accept the BillWatch Terms and Privacy Notice to create an account.";
+            ErrorMessage = "Accept the FullWorth Terms and Privacy Notice to create an account.";
             return LoginPageDestination.None;
         }
 
@@ -230,7 +230,7 @@ public sealed class LoginPageViewModel : INotifyPropertyChanged
         }
         catch (HttpRequestException)
         {
-            ErrorMessage = "BillWatch could not reach the server. Check your connection and try again.";
+            ErrorMessage = "FullWorth could not reach the server. Check your connection and try again.";
             return LoginPageDestination.None;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -240,8 +240,8 @@ public sealed class LoginPageViewModel : INotifyPropertyChanged
         catch
         {
             ErrorMessage = IsCreateAccount
-                ? "BillWatch could not create your account. Please try again."
-                : "BillWatch could not sign you in. Please try again.";
+                ? "FullWorth could not create your account. Please try again."
+                : "FullWorth could not sign you in. Please try again.";
             return LoginPageDestination.None;
         }
         finally

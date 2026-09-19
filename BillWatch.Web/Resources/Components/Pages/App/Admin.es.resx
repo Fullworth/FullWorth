@@ -5,15 +5,15 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
-  <data name="Admin — BillWatch" xml:space="preserve"><value>Administración — BillWatch</value></data>
-  <data name="BillWatch operations" xml:space="preserve"><value>Operaciones de BillWatch</value></data>
+  <data name="Admin — FullWorth" xml:space="preserve"><value>Administración — FullWorth</value></data>
+  <data name="FullWorth operations" xml:space="preserve"><value>Operaciones de FullWorth</value></data>
   <data name="Admin" xml:space="preserve"><value>Administrador</value></data>
   <data name="Staff access, subscription access keys, and an evidence-limited record of administrative changes." xml:space="preserve"><value>Acceso del personal, claves de acceso de suscripción y un registro limitado de los cambios administrativos.</value></data>
   <data name="Refresh" xml:space="preserve"><value>Actualizar</value></data>
   <data name="Loading admin summary" xml:space="preserve"><value>Cargando resumen administrativo</value></data>
   <data name="Restricted surface" xml:space="preserve"><value>Área restringida</value></data>
   <data name="Admin access required" xml:space="preserve"><value>Se requiere acceso administrativo</value></data>
-  <data name="Your BillWatch session is valid, but the API did not authorize this account for the Owner/Admin console. No administrative data was loaded." xml:space="preserve"><value>Tu sesión de BillWatch es válida, pero la API no autorizó esta cuenta para la consola de Propietario/Administrador. No se cargaron datos administrativos.</value></data>
+  <data name="Your FullWorth session is valid, but the API did not authorize this account for the Owner/Admin console. No administrative data was loaded." xml:space="preserve"><value>Tu sesión de FullWorth es válida, pero la API no autorizó esta cuenta para la consola de Propietario/Administrador. No se cargaron datos administrativos.</value></data>
   <data name="We couldn't load the admin console" xml:space="preserve"><value>No pudimos cargar la consola administrativa</value></data>
   <data name="Try again" xml:space="preserve"><value>Intentar de nuevo</value></data>
   <data name="Admin summary" xml:space="preserve"><value>Resumen administrativo</value></data>
@@ -47,7 +47,7 @@
   <data name="Create access key" xml:space="preserve"><value>Crear clave de acceso</value></data>
   <data name="One-time access key" xml:space="preserve"><value>Clave de acceso de una sola visualización</value></data>
   <data name="Save this key now" xml:space="preserve"><value>Guarda esta clave ahora</value></data>
-  <data name="BillWatch stored only its hash. This plaintext value exists only in this page session and cannot be retrieved again after you dismiss it or leave." xml:space="preserve"><value>BillWatch guardó solamente su hash. Este valor de texto existe únicamente durante esta sesión de la página y no puede recuperarse después de descartarlo o salir.</value></data>
+  <data name="FullWorth stored only its hash. This plaintext value exists only in this page session and cannot be retrieved again after you dismiss it or leave." xml:space="preserve"><value>FullWorth guardó solamente su hash. Este valor de texto existe únicamente durante esta sesión de la página y no puede recuperarse después de descartarlo o salir.</value></data>
   <data name="Hide key" xml:space="preserve"><value>Ocultar clave</value></data>
   <data name="Reveal key" xml:space="preserve"><value>Mostrar clave</value></data>
   <data name="Copy key" xml:space="preserve"><value>Copiar clave</value></data>
@@ -67,15 +67,15 @@
   <data name="Actor {0}" xml:space="preserve"><value>Actor {0}</value></data>
   <data name="Target {0}" xml:space="preserve"><value>Objetivo {0}</value></data>
 
-  <data name="BillWatch could not reach the secure admin API." xml:space="preserve"><value>BillWatch no pudo comunicarse con la API administrativa segura.</value></data>
+  <data name="FullWorth could not reach the secure admin API." xml:space="preserve"><value>FullWorth no pudo comunicarse con la API administrativa segura.</value></data>
   <data name="Something went wrong while loading the admin console." xml:space="preserve"><value>Ocurrió un problema al cargar la consola administrativa.</value></data>
-  <data name="BillWatch created an invalid access-key response." xml:space="preserve"><value>BillWatch recibió una respuesta de clave de acceso no válida.</value></data>
-  <data name="BillWatch could not create the access key." xml:space="preserve"><value>BillWatch no pudo crear la clave de acceso.</value></data>
+  <data name="FullWorth created an invalid access-key response." xml:space="preserve"><value>FullWorth recibió una respuesta de clave de acceso no válida.</value></data>
+  <data name="FullWorth could not create the access key." xml:space="preserve"><value>FullWorth no pudo crear la clave de acceso.</value></data>
   <data name="Maximum redemptions must be between 1 and 10,000." xml:space="preserve"><value>El máximo de canjes debe estar entre 1 y 10,000.</value></data>
   <data name="Subscription duration must be between 1 and 3,650 days." xml:space="preserve"><value>La duración de la suscripción debe estar entre 1 y 3,650 días.</value></data>
   <data name="Lifetime key labels must be 120 characters or fewer." xml:space="preserve"><value>Las etiquetas de claves de por vida deben tener 120 caracteres o menos.</value></data>
   <data name="Key lifetime must be between 1 and 3,650 days." xml:space="preserve"><value>La vigencia de la clave debe estar entre 1 y 3,650 días.</value></data>
-  <data name="BillWatch could not revoke that access key." xml:space="preserve"><value>BillWatch no pudo revocar esa clave de acceso.</value></data>
+  <data name="FullWorth could not revoke that access key." xml:space="preserve"><value>FullWorth no pudo revocar esa clave de acceso.</value></data>
   <data name="One-time access key revealed" xml:space="preserve"><value>Clave de acceso de una sola visualización mostrada</value></data>
   <data name="One-time access key hidden" xml:space="preserve"><value>Clave de acceso de una sola visualización oculta</value></data>
   <data name="Copied" xml:space="preserve"><value>Copiada</value></data>

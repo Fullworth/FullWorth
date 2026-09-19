@@ -9,7 +9,7 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Profile> L
 
-<PageTitle>@L["Profile — BillWatch"]</PageTitle>
+<PageTitle>@L["Profile — FullWorth"]</PageTitle>
 
 <link rel="stylesheet" href="/account-settings.css" />
 
@@ -18,7 +18,7 @@
         <div>
             <span class="page-kicker">@L["Account"]</span>
             <h1>@L["Profile"]</h1>
-            <p>@L["Manage the personal information BillWatch keeps for your account."]</p>
+            <p>@L["Manage the personal information FullWorth keeps for your account."]</p>
         </div>
     </header>
 
@@ -42,7 +42,7 @@
         <div class="settings-copy">
             <span class="panel-kicker">@L["Profile"]</span>
             <h2>@L["Display name"]</h2>
-            <p>@L["This is the name BillWatch can use to personalize your account. It is optional and does not change your sign-in email."]</p>
+            <p>@L["This is the name FullWorth can use to personalize your account. It is optional and does not change your sign-in email."]</p>
         </div>
 
         @if (_security is null)
@@ -57,7 +57,7 @@
                     <input type="text"
                            autocomplete="name"
                            maxlength="80"
-                           placeholder="@L["How should BillWatch address you?"]"
+                           placeholder="@L["How should FullWorth address you?"]"
                            @bind="_displayName" />
                 </label>
 
@@ -83,7 +83,7 @@
             </div>
 
             <p class="security-note">
-                @L["BillWatch deliberately keeps this profile small. Your bank data remains separate and is not used as profile information."]
+                @L["FullWorth deliberately keeps this profile small. Your bank data remains separate and is not used as profile information."]
             </p>
         }
     </section>
@@ -117,7 +117,7 @@
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException)
         {
-            _error = L["BillWatch could not load your profile."];
+            _error = L["FullWorth could not load your profile."];
         }
         finally
         {
@@ -160,7 +160,7 @@
         catch (JSException ex)
         {
             _error = string.IsNullOrWhiteSpace(ex.Message)
-                ? L["BillWatch could not update your profile."]
+                ? L["FullWorth could not update your profile."]
                 : ex.Message;
         }
         finally

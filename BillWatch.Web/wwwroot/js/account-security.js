@@ -8,7 +8,7 @@ async function safeFetch(path, options, fallback) {
 }
 
 async function getAntiforgeryToken() {
-    const fallback = "BillWatch could not initialize a secure account update.";
+    const fallback = "FullWorth could not initialize a secure account update.";
     const response = await safeFetch(
         "/bff/antiforgery",
         {
@@ -68,7 +68,7 @@ function mapExpectedError(body, status, fallback) {
     }
 
     if (errorCodes.some(code => code.startsWith("Password", 0))) {
-        return "Your new password doesn’t meet BillWatch’s password requirements.";
+        return "Your new password doesn’t meet FullWorth’s password requirements.";
     }
 
     if (status === 429) {
@@ -159,13 +159,13 @@ async function postJson(path, body, fallback) {
 export function getAccountSecurity() {
     return getJson(
         "/bff/account/security",
-        "BillWatch could not load account security settings.");
+        "FullWorth could not load account security settings.");
 }
 
 export function getExternalIdentityStatus() {
     return getJson(
         "/bff/account/external",
-        "BillWatch could not load linked sign-in methods.");
+        "FullWorth could not load linked sign-in methods.");
 }
 
 const settingsToastObservers = new WeakMap();
@@ -390,11 +390,11 @@ function exposeExternalLinkRecoveryCodeFallback() {
 async function beginExternalIdentityUnlink(provider) {
     const displayName = getExternalProviderDisplayName(provider);
 
-    if (!window.confirm(`Remove ${displayName} as a BillWatch sign-in method?`)) {
+    if (!window.confirm(`Remove ${displayName} as a FullWorth sign-in method?`)) {
         return;
     }
 
-    const currentPassword = window.prompt("Enter your current BillWatch password to continue.");
+    const currentPassword = window.prompt("Enter your current FullWorth password to continue.");
 
     if (!currentPassword) {
         return;
@@ -408,10 +408,10 @@ async function beginExternalIdentityUnlink(provider) {
 
         if (security?.twoFactorEnabled === true) {
             twoFactorCode = window.prompt(
-                "Enter your current BillWatch authenticator code, or leave this blank to use a recovery code.");
+                "Enter your current FullWorth authenticator code, or leave this blank to use a recovery code.");
 
             if (!twoFactorCode) {
-                twoFactorRecoveryCode = window.prompt("Enter one unused BillWatch recovery code.");
+                twoFactorRecoveryCode = window.prompt("Enter one unused FullWorth recovery code.");
 
                 if (!twoFactorRecoveryCode) {
                     return;
@@ -424,10 +424,10 @@ async function beginExternalIdentityUnlink(provider) {
             currentPassword,
             twoFactorCode,
             twoFactorRecoveryCode);
-        window.alert(`${displayName} was removed from your BillWatch sign-in methods.`);
+        window.alert(`${displayName} was removed from your FullWorth sign-in methods.`);
     }
     catch {
-        window.alert("BillWatch could not remove this sign-in method. Check your credentials and try again.");
+        window.alert("FullWorth could not remove this sign-in method. Check your credentials and try again.");
     }
 }
 
@@ -491,7 +491,7 @@ export function updateProfile(displayName) {
         {
             displayName: displayName || null
         },
-        "BillWatch could not update your profile.");
+        "FullWorth could not update your profile.");
 }
 
 export function changePassword(currentPassword, newPassword, twoFactorCode) {
@@ -540,7 +540,7 @@ export async function linkExternalIdentity(
             twoFactorCode: secondFactor.twoFactorCode,
             twoFactorRecoveryCode: secondFactor.twoFactorRecoveryCode
         },
-        "BillWatch could not link this sign-in method. Start the provider link again and try again.");
+        "FullWorth could not link this sign-in method. Start the provider link again and try again.");
 
     await refreshExternalIdentityStatusUi();
     return result;
@@ -559,7 +559,7 @@ export async function unlinkExternalIdentity(
             twoFactorCode: twoFactorCode || null,
             twoFactorRecoveryCode: twoFactorRecoveryCode || null
         },
-        "BillWatch could not remove this sign-in method.");
+        "FullWorth could not remove this sign-in method.");
 
     await refreshExternalIdentityStatusUi();
     return result;

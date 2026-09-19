@@ -10,7 +10,7 @@
 @inject NavigationManager Navigation
 @inject Microsoft.Extensions.Localization.IStringLocalizer<AccountPrivacy> L
 
-<PageTitle>@L["Data & Privacy — BillWatch"]</PageTitle>
+<PageTitle>@L["Data & Privacy — FullWorth"]</PageTitle>
 
 <link rel="stylesheet" href="/account-privacy.css" />
 
@@ -23,7 +23,7 @@
         <div>
             <span class="page-kicker">@L["Your data"]</span>
             <h1>@L["Data & privacy"]</h1>
-            <p>@L["Export the BillWatch data associated with your account or permanently delete it."]</p>
+            <p>@L["Export the FullWorth data associated with your account or permanently delete it."]</p>
         </div>
     </header>
 
@@ -39,8 +39,8 @@
 
         <div class="privacy-management-copy">
             <span class="panel-kicker">@L["Portable data"]</span>
-            <h2>@L["Export your BillWatch data"]</h2>
-            <p>@L["Download a JSON copy of the financial records BillWatch stores for your account."]</p>
+            <h2>@L["Export your FullWorth data"]</h2>
+            <p>@L["Download a JSON copy of the financial records FullWorth stores for your account."]</p>
 
             <div class="privacy-facts">
                 <span>✓ @L["Bank connections and masked accounts"]</span>
@@ -61,11 +61,11 @@
 
     <section class="privacy-explanation-card">
         <div>
-            <span class="panel-kicker">@L["What BillWatch keeps"]</span>
+            <span class="panel-kicker">@L["What FullWorth keeps"]</span>
             <h2>@L["Data exists to explain your bills."]</h2>
         </div>
 
-        <p>@L["Transactions are used to discover recurring bills. Statements and extracted line items provide evidence for what changed and why. Alerts surface meaningful findings. BillWatch does not use this data to move money."]</p>
+        <p>@L["Transactions are used to discover recurring bills. Statements and extracted line items provide evidence for what changed and why. Alerts surface meaningful findings. FullWorth does not use this data to move money."]</p>
     </section>
 
     <section class="danger-zone">
@@ -74,20 +74,20 @@
 
             <div>
                 <span class="danger-kicker">@L["Danger zone"]</span>
-                <h2>@L["Permanently delete BillWatch"]</h2>
+                <h2>@L["Permanently delete FullWorth"]</h2>
             </div>
         </div>
 
-        <p>@L["Account deletion attempts to revoke active bank connections first. If BillWatch cannot safely revoke one of them, deletion stops rather than claiming your account was removed."]</p>
+        <p>@L["Account deletion attempts to revoke active bank connections first. If FullWorth cannot safely revoke one of them, deletion stops rather than claiming your account was removed."]</p>
 
         <div class="delete-consequences">
             <strong>@L["Permanent deletion removes:"]</strong>
             <span>@L["Financial connections and account records"]</span>
             <span>@L["Imported bank transactions"]</span>
             <span>@L["Bill Streams, statements, line items and changes"]</span>
-            <span>@L["BillWatch alerts and stored statement files"]</span>
+            <span>@L["FullWorth alerts and stored statement files"]</span>
             <span>@L["Subscription entitlements and program memberships"]</span>
-            <span>@L["Your BillWatch Identity account"]</span>
+            <span>@L["Your FullWorth Identity account"]</span>
         </div>
 
         @if (!_showDeleteConfirmation)
@@ -201,17 +201,17 @@
             await module.InvokeAsync<bool>("downloadAccountExport");
 
             _messageSucceeded = true;
-            _message = L["Your BillWatch data export was prepared securely."];
+            _message = L["Your FullWorth data export was prepared securely."];
         }
         catch (JSException)
         {
             _messageSucceeded = false;
-            _message = L["BillWatch could not prepare your data export."];
+            _message = L["FullWorth could not prepare your data export."];
         }
         catch (Exception)
         {
             _messageSucceeded = false;
-            _message = L["BillWatch could not prepare your data export."];
+            _message = L["FullWorth could not prepare your data export."];
         }
         finally
         {
@@ -277,7 +277,7 @@
         catch (Exception)
         {
             _messageSucceeded = false;
-            _message = L["BillWatch could not safely complete account deletion. Your account was not deleted."];
+            _message = L["FullWorth could not safely complete account deletion. Your account was not deleted."];
         }
         finally
         {
@@ -311,7 +311,7 @@
 
         if (string.IsNullOrWhiteSpace(message))
         {
-            return L["BillWatch could not safely complete this request."];
+            return L["FullWorth could not safely complete this request."];
         }
 
         if (message.Contains(
@@ -339,17 +339,17 @@
                 "bank connection could not be revoked",
                 StringComparison.OrdinalIgnoreCase))
         {
-            return L["BillWatch could not safely revoke a connected bank, so your account was not deleted. Try again shortly."];
+            return L["FullWorth could not safely revoke a connected bank, so your account was not deleted. Try again shortly."];
         }
 
         if (message.Contains(
                 "stored statement",
                 StringComparison.OrdinalIgnoreCase))
         {
-            return L["BillWatch could not securely remove all stored statement files, so your account was not deleted."];
+            return L["FullWorth could not securely remove all stored statement files, so your account was not deleted."];
         }
 
-        return L["BillWatch could not safely complete account deletion. Your account was not deleted."];
+        return L["FullWorth could not safely complete account deletion. Your account was not deleted."];
     }
 
     public async ValueTask DisposeAsync()

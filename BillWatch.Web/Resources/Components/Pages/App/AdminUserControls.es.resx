@@ -26,8 +26,8 @@
   <data name="Remove {0} role" xml:space="preserve"><value>Quitar el rol {0}</value></data>
   <data name="Add {0} membership" xml:space="preserve"><value>Agregar membresía de {0}</value></data>
   <data name="Remove {0} membership" xml:space="preserve"><value>Quitar membresía de {0}</value></data>
-  <data name="BillWatch blocked that change because your staff role cannot manage this account." xml:space="preserve"><value>BillWatch bloqueó ese cambio porque tu rol de personal no puede administrar esta cuenta.</value></data>
-  <data name="BillWatch could not complete that administrative change." xml:space="preserve"><value>BillWatch no pudo completar ese cambio administrativo.</value></data>
+  <data name="FullWorth blocked that change because your staff role cannot manage this account." xml:space="preserve"><value>FullWorth bloqueó ese cambio porque tu rol de personal no puede administrar esta cuenta.</value></data>
+  <data name="FullWorth could not complete that administrative change." xml:space="preserve"><value>FullWorth no pudo completar ese cambio administrativo.</value></data>
   <data name="Owner" xml:space="preserve"><value>Propietario</value></data>
   <data name="Admin" xml:space="preserve"><value>Administrador</value></data>
   <data name="Moderator" xml:space="preserve"><value>Moderador</value></data>

@@ -25,7 +25,7 @@ public sealed class IdentityEmailOptions
     {
         get;
         set;
-    } = "BillWatch";
+    } = "FullWorth";
 
     public string PublicWebBaseUrl
     {

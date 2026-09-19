@@ -220,7 +220,7 @@ public sealed class BillWatchApiClient
 
             throw new HttpRequestException(
                 error?.Message
-                ?? "BillWatch could not upload this statement.",
+                ?? "FullWorth could not upload this statement.",
                 null,
                 response.StatusCode);
         }
@@ -384,7 +384,7 @@ public sealed class BillWatchApiClient
                 result.HostedLinkUrl))
         {
             throw new InvalidOperationException(
-                "BillWatch did not receive a valid Plaid Link session.");
+                "FullWorth did not receive a valid Plaid Link session.");
         }
 
         return result;
@@ -432,7 +432,7 @@ public sealed class BillWatchApiClient
                 result.HostedLinkUrl))
         {
             throw new InvalidOperationException(
-                "BillWatch did not receive a valid Plaid update session.");
+                "FullWorth did not receive a valid Plaid update session.");
         }
 
         return result;
@@ -465,7 +465,7 @@ public sealed class BillWatchApiClient
 
         return result
             ?? throw new InvalidOperationException(
-                "BillWatch did not receive the Plaid Link session status.");
+                "FullWorth did not receive the Plaid Link session status.");
     }
 
     public async Task<PlaidConnectionResult>
@@ -502,7 +502,7 @@ public sealed class BillWatchApiClient
 
         return result
             ?? throw new InvalidOperationException(
-                "BillWatch did not receive the saved bank connection.");
+                "FullWorth did not receive the saved bank connection.");
     }
 
     private static HttpRequestMessage

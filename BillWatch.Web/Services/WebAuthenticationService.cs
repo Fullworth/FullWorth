@@ -117,7 +117,7 @@ public sealed class WebAuthenticationService
         {
             return new AuthOperationResult(
                 false,
-                "BillWatch received an invalid sign-in response.");
+                "FullWorth received an invalid sign-in response.");
         }
 
         await SignInWebSessionAsync(
@@ -200,13 +200,13 @@ public sealed class WebAuthenticationService
         {
             return new AuthOperationResult(
                 false,
-                "BillWatch received an invalid external sign-in response.");
+                "FullWorth received an invalid external sign-in response.");
         }
 
         await SignInWebSessionAsync(
             httpContext,
             displayName:
-                email ?? "BillWatch user",
+                email ?? "FullWorth user",
             nameIdentifier:
                 $"{provider}:{providerSubject}",
             email,
@@ -298,7 +298,7 @@ public sealed class WebAuthenticationService
             response.StatusCode ==
                 HttpStatusCode.TooManyRequests
                 ? "Too many recovery attempts. Wait a minute and try again."
-                : "BillWatch could not send a recovery email right now.");
+                : "FullWorth could not send a recovery email right now.");
     }
 
     public async Task<AuthOperationResult>
@@ -600,7 +600,7 @@ public sealed class WebAuthenticationService
                 "Too many sign-in attempts. Wait a minute and try again.",
 
             _ =>
-                "BillWatch could not sign you in right now."
+                "FullWorth could not sign you in right now."
         };
     }
 
@@ -706,7 +706,7 @@ public sealed class WebAuthenticationService
                 body))
         {
             return
-                "BillWatch could not create the account.";
+                "FullWorth could not create the account.";
         }
 
         try
@@ -783,7 +783,7 @@ public sealed class WebAuthenticationService
         }
 
         return
-            "BillWatch could not create the account. Check the information and try again.";
+            "FullWorth could not create the account. Check the information and try again.";
     }
 }
 

@@ -207,7 +207,7 @@ public static class AuthEndpointMappings
                         "/register?error=" +
                         Uri.EscapeDataString(
                             localizer[
-                                "Accept the current BillWatch Terms and Privacy Notice to create an account."]));
+                                "Accept the current FullWorth Terms and Privacy Notice to create an account."]));
                 }
 
                 var result =

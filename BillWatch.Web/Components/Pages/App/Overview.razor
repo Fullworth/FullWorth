@@ -11,7 +11,7 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Overview> L
 
-<PageTitle>@L["Overview — BillWatch"]</PageTitle>
+<PageTitle>@L["Overview — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/onboarding.css" />
@@ -77,7 +77,7 @@
 
             <div>
                 <h2>
-                    @L["We couldn't load your BillWatch overview"]
+                    @L["We couldn't load your FullWorth overview"]
                 </h2>
 
                 <p>
@@ -107,7 +107,7 @@
                     </h2>
 
                     <p>
-                        @L["BillWatch has stopped automatic synchronization for the affected connection until it can be reauthorized."]
+                        @L["FullWorth has stopped automatic synchronization for the affected connection until it can be reauthorized."]
                     </p>
 
                     <a class="onboarding-primary-action"
@@ -127,7 +127,7 @@
                     </strong>
 
                     <span>
-                        @L["Your existing BillWatch records remain available."]
+                        @L["Your existing FullWorth records remain available."]
                     </span>
                 </div>
             </section>
@@ -141,11 +141,11 @@
                     </span>
 
                     <h2>
-                        @L["Connect your bank once. BillWatch handles the rest."]
+                        @L["Connect your bank once. FullWorth handles the rest."]
                     </h2>
 
                     <p>
-                        @L["BillWatch uses transaction history to discover recurring bills automatically. Your bank credentials are handled by Plaid, not entered into BillWatch."]
+                        @L["FullWorth uses transaction history to discover recurring bills automatically. Your bank credentials are handled by Plaid, not entered into BillWatch."]
                     </p>
 
                     <div class="onboarding-trust">
@@ -214,7 +214,7 @@
                             </strong>
 
                             <small>
-                                @L["BillWatch keeps monitoring automatically"]
+                                @L["FullWorth keeps monitoring automatically"]
                             </small>
                         </div>
                     </div>
@@ -232,11 +232,11 @@
                 </span>
 
                 <h2>
-                    @L["BillWatch is preparing your first scan."]
+                    @L["FullWorth is preparing your first scan."]
                 </h2>
 
                 <p>
-                    @L["Your connection is active and immediately eligible for the automatic monitoring pipeline. BillWatch will synchronize accounts and transactions, then run deterministic recurring-bill discovery."]
+                    @L["Your connection is active and immediately eligible for the automatic monitoring pipeline. FullWorth will synchronize accounts and transactions, then run deterministic recurring-bill discovery."]
                 </p>
 
                 <div class="automatic-monitoring-note">
@@ -318,7 +318,7 @@
                 </h2>
 
                 <p>
-                    @L["BillWatch has successfully synchronized your connection, but the available transaction history does not currently support a recurring Bill Stream. It will keep checking automatically as new transactions arrive."]
+                    @L["FullWorth has successfully synchronized your connection, but the available transaction history does not currently support a recurring Bill Stream. It will keep checking automatically as new transactions arrive."]
                 </p>
 
                 @if (LatestSuccessfulSync is not null)
@@ -366,7 +366,7 @@
                 </strong>
 
                 <span>
-                    @L["BillWatch only creates a recurring bill when the evidence supports it."]
+                    @L["FullWorth only creates a recurring bill when the evidence supports it."]
                 </span>
             </div>
         </section>
@@ -386,7 +386,7 @@
                     </strong>
 
                     <span>
-                        @L["BillWatch can continue showing existing data, but that connection will not refresh until it is repaired."]
+                        @L["FullWorth can continue showing existing data, but that connection will not refresh until it is repaired."]
                     </span>
                 </div>
 
@@ -396,7 +396,7 @@
             </div>
         }
 
-        <section class="overview-intro" aria-label="@L["BillWatch status"]">
+        <section class="overview-intro" aria-label="@L["FullWorth status"]">
             <div class="overview-intro-copy">
                 <span class="overview-status-label">
                     <span class="overview-status-dot" aria-hidden="true"></span>
@@ -436,7 +436,7 @@
                 {
                     <strong>@L["Not yet available"]</strong>
                 }
-                <small>@L["BillWatch checks for changes as new transactions arrive."]</small>
+                <small>@L["FullWorth checks for changes as new transactions arrive."]</small>
             </div>
         </section>
 
@@ -599,7 +599,7 @@
                     </div>
 
                     <p class="evidence-note">
-                        @L["Transaction history confirms that the amount changed. Provider evidence is needed before BillWatch can responsibly explain why."]
+                        @L["Transaction history confirms that the amount changed. Provider evidence is needed before FullWorth can responsibly explain why."]
                     </p>
 
                     <a class="primary-action"
@@ -778,12 +778,12 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not reach the secure API. Try again in a moment."].Value;
+                L["FullWorth could not reach the secure API. Try again in a moment."].Value;
         }
         catch (Exception)
         {
             _errorMessage =
-                L["Something went wrong while loading your BillWatch overview."].Value;
+                L["Something went wrong while loading your FullWorth overview."].Value;
         }
         finally
         {

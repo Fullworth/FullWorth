@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Subscription> L
 
-<PageTitle>@L["Subscription — BillWatch"]</PageTitle>
+<PageTitle>@L["Subscription — FullWorth"]</PageTitle>
 <link rel="stylesheet" href="/subscription.css" />
 
 <div class="app-page subscription-page">
@@ -22,7 +22,7 @@
 
     <header class="page-heading subscription-heading">
         <div>
-            <span class="page-kicker">@L["BillWatch access"]</span>
+            <span class="page-kicker">@L["FullWorth access"]</span>
             <h1>@L["Subscription"]</h1>
             <p>@L["Choose monthly or yearly access, manage an existing paid plan, or redeem a beta access key."]</p>
         </div>
@@ -35,7 +35,7 @@
                 <span class="subscription-loading-ring" aria-hidden="true"></span>
                 <div>
                     <strong>@L["Checking your access"]</strong>
-                    <p>@L["BillWatch is verifying the subscription attached to this account."]</p>
+                    <p>@L["FullWorth is verifying the subscription attached to this account."]</p>
                 </div>
             </div>
         </section>
@@ -50,9 +50,9 @@
 
                     <div>
                         <span class="subscription-state active">@L["Active"]</span>
-                        <h2>@L["BillWatch access is active"]</h2>
+                        <h2>@L["FullWorth access is active"]</h2>
                         <p>
-                            @L["{0} access", _status.Tier ?? "BillWatch"]
+                            @L["{0} access", _status.Tier ?? "FullWorth"]
                             @if (!string.IsNullOrWhiteSpace(_status.Source))
                             {
                                 <text> · @_status.Source</text>
@@ -99,7 +99,7 @@
 
                 <div class="subscription-actions-row">
                     <a class="subscription-action secondary" href="/app">
-                        @L["Continue to BillWatch"]
+                        @L["Continue to FullWorth"]
                     </a>
 
                     @if (_status.IsPaid && _status.BillingAvailable)
@@ -185,7 +185,7 @@
                     <div class="subscription-card-icon" aria-hidden="true">◇</div>
                     <div>
                         <span class="subscription-state">@L["Paid plans not configured"]</span>
-                        <h2>@L["BillWatch paid checkout is not available yet"]</h2>
+                        <h2>@L["FullWorth paid checkout is not available yet"]</h2>
                         <p>@L["This environment is still using controlled beta access. No payment button is shown until real billing is configured."]</p>
                     </div>
                 </div>
@@ -221,7 +221,7 @@
                         </button>
                     </div>
 
-                    <small>@L["Access keys are redeemed once and attached securely to your BillWatch account."]</small>
+                    <small>@L["Access keys are redeemed once and attached securely to your FullWorth account."]</small>
                 </div>
             </section>
         }
@@ -292,7 +292,7 @@
 
                     if (_status?.IsActive == true && _status.IsPaid)
                     {
-                        SetMessage(L["Your paid BillWatch access is active."], succeeded: true);
+                        SetMessage(L["Your paid FullWorth access is active."], succeeded: true);
                     }
                     else
                     {
@@ -304,7 +304,7 @@
                 catch (JSException)
                 {
                     SetMessage(
-                        L["BillWatch could not confirm paid access yet. Refresh this page shortly."],
+                        L["FullWorth could not confirm paid access yet. Refresh this page shortly."],
                         succeeded: false);
                 }
             }
@@ -320,7 +320,7 @@
         }
         catch (JSException ex)
         {
-            SetMessage(GetSafeJsMessage(ex, L["BillWatch could not load your subscription status."]), succeeded: false);
+            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not load your subscription status."]), succeeded: false);
         }
         finally
         {
@@ -365,7 +365,7 @@
         }
         catch (JSException ex)
         {
-            SetMessage(GetSafeJsMessage(ex, L["BillWatch could not start secure checkout."]), succeeded: false);
+            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not start secure checkout."]), succeeded: false);
             _working = false;
             StateHasChanged();
         }
@@ -387,7 +387,7 @@
         }
         catch (JSException ex)
         {
-            SetMessage(GetSafeJsMessage(ex, L["BillWatch could not open subscription management."]), succeeded: false);
+            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not open subscription management."]), succeeded: false);
             _working = false;
             StateHasChanged();
         }
@@ -413,7 +413,7 @@
 
             _accessKey = string.Empty;
             await RefreshAsync();
-            SetMessage(L["Your BillWatch access is active."], succeeded: true);
+            SetMessage(L["Your FullWorth access is active."], succeeded: true);
         }
         catch (JSException ex)
         {

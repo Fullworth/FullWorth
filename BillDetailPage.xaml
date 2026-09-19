@@ -305,7 +305,7 @@
                                 Style="{StaticResource PrimaryTextStyle}" />
 
                             <Label
-                                Text="BillWatch is watching this bill and will surface important changes when there is evidence for them."
+                                Text="FullWorth is watching this bill and will surface important changes when there is evidence for them."
                                 Style="{StaticResource BodyTextStyle}" />
 
                         </VerticalStackLayout>
