@@ -59,6 +59,11 @@ public static class BffEndpointMappings
             await proxy.ForwardGetAsync(context, "/api/bank-connections", context.RequestAborted));
         bff.MapGet("/bank-transactions", async (HttpContext context, BillWatchBffProxyService proxy, int? take) =>
             await proxy.ForwardGetAsync(context, $"/api/bank-transactions?take={Math.Clamp(take ?? 100, 1, 500)}", context.RequestAborted));
+        bff.MapPost("/bill-monitoring/refresh", async (HttpContext context, IAntiforgery antiforgery, BillWatchBffProxyService proxy) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+            return await proxy.ForwardPostAsync(context, "/api/bill-monitoring/refresh", false, context.RequestAborted);
+        });
         bff.MapGet("/alerts", async (HttpContext context, BillWatchBffProxyService proxy, bool? includeDismissed, bool? unreadOnly, int? take) =>
         {
             var requestUri = "/api/alerts" +
