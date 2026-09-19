@@ -39,7 +39,7 @@
                     Spacing="0">
 
                     <Label
-                        Text="BillWatch"
+                        Text="FullWorth"
                         FontSize="22"
                         FontAttributes="Bold"
                         Style="{StaticResource PrimaryTextStyle}" />
