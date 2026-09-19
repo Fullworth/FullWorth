@@ -1,6 +1,6 @@
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Services.Statements;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementAiPrivateCorpusPathPolicyTests
 {
@@ -10,7 +10,7 @@ public sealed class BillStatementAiPrivateCorpusPathPolicyTests
         var root =
             Path.Combine(
                 Path.GetTempPath(),
-                "BillWatchAiCorpusRoot");
+                "FullWorthAiCorpusRoot");
 
         var statementPath =
             BillStatementAiPrivateCorpusPathPolicy

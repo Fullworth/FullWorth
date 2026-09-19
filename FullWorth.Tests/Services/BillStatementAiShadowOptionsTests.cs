@@ -1,7 +1,7 @@
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Services.Statements;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementAiShadowOptionsTests
 {

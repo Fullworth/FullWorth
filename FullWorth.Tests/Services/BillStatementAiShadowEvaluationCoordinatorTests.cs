@@ -1,10 +1,10 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementAiShadowEvaluationCoordinatorTests
 {
@@ -304,7 +304,7 @@ public sealed class BillStatementAiShadowEvaluationCoordinatorTests
     }
 
     private static BillStatementAiShadowEvaluationCoordinator CreateCoordinator(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         IBillStatementAiExtractor aiExtractor,
         bool shadowEnabled = true,
         bool providerEnabled = true)
@@ -416,17 +416,17 @@ public sealed class BillStatementAiShadowEvaluationCoordinatorTests
                 BillStatementAiModelConfidence.High);
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     $"ai-shadow-coordinator-{Guid.NewGuid():N}")
                 .Options);
     }
 
     private static async Task<Guid> AddUploadAsync(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId)
     {
         var upload =
