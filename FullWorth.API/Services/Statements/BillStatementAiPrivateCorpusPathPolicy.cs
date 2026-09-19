@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Path boundary for a future, offline-only ground-truth corpus runner.

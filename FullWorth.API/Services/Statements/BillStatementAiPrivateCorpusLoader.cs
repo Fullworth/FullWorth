@@ -2,13 +2,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Bounded loader for an offline-only, private ground-truth corpus.
  *
  * The returned case contains sensitive statement data in memory. Callers
- * must never log it, persist it through the BillWatch database, or expose it
+ * must never log it, persist it through the FullWorth database, or expose it
  * through an API response. This loader is intentionally not registered.
  */
 public sealed class BillStatementAiPrivateCorpusLoader

@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * No-spend corpus coverage gate.

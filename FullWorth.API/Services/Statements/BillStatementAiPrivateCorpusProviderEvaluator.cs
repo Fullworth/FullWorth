@@ -1,4 +1,4 @@
-﻿namespace BillWatch.API.Services.Statements;
+﻿namespace FullWorth.API.Services.Statements;
 
 /*
  * Offline-only provider evaluator for an explicitly approved private
@@ -12,7 +12,7 @@
  * - validates every selected corpus case before any provider call
  * - requires the existing aggregate coverage gate to pass first
  * - makes at most one provider call per selected case
- * - validates model output through BillWatch's deterministic trust boundary
+ * - validates model output through FullWorth's deterministic trust boundary
  * - treats rejected AI candidates as unusable rather than trusted facts
  * - stores nothing
  * - logs nothing
@@ -217,7 +217,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 /*
                  * A provider response is still untrusted candidate data.
                  *
-                 * It must pass BillWatch's existing deterministic evidence
+                 * It must pass FullWorth's existing deterministic evidence
                  * and candidate validation boundary before it may count as
                  * an extraction result in the evaluation.
                  */
@@ -236,7 +236,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * A rejected candidate is intentionally not classified as a
                  * provider transport failure.
                  *
-                 * The provider did respond; BillWatch rejected its candidate.
+                 * The provider did respond; FullWorth rejected its candidate.
                  * That should reduce recall/readiness instead of disguising
                  * the trust-boundary rejection as network instability.
                  */

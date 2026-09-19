@@ -1,6 +1,6 @@
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Composes deterministic-first shadow evaluation with the durable attempt

@@ -1,4 +1,4 @@
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 /*
  * Deterministically scores an in-memory ground-truth corpus and emits only
