@@ -1,24 +1,24 @@
 using System.Security.Claims;
-using BillWatch.API.Data;
+using FullWorth.API.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
 public sealed class ActiveSubscriptionRequirement
     : IAuthorizationRequirement;
 
 public sealed class ActiveSubscriptionAuthorizationHandler(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     TimeProvider timeProvider,
     IConfiguration configuration,
     SubscriptionAuthorizationTelemetry telemetry)
     : AuthorizationHandler<ActiveSubscriptionRequirement>
 {
     public ActiveSubscriptionAuthorizationHandler(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         TimeProvider timeProvider)
         : this(
             dbContext,

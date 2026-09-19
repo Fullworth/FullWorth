@@ -1,6 +1,6 @@
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
-public static class BillWatchRoles
+public static class FullWorthRoles
 {
     public const string Owner = "Owner";
 

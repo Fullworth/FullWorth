@@ -1,4 +1,4 @@
-﻿namespace BillWatch.API
+﻿namespace FullWorth.API
 {
     public class ApiAssemblyMarker
     {

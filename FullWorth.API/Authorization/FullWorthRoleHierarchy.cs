@@ -1,15 +1,15 @@
-namespace BillWatch.API.Authorization;
+namespace FullWorth.API.Authorization;
 
-public static class BillWatchRoleHierarchy
+public static class FullWorthRoleHierarchy
 {
     public static int GetRank(
         string? roleName)
     {
         return roleName switch
         {
-            BillWatchRoles.Owner => 300,
-            BillWatchRoles.Admin => 200,
-            BillWatchRoles.Moderator => 100,
+            FullWorthRoles.Owner => 300,
+            FullWorthRoles.Admin => 200,
+            FullWorthRoles.Moderator => 100,
             _ => 0
         };
     }
@@ -18,9 +18,9 @@ public static class BillWatchRoleHierarchy
         string actorRole,
         string targetRole)
     {
-        if (!BillWatchRoles.IsStaffRole(
+        if (!FullWorthRoles.IsStaffRole(
                 actorRole) ||
-            !BillWatchRoles.IsStaffRole(
+            !FullWorthRoles.IsStaffRole(
                 targetRole))
         {
             return false;
@@ -34,7 +34,7 @@ public static class BillWatchRoleHierarchy
          */
         if (string.Equals(
                 targetRole,
-                BillWatchRoles.Owner,
+                FullWorthRoles.Owner,
                 StringComparison.Ordinal))
         {
             return false;
@@ -48,7 +48,7 @@ public static class BillWatchRoleHierarchy
         string actorRole,
         string? targetHighestRole)
     {
-        if (!BillWatchRoles.IsStaffRole(
+        if (!FullWorthRoles.IsStaffRole(
                 actorRole))
         {
             return false;
