@@ -1,12 +1,12 @@
-# BillWatch
+# FullWorth
 
-BillWatch is a transaction-first bill-intelligence product built with .NET 10, .NET MAUI, ASP.NET Core, PostgreSQL, and Plaid.
+FullWorth is a transaction-first bill-intelligence product built with .NET 10, .NET MAUI, ASP.NET Core, PostgreSQL, and Plaid.
 
 Its core promise is: **Know when your bills change — and why.**
 
 ## Development status
 
-Active development integrates through the `development` branch and is promoted to `master` only after the release candidate passes the complete CI gate. Pull request #81 established the current hardened development baseline and passed BillWatch CI #513 on exact head `014ac49064eaa17da68262d39d7d5d4023a6d1bc` before merge.
+Active development integrates through the `development` branch and is promoted to `master` only after the release candidate passes the complete CI gate. Pull request #81 established the current hardened development baseline and passed FullWorth CI #513 on exact head `014ac49064eaa17da68262d39d7d5d4023a6d1bc` before merge.
 
 The CI gate now contains three independent jobs:
 
@@ -156,26 +156,26 @@ sudo systemctl status billwatch-backup.service --no-pager
 
 The first real-host recovery drill must still be performed before beta invitations. Restore to a separate clean host, keep public traffic disabled, use the matching application release, verify protected Plaid data can be decrypted and statement files can be downloaded, and only then treat the backup gate as closed. Never restore directly over a running production stack.
 
-Repository retention is explicit and opt-in. Before beta, configure at least 14 daily, 8 weekly, 12 monthly, and 3 yearly completed snapshots, then verify the policy with `sh deploy/check-backup-policy.sh /opt/billwatch`. BillWatch refuses lower enabled retention floors before invoking Restic pruning.
+Repository retention is explicit and opt-in. Before beta, configure at least 14 daily, 8 weekly, 12 monthly, and 3 yearly completed snapshots, then verify the policy with `sh deploy/check-backup-policy.sh /opt/billwatch`. FullWorth refuses lower enabled retention floors before invoking Restic pruning.
 
-Repository retention is not the same as immutable recovery. Keep the Restic password and backend recovery credentials in a separate password vault or recovery escrow, not only in `.env.production` on the server. Configure immutable/Object-Lock/WORM or append-only retention at the off-host storage provider and test recovery from that protected storage. Use separate backup-write and retention-delete credentials where the provider supports them, so compromise of the application host cannot erase every recovery point. If the provider's immutable retention rejects Restic pruning, keep BillWatch's automatic pruning disabled and use a tested provider-side lifecycle/retention policy instead; do not weaken immutability merely to make prune succeed.
+Repository retention is not the same as immutable recovery. Keep the Restic password and backend recovery credentials in a separate password vault or recovery escrow, not only in `.env.production` on the server. Configure immutable/Object-Lock/WORM or append-only retention at the off-host storage provider and test recovery from that protected storage. Use separate backup-write and retention-delete credentials where the provider supports them, so compromise of the application host cannot erase every recovery point. If the provider's immutable retention rejects Restic pruning, keep FullWorth's automatic pruning disabled and use a tested provider-side lifecycle/retention policy instead; do not weaken immutability merely to make prune succeed.
 
 Backup failure alerting is also explicit and fail-closed for beta readiness. Configure `BILLWATCH_OPERATIONS_ALERTING_ENABLED=true` with a private HTTPS `BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL`, verify local systemd wiring with `sh deploy/check-operations-alerting.sh /opt/billwatch`, and send one manual `readiness-test` event before invitations. The alert sender exposes only fixed operational metadata and keeps the private webhook URL out of process arguments.
 
-A restored snapshot represents the state at its recovery timestamp. Before reopening traffic, reconcile account and statement deletions that occurred after that timestamp against an external deletion/audit record so recovery does not unintentionally resurrect data a user asked BillWatch to remove.
+A restored snapshot represents the state at its recovery timestamp. Before reopening traffic, reconcile account and statement deletions that occurred after that timestamp against an external deletion/audit record so recovery does not unintentionally resurrect data a user asked FullWorth to remove.
 
 Production credentials, `.env.production`, raw statements, extracted statement text, database dumps, and AI evaluation corpora must never be committed.
 
 ## External readiness monitoring
 
-The `BillWatch Production Readiness` GitHub Actions workflow probes production from outside the deployment host every 15 minutes. It remains skipped until the repository variable `BILLWATCH_PRODUCTION_URL` is set to the hostname-only HTTPS origin, for example `https://api.billbeacon.net`.
+The `FullWorth Production Readiness` GitHub Actions workflow probes production from outside the deployment host every 15 minutes. It remains skipped until the repository variable `BILLWATCH_PRODUCTION_URL` is set to the hostname-only HTTPS origin, for example `https://api.billbeacon.net`.
 
-The probe rejects credentials, ports, paths, redirects, local/internal hostnames, and DNS results in private, loopback, or link-local address ranges. It performs three bounded HTTPS attempts and accepts only BillWatch's exact readiness response. No application credential or API key is sent.
+The probe rejects credentials, ports, paths, redirects, local/internal hostnames, and DNS results in private, loopback, or link-local address ranges. It performs three bounded HTTPS attempts and accepts only FullWorth's exact readiness response. No application credential or API key is sent.
 
 After the hostname is configured:
 
 1. Set the repository Actions variable `BILLWATCH_PRODUCTION_URL`.
-2. Run `BillWatch Production Readiness` manually and confirm it passes.
+2. Run `FullWorth Production Readiness` manually and confirm it passes.
 3. Temporarily stop the API or make readiness fail, run the workflow again, and confirm GitHub records a failed run and the operations account receives its configured Actions notification.
 4. Restore the API and confirm the next manual probe passes.
 
