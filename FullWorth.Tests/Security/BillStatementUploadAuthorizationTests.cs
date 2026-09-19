@@ -2,17 +2,17 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BillStatementUploadAuthorizationTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public BillStatementUploadAuthorizationTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;

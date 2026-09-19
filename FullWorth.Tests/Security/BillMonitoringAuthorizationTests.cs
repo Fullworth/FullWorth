@@ -1,14 +1,14 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BillMonitoringAuthorizationTests
 {
     [Fact]
     public async Task Refresh_AnonymousUser_IsRejected()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.PostAsync(

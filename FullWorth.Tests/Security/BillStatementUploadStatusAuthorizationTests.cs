@@ -2,17 +2,17 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BillStatementUploadStatusAuthorizationTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public BillStatementUploadStatusAuthorizationTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -475,7 +475,7 @@ public sealed class BillStatementUploadStatusAuthorizationTests
     private static byte[] CreatePdfBytes()
     {
         const string contentStream =
-            "BT\n/F1 12 Tf\n72 720 Td\n(BillWatch statement processing test with enough embedded text to avoid OCR.) Tj\nET\n";
+            "BT\n/F1 12 Tf\n72 720 Td\n(FullWorth statement processing test with enough embedded text to avoid OCR.) Tj\nET\n";
 
         var objects =
             new[]

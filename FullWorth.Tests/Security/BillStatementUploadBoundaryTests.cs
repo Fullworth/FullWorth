@@ -3,20 +3,20 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BillStatementUploadBoundaryTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web);
 
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public BillStatementUploadBoundaryTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory = factory;
     }

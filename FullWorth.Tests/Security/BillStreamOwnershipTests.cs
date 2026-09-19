@@ -1,21 +1,21 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Models;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Models;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BillStreamOwnershipTests
 {
     [Fact]
     public async Task Detail_ForAnotherUsersStream_ReturnsNotFound()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var ownerClient = factory.CreateHttpsClient();
         using var attackerClient = factory.CreateHttpsClient();
 
@@ -35,7 +35,7 @@ public sealed class BillStreamOwnershipTests
     [Fact]
     public async Task List_DoesNotReturnAnotherUsersStreams()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var ownerClient = factory.CreateHttpsClient();
         using var attackerClient = factory.CreateHttpsClient();
 
@@ -61,7 +61,7 @@ public sealed class BillStreamOwnershipTests
     [Fact]
     public async Task Create_DuplicateProviderName_IsScopedToCurrentUser()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var ownerClient = factory.CreateHttpsClient();
         using var secondClient = factory.CreateHttpsClient();
 
@@ -82,7 +82,7 @@ public sealed class BillStreamOwnershipTests
         Assert.NotNull(created);
 
         await using var scope = factory.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
         var matchingStreams = await dbContext.BillStreams
             .Where(stream => stream.ProviderName == "Shared Provider")
             .ToListAsync();
@@ -93,12 +93,12 @@ public sealed class BillStreamOwnershipTests
     }
 
     private static async Task<Guid> SeedStreamAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         Guid userId,
         string providerName = "Private Utility")
     {
         await using var scope = factory.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
         var now = DateTimeOffset.UtcNow;
         var stream = new BillStreamEntity
         {
