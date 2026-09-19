@@ -1,20 +1,20 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AccountPreferencesAuthorizationTests
 {
     [Fact]
     public async Task Get_AnonymousUser_IsRejected()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.GetAsync("/api/account/preferences");
@@ -25,7 +25,7 @@ public sealed class AccountPreferencesAuthorizationTests
     [Fact]
     public async Task Put_AnonymousUser_IsRejected()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.PutAsJsonAsync(
@@ -38,7 +38,7 @@ public sealed class AccountPreferencesAuthorizationTests
     [Fact]
     public async Task Put_ChangesOnlyAuthenticatedUsersPreference()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var firstClient = factory.CreateHttpsClient();
         using var secondClient = factory.CreateHttpsClient();
 
@@ -57,7 +57,7 @@ public sealed class AccountPreferencesAuthorizationTests
         response.EnsureSuccessStatusCode();
 
         await using var scope = factory.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
         var firstMode = await dbContext.Users
             .Where(user => user.Id == firstId)
             .Select(user => user.TimestampDisplayMode)
@@ -77,7 +77,7 @@ public sealed class AccountPreferencesAuthorizationTests
     [InlineData("2")]
     public async Task Put_InvalidPreference_IsRejected(string mode)
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         var user = await TestUserAuthentication.RegisterAndLoginAsync(client);
         client.DefaultRequestHeaders.Authorization =

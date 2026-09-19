@@ -1,12 +1,12 @@
 using System.Reflection;
-using BillWatch.API.Authorization;
-using BillWatch.API.Controllers;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Authorization;
+using FullWorth.API.Controllers;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AdminSecurityControllerTests
 {
@@ -21,7 +21,7 @@ public sealed class AdminSecurityControllerTests
                 .GetCustomAttributes<AuthorizeAttribute>(inherit: true));
 
         Assert.Equal(
-            BillWatchPolicies.AdminOrOwner,
+            FullWorthPolicies.AdminOrOwner,
             attribute.Policy);
     }
 
@@ -39,7 +39,7 @@ public sealed class AdminSecurityControllerTests
                 KeyHash = secretHash,
                 DisplayPrefix = "BW-ABCD-EFGH",
                 Purpose = SubscriptionAccessKeyPurpose.Beta,
-                Tier = BillWatchSubscriptionTier.Beta,
+                Tier = FullWorthSubscriptionTier.Beta,
                 DurationDays = 30,
                 GrantsLifetimeAccess = false,
                 MaxRedemptions = 5,
@@ -142,7 +142,7 @@ public sealed class AdminSecurityControllerTests
     }
 
     private static AdminSecurityController CreateController(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         return new AdminSecurityController(
             dbContext,
@@ -162,7 +162,7 @@ public sealed class AdminSecurityControllerTests
             KeyHash = Guid.NewGuid().ToString("N"),
             DisplayPrefix = "BW-TEST-KEYS",
             Purpose = SubscriptionAccessKeyPurpose.Complimentary,
-            Tier = BillWatchSubscriptionTier.Standard,
+            Tier = FullWorthSubscriptionTier.Standard,
             DurationDays = 30,
             MaxRedemptions = maxRedemptions,
             RedemptionCount = redemptionCount,
@@ -174,10 +174,10 @@ public sealed class AdminSecurityControllerTests
         };
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
     }

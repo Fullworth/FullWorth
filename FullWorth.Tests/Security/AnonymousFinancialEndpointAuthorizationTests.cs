@@ -1,15 +1,15 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AnonymousFinancialEndpointAuthorizationTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public AnonymousFinancialEndpointAuthorizationTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory = factory;
     }

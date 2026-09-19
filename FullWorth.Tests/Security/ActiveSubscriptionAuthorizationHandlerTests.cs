@@ -1,12 +1,12 @@
 using System.Security.Claims;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ActiveSubscriptionAuthorizationHandlerTests
 {
@@ -114,10 +114,10 @@ public sealed class ActiveSubscriptionAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
     }

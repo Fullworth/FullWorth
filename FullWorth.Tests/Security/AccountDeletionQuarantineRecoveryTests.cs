@@ -1,18 +1,18 @@
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Services.Statements;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Services.Statements;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AccountDeletionQuarantineRecoveryTests
 {
     [Fact]
     public async Task Reconcile_RestoresQuarantinedStatementWhenUserStillExists()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
@@ -26,7 +26,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
             scope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
 
         var dbContext =
-            scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         var logger =
             scope.ServiceProvider
@@ -65,7 +65,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
     [Fact]
     public async Task Reconcile_PurgesQuarantinedStatementWhenUserNoLongerExists()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         _ = factory.CreateHttpsClient();
 
         var deletedUserId = Guid.NewGuid();
@@ -76,7 +76,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
             scope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
 
         var dbContext =
-            scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         var logger =
             scope.ServiceProvider
@@ -112,7 +112,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
     [Fact]
     public async Task StorageQuarantine_CanBeRestoredOrCommittedWithoutPathEscape()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         _ = factory.CreateHttpsClient();
 
         var userId = Guid.NewGuid();

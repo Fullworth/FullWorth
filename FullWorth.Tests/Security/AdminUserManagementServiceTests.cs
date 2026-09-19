@@ -1,11 +1,11 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Admin;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Admin;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AdminUserManagementServiceTests
 {
@@ -18,16 +18,16 @@ public sealed class AdminUserManagementServiceTests
         await using var dbContext = CreateDbContext();
         var owner = AddUser(dbContext, "owner@example.com");
         var target = AddUser(dbContext, "target@example.com");
-        await AssignSeededRole(dbContext, owner.Id, BillWatchRoles.Owner);
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
 
         var result = await CreateService(dbContext).AssignRoleAsync(
             owner.Id,
             target.Id,
-            BillWatchRoles.Admin);
+            FullWorthRoles.Admin);
 
         Assert.True(result.Succeeded);
-        Assert.True(await HasRole(dbContext, target.Id, BillWatchRoles.Admin));
+        Assert.True(await HasRole(dbContext, target.Id, FullWorthRoles.Admin));
         Assert.Single(dbContext.AdminAuditLogs);
     }
 
@@ -37,16 +37,16 @@ public sealed class AdminUserManagementServiceTests
         await using var dbContext = CreateDbContext();
         var owner = AddUser(dbContext, "owner@example.com");
         var target = AddUser(dbContext, "target@example.com");
-        await AssignSeededRole(dbContext, owner.Id, BillWatchRoles.Owner);
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
 
         var result = await CreateService(dbContext).AssignRoleAsync(
             owner.Id,
             target.Id,
-            BillWatchRoles.Owner);
+            FullWorthRoles.Owner);
 
         Assert.False(result.Succeeded);
-        Assert.False(await HasRole(dbContext, target.Id, BillWatchRoles.Owner));
+        Assert.False(await HasRole(dbContext, target.Id, FullWorthRoles.Owner));
     }
 
     [Fact]
@@ -54,16 +54,16 @@ public sealed class AdminUserManagementServiceTests
     {
         await using var dbContext = CreateDbContext();
         var owner = AddUser(dbContext, "owner@example.com");
-        await AssignSeededRole(dbContext, owner.Id, BillWatchRoles.Owner);
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
 
         var result = await CreateService(dbContext).RemoveRoleAsync(
             owner.Id,
             owner.Id,
-            BillWatchRoles.Owner);
+            FullWorthRoles.Owner);
 
         Assert.False(result.Succeeded);
-        Assert.True(await HasRole(dbContext, owner.Id, BillWatchRoles.Owner));
+        Assert.True(await HasRole(dbContext, owner.Id, FullWorthRoles.Owner));
     }
 
     [Fact]
@@ -72,17 +72,17 @@ public sealed class AdminUserManagementServiceTests
         await using var dbContext = CreateDbContext();
         var actor = AddUser(dbContext, "actor@example.com");
         var target = AddUser(dbContext, "target@example.com");
-        await AssignSeededRole(dbContext, actor.Id, BillWatchRoles.Admin);
-        await AssignSeededRole(dbContext, target.Id, BillWatchRoles.Admin);
+        await AssignSeededRole(dbContext, actor.Id, FullWorthRoles.Admin);
+        await AssignSeededRole(dbContext, target.Id, FullWorthRoles.Admin);
         await dbContext.SaveChangesAsync();
 
         var result = await CreateService(dbContext).AssignRoleAsync(
             actor.Id,
             target.Id,
-            BillWatchRoles.Moderator);
+            FullWorthRoles.Moderator);
 
         Assert.False(result.Succeeded);
-        Assert.False(await HasRole(dbContext, target.Id, BillWatchRoles.Moderator));
+        Assert.False(await HasRole(dbContext, target.Id, FullWorthRoles.Moderator));
         Assert.Empty(dbContext.AdminAuditLogs);
     }
 
@@ -92,14 +92,14 @@ public sealed class AdminUserManagementServiceTests
         await using var dbContext = CreateDbContext();
         var owner = AddUser(dbContext, "owner@example.com");
         var target = AddUser(dbContext, "target@example.com");
-        await AssignSeededRole(dbContext, owner.Id, BillWatchRoles.Owner);
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
         var service = CreateService(dbContext);
 
         var grant = await service.GrantEntitlementAsync(
             owner.Id,
             target.Id,
-            BillWatchSubscriptionTier.Standard,
+            FullWorthSubscriptionTier.Standard,
             durationDays: 30,
             grantsLifetimeAccess: false);
 
@@ -122,7 +122,7 @@ public sealed class AdminUserManagementServiceTests
         await using var dbContext = CreateDbContext();
         var owner = AddUser(dbContext, "owner@example.com");
         var target = AddUser(dbContext, "target@example.com");
-        await AssignSeededRole(dbContext, owner.Id, BillWatchRoles.Owner);
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
         var service = CreateService(dbContext);
 
@@ -136,12 +136,12 @@ public sealed class AdminUserManagementServiceTests
         var membership = await dbContext.UserProgramMemberships.SingleAsync();
         Assert.True(membership.IsActive);
         Assert.Equal(UserProgramType.BetaTester, membership.Program);
-        Assert.False(await HasRole(dbContext, target.Id, BillWatchRoles.Moderator));
+        Assert.False(await HasRole(dbContext, target.Id, FullWorthRoles.Moderator));
         Assert.Empty(dbContext.SubscriptionEntitlements);
     }
 
     private static ApplicationUser AddUser(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         string email)
     {
         var user = new ApplicationUser
@@ -157,7 +157,7 @@ public sealed class AdminUserManagementServiceTests
     }
 
     private static async Task AssignSeededRole(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId,
         string roleName)
     {
@@ -172,7 +172,7 @@ public sealed class AdminUserManagementServiceTests
     }
 
     private static async Task<bool> HasRole(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId,
         string roleName)
     {
@@ -184,17 +184,17 @@ public sealed class AdminUserManagementServiceTests
     }
 
     private static AdminUserManagementService CreateService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         return new AdminUserManagementService(
             dbContext,
             new FixedTimeProvider(NowUtc));
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        var dbContext = new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        var dbContext = new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
         dbContext.Database.EnsureCreated();

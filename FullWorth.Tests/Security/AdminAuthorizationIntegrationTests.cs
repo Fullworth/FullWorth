@@ -1,20 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.API.Authorization;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Authorization;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AdminAuthorizationIntegrationTests
 {
     [Theory]
-    [InlineData(BillWatchRoles.Owner)]
-    [InlineData(BillWatchRoles.Admin)]
+    [InlineData(FullWorthRoles.Owner)]
+    [InlineData(FullWorthRoles.Admin)]
     public async Task AdminEndpoints_AllowOwnerAndAdmin(
         string roleName)
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -48,12 +48,12 @@ public sealed class AdminAuthorizationIntegrationTests
 
     [Theory]
     [InlineData(null)]
-    [InlineData(BillWatchRoles.Moderator)]
+    [InlineData(FullWorthRoles.Moderator)]
     public async Task AdminEndpoints_RejectNonPrivilegedUsers(
         string? roleName)
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -92,7 +92,7 @@ public sealed class AdminAuthorizationIntegrationTests
     public async Task RoleHierarchy_RequiresFreshTokenAndBlocksPrivilegeEscalation()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var ownerClient =
             factory.CreateHttpsClient();
@@ -107,13 +107,13 @@ public sealed class AdminAuthorizationIntegrationTests
             await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
                 factory,
                 ownerClient,
-                BillWatchRoles.Owner);
+                FullWorthRoles.Owner);
 
         var admin =
             await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
                 factory,
                 adminClient,
-                BillWatchRoles.Admin);
+                FullWorthRoles.Admin);
 
         var target =
             await TestUserAuthentication.RegisterAndLoginAsync(
@@ -211,7 +211,7 @@ public sealed class AdminAuthorizationIntegrationTests
     public async Task AccessKeyLifecycle_CreateRedeemExhaustAndRevoke_IsEnforcedEndToEnd()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var ownerClient =
             factory.CreateHttpsClient();
@@ -223,7 +223,7 @@ public sealed class AdminAuthorizationIntegrationTests
             await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
                 factory,
                 ownerClient,
-                BillWatchRoles.Owner);
+                FullWorthRoles.Owner);
 
         var user =
             await TestUserAuthentication.RegisterAndLoginAsync(

@@ -1,28 +1,28 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
-using BillWatch.Core.Models;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
+using FullWorth.Core.Models;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class AccountDeletionTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
     private const string TestPassword =
-        "BillWatch!Tests123";
+        "FullWorth!Tests123";
 
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public AccountDeletionTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory = factory;
     }
@@ -63,7 +63,7 @@ public sealed class AccountDeletionTests
         using var response = await SendDeleteAccountAsync(
             client,
             confirmation: "DELETE",
-            currentPassword: "BillWatch!Wrong123");
+            currentPassword: "FullWorth!Wrong123");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.True(await UserExistsAsync(_factory, userId));
@@ -132,7 +132,7 @@ public sealed class AccountDeletionTests
         await using (var setupScope = _factory.Services.CreateAsyncScope())
         {
             var dbContext =
-                setupScope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+                setupScope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
             var statementStorage =
                 setupScope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
@@ -219,7 +219,7 @@ public sealed class AccountDeletionTests
         await using var verificationScope = _factory.Services.CreateAsyncScope();
 
         var verificationDbContext =
-            verificationScope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            verificationScope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         var verificationStorage =
             verificationScope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
@@ -281,7 +281,7 @@ public sealed class AccountDeletionTests
         await using (var setupScope = _factory.Services.CreateAsyncScope())
         {
             var dbContext =
-                setupScope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+                setupScope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
             deletingUserId = await dbContext.Users
                 .Where(user => user.Email == deletingSession.Email)
@@ -298,7 +298,7 @@ public sealed class AccountDeletionTests
                 KeyHash = new string('a', 64),
                 DisplayPrefix = "BW-TEST",
                 Purpose = SubscriptionAccessKeyPurpose.Beta,
-                Tier = BillWatchSubscriptionTier.Beta,
+                Tier = FullWorthSubscriptionTier.Beta,
                 DurationDays = 30,
                 GrantsLifetimeAccess = false,
                 MaxRedemptions = 1,
@@ -309,7 +309,7 @@ public sealed class AccountDeletionTests
             var entitlement = new SubscriptionEntitlementEntity
             {
                 UserId = deletingUserId,
-                Tier = BillWatchSubscriptionTier.Beta,
+                Tier = FullWorthSubscriptionTier.Beta,
                 Source = SubscriptionEntitlementSource.AccessKey,
                 StartsAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1),
                 EndsAtUtc = DateTimeOffset.UtcNow.AddDays(30)
@@ -356,7 +356,7 @@ public sealed class AccountDeletionTests
         await using var verificationScope = _factory.Services.CreateAsyncScope();
 
         var verificationDbContext =
-            verificationScope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            verificationScope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         Assert.False(await verificationDbContext.Users.AnyAsync(
             user => user.Id == deletingUserId));
@@ -380,13 +380,13 @@ public sealed class AccountDeletionTests
     }
 
     [Theory]
-    [InlineData(BillWatchRoles.Owner)]
-    [InlineData(BillWatchRoles.Admin)]
-    [InlineData(BillWatchRoles.Moderator)]
+    [InlineData(FullWorthRoles.Owner)]
+    [InlineData(FullWorthRoles.Admin)]
+    [InlineData(FullWorthRoles.Moderator)]
     public async Task DeleteAccount_RejectsStaffIdentityWhileRoleIsAssigned(
         string roleName)
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         var session =
@@ -433,13 +433,13 @@ public sealed class AccountDeletionTests
     }
 
     private static async Task<bool> UserExistsAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         Guid userId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
 
         var dbContext =
-            scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         return await dbContext.Users.AnyAsync(user => user.Id == userId);
     }

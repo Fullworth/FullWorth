@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ApiResponseCacheSecurityTests
 {
@@ -16,7 +16,7 @@ public sealed class ApiResponseCacheSecurityTests
     [InlineData("/api/subscription")]
     public async Task ProtectedApiResponses_AreNoStore(string route)
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         using var response = await client.GetAsync(route);
 
@@ -30,7 +30,7 @@ public sealed class ApiResponseCacheSecurityTests
     [InlineData("/api/plaid/link-token")]
     public async Task ProtectedMutationResponses_AreNoStore(string route)
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         using var response = await client.PostAsync(route, content: null);
 
@@ -41,7 +41,7 @@ public sealed class ApiResponseCacheSecurityTests
     [Fact]
     public async Task HiddenStripeWebhookResponse_IsNoStore()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         using var response = await client.PostAsync(
             "/api/subscription/webhooks/stripe",

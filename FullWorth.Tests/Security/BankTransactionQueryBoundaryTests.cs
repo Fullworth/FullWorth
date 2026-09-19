@@ -1,8 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class BankTransactionQueryBoundaryTests
 {
@@ -12,7 +12,7 @@ public sealed class BankTransactionQueryBoundaryTests
     [InlineData(-1000)]
     public async Task List_NonPositiveTake_IsClampedWithoutFailure(int take)
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
         client.DefaultRequestHeaders.Authorization =
@@ -32,7 +32,7 @@ public sealed class BankTransactionQueryBoundaryTests
     [InlineData(int.MaxValue)]
     public async Task List_OversizedTake_IsClampedWithoutFailure(int take)
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
         client.DefaultRequestHeaders.Authorization =
