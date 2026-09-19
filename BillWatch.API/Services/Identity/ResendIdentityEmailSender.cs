@@ -35,9 +35,9 @@ public sealed class ResendIdentityEmailSender(
 
         return SendSecurityEmailAsync(
             email,
-            "Confirm your BillWatch email",
+            "Confirm your FullWorth email",
             "Confirm email",
-            "Confirm this email address to protect your BillWatch account and enable secure account recovery.",
+            "Confirm this email address to protect your FullWorth account and enable secure account recovery.",
             publicConfirmationLink);
     }
 
@@ -50,9 +50,9 @@ public sealed class ResendIdentityEmailSender(
 
         return SendSecurityEmailAsync(
             email,
-            "Reset your BillWatch password",
+            "Reset your FullWorth password",
             "Reset password",
-            "Use this secure link to choose a new BillWatch password. If you did not request this, you can ignore this email.",
+            "Use this secure link to choose a new FullWorth password. If you did not request this, you can ignore this email.",
             resetLink);
     }
 
@@ -75,9 +75,9 @@ public sealed class ResendIdentityEmailSender(
 
         return SendSecurityEmailAsync(
             email,
-            "Reset your BillWatch password",
+            "Reset your FullWorth password",
             "Reset password",
-            "Use this secure link to choose a new BillWatch password. If you did not request this, you can ignore this email.",
+            "Use this secure link to choose a new FullWorth password. If you did not request this, you can ignore this email.",
             resetLink);
     }
 
@@ -129,7 +129,7 @@ public sealed class ResendIdentityEmailSender(
             <body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18212f;">
               <div style="max-width:560px;margin:0 auto;padding:40px 20px;">
                 <div style="background:#ffffff;border:1px solid #e3e8ef;border-radius:20px;padding:32px;">
-                  <div style="font-size:20px;font-weight:700;margin-bottom:20px;">BillWatch</div>
+                  <div style="font-size:20px;font-weight:700;margin-bottom:20px;">FullWorth</div>
                   <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">{encodedMessage}</p>
                   <p style="margin:0 0 24px;">
                     <a href="{encodedActionUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-weight:650;padding:12px 18px;border-radius:12px;">{encodedActionText}</a>
