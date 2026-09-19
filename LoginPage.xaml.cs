@@ -1,8 +1,8 @@
-using BillWatch.Core.Legal;
-using BillWatch.ViewModels;
+using FullWorth.Core.Legal;
+using FullWorth.ViewModels;
 using Microsoft.Maui.ApplicationModel;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public partial class LoginPage : ContentPage
 {
@@ -69,14 +69,14 @@ public partial class LoginPage : ContentPage
     private async void OnTermsClicked(object? sender, EventArgs e)
     {
         await Browser.Default.OpenAsync(
-            BillWatchLegalDocuments.PublicTermsUrl,
+            FullWorthLegalDocuments.PublicTermsUrl,
             BrowserLaunchMode.SystemPreferred);
     }
 
     private async void OnPrivacyClicked(object? sender, EventArgs e)
     {
         await Browser.Default.OpenAsync(
-            BillWatchLegalDocuments.PublicPrivacyUrl,
+            FullWorthLegalDocuments.PublicPrivacyUrl,
             BrowserLaunchMode.SystemPreferred);
     }
 }

@@ -3,7 +3,7 @@
     "Name": "New Profile",
     "Projects": [
       {
-        "Path": "BillWatch.csproj",
+        "Path": "FullWorth.csproj",
         "Action": "Start",
         "DebugTarget": "Windows Machine"
       }
