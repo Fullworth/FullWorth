@@ -4,8 +4,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY FullWorth.Core/FullWorth.Core.csproj BillWatch.Core/
-COPY FullWorth.Web/FullWorth.Web.csproj BillWatch.Web/
+COPY FullWorth.Core/FullWorth.Core.csproj FullWorth.Core/
+COPY FullWorth.Web/FullWorth.Web.csproj FullWorth.Web/
 RUN dotnet restore FullWorth.Web/FullWorth.Web.csproj
 
 COPY FullWorth.Core/ FullWorth.Core/

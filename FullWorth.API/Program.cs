@@ -115,7 +115,7 @@ if (string.IsNullOrWhiteSpace(
         connectionString))
 {
     throw new InvalidOperationException(
-        "Connection string 'FullWorthDatabase' was not found.");
+        "Connection string 'BillWatchDatabase' was not found.");
 }
 
 builder.Services.AddDbContext<FullWorthDbContext>(

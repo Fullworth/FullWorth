@@ -37,8 +37,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY FullWorth.Core/FullWorth.Core.csproj BillWatch.Core/
-COPY FullWorth.API/FullWorth.API.csproj BillWatch.API/
+COPY FullWorth.Core/FullWorth.Core.csproj FullWorth.Core/
+COPY FullWorth.API/FullWorth.API.csproj FullWorth.API/
 RUN dotnet restore FullWorth.API/FullWorth.API.csproj
 
 COPY FullWorth.Core/ FullWorth.Core/
