@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace BillWatch.API.Data.Migrations
+namespace FullWorth.API.Data.Migrations
 {
     /// <inheritdoc />
     public partial class AddBillStreams : Migration

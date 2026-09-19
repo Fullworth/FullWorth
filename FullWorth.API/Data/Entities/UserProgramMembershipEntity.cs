@@ -1,7 +1,7 @@
-using BillWatch.API.Data.Configurations;
+using FullWorth.API.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Data.Entities;
+namespace FullWorth.API.Data.Entities;
 
 public enum UserProgramType
 {
