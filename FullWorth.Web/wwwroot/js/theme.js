@@ -30,7 +30,7 @@ function saveTheme(theme) {
 export function initializeTheme() {
     const savedTheme = getSavedTheme();
 
-    // BillWatch defaults to dark mode.
+    // FullWorth defaults to dark mode.
     const theme = savedTheme ?? "dark";
 
     applyTheme(theme);

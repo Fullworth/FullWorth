@@ -21,10 +21,10 @@ const plaidUiText = {
             "The bank connection could not be completed.",
 
         waitTimedOut:
-            "BillWatch stopped waiting for the Plaid session. You can try again.",
+            "FullWorth stopped waiting for the Plaid session. You can try again.",
 
         popupBlocked:
-            "Your browser blocked the Plaid window. Allow pop-ups for BillWatch and try again.",
+            "Your browser blocked the Plaid window. Allow pop-ups for FullWorth and try again.",
 
         preparing:
             "Preparing…",
@@ -33,21 +33,21 @@ const plaidUiText = {
             "Preparing secure connection with Plaid…",
 
         finishConnection:
-            "Complete the secure connection in the Plaid window. BillWatch is waiting…",
+            "Complete the secure connection in the Plaid window. FullWorth is waiting…",
 
         connected:
             institution =>
-                `${institution} is connected. BillWatch will begin automatic monitoring.`,
+                `${institution} is connected. FullWorth will begin automatic monitoring.`,
 
         connectionFailed:
-            "BillWatch could not start or complete the secure bank connection.",
+            "FullWorth could not start or complete the secure bank connection.",
 
         preparingReauthorization:
             institution =>
                 `Preparing secure reauthorization for ${institution}…`,
 
         finishReauthorization:
-            "Finish reauthorizing the connection in the Plaid window. BillWatch is waiting…",
+            "Finish reauthorizing the connection in the Plaid window. FullWorth is waiting…",
 
         reconnected:
             institution =>
@@ -55,7 +55,7 @@ const plaidUiText = {
 
         reauthorizationFailed:
             institution =>
-                `BillWatch could not reauthorize ${institution}.`
+                `FullWorth could not reauthorize ${institution}.`
     },
 
     es: {
@@ -75,10 +75,10 @@ const plaidUiText = {
             "No se pudo completar la conexión bancaria.",
 
         waitTimedOut:
-            "BillWatch dejó de esperar la sesión de Plaid. Puedes intentarlo de nuevo.",
+            "FullWorth dejó de esperar la sesión de Plaid. Puedes intentarlo de nuevo.",
 
         popupBlocked:
-            "Tu navegador bloqueó la ventana de Plaid. Permite las ventanas emergentes para BillWatch e inténtalo de nuevo.",
+            "Tu navegador bloqueó la ventana de Plaid. Permite las ventanas emergentes para FullWorth e inténtalo de nuevo.",
 
         preparing:
             "Preparando…",
@@ -87,21 +87,21 @@ const plaidUiText = {
             "Preparando la conexión segura con Plaid…",
 
         finishConnection:
-            "Completa la conexión segura en la ventana de Plaid. BillWatch está esperando…",
+            "Completa la conexión segura en la ventana de Plaid. FullWorth está esperando…",
 
         connected:
             institution =>
-                `La conexión con ${institution} está activa. BillWatch comenzará el monitoreo automático.`,
+                `La conexión con ${institution} está activa. FullWorth comenzará el monitoreo automático.`,
 
         connectionFailed:
-            "BillWatch no pudo iniciar o completar la conexión bancaria segura.",
+            "FullWorth no pudo iniciar o completar la conexión bancaria segura.",
 
         preparingReauthorization:
             institution =>
                 `Preparando la reautorización segura de ${institution}…`,
 
         finishReauthorization:
-            "Termina de reautorizar la conexión en la ventana de Plaid. BillWatch está esperando…",
+            "Termina de reautorizar la conexión en la ventana de Plaid. FullWorth está esperando…",
 
         reconnected:
             institution =>
@@ -109,7 +109,7 @@ const plaidUiText = {
 
         reauthorizationFailed:
             institution =>
-                `BillWatch no pudo reautorizar la conexión con ${institution}.`
+                `FullWorth no pudo reautorizar la conexión con ${institution}.`
     }
 };
 
@@ -160,7 +160,7 @@ async function getSafeErrorMessage(
         }
     }
 
-    return `BillWatch request failed with status ${response.status}.`;
+    return `FullWorth request failed with status ${response.status}.`;
 }
 
 async function handleResponse(
@@ -171,7 +171,7 @@ async function handleResponse(
             "/login");
 
         throw new Error(
-            "BillWatch session expired.");
+            "FullWorth session expired.");
     }
 
     if (!response.ok) {
@@ -250,7 +250,7 @@ async function getAntiforgeryToken() {
 
     if (!result?.requestToken) {
         throw new Error(
-            "BillWatch could not establish a secure request token.");
+            "FullWorth could not establish a secure request token.");
     }
 
     antiforgeryToken =
@@ -362,7 +362,7 @@ function openPlaidWindow() {
             null;
 
         plaidWindow.document.title =
-            "BillWatch";
+            "FullWorth";
 
         const message =
             plaidWindow.document.createElement(
@@ -615,7 +615,7 @@ export async function downloadAccountExport() {
             "/login");
 
         throw new Error(
-            "BillWatch session expired.");
+            "FullWorth session expired.");
     }
 
     if (!response.ok) {
@@ -662,7 +662,7 @@ export async function downloadAccountExport() {
     return true;
 }
 
-export async function deleteBillWatchAccount(
+export async function deleteFullWorthAccount(
     confirmation) {
 
     if (confirmation !==
@@ -691,7 +691,7 @@ export async function deleteBillWatchAccount(
                     "X-CSRF-TOKEN":
                         requestToken,
 
-                    "X-BillWatch-Delete-Confirmation":
+                    "X-FullWorth-Delete-Confirmation":
                         confirmation
                 },
 
@@ -964,13 +964,13 @@ export function wirePlaidConnectButton(
                 if (!session?.sessionId ||
                     !session?.hostedLinkUrl) {
                     throw new Error(
-                        "BillWatch did not receive a valid Plaid session.");
+                        "FullWorth did not receive a valid Plaid session.");
                 }
 
                 if (!isTrustedPlaidHostedUrl(
                     session.hostedLinkUrl)) {
                     throw new Error(
-                        "BillWatch refused an invalid Plaid Hosted Link URL.");
+                        "FullWorth refused an invalid Plaid Hosted Link URL.");
                 }
 
                 plaidWindow.location.replace(
@@ -1092,13 +1092,13 @@ export function wirePlaidReconnectButton(
                 if (!session?.sessionId ||
                     !session?.hostedLinkUrl) {
                     throw new Error(
-                        "BillWatch did not receive a valid Plaid update session.");
+                        "FullWorth did not receive a valid Plaid update session.");
                 }
 
                 if (!isTrustedPlaidHostedUrl(
                     session.hostedLinkUrl)) {
                     throw new Error(
-                        "BillWatch refused an invalid Plaid Hosted Link URL.");
+                        "FullWorth refused an invalid Plaid Hosted Link URL.");
                 }
 
                 plaidWindow.location.replace(

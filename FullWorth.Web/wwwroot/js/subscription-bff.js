@@ -70,7 +70,7 @@ export async function getSubscription() {
         credentials: "same-origin",
         cache: "no-store",
         headers: { "Accept": "application/json" }
-    }), "BillWatch could not load your subscription status.");
+    }), "FullWorth could not load your subscription status.");
 }
 
 export async function getSubscriptionPlans() {
@@ -78,17 +78,17 @@ export async function getSubscriptionPlans() {
         credentials: "same-origin",
         cache: "no-store",
         headers: { "Accept": "application/json" }
-    }), "BillWatch could not load paid subscription plans.");
+    }), "FullWorth could not load paid subscription plans.");
 }
 
 export async function startCheckout(billingInterval) {
     const result = await postJson(
         "/bff/subscription/checkout",
         { billingInterval },
-        "BillWatch could not start checkout.");
+        "FullWorth could not start checkout.");
 
     if (!result || typeof result.url !== "string" || !result.url.startsWith("https://")) {
-        throw new Error("BillWatch received an invalid checkout destination.");
+        throw new Error("FullWorth received an invalid checkout destination.");
     }
 
     window.location.assign(result.url);
@@ -97,10 +97,10 @@ export async function startCheckout(billingInterval) {
 export async function openBillingPortal() {
     const result = await postEmpty(
         "/bff/subscription/billing-portal",
-        "BillWatch could not open subscription management.");
+        "FullWorth could not open subscription management.");
 
     if (!result || typeof result.url !== "string" || !result.url.startsWith("https://")) {
-        throw new Error("BillWatch received an invalid subscription management destination.");
+        throw new Error("FullWorth received an invalid subscription management destination.");
     }
 
     window.location.assign(result.url);
@@ -109,7 +109,7 @@ export async function openBillingPortal() {
 export async function syncPaidSubscription() {
     return await postEmpty(
         "/bff/subscription/sync",
-        "BillWatch could not refresh your paid subscription.");
+        "FullWorth could not refresh your paid subscription.");
 }
 
 export async function redeemAccessKey(accessKey) {
