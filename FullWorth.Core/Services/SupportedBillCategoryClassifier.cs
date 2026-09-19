@@ -1,6 +1,6 @@
-﻿using BillWatch.Core.Models;
+﻿using FullWorth.Core.Models;
 
-namespace BillWatch.Core.Services;
+namespace FullWorth.Core.Services;
 
 public sealed class SupportedBillCategoryClassifier
 {
@@ -134,7 +134,7 @@ public sealed class SupportedBillCategoryClassifier
 
         /*
          * Cash advances and earned-wage advances are borrowing events,
-         * not recurring bills BillWatch should promote into Bill Streams.
+         * not recurring bills FullWorth should promote into Bill Streams.
          */
         if (ContainsCategory(
                 categoryDetailed,
