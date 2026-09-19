@@ -1,4 +1,4 @@
-name: BillWatch CI
+name: FullWorth CI
 
 on:
   push:
@@ -29,10 +29,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore tests and dependencies
-        run: dotnet restore BillWatch.Tests/BillWatch.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+        run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build backend
-        run: dotnet build BillWatch.Tests/BillWatch.Tests.csproj --configuration Release --no-restore
+        run: dotnet build FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-restore
 
       - name: Install EF migration verifier
         run: dotnet tool install --global dotnet-ef --version 10.0.11
@@ -44,16 +44,16 @@ jobs:
           Plaid__Environment: sandbox
         run: >-
           dotnet ef migrations has-pending-model-changes
-          --project BillWatch.API/BillWatch.API.csproj
-          --startup-project BillWatch.API/BillWatch.API.csproj
+          --project FullWorth.API/FullWorth.API.csproj
+          --startup-project FullWorth.API/FullWorth.API.csproj
           --no-build
           --configuration Release
 
       - name: Run tests
-        run: dotnet test BillWatch.Tests/BillWatch.Tests.csproj --configuration Release --no-build --no-restore
+        run: dotnet test FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-build --no-restore
 
       - name: Verify transaction stream regression
-        run: node --test BillWatch.Tests/transaction-stream.test.mjs
+        run: node --test FullWorth.Tests/transaction-stream.test.mjs
 
   maui:
     name: MAUI Android build
@@ -73,10 +73,10 @@ jobs:
         run: dotnet workload install maui-android
 
       - name: Restore MAUI Android dependencies
-        run: dotnet restore BillWatch.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+        run: dotnet restore FullWorth.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build MAUI Android
-        run: dotnet build BillWatch.csproj --framework net10.0-android --configuration Release --no-restore -p:BillWatchApiBaseUrl=https://api.billbeacon.net/
+        run: dotnet build FullWorth.csproj --framework net10.0-android --configuration Release --no-restore -p:FullWorthApiBaseUrl=https://api.billbeacon.net/
 
   container:
     name: Linux production container
