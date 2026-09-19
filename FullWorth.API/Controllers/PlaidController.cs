@@ -1,11 +1,11 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Plaid;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Plaid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/plaid")]
@@ -24,7 +24,7 @@ public sealed class PlaidController : ControllerBase
         PlaidHostedLinkCompletionService completionService,
         PlaidAccountSyncService accountSyncService,
         PlaidTransactionSyncService transactionSyncService,
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager)
     {
         _plaidLinkService = plaidLinkService;

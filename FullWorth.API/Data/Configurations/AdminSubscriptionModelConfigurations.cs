@@ -1,8 +1,8 @@
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BillWatch.API.Data.Configurations;
+namespace FullWorth.API.Data.Configurations;
 
 internal sealed class SubscriptionEntitlementEntityConfiguration
     : IEntityTypeConfiguration<SubscriptionEntitlementEntity>

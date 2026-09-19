@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace BillWatch.API.Data.Entities;
+namespace FullWorth.API.Data.Entities;
 
 public enum TimestampDisplayMode
 {

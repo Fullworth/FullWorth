@@ -1,20 +1,20 @@
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/subscription")]
 [Authorize]
 public sealed class SubscriptionController(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     SubscriptionAccessKeyRedemptionService redemptionService,
     TimeProvider timeProvider,

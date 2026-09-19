@@ -1,12 +1,12 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/auth/external")]

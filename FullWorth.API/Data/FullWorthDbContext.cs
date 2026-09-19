@@ -1,19 +1,19 @@
-﻿using BillWatch.API.Data.Entities;
-using BillWatch.API.Authorization;
+﻿using FullWorth.API.Data.Entities;
+using FullWorth.API.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Data;
+namespace FullWorth.API.Data;
 
-public sealed class BillWatchDbContext
+public sealed class FullWorthDbContext
     : IdentityDbContext<
         ApplicationUser,
         IdentityRole<Guid>,
         Guid>
 {
-    public BillWatchDbContext(
-        DbContextOptions<BillWatchDbContext> options)
+    public FullWorthDbContext(
+        DbContextOptions<FullWorthDbContext> options)
         : base(options)
     {
     }
@@ -94,13 +94,13 @@ public sealed class BillWatchDbContext
             .HasData(
                 CreateRole(
                     "0f112ee4-1690-4a08-925f-e72721626f51",
-                    BillWatchRoles.Owner),
+                    FullWorthRoles.Owner),
                 CreateRole(
                     "db2a4b76-a5a7-4c60-a66e-44630f39ed93",
-                    BillWatchRoles.Admin),
+                    FullWorthRoles.Admin),
                 CreateRole(
                     "64cdd793-8aac-4f3b-814f-aa0272a02f28",
-                    BillWatchRoles.Moderator));
+                    FullWorthRoles.Moderator));
     }
 
     private static IdentityRole<Guid> CreateRole(
