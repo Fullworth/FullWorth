@@ -2,22 +2,22 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementProcessingPersistenceTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory
+    private readonly FullWorthApiFactory
         _factory;
 
     public BillStatementProcessingPersistenceTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -70,7 +70,7 @@ public sealed class BillStatementProcessingPersistenceTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var upload =
             await dbContext
@@ -195,7 +195,7 @@ public sealed class BillStatementProcessingPersistenceTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var uploads =
             await dbContext
@@ -290,7 +290,7 @@ public sealed class BillStatementProcessingPersistenceTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var upload =
             await dbContext
@@ -414,7 +414,7 @@ public sealed class BillStatementProcessingPersistenceTests
             var dbContext =
                 scope.ServiceProvider
                     .GetRequiredService<
-                        BillWatchDbContext>();
+                        FullWorthDbContext>();
 
             lastStatus =
                 await dbContext

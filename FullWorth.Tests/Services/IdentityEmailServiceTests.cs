@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class IdentityEmailServiceTests
 {
@@ -39,7 +39,7 @@ public sealed class IdentityEmailServiceTests
                 {
                     Enabled = true,
                     FromAddress = "security@billbeacon.net",
-                    FromName = "BillWatch",
+                    FromName = "FullWorth",
                     PublicWebBaseUrl = "https://billbeacon.net"
                 });
 
@@ -314,7 +314,7 @@ public sealed class IdentityEmailServiceTests
             Enabled = true,
             ApiKey = "test-resend-key",
             FromAddress = "security@billbeacon.net",
-            FromName = "BillWatch",
+            FromName = "FullWorth",
             PublicWebBaseUrl = "https://billbeacon.net"
         };
     }

@@ -1,7 +1,7 @@
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Services.Statements;
 using System.Globalization;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementDeterministicPrivateCorpusEvaluatorTests
 {

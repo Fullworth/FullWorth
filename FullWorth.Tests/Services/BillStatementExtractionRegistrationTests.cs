@@ -1,8 +1,8 @@
-using BillWatch.API.Services.Statements;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Services.Statements;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementExtractionRegistrationTests
 {
@@ -10,7 +10,7 @@ public sealed class BillStatementExtractionRegistrationTests
     public void RuntimeExtraction_RemainsDeterministicAndShadowIsInactive()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var scope =
             factory.Services.CreateScope();

@@ -3,21 +3,21 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementProcessingBackgroundServiceTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
     public BillStatementProcessingBackgroundServiceTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -207,7 +207,7 @@ public sealed class BillStatementProcessingBackgroundServiceTests
             var dbContext =
                 scope.ServiceProvider
                     .GetRequiredService<
-                        BillWatchDbContext>();
+                        FullWorthDbContext>();
 
             lastStatus =
                 await dbContext.BillStatementUploads
