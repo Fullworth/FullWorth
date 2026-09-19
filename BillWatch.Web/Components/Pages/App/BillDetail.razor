@@ -153,7 +153,7 @@
                 <div class="panel-heading">
                     <div>
                         <span class="panel-kicker">@L["Why it changed"]</span>
-                        <h2>@L["BillWatch explanation"]</h2>
+                        <h2>@L["FullWorth explanation"]</h2>
                     </div>
 
                     <span class="@GetConfidenceClass(latestChange.Confidence)">
@@ -199,7 +199,7 @@
                 <div>
                     <span class="panel-kicker">@L["Explanation"]</span>
                     <h2>@L["We don't know yet."]</h2>
-                    <p>@L["BillWatch has transaction history for this recurring bill, but no verified statement comparison has produced a detected change yet."]</p>
+                    <p>@L["FullWorth has transaction history for this recurring bill, but no verified statement comparison has produced a detected change yet."]</p>
                 </div>
             </section>
         }
@@ -219,7 +219,7 @@
                 {
                     <div class="detail-empty">
                         <strong>@L["No processed statements yet"]</strong>
-                        <span>@L["Transaction history can detect that an amount moved. Statements are what allow BillWatch to explain why."]</span>
+                        <span>@L["Transaction history can detect that an amount moved. Statements are what allow FullWorth to explain why."]</span>
                     </div>
                 }
                 else
@@ -262,7 +262,7 @@
                 {
                     <div class="detail-empty">
                         <strong>@L["No statement changes yet"]</strong>
-                        <span>@L["BillWatch will list verified historical changes here as statement comparisons become available."]</span>
+                        <span>@L["FullWorth will list verified historical changes here as statement comparisons become available."]</span>
                     </div>
                 }
                 else
@@ -313,8 +313,8 @@
 
     private string PageTitleText =>
         _detail is null
-            ? L["Bill — BillWatch"]
-            : $"{_detail.ProviderName} — BillWatch";
+            ? L["Bill — FullWorth"]
+            : $"{_detail.ProviderName} — FullWorth";
 
     private BillChangeViewModel? LatestChange =>
         _detail?.Changes
@@ -347,11 +347,11 @@
         }
         catch (JSException)
         {
-            _errorMessage = L["The statement finished processing, but BillWatch could not refresh this bill."];
+            _errorMessage = L["The statement finished processing, but FullWorth could not refresh this bill."];
         }
         catch (Exception)
         {
-            _errorMessage = L["The statement finished processing, but BillWatch could not refresh this bill."];
+            _errorMessage = L["The statement finished processing, but FullWorth could not refresh this bill."];
         }
 
         StateHasChanged();
@@ -365,7 +365,7 @@
         if (BillStreamId == Guid.Empty)
         {
             _isLoading = false;
-            _errorMessage = L["BillWatch could not determine which bill to open."];
+            _errorMessage = L["FullWorth could not determine which bill to open."];
             return;
         }
 
@@ -380,7 +380,7 @@
         }
         catch (JSException)
         {
-            _errorMessage = L["BillWatch could not load this bill from the secure API."];
+            _errorMessage = L["FullWorth could not load this bill from the secure API."];
         }
         catch (Exception)
         {
@@ -480,10 +480,10 @@
     {
         if (string.IsNullOrWhiteSpace(description))
         {
-            return L["BillWatch detected a change, but the available evidence does not explain the cause confidently."];
+            return L["FullWorth detected a change, but the available evidence does not explain the cause confidently."];
         }
 
-        // Evidence text is preserved verbatim. Localization must not alter the facts BillWatch extracted.
+        // Evidence text is preserved verbatim. Localization must not alter the facts FullWorth extracted.
         return description.Trim();
     }
 
