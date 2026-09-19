@@ -452,12 +452,23 @@
                     "import",
                     "./js/bff.js");
 
+            await using var streamModule =
+                await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./js/transaction-stream.js");
+
+            await using var streamReference =
+                await streamModule.InvokeAsync<IJSStreamReference>(
+                    "getBankTransactionsStream", TransactionLoadLimit);
+
+            await using var stream =
+                await streamReference.OpenReadStreamAsync(4 * 1024 * 1024);
+
             var result =
-                await _bffModule
-                    .InvokeAsync<
-                        BankTransactionViewModel[]>(
-                        "getBankTransactions",
-                        TransactionLoadLimit);
+                await System.Text.Json.JsonSerializer.DeserializeAsync<
+                    BankTransactionViewModel[]>(
+                    stream,
+                    new System.Text.Json.JsonSerializerOptions(
+                        System.Text.Json.JsonSerializerDefaults.Web));
 
             _transactions =
                 result?
