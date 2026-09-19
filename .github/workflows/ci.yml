@@ -52,6 +52,9 @@ jobs:
       - name: Run tests
         run: dotnet test BillWatch.Tests/BillWatch.Tests.csproj --configuration Release --no-build --no-restore
 
+      - name: Verify transaction stream regression
+        run: node --test BillWatch.Tests/transaction-stream.test.mjs
+
   maui:
     name: MAUI Android build
     runs-on: windows-latest
