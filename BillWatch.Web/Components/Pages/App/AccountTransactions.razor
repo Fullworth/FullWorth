@@ -34,6 +34,15 @@
                 @L["The connected-bank activity BillWatch uses to discover recurring bills."]
             </p>
         </div>
+
+        <button type="button"
+                class="secondary-action"
+                disabled="@(_isLoading || _isRefreshing)"
+                @onclick="SyncNowAsync">
+            @(_isRefreshing
+                ? L["Syncing…"]
+                : L["Sync now"])
+        </button>
     </header>
 
     @if (_isLoading)
@@ -272,7 +281,7 @@
 </div>
 
 @code {
-    private const int TransactionLoadLimit = 50;
+    private const int TransactionLoadLimit = 500;
 
     private IJSObjectReference?
         _bffModule;
@@ -282,6 +291,8 @@
 
     private bool _isLoading =
         true;
+
+    private bool _isRefreshing;
 
     private string? _errorMessage;
 
@@ -373,6 +384,54 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
+
+        StateHasChanged();
+    }
+
+    private async Task SyncNowAsync()
+    {
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        _isRefreshing =
+            true;
+
+        _errorMessage =
+            null;
+
+        StateHasChanged();
+
+        try
+        {
+            _bffModule ??=
+                await JS.InvokeAsync<
+                    IJSObjectReference>(
+                    "import",
+                    "./js/bff.js");
+
+            await _bffModule
+                .InvokeAsync<object?>(
+                    "refreshBillMonitoring");
+
+            await LoadAsync();
+        }
+        catch (JSException)
+        {
+            _errorMessage =
+                L["BillWatch could not refresh your bank data."];
+        }
+        catch (Exception)
+        {
+            _errorMessage =
+                L["Something went wrong while refreshing your bank data."];
+        }
+        finally
+        {
+            _isRefreshing =
+                false;
+        }
 
         StateHasChanged();
     }
