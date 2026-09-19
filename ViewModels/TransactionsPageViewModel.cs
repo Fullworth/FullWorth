@@ -1,9 +1,9 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace BillWatch.ViewModels;
+namespace FullWorth.ViewModels;
 
 public sealed class TransactionsPageViewModel : INotifyPropertyChanged
 {
@@ -144,7 +144,7 @@ public sealed class TransactionsPageViewModel : INotifyPropertyChanged
                 "Transaction history is unavailable.";
 
             ErrorMessage =
-                "BillWatch couldn't load your bank transactions. Please try again.";
+                "FullWorth couldn't load your bank transactions. Please try again.";
         }
         finally
         {
