@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed partial class DeterministicBillLineItemParser
 {

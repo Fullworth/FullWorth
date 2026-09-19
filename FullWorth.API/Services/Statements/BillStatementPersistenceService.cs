@@ -1,12 +1,12 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class BillStatementPersistenceService
 {
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly BillStatementChangeDetectionService
@@ -19,7 +19,7 @@ public sealed class BillStatementPersistenceService
      * Preserve existing direct test construction.
      */
     public BillStatementPersistenceService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         BillStatementChangeDetectionService changeDetectionService)
         : this(
             dbContext,
@@ -30,7 +30,7 @@ public sealed class BillStatementPersistenceService
     }
 
     public BillStatementPersistenceService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         BillStatementChangeDetectionService changeDetectionService,
         BillStatementPaymentDueAlertService paymentDueAlertService)
     {

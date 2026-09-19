@@ -1,9 +1,9 @@
 using System.Threading.Channels;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class BillStatementProcessingSignal
 {
@@ -31,7 +31,7 @@ public sealed class BillStatementProcessingSignal
 
 public sealed class BillStatementProcessingService
 {
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
     private readonly BillStatementDocumentTextReader _documentTextReader;
     private readonly IBillStatementExtractionService _extractionService;
     private readonly BillStatementValidationService _validationService;
@@ -39,7 +39,7 @@ public sealed class BillStatementProcessingService
     private readonly ILogger<BillStatementProcessingService> _logger;
 
     public BillStatementProcessingService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         BillStatementDocumentTextReader documentTextReader,
         IBillStatementExtractionService extractionService,
         BillStatementValidationService validationService,
@@ -335,7 +335,7 @@ public sealed class BillStatementProcessingBackgroundService
         using var scope = _scopeFactory.CreateScope();
 
         var dbContext =
-            scope.ServiceProvider.GetRequiredService<BillWatchDbContext>();
+            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
 
         var statementStorage =
             scope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();

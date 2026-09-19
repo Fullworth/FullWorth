@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Statements;
+namespace FullWorth.API.Services.Statements;
 
 public sealed class BillStatementPaymentDueAlertService
 {
@@ -13,11 +13,11 @@ public sealed class BillStatementPaymentDueAlertService
     private const int MaxMessageLength =
         2000;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public BillStatementPaymentDueAlertService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -52,7 +52,7 @@ public sealed class BillStatementPaymentDueAlertService
         /*
          * No explicit provider due date means no alert.
          *
-         * BillWatch does not guess due dates.
+         * FullWorth does not guess due dates.
          */
         if (!dueDate.HasValue)
         {
@@ -157,7 +157,7 @@ public sealed class BillStatementPaymentDueAlertService
 
         var message =
             Truncate(
-                $"{amount} is due {timing}. BillWatch found this due date directly on the provider statement.",
+                $"{amount} is due {timing}. FullWorth found this due date directly on the provider statement.",
                 MaxMessageLength);
 
         var matchingAlerts =
