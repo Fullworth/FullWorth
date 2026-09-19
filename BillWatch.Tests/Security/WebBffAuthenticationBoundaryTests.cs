@@ -25,4 +25,21 @@ public sealed class WebBffAuthenticationBoundaryTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task MonitoringRefresh_RequiresAuthenticatedSession()
+    {
+        using var factory = new BillWatchWebFactory();
+        using var client = factory.CreateHttpsClient();
+        client.DefaultRequestHeaders.Add("X-BillWatch-Test-Anonymous", "true");
+
+        using var response =
+            await client.PostAsync(
+                "/bff/bill-monitoring/refresh",
+                content: null);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
 }
