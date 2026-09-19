@@ -594,7 +594,7 @@
             ExternalLink = null;
             ExternalError = null;
             await _securityModule.InvokeVoidAsync("clearExternalLinkQuery");
-            SetSuccess($"{GetExternalProviderDisplayName(provider)} {L["can now be used to sign in to BillWatch."].Value}");
+            SetSuccess($"{GetExternalProviderDisplayName(provider)} {L["can now be used to sign in to FullWorth."].Value}");
         }, L["FullWorth could not link this sign-in method. Start the provider link again and try again."].Value);
     }
 
@@ -774,7 +774,7 @@
     {
         SecurityDialog.ChangePassword => L["Confirm your identity only for this password change."],
         SecurityDialog.ChangeEmail => L["Enter the new address and verify this sensitive account change."],
-        SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Verify your identity before FullWorth replaces your current recovery codes."] : L["Each code works once. Store them somewhere safe outside BillWatch."],
+        SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Verify your identity before FullWorth replaces your current recovery codes."] : L["Each code works once. Store them somewhere safe outside FullWorth."],
         SecurityDialog.ReplaceAuthenticator => _twoFactorStep == 1 ? L["Verify your identity before replacing the authenticator currently protecting your account."] : L["Complete the replacement before leaving this flow."],
         SecurityDialog.DisableTwoFactor => L["This is a sensitive security change and requires your current credentials."],
         SecurityDialog.SetupTwoFactor => _twoFactorStep == 1 ? L["Verify your password, then connect any standard authenticator app."] : L["Scan the code and verify one current code from the app."],

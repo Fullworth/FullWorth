@@ -258,7 +258,7 @@
         {
             var module = await GetDeleteModuleAsync();
             await module.InvokeAsync<bool>(
-                "deleteBillWatchAccount",
+                "deleteFullWorthAccount",
                 _deleteConfirmation,
                 _currentPassword,
                 _twoFactorCode);
