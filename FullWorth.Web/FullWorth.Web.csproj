@@ -14,7 +14,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\BillWatch.Core\BillWatch.Core.csproj" />
+		<ProjectReference Include="..\FullWorth.Core\FullWorth.Core.csproj" />
 	</ItemGroup>
 
 </Project>
