@@ -1,21 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.Core.Legal;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Core.Legal;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class RegistrationLegalAcceptanceTests
 {
     private const string Password =
-        "BillWatch!LegalTests123";
+        "FullWorth!LegalTests123";
 
     [Fact]
     public async Task RegistrationWithoutAcceptance_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -37,7 +37,7 @@ public sealed class RegistrationLegalAcceptanceTests
     public async Task RegistrationWithFalseAcceptance_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -52,7 +52,7 @@ public sealed class RegistrationLegalAcceptanceTests
                     password = Password,
                     acceptedTermsAndPrivacy = false,
                     legalTermsVersion =
-                        BillWatchLegalDocuments.CurrentVersion
+                        FullWorthLegalDocuments.CurrentVersion
                 });
 
         await AssertLegalRejectionAsync(response);
@@ -62,7 +62,7 @@ public sealed class RegistrationLegalAcceptanceTests
     public async Task RegistrationWithStaleVersion_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -87,7 +87,7 @@ public sealed class RegistrationLegalAcceptanceTests
     public async Task RegistrationWithCurrentAcceptance_SucceedsAndCanLogin()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -104,7 +104,7 @@ public sealed class RegistrationLegalAcceptanceTests
                     password = Password,
                     acceptedTermsAndPrivacy = true,
                     legalTermsVersion =
-                        BillWatchLegalDocuments.CurrentVersion
+                        FullWorthLegalDocuments.CurrentVersion
                 });
 
         Assert.Equal(
@@ -129,7 +129,7 @@ public sealed class RegistrationLegalAcceptanceTests
     public async Task OversizedRegistrationBody_IsRejectedBeforeIdentityProcessing()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();

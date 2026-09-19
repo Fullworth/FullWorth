@@ -1,7 +1,7 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Controllers;
+using FullWorth.API.Authorization;
+using FullWorth.API.Controllers;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class SubscriptionAccessExemptionRulesTests
 {

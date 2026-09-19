@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Xunit;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class PrivateBetaEvidenceScriptTests
 {
@@ -44,13 +44,13 @@ public sealed class PrivateBetaEvidenceScriptTests
         while (directory is not null)
         {
             if (Directory.Exists(Path.Combine(directory.FullName, "deploy")) &&
-                File.Exists(Path.Combine(directory.FullName, "BillWatch.slnx")))
+                File.Exists(Path.Combine(directory.FullName, "FullWorth.slnx")))
             {
                 return directory.FullName;
             }
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not locate the BillWatch repository root from the test output directory.");
+        throw new DirectoryNotFoundException("Could not locate the FullWorth repository root from the test output directory.");
     }
 }

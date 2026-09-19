@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class StripeWebhookSecurityTests
 {
@@ -13,7 +13,7 @@ public sealed class StripeWebhookSecurityTests
     public async Task ConfiguredWebhook_RejectsOversizedPayloadBeforeSignatureProcessing()
     {
         using var factory =
-            BillWatchApiFactory.WithStripeBilling();
+            FullWorthApiFactory.WithStripeBilling();
 
         using var client =
             factory.CreateHttpsClient();
@@ -42,7 +42,7 @@ public sealed class StripeWebhookSecurityTests
     public async Task ConfiguredWebhook_RejectsOversizedChunkedPayloadWithoutContentLength()
     {
         using var factory =
-            BillWatchApiFactory.WithStripeBilling();
+            FullWorthApiFactory.WithStripeBilling();
 
         using var client =
             factory.CreateHttpsClient();
@@ -67,7 +67,7 @@ public sealed class StripeWebhookSecurityTests
     public async Task ConfiguredWebhook_MaximumSizedPayloadReachesSignatureValidation()
     {
         using var factory =
-            BillWatchApiFactory.WithStripeBilling();
+            FullWorthApiFactory.WithStripeBilling();
 
         using var client =
             factory.CreateHttpsClient();
@@ -89,7 +89,7 @@ public sealed class StripeWebhookSecurityTests
     public async Task ConfiguredWebhook_RejectsInvalidSignatureWithoutEchoingPayload()
     {
         using var factory =
-            BillWatchApiFactory.WithStripeBilling();
+            FullWorthApiFactory.WithStripeBilling();
 
         using var client =
             factory.CreateHttpsClient();
@@ -128,7 +128,7 @@ public sealed class StripeWebhookSecurityTests
     [Fact]
     public async Task ConfiguredWebhook_RejectsOutOfRangeSignatureTimestamp()
     {
-        using var factory = BillWatchApiFactory.WithStripeBilling();
+        using var factory = FullWorthApiFactory.WithStripeBilling();
         using var client = factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -149,7 +149,7 @@ public sealed class StripeWebhookSecurityTests
     public async Task UnconfiguredWebhook_RemainsHidden()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();

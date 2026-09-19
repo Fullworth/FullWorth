@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class SensitiveRateLimitTests
 {
@@ -10,7 +10,7 @@ public sealed class SensitiveRateLimitTests
     public async Task AuthenticationLimiter_RejectsTwentyFirstAnonymousRequest()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -39,7 +39,7 @@ public sealed class SensitiveRateLimitTests
     public async Task AccountExportLimiter_IsUserPartitioned()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var firstClient =
             factory.CreateHttpsClient();
@@ -93,7 +93,7 @@ public sealed class SensitiveRateLimitTests
     public async Task SubscriptionRedemptionLimiter_RejectsSixthRequest()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -138,7 +138,7 @@ public sealed class SensitiveRateLimitTests
     public async Task StatementUploadLimiter_RejectsThirteenthRequest()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -178,7 +178,7 @@ public sealed class SensitiveRateLimitTests
     public async Task StatementDownloadLimiter_RejectsThirtyFirstRequest()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -228,7 +228,7 @@ public sealed class SensitiveRateLimitTests
                     $"missing-{attempt}@billwatch.local",
 
                 password =
-                    "BillWatch!Invalid123"
+                    "FullWorth!Invalid123"
             });
     }
 

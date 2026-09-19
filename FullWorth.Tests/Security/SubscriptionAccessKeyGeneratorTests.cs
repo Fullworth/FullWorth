@@ -1,6 +1,6 @@
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Services.Subscriptions;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class SubscriptionAccessKeyGeneratorTests
 {

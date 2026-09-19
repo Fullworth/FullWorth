@@ -1,7 +1,7 @@
 using System.Net;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class SubscriptionEnforcementIntegrationTests
 {
@@ -18,7 +18,7 @@ public sealed class SubscriptionEnforcementIntegrationTests
         string method,
         string route)
     {
-        await using var factory = BillWatchApiFactory.WithSubscriptionEnforcement();
+        await using var factory = FullWorthApiFactory.WithSubscriptionEnforcement();
         using var client = factory.CreateHttpsClient();
         var user = await TestUserAuthentication.RegisterAndLoginAsync(client);
         TestUserAuthentication.Authorize(client, user);
@@ -32,7 +32,7 @@ public sealed class SubscriptionEnforcementIntegrationTests
     [Fact]
     public async Task EnabledGate_KeepsSubscriptionRecoveryAvailable()
     {
-        await using var factory = BillWatchApiFactory.WithSubscriptionEnforcement();
+        await using var factory = FullWorthApiFactory.WithSubscriptionEnforcement();
         using var client = factory.CreateHttpsClient();
         var user = await TestUserAuthentication.RegisterAndLoginAsync(client);
         TestUserAuthentication.Authorize(client, user);
