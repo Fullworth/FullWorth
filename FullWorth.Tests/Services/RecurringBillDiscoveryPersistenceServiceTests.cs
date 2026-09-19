@@ -1,11 +1,11 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Bills;
-using BillWatch.Core.Models;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Bills;
+using FullWorth.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class RecurringBillDiscoveryPersistenceServiceTests
 {
@@ -372,17 +372,17 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             dbContext.BillStreams);
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     $"recurring-discovery-{Guid.NewGuid():N}")
                 .Options);
     }
 
     private static void AddMonthlyTransactions(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId,
         string merchantName,
         decimal amount,
@@ -418,7 +418,7 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
     }
 
     private static void AddTransaction(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         Guid userId,
         string merchantName,
         DateOnly postedDate,

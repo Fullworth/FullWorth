@@ -1,29 +1,29 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class TesseractEndToEndOcrTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
     private static readonly TimeSpan ProcessingTimeout =
         TimeSpan.FromSeconds(20);
 
-    private readonly BillWatchApiFactory
+    private readonly FullWorthApiFactory
         _factory;
 
     public TesseractEndToEndOcrTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -35,7 +35,7 @@ public sealed class TesseractEndToEndOcrTests
         PngStatement_OcrsParsesAndPersists()
     {
         /*
-         * BillWatchApiFactory normally replaces the native OCR engine
+         * FullWorthApiFactory normally replaces the native OCR engine
          * with a fast deterministic fake.
          *
          * This derived host restores the real production Tesseract
@@ -103,7 +103,7 @@ public sealed class TesseractEndToEndOcrTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var upload =
             await dbContext
@@ -274,7 +274,7 @@ public sealed class TesseractEndToEndOcrTests
             var dbContext =
                 scope.ServiceProvider
                     .GetRequiredService<
-                        BillWatchDbContext>();
+                        FullWorthDbContext>();
 
             lastStatus =
                 await dbContext

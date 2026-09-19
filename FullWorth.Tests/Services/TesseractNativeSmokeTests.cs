@@ -1,7 +1,7 @@
 ﻿using TesseractOCR;
 using TesseractOCR.Enums;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class TesseractNativeSmokeTests
 {

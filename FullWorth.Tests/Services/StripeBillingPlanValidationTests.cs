@@ -2,12 +2,12 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class StripeBillingPlanValidationTests
 {
@@ -18,7 +18,7 @@ public sealed class StripeBillingPlanValidationTests
     [InlineData("price_other_product", false)]
     [InlineData(MonthlyPriceId, true)]
     [InlineData(YearlyPriceId, true)]
-    public async Task CurrentSubscription_RecognizesOnlyConfiguredBillWatchPrices(
+    public async Task CurrentSubscription_RecognizesOnlyConfiguredFullWorthPrices(
         string priceId,
         bool expected)
     {
@@ -199,7 +199,7 @@ public sealed class StripeBillingPlanValidationTests
         service.Db.SubscriptionEntitlements.Add(new SubscriptionEntitlementEntity
         {
             UserId = userId,
-            Tier = BillWatchSubscriptionTier.Standard,
+            Tier = FullWorthSubscriptionTier.Standard,
             Source = SubscriptionEntitlementSource.Paid,
             StartsAtUtc = DateTimeOffset.UtcNow.AddDays(-1),
             EndsAtUtc = DateTimeOffset.UtcNow.AddDays(30),
@@ -255,8 +255,8 @@ public sealed class StripeBillingPlanValidationTests
     private static TestService CreateService(Func<HttpRequestMessage, string> respond)
     {
         var client = new HttpClient(new StubHandler(respond));
-        var db = new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        var db = new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
                 .Options);
         var options = new StripeBillingOptions
@@ -278,7 +278,7 @@ public sealed class StripeBillingPlanValidationTests
     private sealed record TestService(
         StripeBillingService Billing,
         HttpClient Client,
-        BillWatchDbContext Db) : IDisposable
+        FullWorthDbContext Db) : IDisposable
     {
         public void Dispose()
         {

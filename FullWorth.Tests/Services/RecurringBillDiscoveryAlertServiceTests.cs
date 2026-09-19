@@ -1,10 +1,10 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Bills;
-using BillWatch.Core.Models;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Bills;
+using FullWorth.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class RecurringBillDiscoveryAlertServiceTests
 {
@@ -245,19 +245,19 @@ public sealed class RecurringBillDiscoveryAlertServiceTests
                 .ToListAsync());
     }
 
-    private static BillWatchDbContext
+    private static FullWorthDbContext
         CreateDbContext()
     {
         var options =
             new DbContextOptionsBuilder<
-                    BillWatchDbContext>()
+                    FullWorthDbContext>()
                 .UseInMemoryDatabase(
                     Guid.NewGuid()
                         .ToString(
                             "N"))
                 .Options;
 
-        return new BillWatchDbContext(
+        return new FullWorthDbContext(
             options);
     }
 

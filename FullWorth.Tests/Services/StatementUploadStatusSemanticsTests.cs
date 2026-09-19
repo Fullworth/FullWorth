@@ -1,6 +1,6 @@
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class StatementUploadStatusSemanticsTests
 {

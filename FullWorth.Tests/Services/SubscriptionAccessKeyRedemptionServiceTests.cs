@@ -1,9 +1,9 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class SubscriptionAccessKeyRedemptionServiceTests
 {
@@ -92,7 +92,7 @@ public sealed class SubscriptionAccessKeyRedemptionServiceTests
     }
 
     private static SubscriptionAccessKeyRedemptionService CreateService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         SubscriptionAccessKeyGenerator generator)
     {
         return new SubscriptionAccessKeyRedemptionService(
@@ -101,10 +101,10 @@ public sealed class SubscriptionAccessKeyRedemptionServiceTests
             new FixedTimeProvider(NowUtc));
     }
 
-    private static BillWatchDbContext CreateDbContext()
+    private static FullWorthDbContext CreateDbContext()
     {
-        return new BillWatchDbContext(
-            new DbContextOptionsBuilder<BillWatchDbContext>()
+        return new FullWorthDbContext(
+            new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
     }

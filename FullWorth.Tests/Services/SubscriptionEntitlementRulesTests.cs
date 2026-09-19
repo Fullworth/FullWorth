@@ -1,7 +1,7 @@
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class SubscriptionEntitlementRulesTests
 {
@@ -95,7 +95,7 @@ public sealed class SubscriptionEntitlementRulesTests
                 endsAtUtc:
                     null,
                 tier:
-                    BillWatchSubscriptionTier.Beta);
+                    FullWorthSubscriptionTier.Beta);
 
         var standard =
             CreateEntitlement(
@@ -104,7 +104,7 @@ public sealed class SubscriptionEntitlementRulesTests
                 endsAtUtc:
                     NowUtc.AddDays(30),
                 tier:
-                    BillWatchSubscriptionTier.Standard);
+                    FullWorthSubscriptionTier.Standard);
 
         var selected =
             SubscriptionEntitlementRules
@@ -148,8 +148,8 @@ public sealed class SubscriptionEntitlementRulesTests
         CreateEntitlement(
             DateTimeOffset startsAtUtc,
             DateTimeOffset? endsAtUtc,
-            BillWatchSubscriptionTier tier =
-                BillWatchSubscriptionTier.Standard)
+            FullWorthSubscriptionTier tier =
+                FullWorthSubscriptionTier.Standard)
     {
         return new SubscriptionEntitlementEntity
         {

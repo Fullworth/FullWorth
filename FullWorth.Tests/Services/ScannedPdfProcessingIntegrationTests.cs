@@ -2,28 +2,28 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class ScannedPdfProcessingIntegrationTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
     private static readonly TimeSpan ProcessingTimeout =
         TimeSpan.FromSeconds(5);
 
-    private readonly BillWatchApiFactory
+    private readonly FullWorthApiFactory
         _factory;
 
     public ScannedPdfProcessingIntegrationTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -99,7 +99,7 @@ public sealed class ScannedPdfProcessingIntegrationTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var upload =
             await dbContext.BillStatementUploads
@@ -267,7 +267,7 @@ public sealed class ScannedPdfProcessingIntegrationTests
             var dbContext =
                 scope.ServiceProvider
                     .GetRequiredService<
-                        BillWatchDbContext>();
+                        FullWorthDbContext>();
 
             lastStatus =
                 await dbContext.BillStatementUploads
