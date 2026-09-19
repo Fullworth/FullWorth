@@ -1,13 +1,13 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
-public sealed class BillWatchApiClient
+public sealed class FullWorthApiClient
 {
     private readonly HttpClient _httpClient;
 
-    public BillWatchApiClient(
+    public FullWorthApiClient(
         HttpClient httpClient)
     {
         _httpClient =

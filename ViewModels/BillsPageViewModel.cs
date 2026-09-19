@@ -1,8 +1,8 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace BillWatch.ViewModels;
+namespace FullWorth.ViewModels;
 
 public sealed class BillsPageViewModel : INotifyPropertyChanged
 {
@@ -170,7 +170,7 @@ public sealed class BillsPageViewModel : INotifyPropertyChanged
         catch (HttpRequestException)
         {
             ErrorMessage =
-                "Unable to load your bills from BillWatch.";
+                "Unable to load your bills from FullWorth.";
         }
         catch (Exception)
         {

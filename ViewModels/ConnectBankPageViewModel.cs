@@ -1,10 +1,10 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace BillWatch.ViewModels;
+namespace FullWorth.ViewModels;
 
 public sealed class ConnectBankPageViewModel :
     INotifyPropertyChanged
@@ -156,7 +156,7 @@ public sealed class ConnectBankPageViewModel :
         catch
         {
             StatusMessage =
-                "BillWatch could not load your bank connections.";
+                "FullWorth could not load your bank connections.";
         }
         finally
         {
@@ -208,7 +208,7 @@ public sealed class ConnectBankPageViewModel :
             if (!opened)
             {
                 StatusMessage =
-                    "BillWatch could not open the secure bank connection.";
+                    "FullWorth could not open the secure bank connection.";
 
                 return;
             }
@@ -220,7 +220,7 @@ public sealed class ConnectBankPageViewModel :
                 connectionWaitCancellation;
 
             StatusMessage =
-                "Complete the connection in your browser. When you are done — or if you close the Plaid tab — return to BillWatch and click anywhere in this window. BillWatch will refresh or stop waiting.";
+                "Complete the connection in your browser. When you are done — or if you close the Plaid tab — return to FullWorth and click anywhere in this window. FullWorth will refresh or stop waiting.";
 
             var deadline =
                 DateTimeOffset.UtcNow
@@ -260,7 +260,7 @@ public sealed class ConnectBankPageViewModel :
 
                     StatusMessage =
                         connection is null
-                            ? $"{ConnectedInstitution} is now securely connected to BillWatch."
+                            ? $"{ConnectedInstitution} is now securely connected to FullWorth."
                             : $"{ConnectedInstitution} was securely reconnected.";
 
                     await RefreshConnectionsCoreAsync(
@@ -299,7 +299,7 @@ public sealed class ConnectBankPageViewModel :
             }
 
             StatusMessage =
-                "BillWatch stopped waiting for the bank connection. You can try again.";
+                "FullWorth stopped waiting for the bank connection. You can try again.";
         }
         catch (OperationCanceledException)
             when (connectionWaitCancellation?
@@ -311,7 +311,7 @@ public sealed class ConnectBankPageViewModel :
         catch
         {
             StatusMessage =
-                "BillWatch could not connect to your bank. Please try again.";
+                "FullWorth could not connect to your bank. Please try again.";
         }
         finally
         {
@@ -380,7 +380,7 @@ public sealed class ConnectBankPageViewModel :
         catch
         {
             StatusMessage =
-                $"BillWatch could not disconnect {connection.InstitutionName}.";
+                $"FullWorth could not disconnect {connection.InstitutionName}.";
         }
         finally
         {
@@ -433,8 +433,8 @@ public sealed class ConnectBankPageViewModel :
         {
             StatusMessage =
                 activeCount == 1
-                    ? "BillWatch is monitoring 1 bank connection."
-                    : $"BillWatch is monitoring {activeCount} bank connections.";
+                    ? "FullWorth is monitoring 1 bank connection."
+                    : $"FullWorth is monitoring {activeCount} bank connections.";
 
             return;
         }
