@@ -11,7 +11,7 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Bills> L
 
-<PageTitle>@L["Bills — BillWatch"]</PageTitle>
+<PageTitle>@L["Bills — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/bills.css" />
@@ -111,7 +111,7 @@
             </span>
 
             <h2>
-                @L["BillWatch hasn't discovered a recurring bill yet."]
+                @L["FullWorth hasn't discovered a recurring bill yet."]
             </h2>
 
             <p>
@@ -285,7 +285,7 @@
                             <div class="bill-history-state">
                                 <span class="history-dot"></span>
 
-                                @L["More transaction history is needed before BillWatch can compare this bill."]
+                                @L["More transaction history is needed before FullWorth can compare this bill."]
                             </div>
                         }
 
@@ -440,7 +440,7 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not reach the secure API."].Value;
+                L["FullWorth could not reach the secure API."].Value;
         }
         catch (Exception)
         {
