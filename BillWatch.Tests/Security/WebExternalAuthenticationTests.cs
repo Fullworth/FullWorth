@@ -68,7 +68,7 @@ public sealed class WebExternalAuthenticationTests
                 .ReadAsStringAsync();
 
         Assert.Contains(
-            "BillWatch could not complete that external sign-in.",
+            "FullWorth could not complete that external sign-in.",
             body,
             StringComparison.Ordinal);
 
@@ -229,7 +229,7 @@ public sealed class WebExternalAuthenticationTests
                 .ReadAsStringAsync();
 
         Assert.Contains(
-            "BillWatch could not complete that sign-in method.",
+            "FullWorth could not complete that sign-in method.",
             body,
             StringComparison.Ordinal);
 
