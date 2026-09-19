@@ -1,16 +1,16 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Accounts;
+namespace FullWorth.API.Services.Accounts;
 
 public static class AccountDataExportBuilder
 {
     public const string CurrentSchemaVersion = "1.1";
 
     public static async Task<AccountDataExportResult> CreateAsync(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         ApplicationUser user,
         CancellationToken cancellationToken)
     {

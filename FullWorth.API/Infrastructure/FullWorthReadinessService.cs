@@ -1,19 +1,19 @@
-using BillWatch.API.Data;
-using BillWatch.API.Services.Statements;
+using FullWorth.API.Data;
+using FullWorth.API.Services.Statements;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Infrastructure;
+namespace FullWorth.API.Infrastructure;
 
-public sealed class BillWatchReadinessService
+public sealed class FullWorthReadinessService
 {
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
     private readonly BillStatementStorageOptions _storageOptions;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
 
-    public BillWatchReadinessService(
-        BillWatchDbContext dbContext,
+    public FullWorthReadinessService(
+        FullWorthDbContext dbContext,
         IOptions<BillStatementStorageOptions> storageOptions,
         IConfiguration configuration,
         IWebHostEnvironment environment)
@@ -98,7 +98,7 @@ public sealed class BillWatchReadinessService
         return Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),
-            "BillWatch",
+            "FullWorth",
             "StatementStorage");
     }
 

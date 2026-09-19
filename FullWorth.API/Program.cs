@@ -2,17 +2,17 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using System.Net;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Infrastructure;
-using BillWatch.API.Services.Bills;
-using BillWatch.API.Services.Admin;
-using BillWatch.API.Services.Identity;
-using BillWatch.API.Services.Plaid;
-using BillWatch.API.Services.Statements;
-using BillWatch.API.Services.Subscriptions;
-using BillWatch.Core.Services;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
+using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Admin;
+using FullWorth.API.Services.Identity;
+using FullWorth.API.Services.Plaid;
+using FullWorth.API.Services.Statements;
+using FullWorth.API.Services.Subscriptions;
+using FullWorth.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -62,7 +62,7 @@ builder.Services.AddControllers(
         {
             options.Filters.Add(
                 new AuthorizeFilter(
-                    BillWatchPolicies.ActiveSubscription));
+                    FullWorthPolicies.ActiveSubscription));
         }
     });
 builder.Services.AddOpenApi();
@@ -115,10 +115,10 @@ if (string.IsNullOrWhiteSpace(
         connectionString))
 {
     throw new InvalidOperationException(
-        "Connection string 'BillWatchDatabase' was not found.");
+        "Connection string 'FullWorthDatabase' was not found.");
 }
 
-builder.Services.AddDbContext<BillWatchDbContext>(
+builder.Services.AddDbContext<FullWorthDbContext>(
     options =>
         options.UseNpgsql(
             connectionString));
@@ -126,7 +126,7 @@ builder.Services.AddDbContext<BillWatchDbContext>(
 builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
     .AddRoles<IdentityRole<Guid>>()
-    .AddEntityFrameworkStores<BillWatchDbContext>();
+    .AddEntityFrameworkStores<FullWorthDbContext>();
 
 builder.Services.Configure<IdentityOptions>(
     options =>
@@ -197,24 +197,24 @@ builder.Services.AddAuthorization(
     options =>
     {
         options.AddPolicy(
-            BillWatchPolicies.OwnerOnly,
-            policy => policy.RequireRole(BillWatchRoles.Owner));
+            FullWorthPolicies.OwnerOnly,
+            policy => policy.RequireRole(FullWorthRoles.Owner));
 
         options.AddPolicy(
-            BillWatchPolicies.AdminOrOwner,
+            FullWorthPolicies.AdminOrOwner,
             policy => policy.RequireRole(
-                BillWatchRoles.Owner,
-                BillWatchRoles.Admin));
+                FullWorthRoles.Owner,
+                FullWorthRoles.Admin));
 
         options.AddPolicy(
-            BillWatchPolicies.ModeratorOrAbove,
+            FullWorthPolicies.ModeratorOrAbove,
             policy => policy.RequireRole(
-                BillWatchRoles.Owner,
-                BillWatchRoles.Admin,
-                BillWatchRoles.Moderator));
+                FullWorthRoles.Owner,
+                FullWorthRoles.Admin,
+                FullWorthRoles.Moderator));
 
         options.AddPolicy(
-            BillWatchPolicies.ActiveSubscription,
+            FullWorthPolicies.ActiveSubscription,
             policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -661,7 +661,7 @@ builder.Services.AddScoped<
     BillStatementProcessingService>();
 
 builder.Services.AddScoped<
-    BillWatchReadinessService>();
+    FullWorthReadinessService>();
 
 builder.Services.AddSingleton<
     BillStatementProcessingSignal>();
@@ -680,7 +680,7 @@ if (builder.Configuration.GetValue<bool>(
 
     var migrationDbContext =
         migrationScope.ServiceProvider
-            .GetRequiredService<BillWatchDbContext>();
+            .GetRequiredService<FullWorthDbContext>();
 
     await migrationDbContext.Database.MigrateAsync();
 }
@@ -716,7 +716,7 @@ app.UseWhen(
 
 /*
  * Security and privacy headers are applied at response-start time so later
- * middleware or endpoints cannot accidentally replace BillWatch's required
+ * middleware or endpoints cannot accidentally replace FullWorth's required
  * values.
  */
 app.Use(
@@ -784,13 +784,13 @@ app.Use(
 
 /*
  * Authentication intentionally precedes named rate-limit policies because
- * sensitive BillWatch endpoints are partitioned by authenticated UserId.
+ * sensitive FullWorth endpoints are partitioned by authenticated UserId.
  *
  * Anonymous callers still fall back to an IP-scoped partition.
  */
 app.UseAuthentication();
 app.UseRateLimiter();
-app.UseBillWatchRegistrationLegalAcceptance();
+app.UseFullWorthRegistrationLegalAcceptance();
 app.UseAuthorization();
 
 app.MapGet(
@@ -807,7 +807,7 @@ app.MapGet(
 app.MapGet(
         "/health/ready",
         async (
-            BillWatchReadinessService readinessService,
+            FullWorthReadinessService readinessService,
             CancellationToken cancellationToken) =>
         {
             var isReady =

@@ -1,7 +1,7 @@
 using System.Text.Json;
-using BillWatch.Core.Legal;
+using FullWorth.Core.Legal;
 
-namespace BillWatch.API.Infrastructure;
+namespace FullWorth.API.Infrastructure;
 
 public static class RegistrationLegalAcceptanceExtensions
 {
@@ -9,7 +9,7 @@ public static class RegistrationLegalAcceptanceExtensions
         16 * 1024;
 
     public static IApplicationBuilder
-        UseBillWatchRegistrationLegalAcceptance(
+        UseFullWorthRegistrationLegalAcceptance(
             this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -81,13 +81,13 @@ public static class RegistrationLegalAcceptanceExtensions
                 if (!acceptance.Accepted ||
                     !string.Equals(
                         acceptance.Version,
-                        BillWatchLegalDocuments.CurrentVersion,
+                        FullWorthLegalDocuments.CurrentVersion,
                         StringComparison.Ordinal))
                 {
                     await WriteProblemAsync(
                         context,
                         StatusCodes.Status400BadRequest,
-                        "Accept the current BillWatch Terms and Privacy Notice to create an account.");
+                        "Accept the current FullWorth Terms and Privacy Notice to create an account.");
                     return;
                 }
 
