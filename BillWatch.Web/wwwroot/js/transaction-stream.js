@@ -15,5 +15,6 @@ export async function getBankTransactionsStream(take) {
         throw new Error("BillWatch received an oversized transaction response.");
     }
 
-    return DotNet.createJSStreamReference(payload);
+    // IJSStreamReference interop wraps this Blob automatically.
+    return payload;
 }
