@@ -143,14 +143,14 @@ public sealed class AccountController : ControllerBase
                 new
                 {
                     message =
-                        "BillWatch staff accounts cannot be self-deleted while privileged roles are assigned. Remove the staff roles through the authorized admin workflow first."
+                        "FullWorth staff accounts cannot be self-deleted while privileged roles are assigned. Remove the staff roles through the authorized admin workflow first."
                 });
         }
 
         /*
          * Revoke external Plaid access before deleting local connection
          * metadata and protected access tokens. If revocation cannot be
-         * completed safely, do not claim that the BillWatch account was
+         * completed safely, do not claim that the FullWorth account was
          * deleted.
          */
         var connectionIds = await _dbContext.BankConnections
@@ -183,7 +183,7 @@ public sealed class AccountController : ControllerBase
                     InvalidOperationException)
             {
                 _logger.LogWarning(
-                    "BillWatch account deletion could not revoke a bank connection because of {ExceptionType}.",
+                    "FullWorth account deletion could not revoke a bank connection because of {ExceptionType}.",
                     exception.GetType().Name);
 
                 return StatusCode(
@@ -191,7 +191,7 @@ public sealed class AccountController : ControllerBase
                     new
                     {
                         message =
-                            "BillWatch could not safely finish deleting your account because a bank connection could not be revoked. Your BillWatch account was not deleted. Try again shortly."
+                            "FullWorth could not safely finish deleting your account because a bank connection could not be revoked. Your FullWorth account was not deleted. Try again shortly."
                     });
             }
         }
@@ -235,7 +235,7 @@ public sealed class AccountController : ControllerBase
                 quarantinedStatements);
 
             _logger.LogError(
-                "BillWatch account deletion could not quarantine statement storage because of {ExceptionType}.",
+                "FullWorth account deletion could not quarantine statement storage because of {ExceptionType}.",
                 exception.GetType().Name);
 
             return StatusCode(
@@ -243,7 +243,7 @@ public sealed class AccountController : ControllerBase
                 new
                 {
                     message =
-                        "BillWatch could not securely prepare stored statement files for deletion. Your BillWatch account was not deleted. Try again."
+                        "FullWorth could not securely prepare stored statement files for deletion. Your FullWorth account was not deleted. Try again."
                 });
         }
 
@@ -415,7 +415,7 @@ public sealed class AccountController : ControllerBase
                 cleanupPending = true;
 
                 _logger.LogError(
-                    "BillWatch account deletion committed, but quarantined statement cleanup is pending because of {ExceptionType}.",
+                    "FullWorth account deletion committed, but quarantined statement cleanup is pending because of {ExceptionType}.",
                     exception.GetType().Name);
             }
         }
@@ -426,7 +426,7 @@ public sealed class AccountController : ControllerBase
                 value: new
                 {
                     message =
-                        "Your BillWatch account was deleted. Secure cleanup of quarantined statement files is still being retried automatically."
+                        "Your FullWorth account was deleted. Secure cleanup of quarantined statement files is still being retried automatically."
                 });
         }
 
@@ -458,7 +458,7 @@ public sealed class AccountController : ControllerBase
                     ArgumentException)
             {
                 _logger.LogCritical(
-                    "BillWatch could not immediately restore a quarantined statement after account deletion rollback because of {ExceptionType}. Startup maintenance will retry recovery.",
+                    "FullWorth could not immediately restore a quarantined statement after account deletion rollback because of {ExceptionType}. Startup maintenance will retry recovery.",
                     exception.GetType().Name);
             }
         }
