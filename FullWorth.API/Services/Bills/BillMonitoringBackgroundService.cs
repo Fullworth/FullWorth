@@ -1,9 +1,9 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Services.Bills;
+namespace FullWorth.API.Services.Bills;
 
 public sealed class BillMonitoringBackgroundOptions
 {
@@ -46,11 +46,11 @@ public sealed class BillMonitoringBackgroundOptions
 
 public sealed class BillMonitoringRefreshScheduler
 {
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public BillMonitoringRefreshScheduler(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -232,7 +232,7 @@ public sealed class BillMonitoringBackgroundService
                  * data, institution names, or user identifiers.
                  */
                 _logger.LogError(
-                    "The scheduled BillWatch monitoring pass failed with {ExceptionType}.",
+                    "The scheduled FullWorth monitoring pass failed with {ExceptionType}.",
                     ex.GetType().Name);
 
                 candidateCount =
@@ -324,7 +324,7 @@ public sealed class BillMonitoringBackgroundService
                  * for everyone else.
                  */
                 _logger.LogWarning(
-                    "A scheduled BillWatch bank refresh failed with {ExceptionType}.",
+                    "A scheduled FullWorth bank refresh failed with {ExceptionType}.",
                     ex.GetType().Name);
             }
         }

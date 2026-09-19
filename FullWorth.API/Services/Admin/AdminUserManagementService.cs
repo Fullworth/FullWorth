@@ -1,15 +1,15 @@
 using System.Data;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace BillWatch.API.Services.Admin;
+namespace FullWorth.API.Services.Admin;
 
 public sealed class AdminUserManagementService(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     TimeProvider timeProvider)
 {
     public async Task<AdminUserMutationResult> AssignRoleAsync(
@@ -19,8 +19,8 @@ public sealed class AdminUserManagementService(
         CancellationToken cancellationToken = default)
     {
         if (actorUserId == targetUserId ||
-            !BillWatchRoles.IsStaffRole(roleName) ||
-            roleName == BillWatchRoles.Owner)
+            !FullWorthRoles.IsStaffRole(roleName) ||
+            roleName == FullWorthRoles.Owner)
         {
             return AdminUserMutationResult.Forbidden;
         }
@@ -34,10 +34,10 @@ public sealed class AdminUserManagementService(
                     cancellationToken);
 
                 if (state is null ||
-                    !BillWatchRoleHierarchy.CanManageUser(
+                    !FullWorthRoleHierarchy.CanManageUser(
                         state.ActorHighestRole!,
                         state.TargetHighestRole) ||
-                    !BillWatchRoleHierarchy.CanAssignRole(
+                    !FullWorthRoleHierarchy.CanAssignRole(
                         state.ActorHighestRole!,
                         roleName))
                 {
@@ -86,8 +86,8 @@ public sealed class AdminUserManagementService(
         CancellationToken cancellationToken = default)
     {
         if (actorUserId == targetUserId ||
-            !BillWatchRoles.IsStaffRole(roleName) ||
-            roleName == BillWatchRoles.Owner)
+            !FullWorthRoles.IsStaffRole(roleName) ||
+            roleName == FullWorthRoles.Owner)
         {
             return AdminUserMutationResult.Forbidden;
         }
@@ -101,7 +101,7 @@ public sealed class AdminUserManagementService(
                     cancellationToken);
 
                 if (state is null ||
-                    !BillWatchRoleHierarchy.CanManageUser(
+                    !FullWorthRoleHierarchy.CanManageUser(
                         state.ActorHighestRole!,
                         state.TargetHighestRole))
                 {
@@ -142,7 +142,7 @@ public sealed class AdminUserManagementService(
     public async Task<AdminUserMutationResult> GrantEntitlementAsync(
         Guid actorUserId,
         Guid targetUserId,
-        BillWatchSubscriptionTier tier,
+        FullWorthSubscriptionTier tier,
         int? durationDays,
         bool grantsLifetimeAccess,
         CancellationToken cancellationToken = default)
@@ -160,7 +160,7 @@ public sealed class AdminUserManagementService(
             cancellationToken);
 
         if (state is null ||
-            !BillWatchRoleHierarchy.CanManageUser(
+            !FullWorthRoleHierarchy.CanManageUser(
                 state.ActorHighestRole!,
                 state.TargetHighestRole))
         {
@@ -204,7 +204,7 @@ public sealed class AdminUserManagementService(
             cancellationToken);
 
         if (state is null ||
-            !BillWatchRoleHierarchy.CanManageUser(
+            !FullWorthRoleHierarchy.CanManageUser(
                 state.ActorHighestRole!,
                 state.TargetHighestRole))
         {
@@ -260,7 +260,7 @@ public sealed class AdminUserManagementService(
             cancellationToken);
 
         if (state is null ||
-            !BillWatchRoleHierarchy.CanManageUser(
+            !FullWorthRoleHierarchy.CanManageUser(
                 state.ActorHighestRole!,
                 state.TargetHighestRole))
         {
@@ -330,10 +330,10 @@ public sealed class AdminUserManagementService(
         var actorHighest = assignments
             .Where(item => item.UserId == actorUserId)
             .Select(item => item.Name)
-            .OrderByDescending(BillWatchRoleHierarchy.GetRank)
+            .OrderByDescending(FullWorthRoleHierarchy.GetRank)
             .FirstOrDefault();
 
-        if (!BillWatchRoles.IsStaffRole(actorHighest))
+        if (!FullWorthRoles.IsStaffRole(actorHighest))
         {
             return null;
         }
@@ -341,7 +341,7 @@ public sealed class AdminUserManagementService(
         var targetHighest = assignments
             .Where(item => item.UserId == targetUserId)
             .Select(item => item.Name)
-            .OrderByDescending(BillWatchRoleHierarchy.GetRank)
+            .OrderByDescending(FullWorthRoleHierarchy.GetRank)
             .FirstOrDefault();
 
         return new ManagementState(actorHighest, targetHighest);

@@ -1,15 +1,15 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Services;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
 
 using BillCategory =
-    BillWatch.Core.Models.BillCategory;
+    FullWorth.Core.Models.BillCategory;
 
 using CoreBankTransaction =
-    BillWatch.Core.Models.BankTransaction;
+    FullWorth.Core.Models.BankTransaction;
 
-namespace BillWatch.API.Services.Bills;
+namespace FullWorth.API.Services.Bills;
 
 public sealed class RecurringBillDiscoveryPersistenceService
 {
@@ -32,7 +32,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 "TRANSFER_OUT"
             };
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly BillStreamDiscoveryService
@@ -48,7 +48,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
         _discoveryAlertService;
 
     public RecurringBillDiscoveryPersistenceService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -95,7 +95,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
         /*
          * Do not discard a transaction merely because Plaid placed it in a
-         * category BillWatch does not currently recognize.
+         * category FullWorth does not currently recognize.
          *
          * Cadence is primary evidence that a charge is recurring. Category
          * evidence is evaluated after recurrence is established so a stable
@@ -154,7 +154,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
              * Black Hills Energy, Midco, and Verizon.
              *
              * Preserve that evidence when Plaid's category metadata is
-             * missing or outside BillWatch's supported category map. This is
+             * missing or outside FullWorth's supported category map. This is
              * especially important for variable-amount utilities, which
              * intentionally fail the generic stable-amount fallback.
              */

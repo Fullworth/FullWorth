@@ -1,7 +1,7 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Services.Plaid;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Services.Plaid;
 
-namespace BillWatch.API.Services.Bills;
+namespace FullWorth.API.Services.Bills;
 
 public sealed class BillMonitoringRefreshService
 {
@@ -37,7 +37,7 @@ public sealed class BillMonitoringRefreshService
         PlaidAccountSyncService accountSyncService,
         PlaidTransactionSyncService transactionSyncService,
         RecurringBillDiscoveryPersistenceService billDiscoveryService,
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         ILogger<BillMonitoringRefreshService> logger)
         : this(
             accountSyncService,
@@ -72,7 +72,7 @@ public sealed class BillMonitoringRefreshService
             /*
              * Always synchronize accounts first.
              *
-             * A brand-new Plaid connection may exist before BillWatch has
+             * A brand-new Plaid connection may exist before FullWorth has
              * persisted its checking/credit/etc. accounts. Transaction sync
              * depends on those local BankAccount rows.
              */

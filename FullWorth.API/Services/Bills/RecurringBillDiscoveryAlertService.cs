@@ -1,8 +1,8 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Bills;
+namespace FullWorth.API.Services.Bills;
 
 public sealed class RecurringBillDiscoveryAlertService
 {
@@ -12,11 +12,11 @@ public sealed class RecurringBillDiscoveryAlertService
     private const int MaxMessageLength =
         2000;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public RecurringBillDiscoveryAlertService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -136,7 +136,7 @@ public sealed class RecurringBillDiscoveryAlertService
 
         var message =
             Truncate(
-                $"BillWatch found {matchingTransactionCount} posted bank {transactionWord} matching a recurring pattern for {providerName}. It has been added to Bills and will be monitored automatically. This is transaction-based discovery; a provider statement has not yet been used to explain the bill.",
+                $"FullWorth found {matchingTransactionCount} posted bank {transactionWord} matching a recurring pattern for {providerName}. It has been added to Bills and will be monitored automatically. This is transaction-based discovery; a provider statement has not yet been used to explain the bill.",
                 MaxMessageLength);
 
         _dbContext.BillAlerts.Add(

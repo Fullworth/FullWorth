@@ -1,19 +1,19 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Bills;
+namespace FullWorth.API.Services.Bills;
 
 public sealed class BankConnectionHealthAlertService
 {
     private const string AlertTitle =
         "Bank connection needs attention";
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public BankConnectionHealthAlertService(
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         _dbContext =
             dbContext;
@@ -51,7 +51,7 @@ public sealed class BankConnectionHealthAlertService
          * Keep this comparison deliberately narrow.
          *
          * RequiresAttention means the persisted connection state says
-         * BillWatch cannot currently rely on that connection.
+         * FullWorth cannot currently rely on that connection.
          *
          * Disconnected is excluded because the user may have
          * intentionally disconnected it.
@@ -235,14 +235,14 @@ public sealed class BankConnectionHealthAlertService
             0)
         {
             return
-                "A connected bank needs attention before BillWatch can continue reliable bank monitoring. Review the connection in Connect.";
+                "A connected bank needs attention before FullWorth can continue reliable bank monitoring. Review the connection in Connect.";
         }
 
         if (names.Count ==
             1)
         {
             return
-                $"{names[0]} needs attention before BillWatch can continue reliable bank monitoring. Review or reconnect it in Connect.";
+                $"{names[0]} needs attention before FullWorth can continue reliable bank monitoring. Review or reconnect it in Connect.";
         }
 
         var visibleNames =
@@ -262,6 +262,6 @@ public sealed class BankConnectionHealthAlertService
                 : string.Empty;
 
         return
-            $"{names.Count} bank connections need attention: {string.Join(", ", visibleNames)}{remainderText}. Review them in Connect so BillWatch can continue reliable monitoring.";
+            $"{names.Count} bank connections need attention: {string.Join(", ", visibleNames)}{remainderText}. Review them in Connect so FullWorth can continue reliable monitoring.";
     }
 }
