@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using BillWatch.API.Data.Configurations;
+using FullWorth.API.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Data.Entities;
+namespace FullWorth.API.Data.Entities;
 
 public enum SubscriptionAccessKeyPurpose
 {
@@ -29,8 +29,8 @@ public sealed class SubscriptionAccessKeyEntity
     public SubscriptionAccessKeyPurpose Purpose { get; set; } =
         SubscriptionAccessKeyPurpose.Complimentary;
 
-    public BillWatchSubscriptionTier Tier { get; set; } =
-        BillWatchSubscriptionTier.Standard;
+    public FullWorthSubscriptionTier Tier { get; set; } =
+        FullWorthSubscriptionTier.Standard;
 
     public int? DurationDays { get; set; }
 

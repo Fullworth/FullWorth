@@ -1,6 +1,6 @@
-﻿using BillWatch.Core.Models;
+﻿using FullWorth.Core.Models;
 
-namespace BillWatch.API.Data.Entities;
+namespace FullWorth.API.Data.Entities;
 
 public enum BillStreamSource
 {

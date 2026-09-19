@@ -1,9 +1,9 @@
-using BillWatch.API.Data.Configurations;
+using FullWorth.API.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Data.Entities;
+namespace FullWorth.API.Data.Entities;
 
-public enum BillWatchSubscriptionTier
+public enum FullWorthSubscriptionTier
 {
     Beta,
     Standard
@@ -27,8 +27,8 @@ public sealed class SubscriptionEntitlementEntity
 
     public Guid UserId { get; set; }
 
-    public BillWatchSubscriptionTier Tier { get; set; } =
-        BillWatchSubscriptionTier.Standard;
+    public FullWorthSubscriptionTier Tier { get; set; } =
+        FullWorthSubscriptionTier.Standard;
 
     public SubscriptionEntitlementSource Source { get; set; } =
         SubscriptionEntitlementSource.Complimentary;
