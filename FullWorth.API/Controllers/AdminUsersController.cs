@@ -1,20 +1,20 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Admin;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Admin;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Policy = BillWatchPolicies.AdminOrOwner)]
+[Authorize(Policy = FullWorthPolicies.AdminOrOwner)]
 public sealed class AdminUsersController(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     AdminUserManagementService managementService,
     TimeProvider timeProvider)
@@ -80,7 +80,7 @@ public sealed class AdminUsersController(
                 user.CreatedAtUtc,
                 roles.Where(item => item.UserId == user.Id)
                     .Select(item => item.Name!)
-                    .OrderByDescending(BillWatchRoleHierarchy.GetRank)
+                    .OrderByDescending(FullWorthRoleHierarchy.GetRank)
                     .ToArray(),
                 memberships.Where(item => item.UserId == user.Id)
                     .Select(item => item.Program.ToString())
@@ -142,7 +142,7 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
-        if (!Enum.TryParse<BillWatchSubscriptionTier>(
+        if (!Enum.TryParse<FullWorthSubscriptionTier>(
                 request.Tier,
                 ignoreCase: true,
                 out var tier) ||

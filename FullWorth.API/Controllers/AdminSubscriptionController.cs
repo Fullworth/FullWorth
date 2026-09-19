@@ -1,15 +1,15 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Subscriptions;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/admin/subscription")]
-[Authorize(Policy = BillWatchPolicies.AdminOrOwner)]
+[Authorize(Policy = FullWorthPolicies.AdminOrOwner)]
 public sealed class AdminSubscriptionController(
     UserManager<ApplicationUser> userManager,
     AdminSubscriptionAccessKeyService accessKeyService)
@@ -30,7 +30,7 @@ public sealed class AdminSubscriptionController(
                 ignoreCase: true,
                 out var purpose) ||
             !Enum.IsDefined(purpose) ||
-            !Enum.TryParse<BillWatchSubscriptionTier>(
+            !Enum.TryParse<FullWorthSubscriptionTier>(
                 request.Tier,
                 ignoreCase: true,
                 out var tier) ||

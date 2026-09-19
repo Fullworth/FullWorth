@@ -1,19 +1,19 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Plaid;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Plaid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/bank-connections")]
 [Authorize]
 public sealed class BankConnectionsController : ControllerBase
 {
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly PlaidConnectionDisconnectService
@@ -23,7 +23,7 @@ public sealed class BankConnectionsController : ControllerBase
         _userManager;
 
     public BankConnectionsController(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         PlaidConnectionDisconnectService disconnectService,
         UserManager<ApplicationUser> userManager)
     {

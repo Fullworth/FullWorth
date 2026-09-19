@@ -1,16 +1,16 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Policy = BillWatchPolicies.AdminOrOwner)]
+[Authorize(Policy = FullWorthPolicies.AdminOrOwner)]
 public sealed class AdminSecurityController(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     TimeProvider timeProvider)
     : ControllerBase
 {

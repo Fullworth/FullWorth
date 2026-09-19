@@ -1,14 +1,14 @@
 using System.Security.Claims;
 using System.Text;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/account/security")]
