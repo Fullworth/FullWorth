@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidHostedLinkCompletionService
 {
@@ -16,7 +16,7 @@ public sealed class PlaidHostedLinkCompletionService
     private const int MaxPublicTokenLength =
         8 * 1024;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly PlaidApiClient
@@ -29,7 +29,7 @@ public sealed class PlaidHostedLinkCompletionService
         _exchangeService;
 
     public PlaidHostedLinkCompletionService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         PlaidApiClient plaidApiClient,
         PlaidTokenProtector tokenProtector,
         PlaidConnectionExchangeService exchangeService)

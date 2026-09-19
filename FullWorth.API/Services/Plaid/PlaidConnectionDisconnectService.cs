@@ -1,15 +1,15 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidConnectionDisconnectService
 {
     private const string ItemNotFoundErrorCode =
         "ITEM_NOT_FOUND";
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly PlaidApiClient
@@ -19,7 +19,7 @@ public sealed class PlaidConnectionDisconnectService
         _tokenProtector;
 
     public PlaidConnectionDisconnectService(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         PlaidApiClient plaidApiClient,
         PlaidTokenProtector tokenProtector)
     {
@@ -158,7 +158,7 @@ public sealed class PlaidConnectionDisconnectService
 
         /*
          * Historical accounts and transactions remain available for
-         * BillWatch history, but disconnected accounts cannot be treated as
+         * FullWorth history, but disconnected accounts cannot be treated as
          * currently active bank sources.
          */
         foreach (var account in

@@ -1,4 +1,4 @@
-﻿namespace BillWatch.API.Services.Plaid;
+﻿namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidOptions
 {

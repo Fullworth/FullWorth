@@ -1,11 +1,11 @@
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidConnectionSyncCoordinator(
-    BillWatchDbContext dbContext,
+    FullWorthDbContext dbContext,
     PlaidAccountSyncService accountSyncService,
     PlaidTransactionSyncService transactionSyncService)
 {

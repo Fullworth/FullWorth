@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidLinkService
 {
@@ -28,13 +28,13 @@ public sealed class PlaidLinkService
     private readonly PlaidTokenProtector
         _tokenProtector;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public PlaidLinkService(
         PlaidApiClient plaidApiClient,
         PlaidTokenProtector tokenProtector,
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(
             plaidApiClient);
@@ -114,7 +114,7 @@ public sealed class PlaidLinkService
                 ? new
                 {
                     client_name =
-                        "BillWatch",
+                        "FullWorth",
 
                     user =
                         new
@@ -155,7 +155,7 @@ public sealed class PlaidLinkService
                 : new
                 {
                     client_name =
-                        "BillWatch",
+                        "FullWorth",
 
                     user =
                         new
@@ -273,8 +273,8 @@ public sealed class PlaidLinkService
         /*
          * Deliberately do not return the plaintext Link token.
          *
-         * BillWatch uses Plaid Hosted Link, so the client only needs the
-         * hosted URL and BillWatch-owned session identifier.
+         * FullWorth uses Plaid Hosted Link, so the client only needs the
+         * hosted URL and FullWorth-owned session identifier.
          */
         return new PlaidHostedLinkSession(
             linkSession.Id,
@@ -333,7 +333,7 @@ public sealed class PlaidLinkService
          * URL. Fail closed unless it is HTTPS and belongs to Plaid.
          *
          * This prevents an unexpected upstream value from turning
-         * BillWatch into a phishing redirect.
+         * FullWorth into a phishing redirect.
          */
         if (!string.Equals(
                 uri.Scheme,

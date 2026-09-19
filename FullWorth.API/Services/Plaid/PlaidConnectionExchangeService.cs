@@ -1,10 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Services.Plaid;
+namespace FullWorth.API.Services.Plaid;
 
 public sealed class PlaidConnectionExchangeService
 {
@@ -39,13 +39,13 @@ public sealed class PlaidConnectionExchangeService
     private readonly PlaidTokenProtector
         _tokenProtector;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     public PlaidConnectionExchangeService(
         PlaidApiClient plaidApiClient,
         PlaidTokenProtector tokenProtector,
-        BillWatchDbContext dbContext)
+        FullWorthDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(
             plaidApiClient);
@@ -202,7 +202,7 @@ public sealed class PlaidConnectionExchangeService
          * Every lookup is ownership-scoped.
          *
          * A Plaid Item ID supplied or returned for one user can never cause
-         * BillWatch to retrieve or update another user's BankConnection.
+         * FullWorth to retrieve or update another user's BankConnection.
          */
         var connection =
             await _dbContext.BankConnections
