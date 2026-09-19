@@ -141,6 +141,108 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
     }
 
     [Fact]
+    public async Task TwoMonthlyDigitalSubscriptionCharges_ArePromoted()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Example Digital Subscription",
+            new DateOnly(2026, 1, 12),
+            8.99m,
+            "GENERAL_MERCHANDISE",
+            "GENERAL_MERCHANDISE_DIGITAL_GOODS");
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Example Digital Subscription",
+            new DateOnly(2026, 2, 12),
+            8.99m,
+            "GENERAL_MERCHANDISE",
+            "GENERAL_MERCHANDISE_DIGITAL_GOODS");
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new RecurringBillDiscoveryPersistenceService(
+                dbContext);
+
+        var result =
+            await service.DiscoverAndSaveAsync(
+                userId);
+
+        Assert.Equal(
+            1,
+            result.BillsDiscovered);
+
+        var billStream =
+            Assert.Single(
+                dbContext.BillStreams);
+
+        Assert.Equal(
+            BillCategory.Other,
+            billStream.Category);
+
+        Assert.All(
+            dbContext.BankTransactions,
+            transaction =>
+                Assert.Equal(
+                    billStream.Id,
+                    transaction.BillStreamId));
+    }
+
+    [Fact]
+    public async Task TwoMonthlyGeneralMerchandisePurchases_AreNotPromoted()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Example Store",
+            new DateOnly(2026, 1, 12),
+            15m,
+            "GENERAL_MERCHANDISE",
+            "GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE");
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Example Store",
+            new DateOnly(2026, 2, 12),
+            15m,
+            "GENERAL_MERCHANDISE",
+            "GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE");
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new RecurringBillDiscoveryPersistenceService(
+                dbContext);
+
+        var result =
+            await service.DiscoverAndSaveAsync(
+                userId);
+
+        Assert.Equal(
+            0,
+            result.BillsDiscovered);
+
+        Assert.Empty(
+            dbContext.BillStreams);
+    }
+
+    [Fact]
     public async Task StableMonthlyRestaurant_IsNotPromoted()
     {
         await using var dbContext =

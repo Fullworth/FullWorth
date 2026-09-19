@@ -28,7 +28,7 @@ public sealed class RecurringBillDetectionService
                 .OrderBy(transaction => transaction.PostedDate)
                 .ToList();
 
-            if (merchantTransactions.Count < 3)
+            if (merchantTransactions.Count < 2)
             {
                 continue;
             }
@@ -119,9 +119,21 @@ public sealed class RecurringBillDetectionService
     private static bool IsMonthlyCadence(
         IReadOnlyCollection<int> intervals)
     {
-        if (intervals.Count < 2)
+        if (intervals.Count == 0)
         {
             return false;
+        }
+
+        /*
+         * Two observations are enough to establish a monthly cadence
+         * candidate when the single interval is directly monthly. The API
+         * persistence layer still requires stronger category/subscription
+         * evidence before a two-observation candidate becomes a Bill Stream.
+         */
+        if (intervals.Count == 1)
+        {
+            return IsDirectMonthlyInterval(
+                intervals.First());
         }
 
         var directMonthlyIntervals =
