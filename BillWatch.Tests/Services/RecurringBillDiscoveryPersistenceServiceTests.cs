@@ -64,6 +64,83 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
     }
 
     [Fact]
+    public async Task VariableKnownUtilityWithoutPlaidCategory_IsPromotedAsUtility()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Black Hills Energy",
+            new DateOnly(2026, 1, 5),
+            118.42m,
+            null,
+            null);
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Black Hills Energy",
+            new DateOnly(2026, 2, 5),
+            176.19m,
+            null,
+            null);
+
+        AddTransaction(
+            dbContext,
+            userId,
+            "Black Hills Energy",
+            new DateOnly(2026, 3, 5),
+            143.77m,
+            null,
+            null);
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new RecurringBillDiscoveryPersistenceService(
+                dbContext);
+
+        var result =
+            await service.DiscoverAndSaveAsync(
+                userId);
+
+        Assert.Equal(
+            1,
+            result.BillsDiscovered);
+
+        Assert.Equal(
+            1,
+            result.BillStreamsCreated);
+
+        var billStream =
+            Assert.Single(
+                dbContext.BillStreams);
+
+        Assert.Equal(
+            BillCategory.Utility,
+            billStream.Category);
+
+        Assert.Equal(
+            "Black Hills Energy",
+            billStream.ProviderName);
+
+        Assert.True(
+            billStream.IsActive);
+
+        Assert.All(
+            dbContext.BankTransactions,
+            transaction =>
+                Assert.Equal(
+                    billStream.Id,
+                    transaction.BillStreamId));
+    }
+
+    [Fact]
     public async Task StableMonthlyRestaurant_IsNotPromoted()
     {
         await using var dbContext =
