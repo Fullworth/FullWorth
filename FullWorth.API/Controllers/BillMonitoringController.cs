@@ -1,10 +1,10 @@
-﻿using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Bills;
+﻿using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Bills;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/bill-monitoring")]

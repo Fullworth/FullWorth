@@ -1,13 +1,13 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Statements;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Statements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Authorize]
@@ -18,13 +18,13 @@ public sealed class BillStatementUploadsController
     private const long MaxMultipartBodyLength =
         16L * 1024 * 1024;
 
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SecureBillStatementStorageService _storageService;
     private readonly BillStatementProcessingSignal _processingSignal;
 
     public BillStatementUploadsController(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
         SecureBillStatementStorageService storageService,
         BillStatementProcessingSignal processingSignal)

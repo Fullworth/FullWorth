@@ -1,11 +1,11 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/alerts")]
@@ -18,14 +18,14 @@ public sealed class BillAlertsController : ControllerBase
     private const int MaximumTake =
         100;
 
-    private readonly BillWatchDbContext
+    private readonly FullWorthDbContext
         _dbContext;
 
     private readonly UserManager<ApplicationUser>
         _userManager;
 
     public BillAlertsController(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager)
     {
         _dbContext =

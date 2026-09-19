@@ -1,23 +1,23 @@
-﻿using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Models;
+﻿using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/bill-streams")]
 [Authorize]
 public sealed class BillStreamsController : ControllerBase
 {
-    private readonly BillWatchDbContext _dbContext;
+    private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public BillStreamsController(
-        BillWatchDbContext dbContext,
+        FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager)
     {
         _dbContext = dbContext;

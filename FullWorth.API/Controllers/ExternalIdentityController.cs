@@ -1,12 +1,12 @@
-using BillWatch.API.Authorization;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace BillWatch.API.Controllers;
+namespace FullWorth.API.Controllers;
 
 [ApiController]
 [Route("api/auth/external")]
@@ -90,7 +90,7 @@ public sealed class ExternalIdentityController : ControllerBase
 
         /*
          * Provider authentication proves the external identity only.
-         * BillWatch's own second factor remains mandatory when enabled.
+         * FullWorth's own second factor remains mandatory when enabled.
          * Recovery codes are redeemed at this API boundary so they preserve
          * the same one-time semantics as password sign-in.
          */
@@ -135,7 +135,7 @@ public sealed class ExternalIdentityController : ControllerBase
         }
 
         /*
-         * BillWatch's API authentication contract remains Identity bearer
+         * FullWorth's API authentication contract remains Identity bearer
          * tokens. Selecting the bearer scheme causes SignInManager to emit
          * the same access/refresh-token response format used by the normal
          * Identity API login endpoint.
