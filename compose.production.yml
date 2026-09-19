@@ -80,8 +80,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
       AllowedHosts: ${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
-      BillWatchApi__BaseUrl: http://api:8080
-      BillWatchApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
+      FullWorthApi__BaseUrl: http://api:8080
+      FullWorthApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       DataProtection__KeysPath: /var/lib/billwatch-web/keys
       ReverseProxy__KnownProxies__0: 172.28.0.10
     volumes:

@@ -78,7 +78,7 @@ public sealed class FullWorthApiFactory
          * tests never depend on developer user secrets.
          */
         builder.UseSetting(
-            "ConnectionStrings:FullWorthDatabase",
+            "ConnectionStrings:BillWatchDatabase",
             "Host=localhost;Database=billwatch_tests;Username=test;Password=test");
 
         builder.UseEnvironment(
@@ -90,7 +90,7 @@ public sealed class FullWorthApiFactory
                 var testSettings =
                     new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:FullWorthDatabase"] =
+                        ["ConnectionStrings:BillWatchDatabase"] =
                             "Host=localhost;Database=billwatch_tests;Username=test;Password=test",
 
                         ["Plaid:ClientId"] =
