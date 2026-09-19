@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace BillWatch.Core.Services;
+namespace FullWorth.Core.Services;
 
 public sealed class BillMerchantNormalizer
 {
