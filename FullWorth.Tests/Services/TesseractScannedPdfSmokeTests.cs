@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using UglyToad.PdfPig;
 
-namespace BillWatch.Tests.Services;
+namespace FullWorth.Tests.Services;
 
 public sealed class TesseractScannedPdfSmokeTests
 {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getBankTransactionsStream } from "../BillWatch.Web/wwwroot/js/transaction-stream.js";
+import { getBankTransactionsStream } from "../FullWorth.Web/wwwroot/js/transaction-stream.js";
 
 test("500 transactions cross the interop boundary as a stream, preserving Unicode and amounts", async () => {
     const rows = Array.from({ length: 500 }, (_, index) => ({
