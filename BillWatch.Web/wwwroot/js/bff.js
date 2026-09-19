@@ -525,6 +525,12 @@ export async function getBankTransactions(
         `/bff/bank-transactions?take=${safeTake}`);
 }
 
+export async function refreshBillMonitoring() {
+    return await mutateJson(
+        "/bff/bill-monitoring/refresh",
+        "POST");
+}
+
 export async function getAlerts(
     includeDismissed = false,
     unreadOnly = false,
