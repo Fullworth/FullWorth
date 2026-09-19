@@ -1,25 +1,25 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.API.Authorization;
-using BillWatch.API.Data.Entities;
-using BillWatch.Core.Legal;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Authorization;
+using FullWorth.API.Data.Entities;
+using FullWorth.Core.Legal;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class IdentityRoleAuthorizationTests
 {
     private const string Password =
-        "BillWatch!RoleTests123";
+        "FullWorth!RoleTests123";
 
     [Fact]
     public async Task OwnerRoleAssignedBeforeLogin_AuthorizesAdminEndpoint()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -58,7 +58,7 @@ public sealed class IdentityRoleAuthorizationTests
     public async Task OwnerRefreshToken_IssuesRoleAwareAccessToken()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -123,7 +123,7 @@ public sealed class IdentityRoleAuthorizationTests
     public async Task AuthenticatedUserWithoutStaffRole_RemainsForbidden()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -158,7 +158,7 @@ public sealed class IdentityRoleAuthorizationTests
                     email,
                     password = Password,
                     acceptedTermsAndPrivacy = true,
-                    legalTermsVersion = BillWatchLegalDocuments.CurrentVersion
+                    legalTermsVersion = FullWorthLegalDocuments.CurrentVersion
                 });
 
         registerResponse.EnsureSuccessStatusCode();
@@ -198,7 +198,7 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     private static async Task AssignOwnerRoleAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email)
     {
         using var scope =
@@ -215,12 +215,12 @@ public sealed class IdentityRoleAuthorizationTests
                     UserManager<ApplicationUser>>();
 
         if (!await roleManager.RoleExistsAsync(
-                BillWatchRoles.Owner))
+                FullWorthRoles.Owner))
         {
             var createRoleResult =
                 await roleManager.CreateAsync(
                     new IdentityRole<Guid>(
-                        BillWatchRoles.Owner));
+                        FullWorthRoles.Owner));
 
             Assert.True(
                 createRoleResult.Succeeded,
@@ -238,7 +238,7 @@ public sealed class IdentityRoleAuthorizationTests
         var addRoleResult =
             await userManager.AddToRoleAsync(
                 user!,
-                BillWatchRoles.Owner);
+                FullWorthRoles.Owner);
 
         Assert.True(
             addRoleResult.Succeeded,

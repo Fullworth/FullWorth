@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
-public sealed class HealthEndpointTests : IClassFixture<BillWatchApiFactory>
+public sealed class HealthEndpointTests : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory _factory;
+    private readonly FullWorthApiFactory _factory;
 
-    public HealthEndpointTests(BillWatchApiFactory factory)
+    public HealthEndpointTests(FullWorthApiFactory factory)
     {
         _factory = factory;
     }

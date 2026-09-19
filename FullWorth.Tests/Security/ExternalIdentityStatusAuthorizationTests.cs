@@ -1,16 +1,16 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ExternalIdentityStatusAuthorizationTests
 {
     [Fact]
     public async Task Status_AnonymousUser_IsRejected()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response = await client.GetAsync("/api/auth/external");
@@ -21,7 +21,7 @@ public sealed class ExternalIdentityStatusAuthorizationTests
     [Fact]
     public async Task Status_AuthenticatedUser_ReturnsOnlyLinkedProviderMetadata()
     {
-        await using var factory = new BillWatchApiFactory();
+        await using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
         var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
         client.DefaultRequestHeaders.Authorization =

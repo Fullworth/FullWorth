@@ -1,21 +1,21 @@
 ﻿using System.Net;
-using BillWatch.API.Data;
-using BillWatch.API.Data.Entities;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class PlaidOwnershipBoundaryTests
-    : IClassFixture<BillWatchApiFactory>
+    : IClassFixture<FullWorthApiFactory>
 {
-    private readonly BillWatchApiFactory
+    private readonly FullWorthApiFactory
         _factory;
 
     public PlaidOwnershipBoundaryTests(
-        BillWatchApiFactory factory)
+        FullWorthApiFactory factory)
     {
         _factory =
             factory;
@@ -69,7 +69,7 @@ public sealed class PlaidOwnershipBoundaryTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var linkSession =
             await dbContext.PlaidLinkSessions
@@ -222,7 +222,7 @@ public sealed class PlaidOwnershipBoundaryTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var now =
             DateTimeOffset.UtcNow;
@@ -280,7 +280,7 @@ public sealed class PlaidOwnershipBoundaryTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var connection =
             new BankConnectionEntity
@@ -335,7 +335,7 @@ public sealed class PlaidOwnershipBoundaryTests
         var dbContext =
             scope.ServiceProvider
                 .GetRequiredService<
-                    BillWatchDbContext>();
+                    FullWorthDbContext>();
 
         var connection =
             await dbContext.BankConnections

@@ -1,8 +1,8 @@
 using System.Net;
-using BillWatch.Core.Legal;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.Core.Legal;
+using FullWorth.Tests.Infrastructure;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class LegalSurfaceTests
 {
@@ -10,7 +10,7 @@ public sealed class LegalSurfaceTests
     public async Task RegistrationPage_RendersRequiredVersionedLegalConsent()
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -42,7 +42,7 @@ public sealed class LegalSurfaceTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            BillWatchLegalDocuments.CurrentVersion,
+            FullWorthLegalDocuments.CurrentVersion,
             body,
             StringComparison.Ordinal);
 
@@ -65,7 +65,7 @@ public sealed class LegalSurfaceTests
         string expectedTitle)
     {
         using var factory =
-            new BillWatchWebFactory();
+            new FullWorthWebFactory();
 
         using var client =
             factory.CreateHttpsClient();

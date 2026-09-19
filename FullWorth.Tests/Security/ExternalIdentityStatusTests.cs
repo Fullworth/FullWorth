@@ -1,20 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.API.Controllers;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Controllers;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ExternalIdentityStatusTests
 {
     [Fact]
     public async Task Status_AnonymousCaller_IsRejected()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         using var response =
@@ -28,7 +28,7 @@ public sealed class ExternalIdentityStatusTests
     [Fact]
     public async Task Status_AuthenticatedUser_ReturnsOnlyTheirSupportedLinkedProviders()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         var session =
@@ -80,7 +80,7 @@ public sealed class ExternalIdentityStatusTests
     [Fact]
     public async Task Status_DoesNotExposeProviderSubjectIdentifiers()
     {
-        using var factory = new BillWatchApiFactory();
+        using var factory = new FullWorthApiFactory();
         using var client = factory.CreateHttpsClient();
 
         var session =

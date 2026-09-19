@@ -1,23 +1,23 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ExternalIdentityUnlinkSecurityTests
 {
     private const string TestPassword =
-        "BillWatch!Tests123";
+        "FullWorth!Tests123";
 
     [Fact]
     public async Task Unlink_AnonymousCaller_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -49,7 +49,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     public async Task Unlink_WrongPassword_IsRejectedWithoutRemovingLogin()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -101,7 +101,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     public async Task Unlink_TwoFactorAccountWithoutSecondFactor_IsRejectedWithoutRemovingLogin()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -157,7 +157,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     public async Task Unlink_TwoFactorAccountWithRecoveryCode_RemovesLoginAndConsumesCode()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -248,7 +248,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     public async Task Unlink_ReauthenticatedCaller_RemovesOnlyRequestedLogin()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -309,7 +309,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     }
 
     private static async Task AddExternalLoginAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email,
         string provider,
         string subject)
@@ -340,7 +340,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     }
 
     private static async Task<bool> HasExternalLoginAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email,
         string provider)
     {
@@ -369,7 +369,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     }
 
     private static async Task SetTwoFactorEnabledAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email)
     {
         await using var scope =
@@ -395,7 +395,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     }
 
     private static async Task<string> EnableTwoFactorAndCreateRecoveryCodeAsync(
-        BillWatchApiFactory factory,
+        FullWorthApiFactory factory,
         string email)
     {
         await using var scope =

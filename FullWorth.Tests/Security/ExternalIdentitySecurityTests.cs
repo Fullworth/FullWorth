@@ -1,24 +1,24 @@
 using System.Net;
 using System.Net.Http.Json;
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ExternalIdentitySecurityTests
 {
     private const string TestPassword =
-        "BillWatch!Tests123";
+        "FullWorth!Tests123";
 
     [Fact]
     public async Task ExternalLogin_UnconfiguredProvider_FailsClosed()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -44,7 +44,7 @@ public sealed class ExternalIdentitySecurityTests
     public async Task ExternalLink_AnonymousCaller_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -76,7 +76,7 @@ public sealed class ExternalIdentitySecurityTests
     public async Task ExternalLink_AuthenticatedCallerWithoutPasswordReauthentication_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -117,7 +117,7 @@ public sealed class ExternalIdentitySecurityTests
     public async Task ExternalLink_TwoFactorAccountWithoutSecondFactor_IsRejected()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -182,7 +182,7 @@ public sealed class ExternalIdentitySecurityTests
     public async Task ExternalLink_AuthenticatedCallerWithInvalidProviderToken_FailsWithoutLinking()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();

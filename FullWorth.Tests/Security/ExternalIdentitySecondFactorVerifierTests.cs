@@ -1,10 +1,10 @@
-using BillWatch.API.Data.Entities;
-using BillWatch.API.Services.Identity;
-using BillWatch.Tests.Infrastructure;
+using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BillWatch.Tests.Security;
+namespace FullWorth.Tests.Security;
 
 public sealed class ExternalIdentitySecondFactorVerifierTests
 {
@@ -12,7 +12,7 @@ public sealed class ExternalIdentitySecondFactorVerifierTests
     public async Task VerifyAsync_TwoFactorDisabled_DoesNotRequireCode()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -53,7 +53,7 @@ public sealed class ExternalIdentitySecondFactorVerifierTests
     public async Task VerifyAsync_TwoFactorEnabledWithoutCode_RequiresSecondFactor()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -102,7 +102,7 @@ public sealed class ExternalIdentitySecondFactorVerifierTests
     public async Task VerifyAsync_RecoveryCode_IsSingleUse()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
@@ -169,7 +169,7 @@ public sealed class ExternalIdentitySecondFactorVerifierTests
     public async Task VerifyAsync_BothCodeTypes_FailsWithoutRedeemingRecoveryCode()
     {
         using var factory =
-            new BillWatchApiFactory();
+            new FullWorthApiFactory();
 
         using var client =
             factory.CreateHttpsClient();
