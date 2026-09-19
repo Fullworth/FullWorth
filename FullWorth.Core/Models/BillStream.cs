@@ -1,6 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 
-namespace BillWatch.Core.Models;
+namespace FullWorth.Core.Models;
 
 public enum BillCategory
 {

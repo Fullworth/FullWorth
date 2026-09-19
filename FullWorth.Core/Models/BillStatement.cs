@@ -1,4 +1,4 @@
-﻿namespace BillWatch.Core.Models;
+﻿namespace FullWorth.Core.Models;
 
 public sealed record BillStatement
 {
