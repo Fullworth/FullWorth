@@ -1,12 +1,12 @@
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class AdminBffEndpointMappings
 {
     public static IEndpointRouteBuilder
-        MapBillWatchAdminBffEndpoints(
+        MapFullWorthAdminBffEndpoints(
             this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -19,7 +19,7 @@ public static class AdminBffEndpointMappings
             "/users",
             async (
                 HttpContext context,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 int? skip,
                 int? take) =>
             {
@@ -36,7 +36,7 @@ public static class AdminBffEndpointMappings
             "/access-keys",
             async (
                 HttpContext context,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 int? skip,
                 int? take) =>
             {
@@ -53,7 +53,7 @@ public static class AdminBffEndpointMappings
             "/audit-log",
             async (
                 HttpContext context,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 Guid? targetUserId,
                 int? skip,
                 int? take) =>
@@ -85,7 +85,7 @@ public static class AdminBffEndpointMappings
             async (
                 HttpContext context,
                 IAntiforgery antiforgery,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 Guid targetUserId,
                 string roleName) =>
             {
@@ -111,7 +111,7 @@ public static class AdminBffEndpointMappings
             async (
                 HttpContext context,
                 IAntiforgery antiforgery,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 Guid targetUserId,
                 string roleName) =>
             {
@@ -160,7 +160,7 @@ public static class AdminBffEndpointMappings
             async (
                 HttpContext context,
                 IAntiforgery antiforgery,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 Guid targetUserId,
                 Guid entitlementId) =>
             {
@@ -230,7 +230,7 @@ public static class AdminBffEndpointMappings
             async (
                 HttpContext context,
                 IAntiforgery antiforgery,
-                BillWatchBffProxyService proxyService,
+                FullWorthBffProxyService proxyService,
                 Guid accessKeyId) =>
             {
                 await antiforgery.ValidateRequestAsync(context);

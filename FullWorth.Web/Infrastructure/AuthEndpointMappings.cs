@@ -1,15 +1,15 @@
-using BillWatch.Core.Legal;
-using BillWatch.Web.Components;
-using BillWatch.Web.Services;
+using FullWorth.Core.Legal;
+using FullWorth.Web.Components;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.Extensions.Localization;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class AuthEndpointMappings
 {
     public static IEndpointRouteBuilder
-        MapBillWatchAuthEndpoints(
+        MapFullWorthAuthEndpoints(
             this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(
@@ -200,7 +200,7 @@ public static class AuthEndpointMappings
                 if (!acceptedTermsAndPrivacy ||
                     !string.Equals(
                         legalTermsVersion,
-                        BillWatchLegalDocuments.CurrentVersion,
+                        FullWorthLegalDocuments.CurrentVersion,
                         StringComparison.Ordinal))
                 {
                     return Results.Redirect(

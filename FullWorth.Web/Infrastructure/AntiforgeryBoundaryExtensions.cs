@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Routing;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class AntiforgeryBoundaryExtensions
 {
-    public static IApplicationBuilder UseBillWatchAntiforgeryBoundary(
+    public static IApplicationBuilder UseFullWorthAntiforgeryBoundary(
         this IApplicationBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);

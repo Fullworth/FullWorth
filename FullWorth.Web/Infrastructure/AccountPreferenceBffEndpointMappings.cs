@@ -1,11 +1,11 @@
-using BillWatch.Web.Services;
+using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 
-namespace BillWatch.Web.Infrastructure;
+namespace FullWorth.Web.Infrastructure;
 
 public static class AccountPreferenceBffEndpointMappings
 {
-    public static IEndpointRouteBuilder MapBillWatchAccountPreferenceBffEndpoints(
+    public static IEndpointRouteBuilder MapFullWorthAccountPreferenceBffEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -17,7 +17,7 @@ public static class AccountPreferenceBffEndpointMappings
             string.Empty,
             async (
                 HttpContext context,
-                BillWatchBffProxyService proxyService) =>
+                FullWorthBffProxyService proxyService) =>
                 await proxyService.ForwardGetAsync(
                     context,
                     "/api/account/preferences",

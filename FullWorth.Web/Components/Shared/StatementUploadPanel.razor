@@ -187,7 +187,7 @@
         _isBusy = true;
         _state = "working";
         _statusHeading = L["Uploading securely"];
-        _message = L["Sending the {0} statement to BillWatch.", _selectedFile!.Name];
+        _message = L["Sending the {0} statement to FullWorth.", _selectedFile!.Name];
         _buttonText = L["Uploading…"];
 
         try
@@ -279,14 +279,14 @@
         Guid uploadId,
         string? status)
     {
-        if (!BillWatch.Web.Services.StatementUploadStatusSemantics.IsTerminal(status))
+        if (!FullWorth.Web.Services.StatementUploadStatusSemantics.IsTerminal(status))
         {
             return false;
         }
 
         SetProcessingStatus(status);
 
-        if (!BillWatch.Web.Services.StatementUploadStatusSemantics.IsProcessed(status))
+        if (!FullWorth.Web.Services.StatementUploadStatusSemantics.IsProcessed(status))
         {
             return true;
         }
