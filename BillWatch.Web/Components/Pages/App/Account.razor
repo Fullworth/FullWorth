@@ -9,7 +9,7 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<Account> L
 
-<PageTitle>@L["Account — BillWatch"]</PageTitle>
+<PageTitle>@L["Account — FullWorth"]</PageTitle>
 
 <link rel="stylesheet"
       href="/account-activity.css" />
@@ -21,7 +21,7 @@
     <header class="page-heading">
         <div>
             <span class="page-kicker">
-                @L["BillWatch account"]
+                @L["FullWorth account"]
             </span>
 
             <h1>
@@ -29,7 +29,7 @@
             </h1>
 
             <p>
-                @L["Connections, financial data, privacy, and your BillWatch account."]
+                @L["Connections, financial data, privacy, and your FullWorth account."]
             </p>
         </div>
     </header>
@@ -83,7 +83,7 @@
                 </h2>
 
                 <p>
-                    @L["Review the bank transactions BillWatch uses to discover recurring bills."]
+                    @L["Review the bank transactions FullWorth uses to discover recurring bills."]
                 </p>
             </div>
 
@@ -109,7 +109,7 @@
                 </h2>
 
                 <p>
-                    @L["Export your BillWatch data or permanently delete your account."]
+                    @L["Export your FullWorth data or permanently delete your account."]
                 </p>
             </div>
 
@@ -149,7 +149,7 @@
             </h2>
 
             <p>
-                @L["BillWatch uses Plaid to connect financial accounts and retrieve the transaction history needed to discover recurring bills."]
+                @L["FullWorth uses Plaid to connect financial accounts and retrieve the transaction history needed to discover recurring bills."]
             </p>
 
             <div class="plaid-security-note">
@@ -253,7 +253,7 @@
                             </strong>
 
                             <span>
-                                @L["Reauthorize the affected connection through Plaid so BillWatch can resume reliable automatic monitoring."]
+                                @L["Reauthorize the affected connection through Plaid so FullWorth can resume reliable automatic monitoring."]
                             </span>
                         </div>
                     </div>
@@ -465,7 +465,7 @@
                 </h2>
 
                 <p>
-                    @L["BillWatch uses connected-account data to identify recurring bills and changes. It does not provide bill payment, transfers, or money movement."]
+                    @L["FullWorth uses connected-account data to identify recurring bills and changes. It does not provide bill payment, transfers, or money movement."]
                 </p>
             </div>
 
@@ -557,7 +557,7 @@
                     false;
 
                 _errorMessage =
-                    L["BillWatch could not initialize the secure account connection tools."].Value;
+                    L["FullWorth could not initialize the secure account connection tools."].Value;
 
                 StateHasChanged();
             }
@@ -570,7 +570,7 @@
                     false;
 
                 _errorMessage =
-                    L["Something went wrong while opening your BillWatch account."].Value;
+                    L["Something went wrong while opening your FullWorth account."].Value;
 
                 StateHasChanged();
             }
@@ -672,7 +672,7 @@
         catch (JSException)
         {
             _errorMessage =
-                L["BillWatch could not reach the secure API."].Value;
+                L["FullWorth could not reach the secure API."].Value;
         }
         catch (Exception)
         {
@@ -779,7 +779,7 @@
         var confirmed =
             await JS.InvokeAsync<bool>(
                 "confirm",
-                L["Disconnect {0}? BillWatch will stop syncing this bank connection.",
+                L["Disconnect {0}? FullWorth will stop syncing this bank connection.",
                     connection.InstitutionName].Value);
 
         if (!confirmed)
@@ -819,7 +819,7 @@
         catch
         {
             _actionMessage =
-                L["BillWatch could not disconnect {0}.",
+                L["FullWorth could not disconnect {0}.",
                     connection.InstitutionName].Value;
 
             _actionSucceeded =
@@ -913,7 +913,7 @@
     {
         return string.IsNullOrWhiteSpace(
                 value)
-            ? L["BillWatch user"].Value
+            ? L["FullWorth user"].Value
             : value;
     }
 
