@@ -65,27 +65,28 @@ public sealed class BillStatementProcessingService
                 "Batch size must be greater than zero.");
         }
 
+        /*
+         * Load the pending uploads as tracked entities once.
+         *
+         * The previous path projected IDs and immediately queried every
+         * upload again before processing it, adding one redundant database
+         * round trip per item in the batch.
+         */
         var candidates = await _dbContext.BillStatementUploads
-            .AsNoTracking()
             .Where(upload =>
                 upload.Status == BillStatementUploadStatus.Uploaded ||
                 upload.Status == BillStatementUploadStatus.Processing)
             .OrderBy(upload => upload.CreatedAtUtc)
             .ThenBy(upload => upload.Id)
-            .Select(upload =>
-                new PendingStatementUpload(
-                    upload.Id,
-                    upload.UserId))
             .Take(maxItems)
             .ToListAsync(cancellationToken);
 
-        foreach (var candidate in candidates)
+        foreach (var upload in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             await ProcessUploadAsync(
-                candidate.UploadId,
-                candidate.UserId,
+                upload,
                 cancellationToken);
         }
 
@@ -93,21 +94,11 @@ public sealed class BillStatementProcessingService
     }
 
     private async Task ProcessUploadAsync(
-        Guid uploadId,
-        Guid userId,
+        BillStatementUploadEntity upload,
         CancellationToken cancellationToken)
     {
-        var upload = await _dbContext.BillStatementUploads
-            .SingleOrDefaultAsync(
-                item =>
-                    item.Id == uploadId &&
-                    item.UserId == userId,
-                cancellationToken);
-
-        if (upload is null)
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(
+            upload);
 
         if (upload.Status is not
             BillStatementUploadStatus.Uploaded and not
@@ -239,9 +230,6 @@ public sealed class BillStatementProcessingService
         }
     }
 
-    private sealed record PendingStatementUpload(
-        Guid UploadId,
-        Guid UserId);
 }
 
 public sealed class BillStatementProcessingBackgroundService
