@@ -82,6 +82,9 @@
     }
     else
     {
+        var filteredTransactions =
+            FilteredTransactions;
+
         <section class="transaction-summary-grid">
             <article>
                 <span>
@@ -160,7 +163,8 @@
 
         <div class="transaction-result-line">
             <span>
-                @_transactionsResultLabel
+                @GetTransactionsResultLabel(
+                    filteredTransactions.Count)
             </span>
 
             @if (_transactions.Count == TransactionLoadLimit)
@@ -187,7 +191,7 @@
                 </p>
             </section>
         }
-        else if (FilteredTransactions.Count == 0)
+        else if (filteredTransactions.Count == 0)
         {
             <section class="transaction-empty compact">
                 <h2>
@@ -203,7 +207,7 @@
         {
             <section class="transaction-list">
                 @foreach (var transaction
-                    in FilteredTransactions)
+                    in filteredTransactions)
                 {
                     <article class="transaction-row">
                         <div class="@GetTransactionIconClass(
@@ -318,10 +322,13 @@
             transaction =>
                 transaction.IsPending);
 
-    private string _transactionsResultLabel =>
-        FilteredTransactions.Count == 1
+    private string GetTransactionsResultLabel(
+        int count)
+    {
+        return count == 1
             ? L["1 transaction"]
-            : L["{0} transactions", FilteredTransactions.Count];
+            : L["{0} transactions", count];
+    }
 
     private IReadOnlyList<
         TransactionAccountOption>
