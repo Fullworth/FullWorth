@@ -78,7 +78,7 @@ public sealed class BillStreamOwnershipTests
                 BankConnectionId = Guid.NewGuid(),
                 PlaidAccountId = $"metrics-{Guid.NewGuid():N}",
                 Name = "Metrics Account",
-                AccountType = BankAccountType.Depository,
+                AccountType = BankAccountType.Checking,
                 IsActive = true
             };
 
