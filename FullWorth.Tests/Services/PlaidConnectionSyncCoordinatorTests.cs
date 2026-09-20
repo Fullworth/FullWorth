@@ -349,6 +349,165 @@ public sealed class PlaidConnectionSyncCoordinatorTests
             secondConnection.LastSuccessfulSyncAtUtc);
     }
 
+    [Fact]
+    public async Task SyncAllTransactions_MultipleConnections_SyncsEachOwnedConnection()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var tokenProtector =
+            CreateTokenProtector();
+
+        var firstConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "transaction-token-one");
+
+        firstConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000011");
+
+        firstConnection.PlaidItemId =
+            "transaction-item-one";
+
+        firstConnection.InstitutionName =
+            "Transaction Bank One";
+
+        firstConnection.TransactionsCursor =
+            null;
+
+        var secondConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "transaction-token-two");
+
+        secondConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000012");
+
+        secondConnection.PlaidItemId =
+            "transaction-item-two";
+
+        secondConnection.InstitutionName =
+            "Transaction Bank Two";
+
+        secondConnection.TransactionsCursor =
+            null;
+
+        dbContext.BankConnections.AddRange(
+            firstConnection,
+            secondConnection);
+
+        dbContext.BankAccounts.AddRange(
+            new BankAccountEntity
+            {
+                UserId =
+                    userId,
+
+                BankConnectionId =
+                    firstConnection.Id,
+
+                PlaidAccountId =
+                    "transaction-account-one",
+
+                Name =
+                    "Checking One",
+
+                IsActive =
+                    true
+            },
+
+            new BankAccountEntity
+            {
+                UserId =
+                    userId,
+
+                BankConnectionId =
+                    secondConnection.Id,
+
+                PlaidAccountId =
+                    "transaction-account-two",
+
+                Name =
+                    "Checking Two",
+
+                IsActive =
+                    true
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        using var handler =
+            new ScriptedHttpMessageHandler(
+                TransactionResponse(
+                    "cursor-one"),
+                TransactionResponse(
+                    "cursor-two"));
+
+        using var httpClient =
+            new HttpClient(
+                handler);
+
+        var coordinator =
+            CreateCoordinator(
+                dbContext,
+                httpClient,
+                tokenProtector);
+
+        var result =
+            await coordinator.SyncAllTransactionsAsync(
+                userId);
+
+        Assert.Equal(
+            2,
+            result.ConnectionsSynced);
+
+        Assert.Equal(
+            0,
+            result.Added);
+
+        Assert.Equal(
+            0,
+            result.Modified);
+
+        Assert.Equal(
+            0,
+            result.Removed);
+
+        Assert.Equal(
+            2,
+            handler.Requests.Count);
+
+        Assert.Contains(
+            "\"access_token\":\"transaction-token-one\"",
+            handler.Requests[0].Body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"access_token\":\"transaction-token-two\"",
+            handler.Requests[1].Body,
+            StringComparison.Ordinal);
+
+        Assert.Equal(
+            "cursor-one",
+            firstConnection.TransactionsCursor);
+
+        Assert.Equal(
+            "cursor-two",
+            secondConnection.TransactionsCursor);
+
+        Assert.NotNull(
+            firstConnection.LastSuccessfulSyncAtUtc);
+
+        Assert.NotNull(
+            secondConnection.LastSuccessfulSyncAtUtc);
+    }
+
     private static PlaidConnectionSyncCoordinator CreateCoordinator(
         FullWorthDbContext dbContext,
         HttpClient httpClient,
@@ -441,6 +600,40 @@ public sealed class PlaidConnectionSyncCoordinatorTests
 
                     request_id =
                         "safe-test-request-id"
+                });
+
+        return new HttpResponseMessage(
+            HttpStatusCode.OK)
+        {
+            Content =
+                new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+        };
+    }
+
+    private static HttpResponseMessage TransactionResponse(
+        string nextCursor)
+    {
+        var json =
+            JsonSerializer.Serialize(
+                new
+                {
+                    added =
+                        Array.Empty<object>(),
+
+                    modified =
+                        Array.Empty<object>(),
+
+                    removed =
+                        Array.Empty<object>(),
+
+                    next_cursor =
+                        nextCursor,
+
+                    has_more =
+                        false
                 });
 
         return new HttpResponseMessage(

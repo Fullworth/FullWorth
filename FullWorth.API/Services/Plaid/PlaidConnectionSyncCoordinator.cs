@@ -57,8 +57,8 @@ public sealed class PlaidConnectionSyncCoordinator(
     {
         ValidateUserId(userId);
 
-        var connectionIds =
-            await GetActiveConnectionIdsAsync(
+        var connections =
+            await GetActiveConnectionsAsync(
                 userId,
                 cancellationToken);
 
@@ -66,21 +66,38 @@ public sealed class PlaidConnectionSyncCoordinator(
         var totalModified = 0;
         var totalRemoved = 0;
 
-        foreach (var connectionId in connectionIds)
+        foreach (var connection in
+                 connections)
         {
-            var result =
-                await SyncTransactionsAsync(
+            try
+            {
+                var result =
+                    await transactionSyncService
+                        .SyncConnectionAsync(
+                            userId,
+                            connection,
+                            cancellationToken);
+
+                totalAdded += result.Added;
+                totalModified += result.Modified;
+                totalRemoved += result.Removed;
+            }
+            catch (PlaidApiException exception)
+                when (PlaidConnectionAttentionClassifier
+                    .RequiresUserAttention(
+                        exception))
+            {
+                await PersistRequiresAttentionAsync(
                     userId,
-                    connectionId,
+                    connection,
                     cancellationToken);
 
-            totalAdded += result.Added;
-            totalModified += result.Modified;
-            totalRemoved += result.Removed;
+                throw;
+            }
         }
 
         return new PlaidTransactionSyncSummary(
-            connectionIds.Count,
+            connections.Count,
             totalAdded,
             totalModified,
             totalRemoved);
@@ -150,22 +167,6 @@ public sealed class PlaidConnectionSyncCoordinator(
                 connection.ProtectedPlaidAccessToken != null &&
                 connection.ProtectedPlaidAccessToken != string.Empty)
             .OrderBy(connection => connection.Id)
-            .ToListAsync(cancellationToken);
-    }
-
-    private async Task<List<Guid>> GetActiveConnectionIdsAsync(
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        return await dbContext.BankConnections
-            .AsNoTracking()
-            .Where(connection =>
-                connection.UserId == userId &&
-                connection.Status == BankConnectionStatus.Active &&
-                connection.ProtectedPlaidAccessToken != null &&
-                connection.ProtectedPlaidAccessToken != string.Empty)
-            .OrderBy(connection => connection.Id)
-            .Select(connection => connection.Id)
             .ToListAsync(cancellationToken);
     }
 
