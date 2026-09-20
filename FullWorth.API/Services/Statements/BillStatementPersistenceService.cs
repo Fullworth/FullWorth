@@ -153,9 +153,9 @@ public sealed class BillStatementPersistenceService
             if (parsedLineItems.Count >
                 0)
             {
-                var existingLineItemCount =
+                var hasExistingLineItems =
                     await _dbContext.BillLineItems
-                        .CountAsync(
+                        .AnyAsync(
                             lineItem =>
                                 lineItem.UserId ==
                                     upload.UserId &&
@@ -163,8 +163,7 @@ public sealed class BillStatementPersistenceService
                                     existingStatement.Id,
                             cancellationToken);
 
-                if (existingLineItemCount ==
-                    0)
+                if (!hasExistingLineItems)
                 {
                     pendingLineItems =
                         CreateLineItems(

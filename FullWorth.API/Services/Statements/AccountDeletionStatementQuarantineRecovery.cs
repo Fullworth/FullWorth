@@ -19,22 +19,37 @@ public sealed class AccountDeletionStatementQuarantineRecovery(
             return 0;
         }
 
+        var quarantinedUserIds =
+            entries
+                .Select(
+                    entry =>
+                        entry.UserId)
+                .Distinct()
+                .ToArray();
+
+        var existingUserIds =
+            await dbContext.Users
+                .AsNoTracking()
+                .Where(
+                    user =>
+                        quarantinedUserIds.Contains(
+                            user.Id))
+                .Select(
+                    user =>
+                        user.Id)
+                .ToHashSetAsync(
+                    cancellationToken);
+
         var reconciled = 0;
 
         foreach (var entry in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var userExists =
-                await dbContext.Users
-                    .AsNoTracking()
-                    .AnyAsync(
-                        user => user.Id == entry.UserId,
-                        cancellationToken);
-
             try
             {
-                if (userExists)
+                if (existingUserIds.Contains(
+                        entry.UserId))
                 {
                     statementStorage.RestoreAccountDeletionQuarantine(
                         entry);

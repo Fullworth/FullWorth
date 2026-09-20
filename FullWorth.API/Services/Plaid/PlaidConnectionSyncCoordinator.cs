@@ -15,24 +15,39 @@ public sealed class PlaidConnectionSyncCoordinator(
     {
         ValidateUserId(userId);
 
-        var connectionIds =
-            await GetActiveConnectionIdsAsync(
+        var connections =
+            await GetActiveConnectionsAsync(
                 userId,
                 cancellationToken);
 
         var totalAccountsSynced = 0;
 
-        foreach (var connectionId in connectionIds)
+        foreach (var connection in connections)
         {
-            totalAccountsSynced +=
-                await SyncAccountsAsync(
+            try
+            {
+                totalAccountsSynced +=
+                    await accountSyncService.SyncAccountsAsync(
+                        userId,
+                        connection,
+                        cancellationToken);
+            }
+            catch (PlaidApiException exception)
+                when (PlaidConnectionAttentionClassifier
+                    .RequiresUserAttention(
+                        exception))
+            {
+                await PersistRequiresAttentionAsync(
                     userId,
-                    connectionId,
+                    connection,
                     cancellationToken);
+
+                throw;
+            }
         }
 
         return new PlaidAccountSyncSummary(
-            connectionIds.Count,
+            connections.Count,
             totalAccountsSynced);
     }
 
@@ -42,8 +57,8 @@ public sealed class PlaidConnectionSyncCoordinator(
     {
         ValidateUserId(userId);
 
-        var connectionIds =
-            await GetActiveConnectionIdsAsync(
+        var connections =
+            await GetActiveConnectionsAsync(
                 userId,
                 cancellationToken);
 
@@ -51,21 +66,38 @@ public sealed class PlaidConnectionSyncCoordinator(
         var totalModified = 0;
         var totalRemoved = 0;
 
-        foreach (var connectionId in connectionIds)
+        foreach (var connection in
+                 connections)
         {
-            var result =
-                await SyncTransactionsAsync(
+            try
+            {
+                var result =
+                    await transactionSyncService
+                        .SyncConnectionAsync(
+                            userId,
+                            connection,
+                            cancellationToken);
+
+                totalAdded += result.Added;
+                totalModified += result.Modified;
+                totalRemoved += result.Removed;
+            }
+            catch (PlaidApiException exception)
+                when (PlaidConnectionAttentionClassifier
+                    .RequiresUserAttention(
+                        exception))
+            {
+                await PersistRequiresAttentionAsync(
                     userId,
-                    connectionId,
+                    connection,
                     cancellationToken);
 
-            totalAdded += result.Added;
-            totalModified += result.Modified;
-            totalRemoved += result.Removed;
+                throw;
+            }
         }
 
         return new PlaidTransactionSyncSummary(
-            connectionIds.Count,
+            connections.Count,
             totalAdded,
             totalModified,
             totalRemoved);
@@ -123,20 +155,49 @@ public sealed class PlaidConnectionSyncCoordinator(
         }
     }
 
-    private async Task<List<Guid>> GetActiveConnectionIdsAsync(
-        Guid userId,
-        CancellationToken cancellationToken)
+    private async Task<List<BankConnectionEntity>>
+        GetActiveConnectionsAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
     {
         return await dbContext.BankConnections
-            .AsNoTracking()
             .Where(connection =>
                 connection.UserId == userId &&
                 connection.Status == BankConnectionStatus.Active &&
                 connection.ProtectedPlaidAccessToken != null &&
                 connection.ProtectedPlaidAccessToken != string.Empty)
             .OrderBy(connection => connection.Id)
-            .Select(connection => connection.Id)
             .ToListAsync(cancellationToken);
+    }
+
+    private async Task PersistRequiresAttentionAsync(
+        Guid userId,
+        BankConnectionEntity connection,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (connection.UserId !=
+            userId)
+        {
+            throw new InvalidOperationException(
+                "The bank connection does not belong to the requested user.");
+        }
+
+        if (connection.Status ==
+            BankConnectionStatus.Disconnected)
+        {
+            return;
+        }
+
+        connection.Status =
+            BankConnectionStatus.RequiresAttention;
+
+        connection.UpdatedAtUtc =
+            DateTimeOffset.UtcNow;
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
     }
 
     private async Task PersistRequiresAttentionAsync(

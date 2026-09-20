@@ -8,9 +8,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0B1F3B" />
+    <meta name="application-name" content="FullWorth" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FullWorth" />
     <link rel="icon" type="image/svg+xml" href="/assets/fullworth/fullworth-mark.svg" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href="/assets/fullworth/fullworth-mark-dark.svg" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="/site.webmanifest" />
+    <link rel="apple-touch-icon"
+          sizes="180x180"
+          href="/assets/fullworth/fullworth-touch-icon-180.png" />
     <base href="/" />
     <script src="/js/theme-bootstrap.js"></script>
     <ResourcePreloader />
@@ -25,6 +32,7 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script src="/js/pwa.js"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

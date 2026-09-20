@@ -31,40 +31,31 @@ public sealed class BankConnectionHealthAlertService
                 nameof(userId));
         }
 
-        var connections =
+        /*
+         * Query only the rows and column needed to build the aggregate
+         * connection-health alert. Active and intentionally disconnected
+         * connections never need to be materialized here.
+         */
+        var attentionInstitutionNames =
             await _dbContext.BankConnections
                 .AsNoTracking()
                 .Where(
                     connection =>
                         connection.UserId ==
-                            userId)
+                            userId &&
+                        connection.Status ==
+                            BankConnectionStatus.RequiresAttention)
                 .OrderBy(
                     connection =>
                         connection.InstitutionName)
                 .ThenBy(
                     connection =>
                         connection.Id)
+                .Select(
+                    connection =>
+                        connection.InstitutionName)
                 .ToListAsync(
                     cancellationToken);
-
-        /*
-         * Keep this comparison deliberately narrow.
-         *
-         * RequiresAttention means the persisted connection state says
-         * FullWorth cannot currently rely on that connection.
-         *
-         * Disconnected is excluded because the user may have
-         * intentionally disconnected it.
-         */
-        var attentionConnections =
-            connections
-                .Where(
-                    connection =>
-                        string.Equals(
-                            connection.Status.ToString(),
-                            "RequiresAttention",
-                            StringComparison.Ordinal))
-                .ToList();
 
         var existingAlerts =
             await _dbContext.BillAlerts
@@ -89,7 +80,7 @@ public sealed class BankConnectionHealthAlertService
                 .ToListAsync(
                     cancellationToken);
 
-        if (attentionConnections.Count ==
+        if (attentionInstitutionNames.Count ==
             0)
         {
             if (existingAlerts.Count >
@@ -107,11 +98,7 @@ public sealed class BankConnectionHealthAlertService
 
         var message =
             BuildMessage(
-                attentionConnections
-                    .Select(
-                        connection =>
-                            connection.InstitutionName)
-                    .ToList());
+                attentionInstitutionNames);
 
         var now =
             DateTimeOffset.UtcNow;

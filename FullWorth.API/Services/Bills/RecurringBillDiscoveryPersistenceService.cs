@@ -102,17 +102,57 @@ public sealed class RecurringBillDiscoveryPersistenceService
          * subscription is not invisible just because its upstream category
          * is broad or missing.
          */
-        var candidateTransactions =
-            persistedTransactions
-                .Where(
-                    IsRecurringCandidateTransaction)
-                .ToList();
+        var candidateTransactionsByProvider =
+            new Dictionary<
+                string,
+                List<BankTransactionEntity>>(
+                    StringComparer.OrdinalIgnoreCase);
 
         var coreTransactions =
-            candidateTransactions
-                .Select(
-                    ToCoreTransaction)
-                .ToList();
+            new List<CoreBankTransaction>(
+                persistedTransactions.Count);
+
+        foreach (var transaction in
+                 persistedTransactions)
+        {
+            if (transaction.IsPending ||
+                transaction.Amount <=
+                    0m)
+            {
+                continue;
+            }
+
+            var normalizedMerchantName =
+                GetNormalizedMerchantName(
+                    transaction);
+
+            if (string.IsNullOrWhiteSpace(
+                    normalizedMerchantName))
+            {
+                continue;
+            }
+
+            if (!candidateTransactionsByProvider
+                .TryGetValue(
+                    normalizedMerchantName,
+                    out var providerTransactions))
+            {
+                providerTransactions =
+                    [];
+
+                candidateTransactionsByProvider.Add(
+                    normalizedMerchantName,
+                    providerTransactions);
+            }
+
+            providerTransactions.Add(
+                transaction);
+
+            coreTransactions.Add(
+                ToCoreTransaction(
+                    transaction,
+                    normalizedMerchantName));
+        }
 
         var detectedStreams =
             _discoveryService.Discover(
@@ -124,22 +164,10 @@ public sealed class RecurringBillDiscoveryPersistenceService
         foreach (var detectedStream in
                  detectedStreams)
         {
-            var matchingTransactions =
-                candidateTransactions
-                    .Where(
-                        transaction =>
-                            string.Equals(
-                                GetNormalizedMerchantName(
-                                    transaction),
-                                detectedStream.ProviderName,
-                                StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(
-                        transaction =>
-                            transaction.PostedDate)
-                    .ToList();
-
-            if (matchingTransactions.Count ==
-                0)
+            if (!candidateTransactionsByProvider
+                .TryGetValue(
+                    detectedStream.ProviderName,
+                    out var matchingTransactions))
             {
                 continue;
             }
@@ -217,6 +245,36 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 .ToListAsync(
                     cancellationToken);
 
+        var existingStreamsByProvider =
+            existingStreams
+                .GroupBy(
+                    stream =>
+                        _merchantNormalizer.Normalize(
+                            stream.ProviderName),
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group.First(),
+                    StringComparer.OrdinalIgnoreCase);
+
+        var linkedTransactionsByStreamId =
+            persistedTransactions
+                .Where(
+                    transaction =>
+                        transaction.BillStreamId
+                            .HasValue)
+                .GroupBy(
+                    transaction =>
+                        transaction.BillStreamId!
+                            .Value)
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group.ToList());
+
         var discoveredProviderNames =
             acceptedDiscoveries
                 .Select(
@@ -276,15 +334,17 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 deactivatedCount++;
             }
 
-            foreach (var transaction in
-                     persistedTransactions)
+            if (!linkedTransactionsByStreamId
+                .TryGetValue(
+                    existingStream.Id,
+                    out var linkedTransactions))
             {
-                if (transaction.BillStreamId !=
-                    existingStream.Id)
-                {
-                    continue;
-                }
+                continue;
+            }
 
+            foreach (var transaction in
+                     linkedTransactions)
+            {
                 transaction.BillStreamId =
                     null;
 
@@ -298,15 +358,10 @@ public sealed class RecurringBillDiscoveryPersistenceService
         foreach (var discovery in
                  acceptedDiscoveries)
         {
-            var persistedStream =
-                existingStreams
-                    .FirstOrDefault(
-                        existing =>
-                            string.Equals(
-                                _merchantNormalizer.Normalize(
-                                    existing.ProviderName),
-                                discovery.ProviderName,
-                                StringComparison.OrdinalIgnoreCase));
+            existingStreamsByProvider
+                .TryGetValue(
+                    discovery.ProviderName,
+                    out var persistedStream);
 
             if (persistedStream is
                 null)
@@ -343,6 +398,10 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 existingStreams.Add(
                     persistedStream);
 
+                existingStreamsByProvider[
+                    discovery.ProviderName] =
+                        persistedStream;
+
                 createdCount++;
 
                 /*
@@ -359,7 +418,9 @@ public sealed class RecurringBillDiscoveryPersistenceService
                             persistedStream,
                             discovery.Transactions.Count,
                             now,
-                            cancellationToken);
+                            cancellationToken,
+                            newlyAddedStream:
+                                true);
 
                 if (alertCreated)
                 {
@@ -469,25 +530,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
             NewBillAlertsCreated:
                 newBillAlertCount);
-    }
-
-    private bool IsRecurringCandidateTransaction(
-        BankTransactionEntity transaction)
-    {
-        if (transaction.IsPending)
-        {
-            return false;
-        }
-
-        if (transaction.Amount <=
-            0m)
-        {
-            return false;
-        }
-
-        return !string.IsNullOrWhiteSpace(
-            GetNormalizedMerchantName(
-                transaction));
     }
 
     private BillCategory ResolveBillCategory(
@@ -674,13 +716,13 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     StringComparison.OrdinalIgnoreCase));
     }
 
-    private CoreBankTransaction ToCoreTransaction(
-        BankTransactionEntity transaction)
+    private static CoreBankTransaction ToCoreTransaction(
+        BankTransactionEntity transaction,
+        string normalizedMerchantName)
     {
         return new CoreBankTransaction(
             merchantName:
-                GetNormalizedMerchantName(
-                    transaction),
+                normalizedMerchantName,
 
             postedDate:
                 transaction.PostedDate,

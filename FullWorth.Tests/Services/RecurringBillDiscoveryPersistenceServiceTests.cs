@@ -372,6 +372,164 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             dbContext.BillStreams);
     }
 
+    [Fact]
+    public async Task MultipleDiscoveries_LinkCorrectStreams_AndDeactivateStaleStream()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var now =
+            DateTimeOffset.UtcNow;
+
+        var staleStream =
+            new BillStreamEntity
+            {
+                Id =
+                    Guid.NewGuid(),
+
+                UserId =
+                    userId,
+
+                ProviderName =
+                    "Old Service",
+
+                Category =
+                    BillCategory.Other,
+
+                Source =
+                    BillStreamSource.AutomaticDiscovery,
+
+                IsActive =
+                    true,
+
+                CreatedAtUtc =
+                    now.AddMonths(-4),
+
+                UpdatedAtUtc =
+                    now.AddMonths(-1)
+            };
+
+        dbContext.BillStreams.Add(
+            staleStream);
+
+        var staleTransaction =
+            AddTransaction(
+                dbContext,
+                userId,
+                "Old Service",
+                new DateOnly(2026, 1, 2),
+                4.99m,
+                null,
+                null);
+
+        staleTransaction.BillStreamId =
+            staleStream.Id;
+
+        AddMonthlyTransactions(
+            dbContext,
+            userId,
+            "Example Cloud One",
+            9.99m,
+            null,
+            null);
+
+        AddMonthlyTransactions(
+            dbContext,
+            userId,
+            "Example Cloud Two",
+            19.99m,
+            null,
+            null);
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new RecurringBillDiscoveryPersistenceService(
+                dbContext);
+
+        var result =
+            await service.DiscoverAndSaveAsync(
+                userId);
+
+        Assert.Equal(
+            2,
+            result.BillsDiscovered);
+
+        Assert.Equal(
+            2,
+            result.BillStreamsCreated);
+
+        Assert.Equal(
+            2,
+            result.NewBillAlertsCreated);
+
+        Assert.Equal(
+            2,
+            dbContext.BillAlerts.Count(
+                alert =>
+                    alert.AlertType ==
+                        BillAlertType.NewBill));
+
+        Assert.Equal(
+            1,
+            result.BillStreamsDeactivated);
+
+        Assert.Equal(
+            6,
+            result.TransactionsLinked);
+
+        Assert.Equal(
+            1,
+            result.TransactionsUnlinked);
+
+        Assert.False(
+            staleStream.IsActive);
+
+        Assert.Null(
+            staleTransaction.BillStreamId);
+
+        var cloudOne =
+            Assert.Single(
+                dbContext.BillStreams
+                    .Where(
+                        stream =>
+                            stream.ProviderName ==
+                                "Example Cloud One"));
+
+        var cloudTwo =
+            Assert.Single(
+                dbContext.BillStreams
+                    .Where(
+                        stream =>
+                            stream.ProviderName ==
+                                "Example Cloud Two"));
+
+        Assert.All(
+            dbContext.BankTransactions
+                .Where(
+                    transaction =>
+                        transaction.MerchantName ==
+                            "Example Cloud One"),
+            transaction =>
+                Assert.Equal(
+                    cloudOne.Id,
+                    transaction.BillStreamId));
+
+        Assert.All(
+            dbContext.BankTransactions
+                .Where(
+                    transaction =>
+                        transaction.MerchantName ==
+                            "Example Cloud Two"),
+            transaction =>
+                Assert.Equal(
+                    cloudTwo.Id,
+                    transaction.BillStreamId));
+    }
+
     private static FullWorthDbContext CreateDbContext()
     {
         return new FullWorthDbContext(
@@ -417,7 +575,7 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             categoryDetailed);
     }
 
-    private static void AddTransaction(
+    private static BankTransactionEntity AddTransaction(
         FullWorthDbContext dbContext,
         Guid userId,
         string merchantName,
@@ -426,7 +584,7 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         string? categoryPrimary,
         string? categoryDetailed)
     {
-        dbContext.BankTransactions.Add(
+        var transaction =
             new BankTransactionEntity
             {
                 UserId =
@@ -468,6 +626,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
                 CategoryDetailed =
                     categoryDetailed
-            });
+            };
+
+        dbContext.BankTransactions.Add(
+            transaction);
+
+        return transaction;
     }
 }

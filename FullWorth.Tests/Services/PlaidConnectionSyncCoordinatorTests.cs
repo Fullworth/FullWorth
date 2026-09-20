@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Plaid;
@@ -219,6 +220,294 @@ public sealed class PlaidConnectionSyncCoordinatorTests
         Assert.Empty(secondHandler.Requests);
     }
 
+    [Fact]
+    public async Task SyncAllAccounts_MultipleConnections_SyncsEachOwnedConnection()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var tokenProtector =
+            CreateTokenProtector();
+
+        var firstConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "access-token-one");
+
+        firstConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000001");
+
+        firstConnection.PlaidItemId =
+            "item-one";
+
+        firstConnection.InstitutionName =
+            "Bank One";
+
+        var secondConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "access-token-two");
+
+        secondConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000002");
+
+        secondConnection.PlaidItemId =
+            "item-two";
+
+        secondConnection.InstitutionName =
+            "Bank Two";
+
+        dbContext.BankConnections.AddRange(
+            firstConnection,
+            secondConnection);
+
+        await dbContext.SaveChangesAsync();
+
+        using var handler =
+            new ScriptedHttpMessageHandler(
+                AccountResponse(
+                    "account-one",
+                    "Checking One"),
+                AccountResponse(
+                    "account-two",
+                    "Checking Two"));
+
+        using var httpClient =
+            new HttpClient(
+                handler);
+
+        var coordinator =
+            CreateCoordinator(
+                dbContext,
+                httpClient,
+                tokenProtector);
+
+        var result =
+            await coordinator.SyncAllAccountsAsync(
+                userId);
+
+        Assert.Equal(
+            2,
+            result.ConnectionsSynced);
+
+        Assert.Equal(
+            2,
+            result.AccountsSynced);
+
+        Assert.Equal(
+            2,
+            handler.Requests.Count);
+
+        Assert.Contains(
+            "\"access_token\":\"access-token-one\"",
+            handler.Requests[0].Body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"access_token\":\"access-token-two\"",
+            handler.Requests[1].Body,
+            StringComparison.Ordinal);
+
+        var accounts =
+            await dbContext.BankAccounts
+                .OrderBy(
+                    account =>
+                        account.PlaidAccountId)
+                .ToListAsync();
+
+        Assert.Equal(
+            2,
+            accounts.Count);
+
+        Assert.Contains(
+            accounts,
+            account =>
+                account.PlaidAccountId ==
+                    "account-one" &&
+                account.BankConnectionId ==
+                    firstConnection.Id);
+
+        Assert.Contains(
+            accounts,
+            account =>
+                account.PlaidAccountId ==
+                    "account-two" &&
+                account.BankConnectionId ==
+                    secondConnection.Id);
+
+        Assert.NotNull(
+            firstConnection.LastSuccessfulSyncAtUtc);
+
+        Assert.NotNull(
+            secondConnection.LastSuccessfulSyncAtUtc);
+    }
+
+    [Fact]
+    public async Task SyncAllTransactions_MultipleConnections_SyncsEachOwnedConnection()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var tokenProtector =
+            CreateTokenProtector();
+
+        var firstConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "transaction-token-one");
+
+        firstConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000011");
+
+        firstConnection.PlaidItemId =
+            "transaction-item-one";
+
+        firstConnection.InstitutionName =
+            "Transaction Bank One";
+
+        firstConnection.TransactionsCursor =
+            null;
+
+        var secondConnection =
+            CreateConnection(
+                userId,
+                tokenProtector,
+                "transaction-token-two");
+
+        secondConnection.Id =
+            Guid.Parse(
+                "00000000-0000-0000-0000-000000000012");
+
+        secondConnection.PlaidItemId =
+            "transaction-item-two";
+
+        secondConnection.InstitutionName =
+            "Transaction Bank Two";
+
+        secondConnection.TransactionsCursor =
+            null;
+
+        dbContext.BankConnections.AddRange(
+            firstConnection,
+            secondConnection);
+
+        dbContext.BankAccounts.AddRange(
+            new BankAccountEntity
+            {
+                UserId =
+                    userId,
+
+                BankConnectionId =
+                    firstConnection.Id,
+
+                PlaidAccountId =
+                    "transaction-account-one",
+
+                Name =
+                    "Checking One",
+
+                IsActive =
+                    true
+            },
+
+            new BankAccountEntity
+            {
+                UserId =
+                    userId,
+
+                BankConnectionId =
+                    secondConnection.Id,
+
+                PlaidAccountId =
+                    "transaction-account-two",
+
+                Name =
+                    "Checking Two",
+
+                IsActive =
+                    true
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        using var handler =
+            new ScriptedHttpMessageHandler(
+                TransactionResponse(
+                    "cursor-one"),
+                TransactionResponse(
+                    "cursor-two"));
+
+        using var httpClient =
+            new HttpClient(
+                handler);
+
+        var coordinator =
+            CreateCoordinator(
+                dbContext,
+                httpClient,
+                tokenProtector);
+
+        var result =
+            await coordinator.SyncAllTransactionsAsync(
+                userId);
+
+        Assert.Equal(
+            2,
+            result.ConnectionsSynced);
+
+        Assert.Equal(
+            0,
+            result.Added);
+
+        Assert.Equal(
+            0,
+            result.Modified);
+
+        Assert.Equal(
+            0,
+            result.Removed);
+
+        Assert.Equal(
+            2,
+            handler.Requests.Count);
+
+        Assert.Contains(
+            "\"access_token\":\"transaction-token-one\"",
+            handler.Requests[0].Body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"access_token\":\"transaction-token-two\"",
+            handler.Requests[1].Body,
+            StringComparison.Ordinal);
+
+        Assert.Equal(
+            "cursor-one",
+            firstConnection.TransactionsCursor);
+
+        Assert.Equal(
+            "cursor-two",
+            secondConnection.TransactionsCursor);
+
+        Assert.NotNull(
+            firstConnection.LastSuccessfulSyncAtUtc);
+
+        Assert.NotNull(
+            secondConnection.LastSuccessfulSyncAtUtc);
+    }
+
     private static PlaidConnectionSyncCoordinator CreateCoordinator(
         FullWorthDbContext dbContext,
         HttpClient httpClient,
@@ -274,6 +563,88 @@ public sealed class PlaidConnectionSyncCoordinatorTests
             new DbContextOptionsBuilder<FullWorthDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
                 .Options);
+    }
+
+    private static HttpResponseMessage AccountResponse(
+        string accountId,
+        string accountName)
+    {
+        var json =
+            JsonSerializer.Serialize(
+                new
+                {
+                    accounts =
+                        new[]
+                        {
+                            new
+                            {
+                                account_id =
+                                    accountId,
+
+                                name =
+                                    accountName,
+
+                                official_name =
+                                    (string?)null,
+
+                                mask =
+                                    "1234",
+
+                                type =
+                                    "depository",
+
+                                subtype =
+                                    "checking"
+                            }
+                        },
+
+                    request_id =
+                        "safe-test-request-id"
+                });
+
+        return new HttpResponseMessage(
+            HttpStatusCode.OK)
+        {
+            Content =
+                new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+        };
+    }
+
+    private static HttpResponseMessage TransactionResponse(
+        string nextCursor)
+    {
+        var json =
+            JsonSerializer.Serialize(
+                new
+                {
+                    added =
+                        Array.Empty<object>(),
+
+                    modified =
+                        Array.Empty<object>(),
+
+                    removed =
+                        Array.Empty<object>(),
+
+                    next_cursor =
+                        nextCursor,
+
+                    has_more =
+                        false
+                });
+
+        return new HttpResponseMessage(
+            HttpStatusCode.OK)
+        {
+            Content =
+                new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
+        };
     }
 
     private static HttpResponseMessage PlaidError(

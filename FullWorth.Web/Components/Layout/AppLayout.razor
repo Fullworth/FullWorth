@@ -219,6 +219,32 @@
                                     </span>
                                     <span>@L["Account"]</span>
                                 </NavLink>
+
+                                @if (_showInstallAction)
+                                {
+                                    <button type="button"
+                                            class="app-nav-link pwa-install-action"
+                                            @onclick="InstallPwaAsync"
+                                            @onclick:stopPropagation="true">
+                                        <span class="nav-icon"
+                                              aria-hidden="true">
+                                            ↓
+                                        </span>
+
+                                        <span>
+                                            @L["Install FullWorth"]
+                                        </span>
+                                    </button>
+
+                                    @if (!string.IsNullOrWhiteSpace(
+                                        _installMessage))
+                                    {
+                                        <p class="pwa-install-message"
+                                           role="status">
+                                            @_installMessage
+                                        </p>
+                                    }
+                                }
                             </div>
                         </div>
                     }
@@ -311,6 +337,8 @@
 @code {
     private IJSObjectReference? _timeModule;
     private bool _mobileMenuOpen;
+    private bool _showInstallAction = true;
+    private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -332,6 +360,59 @@
         {
             // Timestamp formatting is presentation-only and must never
             // prevent the authenticated application from rendering.
+        }
+
+        try
+        {
+            _showInstallAction =
+                !await JS.InvokeAsync<bool>(
+                    "FullWorthPwa.isStandalone");
+
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+            // Installation is progressive enhancement. FullWorth remains
+            // fully usable when the browser does not expose PWA helpers.
+        }
+    }
+
+    private async Task InstallPwaAsync()
+    {
+        _installMessage =
+            null;
+
+        try
+        {
+            var result =
+                await JS.InvokeAsync<string>(
+                    "FullWorthPwa.install");
+
+            switch (result)
+            {
+                case "accepted":
+                case "installed":
+                    _showInstallAction =
+                        false;
+
+                    CloseMobileMenu();
+                    break;
+
+                case "ios":
+                    _installMessage =
+                        L["On iPhone or iPad, tap Share, then Add to Home Screen."];
+                    break;
+
+                case "browser":
+                    _installMessage =
+                        L["Use your browser menu to install FullWorth as an app."];
+                    break;
+            }
+        }
+        catch (JSException)
+        {
+            _installMessage =
+                L["Use your browser menu to install FullWorth as an app."];
         }
     }
 
