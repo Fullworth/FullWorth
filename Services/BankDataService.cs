@@ -1,15 +1,15 @@
-﻿namespace BillWatch.Services;
+﻿namespace FullWorth.Services;
 
 public sealed class BankDataService
 {
-    private readonly BillWatchApiClient
+    private readonly FullWorthApiClient
         _apiClient;
 
     private readonly AuthenticationService
         _authenticationService;
 
     public BankDataService(
-        BillWatchApiClient apiClient,
+        FullWorthApiClient apiClient,
         AuthenticationService authenticationService)
     {
         _apiClient =

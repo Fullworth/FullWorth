@@ -1,0 +1,15 @@
+{
+  "name": "FullWorth",
+  "short_name": "FullWorth",
+  "icons": [
+    {
+      "src": "/assets/fullworth/fullworth-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#0B1F3B",
+  "background_color": "#F8FAFC",
+  "display": "standalone"
+}

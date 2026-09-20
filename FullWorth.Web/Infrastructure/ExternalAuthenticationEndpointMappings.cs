@@ -1,0 +1,852 @@
+using System.Security.Claims;
+using FullWorth.Web.Services;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
+
+namespace FullWorth.Web.Infrastructure;
+
+public static class ExternalAuthenticationEndpointMappings
+{
+    public const string ExternalCookieScheme =
+        "FullWorth.Web.External";
+
+    private const string ExternalIdTokenProperty =
+        "billwatch:external-id-token";
+
+    private const string ExternalProviderProperty =
+        "billwatch:external-provider";
+
+    private const string ExternalPurposeProperty =
+        "billwatch:external-purpose";
+
+    private const string LoginPurpose =
+        "login";
+
+    private const string LinkPurpose =
+        "link";
+
+    private static readonly ExternalProviderDefinition[] Providers =
+    [
+        new(
+            Provider: "google",
+            Scheme: "FullWorth.Web.Google",
+            DisplayName: "Google",
+            Authority: "https://accounts.google.com",
+            CallbackPath: "/signin-billwatch-google",
+            ResponseMode: OpenIdConnectResponseMode.Query,
+            IncludeProfileScope: true),
+
+        new(
+            Provider: "apple",
+            Scheme: "FullWorth.Web.Apple",
+            DisplayName: "Apple",
+            Authority: "https://appleid.apple.com",
+            CallbackPath: "/signin-billwatch-apple",
+            ResponseMode: OpenIdConnectResponseMode.FormPost,
+            IncludeProfileScope: false),
+
+        new(
+            Provider: "microsoft",
+            Scheme: "FullWorth.Web.Microsoft",
+            DisplayName: "Microsoft",
+            Authority: "https://login.microsoftonline.com/consumers/v2.0",
+            CallbackPath: "/signin-billwatch-microsoft",
+            ResponseMode: OpenIdConnectResponseMode.Query,
+            IncludeProfileScope: true)
+    ];
+
+    public static AuthenticationBuilder
+        AddFullWorthExternalAuthentication(
+            this AuthenticationBuilder authenticationBuilder,
+            IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(
+            authenticationBuilder);
+        ArgumentNullException.ThrowIfNull(
+            configuration);
+
+        var configuredProviders =
+            configuration
+                .GetSection(
+                    ExternalWebIdentityOptions.SectionName)
+                .Get<ExternalWebIdentityOptions>()
+            ?? new ExternalWebIdentityOptions();
+
+        authenticationBuilder.AddCookie(
+            ExternalCookieScheme,
+            options =>
+            {
+                options.Cookie.Name =
+                    "__Host-BillWatch.Web.External";
+
+                options.Cookie.HttpOnly =
+                    true;
+
+                options.Cookie.SecurePolicy =
+                    CookieSecurePolicy.Always;
+
+                options.Cookie.SameSite =
+                    SameSiteMode.Lax;
+
+                options.Cookie.Path =
+                    "/";
+
+                options.ExpireTimeSpan =
+                    TimeSpan.FromMinutes(5);
+
+                options.SlidingExpiration =
+                    false;
+            });
+
+        foreach (var provider in Providers)
+        {
+            var credentials =
+                configuredProviders.GetProvider(
+                    provider.Provider);
+
+            if (credentials is null ||
+                !credentials.IsConfigured)
+            {
+                continue;
+            }
+
+            authenticationBuilder.AddOpenIdConnect(
+                provider.Scheme,
+                provider.DisplayName,
+                options =>
+                    ConfigureOpenIdConnect(
+                        options,
+                        provider,
+                        credentials));
+        }
+
+        return authenticationBuilder;
+    }
+
+    public static IEndpointRouteBuilder
+        MapFullWorthExternalAuthenticationEndpoints(
+            this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(
+            endpoints);
+
+        endpoints.MapGet(
+                "/auth/external/{provider}",
+                BeginExternalSignInAsync)
+            .AllowAnonymous();
+
+        endpoints.MapGet(
+                "/auth/external/complete",
+                CompleteExternalSignInAsync)
+            .AllowAnonymous();
+
+        endpoints.MapPost(
+                "/auth/external/two-factor",
+                CompleteExternalSecondFactorAsync)
+            .AllowAnonymous();
+
+        endpoints.MapGet(
+                "/auth/external/{provider}/link",
+                BeginExternalLinkAsync)
+            .RequireAuthorization();
+
+        endpoints.MapPost(
+                "/bff/account/external/link",
+                CompleteExternalLinkAsync)
+            .RequireAuthorization();
+
+        return endpoints;
+    }
+
+    private static Task<IResult>
+        BeginExternalSignInAsync(
+            string provider,
+            IAuthenticationSchemeProvider schemeProvider)
+    {
+        return BeginExternalChallengeAsync(
+            provider,
+            LoginPurpose,
+            schemeProvider,
+            unavailableRedirectBuilder:
+                BuildLoginErrorRedirect,
+            redirectUriBuilder:
+                normalizedProvider =>
+                    "/auth/external/complete?provider=" +
+                    Uri.EscapeDataString(
+                        normalizedProvider));
+    }
+
+    private static Task<IResult>
+        BeginExternalLinkAsync(
+            string provider,
+            IAuthenticationSchemeProvider schemeProvider)
+    {
+        return BeginExternalChallengeAsync(
+            provider,
+            LinkPurpose,
+            schemeProvider,
+            unavailableRedirectBuilder:
+                BuildAccountSettingsErrorRedirect,
+            redirectUriBuilder:
+                normalizedProvider =>
+                    "/app/account/settings?externalLink=" +
+                    Uri.EscapeDataString(
+                        normalizedProvider));
+    }
+
+    private static async Task<IResult>
+        BeginExternalChallengeAsync(
+            string provider,
+            string purpose,
+            IAuthenticationSchemeProvider schemeProvider,
+            Func<string, string> unavailableRedirectBuilder,
+            Func<string, string> redirectUriBuilder)
+    {
+        var providerDefinition =
+            FindProvider(
+                provider);
+
+        if (providerDefinition is null)
+        {
+            return Results.NotFound();
+        }
+
+        var registeredScheme =
+            await schemeProvider.GetSchemeAsync(
+                providerDefinition.Scheme);
+
+        if (registeredScheme is null)
+        {
+            return Results.Redirect(
+                unavailableRedirectBuilder(
+                    "That sign-in option is not available yet."));
+        }
+
+        var normalizedProvider =
+            providerDefinition.Provider;
+
+        var properties =
+            new AuthenticationProperties
+            {
+                RedirectUri =
+                    redirectUriBuilder(
+                        normalizedProvider)
+            };
+
+        properties.Items[
+            ExternalProviderProperty] =
+            normalizedProvider;
+
+        properties.Items[
+            ExternalPurposeProperty] =
+            purpose;
+
+        return Results.Challenge(
+            properties,
+            [
+                providerDefinition.Scheme
+            ]);
+    }
+
+    private static async Task<IResult>
+        CompleteExternalSignInAsync(
+            HttpContext context,
+            string? provider,
+            IHttpClientFactory httpClientFactory,
+            CancellationToken cancellationToken)
+    {
+        var providerDefinition =
+            FindProvider(
+                provider);
+
+        if (providerDefinition is null)
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    "External sign-in could not be completed."));
+        }
+
+        var externalResult =
+            await context.AuthenticateAsync(
+                ExternalCookieScheme);
+
+        if (!TryGetExternalIdentity(
+                externalResult,
+                providerDefinition.Provider,
+                LoginPurpose,
+                out var idToken,
+                out var subject,
+                out var email))
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    "External sign-in could not be completed."));
+        }
+
+        var loginResult =
+            await ExternalWebSignInFlow.LoginAsync(
+                context,
+                httpClientFactory,
+                providerDefinition.Provider,
+                idToken!,
+                subject!,
+                email,
+                twoFactorCode: null,
+                recoveryCode: null,
+                cancellationToken);
+
+        if (loginResult.RequiresTwoFactor)
+        {
+            return Results.Redirect(
+                BuildExternalTwoFactorRedirect(
+                    providerDefinition.Provider,
+                    factorError: false));
+        }
+
+        await ClearExternalSessionAsync(
+            context);
+
+        if (!loginResult.Succeeded)
+        {
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    loginResult.ErrorMessage ??
+                    "External sign-in could not be completed."));
+        }
+
+        return Results.Redirect(
+            "/app");
+    }
+
+    private static async Task<IResult>
+        CompleteExternalSecondFactorAsync(
+            HttpContext context,
+            IAntiforgery antiforgery,
+            IHttpClientFactory httpClientFactory)
+    {
+        await antiforgery.ValidateRequestAsync(
+            context);
+
+        var form =
+            await context.Request.ReadFormAsync(
+                context.RequestAborted);
+
+        var providerDefinition =
+            FindProvider(
+                form["provider"].ToString());
+
+        if (providerDefinition is null)
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    "External sign-in could not be completed."));
+        }
+
+        var twoFactorCode =
+            form["twoFactorCode"].ToString().Trim();
+
+        var recoveryCode =
+            form["recoveryCode"].ToString().Trim();
+
+        if (string.IsNullOrWhiteSpace(twoFactorCode) ==
+            string.IsNullOrWhiteSpace(recoveryCode))
+        {
+            return Results.Redirect(
+                BuildExternalTwoFactorRedirect(
+                    providerDefinition.Provider,
+                    factorError: true));
+        }
+
+        var externalResult =
+            await context.AuthenticateAsync(
+                ExternalCookieScheme);
+
+        if (!TryGetExternalIdentity(
+                externalResult,
+                providerDefinition.Provider,
+                LoginPurpose,
+                out var idToken,
+                out var subject,
+                out var email))
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    "External sign-in could not be completed."));
+        }
+
+        /*
+         * A provider assertion may be used for only one local second-factor
+         * attempt. Clear it before calling the API so a guessed/failed code
+         * cannot be retried against the same provider proof.
+         */
+        await ClearExternalSessionAsync(
+            context);
+
+        var loginResult =
+            await ExternalWebSignInFlow.LoginAsync(
+                context,
+                httpClientFactory,
+                providerDefinition.Provider,
+                idToken!,
+                subject!,
+                email,
+                twoFactorCode,
+                recoveryCode,
+                context.RequestAborted);
+
+        if (!loginResult.Succeeded)
+        {
+            return Results.Redirect(
+                BuildLoginErrorRedirect(
+                    loginResult.ErrorMessage ??
+                    "External sign-in could not be completed."));
+        }
+
+        return Results.Redirect(
+            "/app");
+    }
+
+    private static async Task<IResult>
+        CompleteExternalLinkAsync(
+            HttpContext context,
+            IAntiforgery antiforgery,
+            AdminBffWriteProxyService writeProxyService,
+            ExternalIdentityLinkBffRequest request,
+            CancellationToken cancellationToken)
+    {
+        await antiforgery.ValidateRequestAsync(
+            context);
+
+        var providerDefinition =
+            FindProvider(
+                request.Provider);
+
+        if (providerDefinition is null)
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.BadRequest();
+        }
+
+        var externalResult =
+            await context.AuthenticateAsync(
+                ExternalCookieScheme);
+
+        if (!TryGetExternalIdentity(
+                externalResult,
+                providerDefinition.Provider,
+                LinkPurpose,
+                out var idToken,
+                out _,
+                out _))
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.BadRequest(
+                new
+                {
+                    error =
+                        "ExternalLinkExpired"
+                });
+        }
+
+        /*
+         * The provider proof is single-use at the BFF layer. Clear the
+         * temporary external cookie before the API reauthentication request
+         * so a failed password/2FA attempt cannot be replayed repeatedly with
+         * the same provider assertion.
+         */
+        await ClearExternalSessionAsync(
+            context);
+
+        return await writeProxyService.ForwardJsonAsync(
+            context,
+            HttpMethod.Post,
+            "/api/auth/external/link",
+            new
+            {
+                provider =
+                    providerDefinition.Provider,
+
+                idToken,
+
+                currentPassword =
+                    request.CurrentPassword,
+
+                twoFactorCode =
+                    request.TwoFactorCode,
+
+                twoFactorRecoveryCode =
+                    request.TwoFactorRecoveryCode
+            },
+            cancellationToken);
+    }
+
+    private static bool TryGetExternalIdentity(
+        AuthenticateResult externalResult,
+        string expectedProvider,
+        string expectedPurpose,
+        out string? idToken,
+        out string? subject,
+        out string? email)
+    {
+        idToken =
+            null;
+        subject =
+            null;
+        email =
+            null;
+
+        if (!externalResult.Succeeded ||
+            externalResult.Principal is null ||
+            externalResult.Properties is null)
+        {
+            return false;
+        }
+
+        externalResult.Properties.Items.TryGetValue(
+            ExternalProviderProperty,
+            out var storedProvider);
+
+        externalResult.Properties.Items.TryGetValue(
+            ExternalPurposeProperty,
+            out var storedPurpose);
+
+        if (!string.Equals(
+                storedProvider,
+                expectedProvider,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                storedPurpose,
+                expectedPurpose,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        externalResult.Properties.Items.TryGetValue(
+            ExternalIdTokenProperty,
+            out idToken);
+
+        subject =
+            externalResult.Principal
+                .FindFirst("sub")?
+                .Value;
+
+        email =
+            externalResult.Principal
+                .FindFirst("email")?
+                .Value ??
+            externalResult.Principal
+                .FindFirst(ClaimTypes.Email)?
+                .Value;
+
+        return !string.IsNullOrWhiteSpace(
+                   idToken) &&
+               !string.IsNullOrWhiteSpace(
+                   subject);
+    }
+
+    private static void ConfigureOpenIdConnect(
+        OpenIdConnectOptions options,
+        ExternalProviderDefinition provider,
+        ExternalWebIdentityCredentialOptions credentials)
+    {
+        options.SignInScheme =
+            ExternalCookieScheme;
+
+        options.Authority =
+            provider.Authority;
+
+        options.ClientId =
+            credentials.ClientId!.Trim();
+
+        options.ClientSecret =
+            credentials.ClientSecret!.Trim();
+
+        options.CallbackPath =
+            provider.CallbackPath;
+
+        options.ResponseType =
+            OpenIdConnectResponseType.Code;
+
+        options.ResponseMode =
+            provider.ResponseMode;
+
+        options.UsePkce =
+            true;
+
+        options.RequireHttpsMetadata =
+            true;
+
+        options.GetClaimsFromUserInfoEndpoint =
+            false;
+
+        /*
+         * FullWorth needs only the provider-issued ID token long enough to
+         * validate the linked identity again at the API boundary. Provider
+         * access and refresh tokens are deliberately not persisted.
+         */
+        options.SaveTokens =
+            false;
+
+        options.MapInboundClaims =
+            false;
+
+        options.Scope.Clear();
+        options.Scope.Add(
+            OpenIdConnectScope.OpenId);
+        options.Scope.Add(
+            OpenIdConnectScope.Email);
+
+        if (provider.IncludeProfileScope)
+        {
+            options.Scope.Add(
+                OpenIdConnectScope.Profile);
+        }
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer =
+                    true,
+
+                ValidateAudience =
+                    true,
+
+                NameClaimType =
+                    "email"
+            };
+
+        ConfigureRemoteCookie(
+            options.CorrelationCookie,
+            $"__Host-BillWatch.Web.{provider.DisplayName}.Correlation.");
+
+        ConfigureRemoteCookie(
+            options.NonceCookie,
+            $"__Host-BillWatch.Web.{provider.DisplayName}.Nonce.");
+
+        options.Events =
+            new OpenIdConnectEvents
+            {
+                OnTokenValidated =
+                    context =>
+                    {
+                        var idToken =
+                            context.TokenEndpointResponse?
+                                .IdToken;
+
+                        var properties =
+                            context.Properties;
+
+                        if (string.IsNullOrWhiteSpace(
+                                idToken) ||
+                            properties is null)
+                        {
+                            context.Fail(
+                                "The identity provider did not return a valid sign-in state.");
+
+                            return Task.CompletedTask;
+                        }
+
+                        properties.Items[
+                            ExternalIdTokenProperty] =
+                            idToken;
+
+                        properties.Items[
+                            ExternalProviderProperty] =
+                            provider.Provider;
+
+                        return Task.CompletedTask;
+                    },
+
+                OnRemoteFailure =
+                    context =>
+                    {
+                        context.HandleResponse();
+
+                        var purpose =
+                            context.Properties?.Items.TryGetValue(
+                                ExternalPurposeProperty,
+                                out var storedPurpose) == true
+                                ? storedPurpose
+                                : null;
+
+                        var error =
+                            "External sign-in could not be completed.";
+
+                        context.Response.Redirect(
+                            string.Equals(
+                                purpose,
+                                LinkPurpose,
+                                StringComparison.Ordinal)
+                                ? BuildAccountSettingsErrorRedirect(
+                                    error)
+                                : BuildLoginErrorRedirect(
+                                    error));
+
+                        return Task.CompletedTask;
+                    }
+            };
+    }
+
+    private static void ConfigureRemoteCookie(
+        CookieBuilder cookie,
+        string name)
+    {
+        cookie.Name =
+            name;
+
+        cookie.HttpOnly =
+            true;
+
+        cookie.SecurePolicy =
+            CookieSecurePolicy.Always;
+
+        cookie.SameSite =
+            SameSiteMode.None;
+
+        cookie.Path =
+            "/";
+
+        cookie.IsEssential =
+            true;
+    }
+
+    private static ExternalProviderDefinition?
+        FindProvider(
+            string? provider)
+    {
+        if (string.IsNullOrWhiteSpace(
+                provider))
+        {
+            return null;
+        }
+
+        var normalizedProvider =
+            provider.Trim()
+                .ToLowerInvariant();
+
+        return Providers.FirstOrDefault(
+            candidate =>
+                string.Equals(
+                    candidate.Provider,
+                    normalizedProvider,
+                    StringComparison.Ordinal));
+    }
+
+    private static async Task ClearExternalSessionAsync(
+        HttpContext context)
+    {
+        await context.SignOutAsync(
+            ExternalCookieScheme);
+    }
+
+    private static string BuildLoginErrorRedirect(
+        string _)
+    {
+        return "/login?externalError=true";
+    }
+
+    private static string BuildExternalTwoFactorRedirect(
+        string provider,
+        bool factorError)
+    {
+        var redirect =
+            "/login?externalTwoFactor=true&provider=" +
+            Uri.EscapeDataString(provider);
+
+        if (factorError)
+        {
+            redirect += "&externalFactorError=true";
+        }
+
+        return redirect;
+    }
+
+    private static string BuildAccountSettingsErrorRedirect(
+        string _)
+    {
+        return "/app/account/settings?externalError=true";
+    }
+
+    private sealed record ExternalProviderDefinition(
+        string Provider,
+        string Scheme,
+        string DisplayName,
+        string Authority,
+        string CallbackPath,
+        string ResponseMode,
+        bool IncludeProfileScope);
+}
+
+public sealed record ExternalIdentityLinkBffRequest(
+    string Provider,
+    string CurrentPassword,
+    string? TwoFactorCode,
+    string? TwoFactorRecoveryCode);
+
+public sealed class ExternalWebIdentityOptions
+{
+    public const string SectionName =
+        "ExternalIdentity";
+
+    public ExternalWebIdentityCredentialOptions Google { get; set; } =
+        new();
+
+    public ExternalWebIdentityCredentialOptions Apple { get; set; } =
+        new();
+
+    public ExternalWebIdentityCredentialOptions Microsoft { get; set; } =
+        new();
+
+    public ExternalWebIdentityCredentialOptions? GetProvider(
+        string provider)
+    {
+        return provider switch
+        {
+            "google" =>
+                Google,
+
+            "apple" =>
+                Apple,
+
+            "microsoft" =>
+                Microsoft,
+
+            _ =>
+                null
+        };
+    }
+}
+
+public sealed class ExternalWebIdentityCredentialOptions
+{
+    public string? ClientId { get; set; }
+
+    public string? ClientSecret { get; set; }
+
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(
+            ClientId) &&
+        !string.IsNullOrWhiteSpace(
+            ClientSecret);
+}

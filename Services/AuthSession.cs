@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class AuthSession
 {

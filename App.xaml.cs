@@ -1,6 +1,6 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public partial class App : Application
 {

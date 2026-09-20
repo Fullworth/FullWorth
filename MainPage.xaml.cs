@@ -1,6 +1,6 @@
-﻿using BillWatch.ViewModels;
+﻿using FullWorth.ViewModels;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public partial class MainPage : ContentPage
 {

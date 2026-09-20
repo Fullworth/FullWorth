@@ -1,11 +1,11 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class BillStreamService
 {
-    private readonly BillWatchApiClient
+    private readonly FullWorthApiClient
         _apiClient;
 
     private readonly AuthenticationService
@@ -15,7 +15,7 @@ public sealed class BillStreamService
         _httpClient;
 
     public BillStreamService(
-        BillWatchApiClient apiClient,
+        FullWorthApiClient apiClient,
         AuthenticationService authenticationService,
         HttpClient httpClient)
     {

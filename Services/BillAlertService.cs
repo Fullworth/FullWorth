@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class BillAlertService
 {

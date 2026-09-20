@@ -1,15 +1,15 @@
-﻿namespace BillWatch.Services;
+﻿namespace FullWorth.Services;
 
 public sealed class PlaidConnectionService
 {
-    private readonly BillWatchApiClient
+    private readonly FullWorthApiClient
         _apiClient;
 
     private readonly AuthenticationService
         _authenticationService;
 
     public PlaidConnectionService(
-        BillWatchApiClient apiClient,
+        FullWorthApiClient apiClient,
         AuthenticationService authenticationService)
     {
         _apiClient =

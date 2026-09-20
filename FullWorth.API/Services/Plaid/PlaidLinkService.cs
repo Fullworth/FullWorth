@@ -1,0 +1,429 @@
+using System.Globalization;
+using System.Text.Json;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace FullWorth.API.Services.Plaid;
+
+public sealed class PlaidLinkService
+{
+    private const int MaxLinkTokenLength =
+        8 * 1024;
+
+    private const int MaxHostedLinkUrlLength =
+        4 * 1024;
+
+    private const int MaxTransactionHistoryDays =
+        730;
+
+    private static readonly TimeSpan
+        DefaultLinkSessionLifetime =
+            TimeSpan.FromHours(
+                4);
+
+    private readonly PlaidApiClient
+        _plaidApiClient;
+
+    private readonly PlaidTokenProtector
+        _tokenProtector;
+
+    private readonly FullWorthDbContext
+        _dbContext;
+
+    public PlaidLinkService(
+        PlaidApiClient plaidApiClient,
+        PlaidTokenProtector tokenProtector,
+        FullWorthDbContext dbContext)
+    {
+        ArgumentNullException.ThrowIfNull(
+            plaidApiClient);
+
+        ArgumentNullException.ThrowIfNull(
+            tokenProtector);
+
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        _plaidApiClient =
+            plaidApiClient;
+
+        _tokenProtector =
+            tokenProtector;
+
+        _dbContext =
+            dbContext;
+    }
+
+    public async Task<PlaidHostedLinkSession>
+        CreateLinkSessionAsync(
+            Guid userId,
+            Guid? bankConnectionId = null,
+            CancellationToken cancellationToken = default)
+    {
+        if (userId ==
+            Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A valid user ID is required.",
+                nameof(userId));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string?
+            accessToken =
+                null;
+
+        if (bankConnectionId is Guid connectionId)
+        {
+            if (connectionId == Guid.Empty)
+            {
+                throw new ArgumentException(
+                    "A valid bank connection ID is required.",
+                    nameof(bankConnectionId));
+            }
+
+            var connection =
+                await _dbContext.BankConnections
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(
+                        candidate =>
+                            candidate.UserId == userId &&
+                            candidate.Id == connectionId,
+                        cancellationToken)
+                ?? throw new KeyNotFoundException(
+                    "Bank connection was not found.");
+
+            if (connection.Status ==
+                    BankConnectionStatus.Disconnected ||
+                string.IsNullOrWhiteSpace(
+                    connection.ProtectedPlaidAccessToken))
+            {
+                throw new InvalidOperationException(
+                    "Disconnected bank connections cannot enter Plaid update mode.");
+            }
+
+            accessToken =
+                _tokenProtector.Unprotect(
+                    connection.ProtectedPlaidAccessToken);
+        }
+
+        object request =
+            accessToken is null
+                ? new
+                {
+                    client_name =
+                        "FullWorth",
+
+                    user =
+                        new
+                        {
+                            client_user_id =
+                                userId.ToString(
+                                    "D",
+                                    CultureInfo.InvariantCulture)
+                        },
+
+                    products =
+                        new[]
+                        {
+                            "transactions"
+                        },
+
+                    transactions =
+                        new
+                        {
+                            days_requested =
+                                MaxTransactionHistoryDays
+                        },
+
+                    country_codes =
+                        new[]
+                        {
+                            "US"
+                        },
+
+                    language =
+                        "en",
+
+                    hosted_link =
+                        new
+                        {
+                        }
+                }
+                : new
+                {
+                    client_name =
+                        "FullWorth",
+
+                    user =
+                        new
+                        {
+                            client_user_id =
+                                userId.ToString(
+                                    "D",
+                                    CultureInfo.InvariantCulture)
+                        },
+
+                    access_token =
+                        accessToken,
+
+                    country_codes =
+                        new[]
+                        {
+                            "US"
+                        },
+
+                    language =
+                        "en",
+
+                    hosted_link =
+                        new
+                        {
+                        }
+                };
+
+        using var response =
+            await _plaidApiClient.PostAsync(
+                "link/token/create",
+                request,
+                cancellationToken);
+
+        var root =
+            response.RootElement;
+
+        if (root.ValueKind !=
+            JsonValueKind.Object)
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an invalid Link token response.");
+        }
+
+        var linkToken =
+            GetRequiredString(
+                root,
+                "link_token",
+                MaxLinkTokenLength,
+                "Plaid returned an invalid Link token response.");
+
+        var hostedLinkUrlText =
+            GetRequiredString(
+                root,
+                "hosted_link_url",
+                MaxHostedLinkUrlLength,
+                "Plaid returned an invalid Hosted Link response.");
+
+        var hostedLinkUrl =
+            ValidateHostedLinkUrl(
+                hostedLinkUrlText);
+
+        var now =
+            DateTimeOffset.UtcNow;
+
+        var expiresAtUtc =
+            ReadExpiration(
+                root,
+                now);
+
+        /*
+         * Protect the Link token before any database state is created.
+         *
+         * Only protected ciphertext is persisted. The plaintext token
+         * remains local to this request and is never returned to the MAUI
+         * client by this service.
+         */
+        var protectedLinkToken =
+            _tokenProtector.ProtectLinkToken(
+                linkToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var linkSession =
+            new PlaidLinkSessionEntity
+            {
+                UserId =
+                    userId,
+
+                BankConnectionId =
+                    bankConnectionId,
+
+                ProtectedLinkToken =
+                    protectedLinkToken,
+
+                Status =
+                    PlaidLinkSessionStatus.Pending,
+
+                ExpiresAtUtc =
+                    expiresAtUtc,
+
+                CreatedAtUtc =
+                    now,
+
+                UpdatedAtUtc =
+                    now
+            };
+
+        _dbContext.PlaidLinkSessions.Add(
+            linkSession);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        /*
+         * Deliberately do not return the plaintext Link token.
+         *
+         * FullWorth uses Plaid Hosted Link, so the client only needs the
+         * hosted URL and FullWorth-owned session identifier.
+         */
+        return new PlaidHostedLinkSession(
+            linkSession.Id,
+            hostedLinkUrl.AbsoluteUri);
+    }
+
+    private static string GetRequiredString(
+        JsonElement parent,
+        string propertyName,
+        int maxLength,
+        string safeFailureMessage)
+    {
+        if (parent.ValueKind !=
+                JsonValueKind.Object ||
+            !parent.TryGetProperty(
+                propertyName,
+                out var element) ||
+            element.ValueKind !=
+                JsonValueKind.String)
+        {
+            throw new InvalidOperationException(
+                safeFailureMessage);
+        }
+
+        var value =
+            element.GetString();
+
+        if (string.IsNullOrWhiteSpace(
+                value) ||
+            value.Length >
+                maxLength ||
+            value.Any(
+                char.IsControl))
+        {
+            throw new InvalidOperationException(
+                safeFailureMessage);
+        }
+
+        return value;
+    }
+
+    private static Uri ValidateHostedLinkUrl(
+        string hostedLinkUrl)
+    {
+        if (!Uri.TryCreate(
+                hostedLinkUrl,
+                UriKind.Absolute,
+                out var uri))
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an invalid Hosted Link URL.");
+        }
+
+        /*
+         * Hosted Link is an externally navigated financial-authentication
+         * URL. Fail closed unless it is HTTPS and belongs to Plaid.
+         *
+         * This prevents an unexpected upstream value from turning
+         * FullWorth into a phishing redirect.
+         */
+        if (!string.Equals(
+                uri.Scheme,
+                Uri.UriSchemeHttps,
+                StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(
+                uri.Host) ||
+            !string.IsNullOrEmpty(
+                uri.UserInfo) ||
+            !IsPlaidHost(
+                uri.Host))
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an invalid Hosted Link URL.");
+        }
+
+        return uri;
+    }
+
+    private static bool IsPlaidHost(
+        string host)
+    {
+        if (string.Equals(
+                host,
+                "plaid.com",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return host.EndsWith(
+            ".plaid.com",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DateTimeOffset ReadExpiration(
+        JsonElement root,
+        DateTimeOffset now)
+    {
+        if (!root.TryGetProperty(
+                "expiration",
+                out var expirationElement) ||
+            expirationElement.ValueKind ==
+                JsonValueKind.Null)
+        {
+            return now.Add(
+                DefaultLinkSessionLifetime);
+        }
+
+        if (expirationElement.ValueKind !=
+            JsonValueKind.String)
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an invalid Link token expiration.");
+        }
+
+        var expirationText =
+            expirationElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(
+                expirationText) ||
+            !DateTimeOffset.TryParse(
+                expirationText,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces |
+                DateTimeStyles.AssumeUniversal |
+                DateTimeStyles.AdjustToUniversal,
+                out var expiration))
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an invalid Link token expiration.");
+        }
+
+        expiration =
+            expiration.ToUniversalTime();
+
+        /*
+         * Do not persist a session that is already unusable.
+         */
+        if (expiration <=
+            now)
+        {
+            throw new InvalidOperationException(
+                "Plaid returned an expired Link token.");
+        }
+
+        return expiration;
+    }
+}
+
+public sealed record PlaidHostedLinkSession(
+    Guid SessionId,
+    string HostedLinkUrl);

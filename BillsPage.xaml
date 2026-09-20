@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
 <ContentPage
-    x:Class="BillWatch.BillsPage"
+    x:Class="FullWorth.BillsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Style="{StaticResource BillWatchPageStyle}">
+    Style="{StaticResource FullWorthPageStyle}">
 
     <ScrollView>
 
@@ -39,7 +39,7 @@
                     Spacing="0">
 
                     <Label
-                        Text="BillWatch"
+                        Text="FullWorth"
                         FontSize="22"
                         FontAttributes="Bold"
                         Style="{StaticResource PrimaryTextStyle}" />

@@ -1,0 +1,39 @@
+﻿@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Something went wrong — FullWorth</PageTitle>
+
+<div class="system-page">
+    <section class="system-card" aria-labelledby="error-title">
+        <div class="system-icon system-icon-error" aria-hidden="true">!</div>
+        <span class="system-kicker">Something went wrong</span>
+        <h1 id="error-title">FullWorth hit a snag.</h1>
+        <p>
+            We couldn't finish that request. Nothing on this page should require you to expose passwords, bank credentials, or security codes.
+        </p>
+
+        @if (ShowRequestId)
+        {
+            <div class="system-request-id">
+                <span>Reference</span>
+                <code>@RequestId</code>
+            </div>
+        }
+
+        <div class="system-actions">
+            <a class="system-primary-action" href="/app">Return to FullWorth</a>
+            <a class="system-secondary-action" href="/">Back to home</a>
+        </div>
+    </section>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrWhiteSpace(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -1,6 +1,16 @@
-# BillWatch Current Context
+# FullWorth Current Context (legacy filename retained)
 
-Last updated: 2026-09-17
+Last updated: 2026-09-19
+
+## FullWorth brand transition
+
+- Product brand: **FullWorth**.
+- Tagline/positioning: **Your entire financial life. One app.**
+- The repository is still named `RealizmModz/BillWatch` and this file remains `BILLWATCH_CONTEXT.md` temporarily because current project tooling and continuation instructions reference those identifiers.
+- Production compatibility identifiers such as `BILLWATCH_*` environment variables, `/opt/billwatch`, Data Protection application/purpose strings, persisted secure-storage keys, Stripe metadata keys, and current public domains remain unchanged until a dedicated guarded operations migration is completed.
+- PR #113 promoted the recurring-discovery coverage fix to `master` as `1b2b52cd77f45143d4b741d77f1cb79f292f86c2`; that merge is **not** claimed as deployed production.
+- PR #114 merged the approved FullWorth brand assets into `development` as `b51a49705d0cf062abba0ca9c3522f1d3c6994fe` after exact-head CI passed all three required jobs.
+- The active branding rename work is on `brand/fullworth-product-identity`; do not claim it merged until its exact-head CI is green and the PR is merged.
 
 ## Authority / continuation rules
 
@@ -14,9 +24,9 @@ This is the durable BillWatch development handoff. Current source, exact-head CI
 
 ## Product promise
 
-**Know when your bills change — and why.**
+**Your entire financial life. One app.**
 
-BillWatch is transaction-first. Bank transactions discover recurring bills. Provider statements/evidence explain why bills changed. AI may produce structured candidate facts, but deterministic code validates evidence, performs arithmetic, enforces ownership/security, compares history, and makes final persistence/alert decisions. AI output is never evidence by itself.
+FullWorth remains transaction-first while expanding into a broader financial-life hub. Bank transactions discover recurring bills. Provider statements/evidence explain why bills changed. AI may produce structured candidate facts, but deterministic code validates evidence, performs arithmetic, enforces ownership/security, compares history, and makes final persistence/alert decisions. AI output is never evidence by itself.
 
 ## Repository / stack
 

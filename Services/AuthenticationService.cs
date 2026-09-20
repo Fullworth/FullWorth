@@ -2,20 +2,20 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class AuthenticationService
 {
     private static readonly TimeSpan RefreshBeforeExpiration =
         TimeSpan.FromMinutes(1);
 
-    private readonly BillWatchApiClient _apiClient;
+    private readonly FullWorthApiClient _apiClient;
     private readonly AuthSession _authSession;
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public AuthenticationService(
-        BillWatchApiClient apiClient,
+        FullWorthApiClient apiClient,
         AuthSession authSession,
         HttpClient httpClient)
     {
@@ -51,7 +51,7 @@ public sealed class AuthenticationService
             string.IsNullOrWhiteSpace(legalTermsVersion))
         {
             throw new AccountRegistrationException(
-                "Accept the current BillWatch Terms and Privacy Notice to create an account.");
+                "Accept the current FullWorth Terms and Privacy Notice to create an account.");
         }
 
         using var response = await _httpClient.PostAsJsonAsync(
@@ -97,11 +97,11 @@ public sealed class AuthenticationService
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new AccountRegistrationException(
-                    "Accept the current BillWatch Terms and Privacy Notice to create an account.");
+                    "Accept the current FullWorth Terms and Privacy Notice to create an account.");
             }
 
             throw new AccountRegistrationException(
-                "BillWatch could not create the account. Use a valid email and a password with at least 12 characters, including uppercase, lowercase, a number, and a symbol.");
+                "FullWorth could not create the account. Use a valid email and a password with at least 12 characters, including uppercase, lowercase, a number, and a symbol.");
         }
 
         response.EnsureSuccessStatusCode();
@@ -271,11 +271,11 @@ public sealed class AuthenticationService
         if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
         {
             throw new AccountDeletionException(
-                "BillWatch could not safely revoke one of your bank connections, so your account was not deleted. Try again shortly.");
+                "FullWorth could not safely revoke one of your bank connections, so your account was not deleted. Try again shortly.");
         }
 
         throw new AccountDeletionException(
-            "BillWatch could not permanently delete your account right now. Your account remains available; try again.");
+            "FullWorth could not permanently delete your account right now. Your account remains available; try again.");
     }
 
     public void Logout()
@@ -374,14 +374,14 @@ public sealed class AccountDeletionException : Exception
 public sealed class SessionExpiredException : Exception
 {
     public SessionExpiredException()
-        : base("Your BillWatch session has expired.")
+        : base("Your FullWorth session has expired.")
     {
     }
 
     public SessionExpiredException(
         Exception innerException)
         : base(
-            "Your BillWatch session has expired.",
+            "Your FullWorth session has expired.",
             innerException)
     {
     }

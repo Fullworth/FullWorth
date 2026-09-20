@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
-    x:Class="BillWatch.LoginPage"
+    x:Class="FullWorth.LoginPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:converters="clr-namespace:BillWatch.Converters"
+    xmlns:converters="clr-namespace:FullWorth.Converters"
     Shell.NavBarIsVisible="False"
-    Style="{StaticResource BillWatchPageStyle}">
+    Style="{StaticResource FullWorthPageStyle}">
 
     <ContentPage.Resources>
         <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
@@ -35,7 +35,7 @@
                 </Border>
 
                 <Label
-                    Text="BillWatch"
+                    Text="FullWorth"
                     HorizontalTextAlignment="Center"
                     Style="{StaticResource PageTitleStyle}" />
 
@@ -102,7 +102,7 @@
                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
                                 VerticalOptions="Start" />
                             <Label
-                                Text="I agree to the BillWatch Terms and acknowledge the Privacy Notice."
+                                Text="I agree to the FullWorth Terms and acknowledge the Privacy Notice."
                                 VerticalOptions="Center"
                                 Style="{StaticResource SmallTextStyle}" />
                         </HorizontalStackLayout>
@@ -174,7 +174,7 @@
                         FontAttributes="Bold"
                         Style="{StaticResource PrimaryTextStyle}" />
                     <Label
-                        Text="BillWatch is read-only: it monitors transaction data, keeps Plaid access tokens protected on the server, and explains changes only when there is evidence."
+                        Text="FullWorth is read-only: it monitors transaction data, keeps Plaid access tokens protected on the server, and explains changes only when there is evidence."
                         Style="{StaticResource SmallTextStyle}" />
                 </VerticalStackLayout>
             </Border>

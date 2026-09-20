@@ -1,6 +1,6 @@
-﻿using BillWatch.ViewModels;
+﻿using FullWorth.ViewModels;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public sealed class TransactionsPage : ContentPage
 {
@@ -16,7 +16,7 @@ public sealed class TransactionsPage : ContentPage
 
         SetDynamicResource(
             StyleProperty,
-            "BillWatchPageStyle");
+            "FullWorthPageStyle");
 
         var title =
             new Label

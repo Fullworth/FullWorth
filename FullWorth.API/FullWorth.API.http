@@ -1,0 +1,39 @@
+@FullWorth_API_HostAddress = https://localhost:7243
+@FullWorth_TestEmail = replace-with-local-test-email
+@FullWorth_TestPassword = replace-with-local-test-password
+@FullWorth_BankConnectionId = 00000000-0000-0000-0000-000000000000
+
+# Keep local credentials in your HTTP client environment or replace these placeholders
+# only in an uncommitted local copy. Never commit real credentials or tokens.
+
+# @name login
+POST {{FullWorth_API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{FullWorth_TestEmail}}",
+  "password": "{{FullWorth_TestPassword}}"
+}
+
+###
+
+GET {{FullWorth_API_HostAddress}}/api/bank-connections
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+
+POST {{FullWorth_API_HostAddress}}/api/bill-monitoring/refresh
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+GET {{FullWorth_API_HostAddress}}/api/bill-streams
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+
+DELETE {{FullWorth_API_HostAddress}}/api/bank-connections/{{FullWorth_BankConnectionId}}
+Authorization: Bearer {{login.response.body.$.accessToken}}

@@ -1,9 +1,9 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace BillWatch.ViewModels;
+namespace FullWorth.ViewModels;
 
 public sealed class MainPageViewModel : INotifyPropertyChanged
 {
@@ -267,11 +267,11 @@ public sealed class MainPageViewModel : INotifyPropertyChanged
             if (HasAttention)
             {
                 return
-                    $"BillWatch is monitoring {BillsMonitored} {(BillsMonitored == 1 ? "bill" : "bills")} and found {AttentionCount} {(AttentionCount == 1 ? "item" : "items")} that need attention.";
+                    $"FullWorth is monitoring {BillsMonitored} {(BillsMonitored == 1 ? "bill" : "bills")} and found {AttentionCount} {(AttentionCount == 1 ? "item" : "items")} that need attention.";
             }
 
             return
-                $"BillWatch is monitoring {BillsMonitored} {(BillsMonitored == 1 ? "bill" : "bills")} and nothing currently needs attention.";
+                $"FullWorth is monitoring {BillsMonitored} {(BillsMonitored == 1 ? "bill" : "bills")} and nothing currently needs attention.";
         }
     }
 
@@ -352,12 +352,12 @@ public sealed class MainPageViewModel : INotifyPropertyChanged
         catch (SessionExpiredException)
         {
             ErrorMessage =
-                "Your BillWatch session expired. Please sign in again.";
+                "Your FullWorth session expired. Please sign in again.";
         }
         catch (HttpRequestException)
         {
             ErrorMessage =
-                "BillWatch couldn't load your dashboard right now.";
+                "FullWorth couldn't load your dashboard right now.";
         }
         catch (OperationCanceledException)
             when (cancellationToken

@@ -1,0 +1,689 @@
+﻿@page "/app/bills"
+
+@using FullWorth.Web.Components.Shared
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@layout AppLayout
+
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+@inject Microsoft.Extensions.Localization.IStringLocalizer<Bills> L
+
+<PageTitle>@L["Bills — FullWorth"]</PageTitle>
+
+<link rel="stylesheet"
+      href="/bills.css" />
+
+<link rel="stylesheet"
+      href="/bills-revamp.css" />
+
+<div class="app-page bills-page">
+    <header class="page-heading bills-page-heading">
+        <div>
+            <span class="page-kicker">
+                @L["Your bill watchlist"]
+            </span>
+
+            <h1>
+                @L["Bills"]
+            </h1>
+
+            <p>
+                @L["Explore recurring charges, compare recent amounts, and open the evidence behind each bill."]
+            </p>
+        </div>
+
+        @if (!_isLoading &&
+             string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="bills-heading-summary">
+                <strong>
+                    @_billStreams.Count
+                </strong>
+
+                <span>
+                    @L["monitored"]
+                </span>
+
+                <div class="summary-divider"></div>
+
+                <strong>
+                    @FormatMoney(TotalCurrent)
+                </strong>
+
+                <span>
+                    @L["latest charges"]
+                </span>
+            </div>
+        }
+    </header>
+
+    @if (_isLoading)
+    {
+        <div class="bill-card-grid">
+            @for (var i = 0;
+                  i < 6;
+                  i++)
+            {
+                <div class="bill-card-skeleton"></div>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(
+        _errorMessage))
+    {
+        <div class="app-error-state">
+            <div class="state-symbol">
+                !
+            </div>
+
+            <div>
+                <h2>
+                    @L["We couldn't load your bills"]
+                </h2>
+
+                <p>
+                    @_errorMessage
+                </p>
+            </div>
+
+            <button type="button"
+                    class="secondary-action"
+                    @onclick="ReloadAsync">
+                @L["Try again"]
+            </button>
+        </div>
+    }
+    else if (_billStreams.Count == 0)
+    {
+        <div class="empty-dashboard">
+            <div class="empty-icon">
+                <svg class="bw-sprite"
+                     aria-hidden="true">
+                    <use href="/assets/billwatch-sprites.svg#bill"></use>
+                </svg>
+            </div>
+
+            <span class="page-kicker">
+                @L["No bills yet"]
+            </span>
+
+            <h2>
+                @L["FullWorth hasn't discovered a recurring bill yet."]
+            </h2>
+
+            <p>
+                @L["Once recurring charges are matched into Bill Streams, they'll appear here automatically."]
+            </p>
+        </div>
+    }
+    else
+    {
+        @if (IncreasedCount > 0)
+        {
+            <section class="bills-change-focus" aria-label="@L["Bills with increases"]">
+                <div class="bills-change-icon" aria-hidden="true">↗</div>
+                <div>
+                    <span class="bills-change-eyebrow">@L["Worth a closer look"]</span>
+                    <h2>
+                        @if (IncreasedCount == 1)
+                        {
+                            @L["One bill is above its prior average"]
+                        }
+                        else
+                        {
+                            @L["{0} bills are above their prior average", IncreasedCount]
+                        }
+                    </h2>
+                    <p>@L["A higher transaction amount does not establish the cause. Open a bill to review its available history and evidence."]</p>
+                </div>
+                <button type="button"
+                        class="bills-change-action"
+                        @onclick="() => SetFilter(BillFilter.Increased)">
+                    @L["Show increases"]
+                    <span aria-hidden="true">→</span>
+                </button>
+            </section>
+        }
+
+        <div class="bills-filter-heading">
+            <div>
+                <span class="panel-kicker">@L["Browse your bills"]</span>
+                <h2>@L["Filter by change"]</h2>
+            </div>
+            <span aria-live="polite">@L["Showing {0} of {1} bills", FilteredBills.Count, _billStreams.Count]</span>
+        </div>
+
+        <div class="bill-filter-bar" role="group" aria-label="@L["Filter bills by change"]">
+            <button type="button"
+                    class="@GetFilterClass(BillFilter.All)"
+                    aria-pressed="@(_filter == BillFilter.All)"
+                    @onclick="() => SetFilter(BillFilter.All)">
+                @L["All"]
+                <span>@_billStreams.Count</span>
+            </button>
+
+            <button type="button"
+                    class="@GetFilterClass(BillFilter.Increased)"
+                    aria-pressed="@(_filter == BillFilter.Increased)"
+                    @onclick="() => SetFilter(BillFilter.Increased)">
+                @L["Increased"]
+                <span>@IncreasedCount</span>
+            </button>
+
+            <button type="button"
+                    class="@GetFilterClass(BillFilter.Decreased)"
+                    aria-pressed="@(_filter == BillFilter.Decreased)"
+                    @onclick="() => SetFilter(BillFilter.Decreased)">
+                @L["Decreased"]
+                <span>@DecreasedCount</span>
+            </button>
+
+            <button type="button"
+                    class="@GetFilterClass(BillFilter.NoHistory)"
+                    aria-pressed="@(_filter == BillFilter.NoHistory)"
+                    @onclick="() => SetFilter(BillFilter.NoHistory)">
+                @L["Building history"]
+                <span>@NoHistoryCount</span>
+            </button>
+        </div>
+
+        @if (FilteredBills.Count == 0)
+        {
+            <div class="filtered-empty">
+                @L["No bills match this filter."]
+            </div>
+        }
+        else
+        {
+            <section class="bill-card-grid">
+                @foreach (var bill in FilteredBills)
+                {
+                    var difference =
+                        GetDifference(
+                            bill);
+
+                    <a class="bill-card"
+                       href="@($"/app/bills/{bill.Id}")">
+
+                        <div class="bill-card-top">
+                            <div class="bill-provider">
+                                <div class="@GetBillAvatarClass(bill.Category)"
+                                     aria-hidden="true">
+                                    <ProviderLogo ProviderName="@bill.ProviderName">
+                                        <FallbackContent>
+                                            <svg class="bw-sprite bill-category-sprite">
+                                                <use href="@GetBillSpriteHref(bill.Category)"></use>
+                                            </svg>
+                                        </FallbackContent>
+                                    </ProviderLogo>
+                                </div>
+
+                                <div>
+                                    <h2>
+                                        @bill.ProviderName
+                                    </h2>
+
+                                    <span>
+                                        @FormatCategory(
+                                            bill.Category)
+                                    </span>
+                                </div>
+                            </div>
+
+                            <span class="watching-state">
+                                <span></span>
+                                @L["Watching"]
+                            </span>
+                        </div>
+
+                        <div class="bill-current">
+                            <span>
+                                @L["Current amount"]
+                            </span>
+
+                            <strong>
+                                @FormatMoney(
+                                    bill.CurrentAmount)
+                            </strong>
+                        </div>
+
+                        @if (bill.PreviousAverage > 0m)
+                        {
+                            <div class="@GetChangePanelClass(
+                                difference)">
+
+                                <div>
+                                    <span>
+                                        @L["vs. prior average"]
+                                    </span>
+
+                                    <strong>
+                                        @FormatDifference(
+                                            difference)
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>
+                                        @GetAnnualizedLabel(
+                                            difference)
+                                    </span>
+
+                                    <strong>
+                                        @FormatAnnualized(
+                                            bill,
+                                            difference)
+                                    </strong>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="bill-history-state">
+                                <span class="history-dot"></span>
+
+                                @L["More transaction history is needed before FullWorth can compare this bill."]
+                            </div>
+                        }
+
+                        <div class="bill-card-footer">
+                            <span>
+                                @L["See bill history"]
+                            </span>
+
+                            <span aria-hidden="true">
+                                →
+                            </span>
+                        </div>
+                    </a>
+                }
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private IJSObjectReference?
+        _bffModule;
+
+    private List<BillStreamViewModel>
+        _billStreams = [];
+
+    private bool _isLoading =
+        true;
+
+    private string? _errorMessage;
+
+    private BillFilter _filter =
+        BillFilter.All;
+
+    private decimal TotalCurrent =>
+        _billStreams.Sum(
+            bill =>
+                Math.Max(
+                    bill.CurrentAmount,
+                    0m));
+
+    private int IncreasedCount =>
+        _billStreams.Count(
+            bill =>
+                bill.PreviousAverage > 0m &&
+                GetDifference(bill) > 0m);
+
+    private int DecreasedCount =>
+        _billStreams.Count(
+            bill =>
+                bill.PreviousAverage > 0m &&
+                GetDifference(bill) < 0m);
+
+    private int NoHistoryCount =>
+        _billStreams.Count(
+            bill =>
+                bill.PreviousAverage <= 0m);
+
+    private IReadOnlyList<BillStreamViewModel>
+        FilteredBills =>
+            _billStreams
+                .Where(
+                    bill =>
+                        _filter switch
+                        {
+                            BillFilter.Increased =>
+                                bill.PreviousAverage > 0m &&
+                                GetDifference(bill) > 0m,
+
+                            BillFilter.Decreased =>
+                                bill.PreviousAverage > 0m &&
+                                GetDifference(bill) < 0m,
+
+                            BillFilter.NoHistory =>
+                                bill.PreviousAverage <= 0m,
+
+                            _ =>
+                                true
+                        })
+                .OrderByDescending(
+                    bill =>
+                        bill.CurrentAmount)
+                .ThenBy(
+                    bill =>
+                        bill.ProviderName)
+                .ToList();
+
+    protected override async Task
+        OnAfterRenderAsync(
+            bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await LoadAsync();
+
+        StateHasChanged();
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadAsync();
+    }
+
+    private void SetFilter(
+        BillFilter filter)
+    {
+        _filter =
+            filter;
+    }
+
+    private string GetFilterClass(
+        BillFilter filter)
+    {
+        return _filter == filter
+            ? "bill-filter active"
+            : "bill-filter";
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading =
+            true;
+
+        _errorMessage =
+            null;
+
+        try
+        {
+            _bffModule ??=
+                await JS.InvokeAsync<
+                    IJSObjectReference>(
+                    "import",
+                    "./js/bff.js");
+
+            var result =
+                await _bffModule
+                    .InvokeAsync<
+                        BillStreamViewModel[]>(
+                        "getBillStreams");
+
+            _billStreams =
+                result?
+                    .Where(
+                        bill =>
+                            bill.IsActive)
+                    .ToList()
+                ?? [];
+        }
+        catch (JSException)
+        {
+            _errorMessage =
+                L["FullWorth could not reach the secure API."].Value;
+        }
+        catch (Exception)
+        {
+            _errorMessage =
+                L["Something went wrong while loading your bills."].Value;
+        }
+        finally
+        {
+            _isLoading =
+                false;
+        }
+    }
+
+    private static decimal GetDifference(
+        BillStreamViewModel bill)
+    {
+        if (bill.PreviousAverage <= 0m)
+        {
+            return 0m;
+        }
+
+        return decimal.Round(
+            bill.CurrentAmount -
+                bill.PreviousAverage,
+            2,
+            MidpointRounding.AwayFromZero);
+    }
+
+    private static string FormatMoney(
+        decimal amount)
+    {
+        return amount.ToString(
+            "C2");
+    }
+
+    private string FormatDifference(
+        decimal difference)
+    {
+        if (difference > 0m)
+        {
+            return $"+{FormatMoney(difference)}";
+        }
+
+        if (difference < 0m)
+        {
+            return $"-{FormatMoney(Math.Abs(difference))}";
+        }
+
+        return L["No change"].Value;
+    }
+
+    private string GetAnnualizedLabel(
+        decimal difference)
+    {
+        return difference == 0m
+            ? L["est. yearly cost"].Value
+            : L["annualized impact"].Value;
+    }
+
+    private string FormatAnnualized(
+        BillStreamViewModel bill,
+        decimal difference)
+    {
+        if (difference == 0m)
+        {
+            var annualizedCost =
+                decimal.Round(
+                    Math.Max(
+                        bill.CurrentAmount,
+                        0m) *
+                    12m,
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+            return
+                $"{FormatMoney(annualizedCost)}{L["/yr"].Value}";
+        }
+
+        var annualizedImpact =
+            decimal.Round(
+                difference * 12m,
+                2,
+                MidpointRounding.AwayFromZero);
+
+        if (annualizedImpact > 0m)
+        {
+            return
+                $"+{FormatMoney(annualizedImpact)}{L["/yr"].Value}";
+        }
+
+        return
+            $"-{FormatMoney(Math.Abs(annualizedImpact))}{L["/yr"].Value}";
+    }
+
+    private static string GetChangePanelClass(
+        decimal difference)
+    {
+        if (difference > 0m)
+        {
+            return "bill-change-panel increase";
+        }
+
+        if (difference < 0m)
+        {
+            return "bill-change-panel decrease";
+        }
+
+        return "bill-change-panel steady";
+    }
+
+    private static string GetBillAvatarClass(
+        string category)
+    {
+        return category switch
+        {
+            "Internet" =>
+                "bill-provider-avatar bill-category-internet",
+
+            "MobilePhone" =>
+                "bill-provider-avatar bill-category-phone",
+
+            "Electricity" =>
+                "bill-provider-avatar bill-category-electricity",
+
+            "NaturalGas" =>
+                "bill-provider-avatar bill-category-gas",
+
+            "Utility" =>
+                "bill-provider-avatar bill-category-utility",
+
+            _ =>
+                "bill-provider-avatar bill-category-other"
+        };
+    }
+
+    private static string GetBillSpriteHref(
+        string category)
+    {
+        var sprite =
+            category switch
+            {
+                "Internet" =>
+                    "internet",
+
+                "MobilePhone" =>
+                    "phone",
+
+                "Electricity" =>
+                    "electricity",
+
+                "NaturalGas" =>
+                    "gas",
+
+                "Utility" =>
+                    "utility",
+
+                _ =>
+                    "other-bill"
+            };
+
+        return
+            $"/assets/billwatch-sprites.svg#{sprite}";
+    }
+
+    private string FormatCategory(
+        string category)
+    {
+        if (string.IsNullOrWhiteSpace(
+                category) ||
+            string.Equals(
+                category,
+                "Unknown",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return L["Recurring bill"].Value;
+        }
+
+        return category switch
+        {
+            "MobilePhone" =>
+                L["Mobile phone"].Value,
+
+            "NaturalGas" =>
+                L["Natural gas"].Value,
+
+            _ =>
+                L[category].Value
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_bffModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _bffModule
+                .DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private enum BillFilter
+    {
+        All,
+        Increased,
+        Decreased,
+        NoHistory
+    }
+
+    public sealed class BillStreamViewModel
+    {
+        public Guid Id { get; set; }
+
+        public string ProviderName
+        {
+            get;
+            set;
+        } = string.Empty;
+
+        public string Category
+        {
+            get;
+            set;
+        } = string.Empty;
+
+        public bool IsActive { get; set; }
+
+        public decimal CurrentAmount
+        {
+            get;
+            set;
+        }
+
+        public decimal PreviousAverage
+        {
+            get;
+            set;
+        }
+    }
+}

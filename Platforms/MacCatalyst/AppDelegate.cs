@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace BillWatch
+namespace FullWorth
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate
