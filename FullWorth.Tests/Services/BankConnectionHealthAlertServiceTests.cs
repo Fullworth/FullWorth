@@ -83,7 +83,12 @@ public sealed class BankConnectionHealthAlertServiceTests
             CreateConnection(
                 userId,
                 "Bank B",
-                "RequiresAttention"));
+                "RequiresAttention"),
+
+            CreateConnection(
+                userId,
+                "Healthy Bank",
+                "Active"));
 
         await dbContext.SaveChangesAsync();
 
@@ -112,6 +117,10 @@ public sealed class BankConnectionHealthAlertServiceTests
 
         Assert.Contains(
             "Bank B",
+            alert.Message);
+
+        Assert.DoesNotContain(
+            "Healthy Bank",
             alert.Message);
     }
 
