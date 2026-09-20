@@ -71,13 +71,75 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect MAUI-relevant changes
+        id: maui_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $safePrefixes = @(
+            "FullWorth.API/",
+            "FullWorth.Web/",
+            "FullWorth.Tests/",
+            "deploy/"
+          )
+
+          $safeExactFiles = @(
+            ".dockerignore",
+            ".env.production.example",
+            "AI_SHADOW_CORPUS.md",
+            "BILLWATCH_CONTEXT.md",
+            "BILLWATCH_TODO.md",
+            "Dockerfile",
+            "Dockerfile.web",
+            "README.md",
+            "REVENUE_READINESS.md",
+            "compose.production.yml"
+          )
+
+          $requiresMaui = $false
+
+          foreach ($file in $changedFiles) {
+            $safe =
+              $safeExactFiles -contains $file
+
+            if (-not $safe) {
+              foreach ($prefix in $safePrefixes) {
+                if ($file.StartsWith(
+                    $prefix,
+                    [System.StringComparison]::Ordinal)) {
+                  $safe = $true
+                  break
+                }
+              }
+            }
+
+            if (-not $safe) {
+              $requiresMaui = $true
+              break
+            }
+          }
+
+          "required=$($requiresMaui.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Install .NET 10
+        if: steps.maui_changes.outputs.required == 'true'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       - name: Cache MAUI NuGet packages
+        if: steps.maui_changes.outputs.required == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -86,12 +148,15 @@ jobs:
             nuget-${{ runner.os }}-maui-
 
       - name: Install MAUI workload
+        if: steps.maui_changes.outputs.required == 'true'
         run: dotnet workload install maui-android --skip-manifest-update
 
       - name: Restore MAUI Android dependencies
+        if: steps.maui_changes.outputs.required == 'true'
         run: dotnet restore FullWorth.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build MAUI Android
+        if: steps.maui_changes.outputs.required == 'true'
         run: dotnet build FullWorth.csproj --framework net10.0-android --configuration Release --no-restore -p:FullWorthApiBaseUrl=https://api.billbeacon.net/
 
   container:
@@ -117,8 +182,64 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect production-container-relevant changes
+        id: container_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $relevantPrefixes = @(
+            "FullWorth.API/",
+            "FullWorth.Core/",
+            "FullWorth.Web/",
+            "deploy/"
+          )
+
+          $relevantExactFiles = @(
+            ".github/workflows/ci.yml",
+            ".dockerignore",
+            ".env.production.example",
+            "Dockerfile",
+            "Dockerfile.web",
+            "compose.production.yml"
+          )
+
+          $required = $false
+
+          foreach ($file in $changedFiles) {
+            if ($relevantExactFiles -contains $file) {
+              $required = $true
+              break
+            }
+
+            foreach ($prefix in $relevantPrefixes) {
+              if ($file.StartsWith(
+                  $prefix,
+                  [System.StringComparison]::Ordinal)) {
+                $required = $true
+                break
+              }
+            }
+
+            if ($required) {
+              break
+            }
+          }
+
+          "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Validate production operation scripts
+        if: steps.container_changes.outputs.required == 'true'
         run: |
           sh deploy/tests/production-operations-tests.sh
           sh deploy/tests/operations-alert-sender-tests.sh
@@ -129,6 +250,7 @@ jobs:
           sh deploy/tests/runtime-watchdog-tests.sh
 
       - name: Validate beta readiness scripts
+        if: steps.container_changes.outputs.required == 'true'
         run: |
           sh deploy/tests/beta-readiness-tests.sh
           sh deploy/tests/web-bff-cross-user-smoke-tests.sh
@@ -139,9 +261,11 @@ jobs:
           sh deploy/tests/subscription-rollout-preflight-tests.sh
 
       - name: Configure container builder
+        if: steps.container_changes.outputs.required == 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Build production API image
+        if: steps.container_changes.outputs.required == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -155,6 +279,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build production web image
+        if: steps.container_changes.outputs.required == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -168,15 +293,19 @@ jobs:
           cache-to: type=gha,mode=max,scope=web
 
       - name: Start production stack
+        if: steps.container_changes.outputs.required == 'true'
         run: docker compose --file compose.production.yml up --detach --no-build
 
       - name: Verify API HTTPS readiness
+        if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 https://localhost/health/ready
 
       - name: Verify web HTTPS readiness
+        if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 --resolve web.localhost:443:127.0.0.1 https://web.localhost/health/ready
 
       - name: Verify production HTTP security boundaries
+        if: steps.container_changes.outputs.required == 'true'
         env:
           BILLWATCH_HTTP_SECURITY_ALLOW_INSECURE: "true"
         run: >-
@@ -185,6 +314,7 @@ jobs:
           https://web.localhost
 
       - name: Seed protected recovery fixture
+        if: steps.container_changes.outputs.required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -218,9 +348,11 @@ jobs:
             'test -n "$(find /var/lib/billwatch/statements -type f -size +0c -print -quit)"'
 
       - name: Build recovery image
+        if: steps.container_changes.outputs.required == 'true'
         run: docker compose --profile operations --file compose.production.yml build backup
 
       - name: Verify production image release revisions
+        if: steps.container_changes.outputs.required == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -234,24 +366,28 @@ jobs:
           done
 
       - name: Initialize encrypted backup repository
+        if: steps.container_changes.outputs.required == 'true'
         run: docker compose --profile operations --file compose.production.yml run --rm backup init
 
       - name: Create consistent encrypted backup
+        if: steps.container_changes.outputs.required == 'true'
         run: sh deploy/run-backup.sh "$PWD"
 
       - name: Prove isolated database and file restore
+        if: steps.container_changes.outputs.required == 'true'
         run: |
           docker compose --profile operations --file compose.production.yml up --detach --wait restore-database
           docker compose --profile operations --file compose.production.yml run --rm backup verify
           docker compose --profile operations --file compose.production.yml stop restore-database
 
       - name: Verify API recovery after backup
+        if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 https://localhost/health/ready
 
       - name: Print sanitized container logs on failure
-        if: failure()
+        if: failure() && steps.container_changes.outputs.required == 'true'
         run: docker compose --profile operations --file compose.production.yml logs --no-color --tail 200
 
       - name: Stop production stack
-        if: always()
+        if: always() && steps.container_changes.outputs.required == 'true'
         run: docker compose --profile operations --file compose.production.yml down --volumes
