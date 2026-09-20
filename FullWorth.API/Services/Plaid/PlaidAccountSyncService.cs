@@ -77,9 +77,8 @@ public sealed class PlaidAccountSyncService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var connectionIds =
+        var connections =
             await _dbContext.BankConnections
-                .AsNoTracking()
                 .Where(
                     connection =>
                         connection.UserId ==
@@ -93,29 +92,26 @@ public sealed class PlaidAccountSyncService
                 .OrderBy(
                     connection =>
                         connection.Id)
-                .Select(
-                    connection =>
-                        connection.Id)
                 .ToListAsync(
                     cancellationToken);
 
         var totalAccountsSynced =
             0;
 
-        foreach (var connectionId in
-                 connectionIds)
+        foreach (var connection in
+                 connections)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             totalAccountsSynced +=
                 await SyncAccountsAsync(
                     userId,
-                    connectionId,
+                    connection,
                     cancellationToken);
         }
 
         return new PlaidAccountSyncSummary(
-            connectionIds.Count,
+            connections.Count,
             totalAccountsSynced);
     }
 
@@ -162,6 +158,42 @@ public sealed class PlaidAccountSyncService
             throw new KeyNotFoundException(
                 "Bank connection was not found.");
         }
+
+        return await SyncAccountsAsync(
+            userId,
+            connection,
+            cancellationToken);
+    }
+
+    internal async Task<int> SyncAccountsAsync(
+        Guid userId,
+        BankConnectionEntity connection,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId ==
+            Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A valid user ID is required.",
+                nameof(userId));
+        }
+
+        ArgumentNullException.ThrowIfNull(
+            connection);
+
+        if (connection.Id ==
+            Guid.Empty ||
+            connection.UserId !=
+                userId)
+        {
+            throw new InvalidOperationException(
+                "The bank connection does not belong to the requested user.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var bankConnectionId =
+            connection.Id;
 
         if (string.IsNullOrWhiteSpace(
                 connection.ProtectedPlaidAccessToken))
