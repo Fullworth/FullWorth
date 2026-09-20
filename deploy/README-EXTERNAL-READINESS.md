@@ -39,7 +39,7 @@ If a readiness job fails, its final alert step invokes the external alert sender
 Run this proof only after the intended production release is deployed and healthy.
 
 1. Confirm both normal readiness jobs are passing.
-2. Manually dispatch **BillWatch Production Readiness** with `force_failure=true`.
+2. Manually dispatch **FullWorth Production Readiness** with `force_failure=true`.
 3. Confirm the API readiness probe succeeds first.
 4. Confirm the API matrix job then fails at the intentional controlled drill step.
 5. Confirm the `Deliver independent readiness failure alert` step runs.

@@ -1,4 +1,4 @@
-# BillWatch Future TODO
+# FullWorth Future TODO
 
 Last updated: 2026-09-02 local time / 2026-09-03 UTC
 
@@ -156,12 +156,12 @@ This file is ordered by priority. Do not start lower-priority product expansion 
 - [ ] Decide private-beta pricing only after product behavior is trustworthy.
 - [ ] Avoid payment infrastructure before users actually need it.
 - [ ] Add Terms of Service and Privacy Policy before broader public beta.
-- [ ] Clearly state BillWatch does not move money and is not a bank.
+- [ ] Clearly state FullWorth does not move money and is not a bank.
 
 ## P2 — MAUI release
 
 - [ ] Keep the MAUI project healthy while Web beta is validated.
-- [ ] Build release artifacts with `-p:BillWatchApiBaseUrl=https://api.billbeacon.net/` when native beta is scheduled.
+- [ ] Build release artifacts with `-p:FullWorthApiBaseUrl=https://api.billbeacon.net/` when native beta is scheduled.
 - [ ] Preserve `AuthenticationService.GetValidAccessTokenAsync()` for protected services.
 - [ ] Do not duplicate API truth in the client.
 

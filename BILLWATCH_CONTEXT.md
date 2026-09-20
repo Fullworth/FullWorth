@@ -1,20 +1,20 @@
 # FullWorth Current Context (legacy filename retained)
 
-Last updated: 2026-09-19
+Last updated: 2026-09-20
 
 ## FullWorth brand transition
 
 - Product brand: **FullWorth**.
 - Tagline/positioning: **Your entire financial life. One app.**
-- The repository is still named `RealizmModz/BillWatch` and this file remains `BILLWATCH_CONTEXT.md` temporarily because current project tooling and continuation instructions reference those identifiers.
+- The repository is now named `RealizmModz/FullWorth`. This file remains `BILLWATCH_CONTEXT.md` temporarily because current continuation tooling references that filename.
 - Production compatibility identifiers such as `BILLWATCH_*` environment variables, `/opt/billwatch`, Data Protection application/purpose strings, persisted secure-storage keys, Stripe metadata keys, and current public domains remain unchanged until a dedicated guarded operations migration is completed.
 - PR #113 promoted the recurring-discovery coverage fix to `master` as `1b2b52cd77f45143d4b741d77f1cb79f292f86c2`; that merge is **not** claimed as deployed production.
 - PR #114 merged the approved FullWorth brand assets into `development` as `b51a49705d0cf062abba0ca9c3522f1d3c6994fe` after exact-head CI passed all three required jobs.
-- The active branding rename work is on `brand/fullworth-product-identity`; do not claim it merged until its exact-head CI is green and the PR is merged.
+- The FullWorth product and repository identity migration is merged. Remaining `BILLWATCH_*` and `billwatch` infrastructure identifiers stay behind the guarded compatibility boundary described above.
 
 ## Authority / continuation rules
 
-This is the durable BillWatch development handoff. Current source, exact-head CI, and verified production state win over this file for implementation/runtime truth.
+This is the durable FullWorth development handoff. Current source, exact-head CI, and verified production state win over this file for implementation/runtime truth.
 
 - Stop immediately for compile/runtime/test/CI/deployment failures caused by current work, destructive migration risk, genuine security problems, or unresolved architecture uncertainty.
 - Never weaken authentication, BFF isolation, antiforgery, HTTPS, ownership checks, trusted-proxy rules, token protection, statement protections, backup protections, migration safety, or financial-data boundaries to pass a check.
@@ -41,15 +41,16 @@ FullWorth is moving to a **PWA-first client architecture**.
 
 ## Repository / stack
 
-Repository: `RealizmModz/BillWatch`
+Repository: `RealizmModz/FullWorth`
 
 Default/release branch: `master`
 Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `7824cc5f6ddb0231c986a793f15654d0314a8ad5`
-- `development`: `847e17a20c97352114aafb7ef407da8a40882591`
+- `master`: `2282fcc0a2e3f6ed22c9a7f533d5b0552739072f`
+- `development`: `e90e5b08c26e2c0c44a67e59bd766e41db649efe`
+- PR #141 promoted the PWA and performance batch to `master` as `2282fcc0a2e3f6ed22c9a7f533d5b0552739072f`; its exact promotion head passed all three required jobs before merge, and the post-merge push CI is the release gate for that merge commit.
 - PR #96 synchronized the Slack-compatible readiness-alert payload into `development` as `0253f08581417f9e41293481fccbcaf5da301ede`.
 - PR #98 promoted the secure private-beta acceptance hardening to `master` as `3622b57c84c035c30a63bea070f53195635a62eb`. CI #534 passed all three required jobs on exact head `0253f085...`.
 - PR #99 fixed HTML-encoded ASP.NET Core Identity confirmation-link parsing and merged into `development` as `847e17a20c97352114aafb7ef407da8a40882591`.

@@ -21,7 +21,7 @@ The local API requires PostgreSQL plus Plaid sandbox credentials stored in .NET 
 From the repository root in PowerShell:
 
 ```powershell
-dotnet run --launch-profile https --project .\BillWatch.API\BillWatch.API.csproj
+dotnet run --launch-profile https --project .\FullWorth.API\FullWorth.API.csproj
 ```
 
 Local endpoints:
@@ -33,8 +33,8 @@ Local endpoints:
 ## Validate the backend
 
 ```powershell
-dotnet build .\BillWatch.Tests\BillWatch.Tests.csproj --configuration Release
-dotnet test .\BillWatch.Tests\BillWatch.Tests.csproj --configuration Release --no-build
+dotnet build .\FullWorth.Tests\FullWorth.Tests.csproj --configuration Release
+dotnet test .\FullWorth.Tests\FullWorth.Tests.csproj --configuration Release --no-build
 ```
 
 GitHub Actions runs the complete CI gate for pull requests and for pushes to `master`. In addition to the backend build and tests, CI builds the MAUI Android Release target and the Linux production container, including the native Tesseract/Leptonica OCR dependencies.
@@ -88,7 +88,7 @@ The deployment command re-runs the fail-closed configuration preflight, rejects 
 9. Build the MAUI release with the exact deployed origin:
 
 ```powershell
-dotnet build .\BillWatch.csproj --configuration Release -p:BillWatchApiBaseUrl=https://api.billbeacon.net/
+dotnet build .\FullWorth.csproj --configuration Release -p:FullWorthApiBaseUrl=https://api.billbeacon.net/
 ```
 
 The API applies EF Core migrations during startup in this single-instance deployment. Do not scale the API above one instance while startup migration is enabled; a multi-instance platform should run migrations as a separate one-time release job.
