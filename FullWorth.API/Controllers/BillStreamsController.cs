@@ -177,8 +177,8 @@ public sealed class BillStreamsController : ControllerBase
             return NotFound();
         }
 
-        var transactions =
-            await _dbContext.BankTransactions
+        var transactionAmounts =
+            _dbContext.BankTransactions
                 .AsNoTracking()
                 .Where(transaction =>
                     transaction.UserId == userId &&
@@ -190,21 +190,25 @@ public sealed class BillStreamsController : ControllerBase
                     transaction.PostedDate)
                 .ThenByDescending(transaction =>
                     transaction.CreatedAtUtc)
-                .ToListAsync(
-                    cancellationToken);
+                .Select(transaction =>
+                    transaction.Amount);
 
         var currentAmount =
-            transactions.Count == 0
-                ? 0m
-                : transactions[0].Amount;
+            await transactionAmounts
+                .Select(amount =>
+                    (decimal?)amount)
+                .FirstOrDefaultAsync(
+                    cancellationToken)
+            ?? 0m;
 
         var previousAverage =
-            transactions.Count <= 1
-                ? 0m
-                : transactions
-                    .Skip(1)
-                    .Average(transaction =>
-                        transaction.Amount);
+            await transactionAmounts
+                .Skip(1)
+                .Select(amount =>
+                    (decimal?)amount)
+                .AverageAsync(
+                    cancellationToken)
+            ?? 0m;
 
         var statements =
             await _dbContext.BillStatements
