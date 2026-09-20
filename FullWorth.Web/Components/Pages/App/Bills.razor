@@ -50,7 +50,7 @@
                 <div class="summary-divider"></div>
 
                 <strong>
-                    @FormatMoney(TotalCurrent)
+                    @FormatMoney(_totalCurrent)
                 </strong>
 
                 <span>
@@ -121,20 +121,23 @@
     }
     else
     {
-        @if (IncreasedCount > 0)
+        var filteredBills =
+            FilteredBills;
+
+        @if (_increasedCount > 0)
         {
             <section class="bills-change-focus" aria-label="@L["Bills with increases"]">
                 <div class="bills-change-icon" aria-hidden="true">↗</div>
                 <div>
                     <span class="bills-change-eyebrow">@L["Worth a closer look"]</span>
                     <h2>
-                        @if (IncreasedCount == 1)
+                        @if (_increasedCount == 1)
                         {
                             @L["One bill is above its prior average"]
                         }
                         else
                         {
-                            @L["{0} bills are above their prior average", IncreasedCount]
+                            @L["{0} bills are above their prior average", _increasedCount]
                         }
                     </h2>
                     <p>@L["A higher transaction amount does not establish the cause. Open a bill to review its available history and evidence."]</p>
@@ -153,7 +156,7 @@
                 <span class="panel-kicker">@L["Browse your bills"]</span>
                 <h2>@L["Filter by change"]</h2>
             </div>
-            <span aria-live="polite">@L["Showing {0} of {1} bills", FilteredBills.Count, _billStreams.Count]</span>
+            <span aria-live="polite">@L["Showing {0} of {1} bills", filteredBills.Count, _billStreams.Count]</span>
         </div>
 
         <div class="bill-filter-bar" role="group" aria-label="@L["Filter bills by change"]">
@@ -170,7 +173,7 @@
                     aria-pressed="@(_filter == BillFilter.Increased)"
                     @onclick="() => SetFilter(BillFilter.Increased)">
                 @L["Increased"]
-                <span>@IncreasedCount</span>
+                <span>@_increasedCount</span>
             </button>
 
             <button type="button"
@@ -178,7 +181,7 @@
                     aria-pressed="@(_filter == BillFilter.Decreased)"
                     @onclick="() => SetFilter(BillFilter.Decreased)">
                 @L["Decreased"]
-                <span>@DecreasedCount</span>
+                <span>@_decreasedCount</span>
             </button>
 
             <button type="button"
@@ -186,11 +189,11 @@
                     aria-pressed="@(_filter == BillFilter.NoHistory)"
                     @onclick="() => SetFilter(BillFilter.NoHistory)">
                 @L["Building history"]
-                <span>@NoHistoryCount</span>
+                <span>@_noHistoryCount</span>
             </button>
         </div>
 
-        @if (FilteredBills.Count == 0)
+        @if (filteredBills.Count == 0)
         {
             <div class="filtered-empty">
                 @L["No bills match this filter."]
@@ -199,7 +202,7 @@
         else
         {
             <section class="bill-card-grid">
-                @foreach (var bill in FilteredBills)
+                @foreach (var bill in filteredBills)
                 {
                     var difference =
                         GetDifference(
@@ -320,29 +323,13 @@
     private BillFilter _filter =
         BillFilter.All;
 
-    private decimal TotalCurrent =>
-        _billStreams.Sum(
-            bill =>
-                Math.Max(
-                    bill.CurrentAmount,
-                    0m));
+    private decimal _totalCurrent;
 
-    private int IncreasedCount =>
-        _billStreams.Count(
-            bill =>
-                bill.PreviousAverage > 0m &&
-                GetDifference(bill) > 0m);
+    private int _increasedCount;
 
-    private int DecreasedCount =>
-        _billStreams.Count(
-            bill =>
-                bill.PreviousAverage > 0m &&
-                GetDifference(bill) < 0m);
+    private int _decreasedCount;
 
-    private int NoHistoryCount =>
-        _billStreams.Count(
-            bill =>
-                bill.PreviousAverage <= 0m);
+    private int _noHistoryCount;
 
     private IReadOnlyList<BillStreamViewModel>
         FilteredBills =>
@@ -436,6 +423,8 @@
                             bill.IsActive)
                     .ToList()
                 ?? [];
+
+            UpdateBillSummaries();
         }
         catch (JSException)
         {
@@ -452,6 +441,33 @@
             _isLoading =
                 false;
         }
+    }
+
+    private void UpdateBillSummaries()
+    {
+        _totalCurrent =
+            _billStreams.Sum(
+                bill =>
+                    Math.Max(
+                        bill.CurrentAmount,
+                        0m));
+
+        _increasedCount =
+            _billStreams.Count(
+                bill =>
+                    bill.PreviousAverage > 0m &&
+                    GetDifference(bill) > 0m);
+
+        _decreasedCount =
+            _billStreams.Count(
+                bill =>
+                    bill.PreviousAverage > 0m &&
+                    GetDifference(bill) < 0m);
+
+        _noHistoryCount =
+            _billStreams.Count(
+                bill =>
+                    bill.PreviousAverage <= 0m);
     }
 
     private static decimal GetDifference(
