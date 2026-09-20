@@ -59,6 +59,99 @@ public sealed class BillStreamOwnershipTests
     }
 
     [Fact]
+    public async Task Detail_ReturnsLatestAmountAndPreviousAverage()
+    {
+        await using var factory = new FullWorthApiFactory();
+        using var client = factory.CreateHttpsClient();
+
+        var user = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        var userId = await TestUserAuthentication.GetUserIdAsync(factory, user.Email);
+        var streamId = await SeedStreamAsync(factory, userId, "Metrics Utility");
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
+            var account = new BankAccountEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                BankConnectionId = Guid.NewGuid(),
+                PlaidAccountId = $"metrics-{Guid.NewGuid():N}",
+                Name = "Metrics Account",
+                AccountType = BankAccountType.Checking,
+                IsActive = true
+            };
+
+            var connection = new BankConnectionEntity
+            {
+                Id = account.BankConnectionId,
+                UserId = userId,
+                InstitutionName = "Metrics Bank",
+                Status = BankConnectionStatus.Active
+            };
+
+            dbContext.BankConnections.Add(connection);
+            dbContext.BankAccounts.Add(account);
+
+            var now = DateTimeOffset.UtcNow;
+            dbContext.BankTransactions.AddRange(
+                new BankTransactionEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    BankAccountId = account.Id,
+                    BillStreamId = streamId,
+                    PlaidTransactionId = $"oldest-{Guid.NewGuid():N}",
+                    Name = "Metrics Utility",
+                    Amount = 10m,
+                    PostedDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-2)),
+                    CreatedAtUtc = now.AddMonths(-2),
+                    UpdatedAtUtc = now.AddMonths(-2)
+                },
+                new BankTransactionEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    BankAccountId = account.Id,
+                    BillStreamId = streamId,
+                    PlaidTransactionId = $"previous-{Guid.NewGuid():N}",
+                    Name = "Metrics Utility",
+                    Amount = 20m,
+                    PostedDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1)),
+                    CreatedAtUtc = now.AddMonths(-1),
+                    UpdatedAtUtc = now.AddMonths(-1)
+                },
+                new BankTransactionEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    BankAccountId = account.Id,
+                    BillStreamId = streamId,
+                    PlaidTransactionId = $"latest-{Guid.NewGuid():N}",
+                    Name = "Metrics Utility",
+                    Amount = 40m,
+                    PostedDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                });
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", user.AccessToken);
+
+        using var response = await client.GetAsync($"/api/bill-streams/{streamId}");
+        response.EnsureSuccessStatusCode();
+
+        var detail = await response.Content.ReadFromJsonAsync<BillStreamResultDto>();
+
+        Assert.NotNull(detail);
+        Assert.Equal(40m, detail.CurrentAmount);
+        Assert.Equal(15m, detail.PreviousAverage);
+    }
+
+    [Fact]
     public async Task Create_DuplicateProviderName_IsScopedToCurrentUser()
     {
         await using var factory = new FullWorthApiFactory();
