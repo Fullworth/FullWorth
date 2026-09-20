@@ -218,6 +218,128 @@ public sealed class BillStatementPaymentDueAlertServiceTests
                 .ToListAsync());
     }
 
+    [Fact]
+    public async Task OtherUsersBillStream_IsRejected()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var ownerUserId =
+            Guid.NewGuid();
+
+        var otherUserId =
+            Guid.NewGuid();
+
+        var stream =
+            CreateBillStream(
+                ownerUserId);
+
+        dbContext.BillStreams.Add(
+            stream);
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new BillStatementPaymentDueAlertService(
+                dbContext);
+
+        await Assert.ThrowsAsync<
+            InvalidOperationException>(
+            () =>
+                service.ReconcileAsync(
+                    otherUserId,
+                    stream.Id,
+                    new DateOnly(
+                        2026,
+                        9,
+                        15),
+                    94.99m,
+                    "USD",
+                    new DateOnly(
+                        2026,
+                        8,
+                        27),
+                    DateTimeOffset.UtcNow));
+
+        Assert.Empty(
+            await dbContext.BillAlerts
+                .ToListAsync());
+    }
+
+    [Fact]
+    public async Task LongProviderName_SameDueEvent_DoesNotDuplicate()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var stream =
+            CreateBillStream(
+                userId);
+
+        stream.ProviderName =
+            new string(
+                'P',
+                400);
+
+        dbContext.BillStreams.Add(
+            stream);
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new BillStatementPaymentDueAlertService(
+                dbContext);
+
+        var dueDate =
+            new DateOnly(
+                2026,
+                9,
+                15);
+
+        var today =
+            new DateOnly(
+                2026,
+                8,
+                27);
+
+        await service.ReconcileAsync(
+            userId,
+            stream.Id,
+            dueDate,
+            94.99m,
+            "USD",
+            today,
+            DateTimeOffset.UtcNow);
+
+        await dbContext.SaveChangesAsync();
+
+        await service.ReconcileAsync(
+            userId,
+            stream.Id,
+            dueDate,
+            94.99m,
+            "USD",
+            today,
+            DateTimeOffset.UtcNow);
+
+        await dbContext.SaveChangesAsync();
+
+        Assert.Single(
+            await dbContext.BillAlerts
+                .Where(
+                    alert =>
+                        alert.UserId ==
+                            userId &&
+                        alert.BillStreamId ==
+                            stream.Id &&
+                        alert.AlertType ==
+                            BillAlertType.PaymentDue)
+                .ToListAsync());
+    }
+
     private static FullWorthDbContext
         CreateDbContext()
     {

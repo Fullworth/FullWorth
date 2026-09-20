@@ -88,28 +88,6 @@ public sealed class BillStatementPaymentDueAlertService
                 "Payment-due alert currency is invalid.");
         }
 
-        var providerName =
-            await _dbContext.BillStreams
-                .AsNoTracking()
-                .Where(
-                    stream =>
-                        stream.Id ==
-                            billStreamId &&
-                        stream.UserId ==
-                            userId)
-                .Select(
-                    stream =>
-                        stream.ProviderName)
-                .SingleOrDefaultAsync(
-                    cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(
-                providerName))
-        {
-            throw new InvalidOperationException(
-                "The owned bill stream could not be found.");
-        }
-
         var daysUntilDue =
             dueDate.Value.DayNumber -
             today.DayNumber;
@@ -129,9 +107,53 @@ public sealed class BillStatementPaymentDueAlertService
          * The title acts as the semantic identity for a payment-due
          * event within a Bill Stream.
          *
-         * A corrected statement with the same provider due date updates
-         * the existing alert rather than creating another one.
+         * Resolve the owned provider and its payment-due alerts in one
+         * database round trip. Ownership remains part of the SQL query.
          */
+        var ownedRows =
+            await (
+                from stream in
+                    _dbContext.BillStreams
+                where
+                    stream.Id ==
+                        billStreamId &&
+                    stream.UserId ==
+                        userId
+                join alert in
+                    _dbContext.BillAlerts
+                        .Where(
+                            alert =>
+                                alert.UserId ==
+                                    userId &&
+                                alert.AlertType ==
+                                    BillAlertType.PaymentDue)
+                    on (Guid?)stream.Id
+                    equals alert.BillStreamId
+                    into paymentAlerts
+                from alert in
+                    paymentAlerts.DefaultIfEmpty()
+                select new
+                {
+                    stream.ProviderName,
+                    Alert =
+                        alert
+                })
+                .ToListAsync(
+                    cancellationToken);
+
+        if (ownedRows.Count ==
+                0 ||
+            string.IsNullOrWhiteSpace(
+                ownedRows[0].ProviderName))
+        {
+            throw new InvalidOperationException(
+                "The owned bill stream could not be found.");
+        }
+
+        var providerName =
+            ownedRows[0]
+                .ProviderName;
+
         var title =
             Truncate(
                 $"{providerName} payment due {formattedDueDate}",
@@ -161,25 +183,24 @@ public sealed class BillStatementPaymentDueAlertService
                 MaxMessageLength);
 
         var matchingAlerts =
-            await _dbContext.BillAlerts
+            ownedRows
+                .Select(
+                    row =>
+                        row.Alert)
+                .OfType<BillAlertEntity>()
                 .Where(
                     alert =>
-                        alert.UserId ==
-                            userId &&
-                        alert.BillStreamId ==
-                            billStreamId &&
-                        alert.AlertType ==
-                            BillAlertType.PaymentDue &&
-                        alert.Title ==
-                            title)
+                        string.Equals(
+                            alert.Title,
+                            title,
+                            StringComparison.Ordinal))
                 .OrderBy(
                     alert =>
                         alert.CreatedAtUtc)
                 .ThenBy(
                     alert =>
                         alert.Id)
-                .ToListAsync(
-                    cancellationToken);
+                .ToList();
 
         if (matchingAlerts.Count ==
             0)
