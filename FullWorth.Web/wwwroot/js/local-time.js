@@ -202,3 +202,16 @@ export function formatLocalDate(value) {
 export function formatLocalDateTime(value) {
     return formatByMode(value, true);
 }
+
+export function formatConnectionTimestamps(entries) {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+
+    return entries.map(entry => [
+        formatByMode(entry?.[0], false),
+        entry?.[1]
+            ? formatByMode(entry[1], true)
+            : null
+    ]);
+}
