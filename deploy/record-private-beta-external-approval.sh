@@ -73,13 +73,13 @@ case "$approval_type" in
         phases='provider-immutable-backup-attested,protected-backup-recovery-attested'
         ;;
     legal)
-        legal_source="$root_dir/BillWatch.Core/Legal/BillWatchLegalDocuments.cs"
+        legal_source="$root_dir/FullWorth.Core/Legal/FullWorthLegalDocuments.cs"
         [ -f "$legal_source" ] && [ ! -L "$legal_source" ] ||
-            fail "BillWatchLegalDocuments.cs must be a regular non-symlink file."
+            fail "FullWorthLegalDocuments.cs must be a regular non-symlink file."
         legal_version=$(awk '/CurrentVersion[[:space:]]*=/{getline; line=$0; gsub(/[[:space:]"]/, "", line); sub(/;.*/, "", line); print line; exit}' "$legal_source")
         [ -n "$legal_version" ] ||
             fail "could not determine the deployed legal document version."
-        expected='I attest that a qualified review of the deployed BillWatch Terms and Privacy documents is complete and approved for trusted private beta.'
+        expected='I attest that a qualified review of the deployed FullWorth Terms and Privacy documents is complete and approved for trusted private beta.'
         [ "${BILLWATCH_LEGAL_REVIEW_ATTESTATION:-}" = "$expected" ] ||
             fail "legal review requires the exact BILLWATCH_LEGAL_REVIEW_ATTESTATION phrase after qualified review has actually been completed."
         extra_line="LEGAL_DOCUMENT_VERSION=$legal_version"

@@ -12,11 +12,11 @@ release=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 deployment="$temp/deployment"
 evidence="$temp/evidence"
 fakebin="$temp/bin"
-mkdir -p "$deployment/BillWatch.Core/Legal" "$evidence" "$fakebin"
+mkdir -p "$deployment/FullWorth.Core/Legal" "$evidence" "$fakebin"
 printf '%s\n' "$release" > "$deployment/.billwatch-release"
-cat > "$deployment/BillWatch.Core/Legal/BillWatchLegalDocuments.cs" <<'CS'
-namespace BillWatch.Core.Legal;
-public static class BillWatchLegalDocuments
+cat > "$deployment/FullWorth.Core/Legal/FullWorthLegalDocuments.cs" <<'CS'
+namespace FullWorth.Core.Legal;
+public static class FullWorthLegalDocuments
 {
     public const string CurrentVersion =
         "2026-09-04-beta";
@@ -57,7 +57,7 @@ if BILLWATCH_EXTERNAL_APPROVAL_EVIDENCE_FILE="$evidence/missing-attestation.env"
 fi
 
 BILLWATCH_EXTERNAL_APPROVAL_EVIDENCE_FILE="$legal" \
-BILLWATCH_LEGAL_REVIEW_ATTESTATION='I attest that a qualified review of the deployed BillWatch Terms and Privacy documents is complete and approved for trusted private beta.' \
+BILLWATCH_LEGAL_REVIEW_ATTESTATION='I attest that a qualified review of the deployed FullWorth Terms and Privacy documents is complete and approved for trusted private beta.' \
 sh "$record_script" legal "$deployment" >/dev/null
 
 grep -qx 'LEGAL_DOCUMENT_VERSION=2026-09-04-beta' "$legal"

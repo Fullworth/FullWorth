@@ -59,7 +59,7 @@ case "$*" in
         printf '%s\n' "${BILLWATCH_TEST_HEAD:-0123456789abcdef0123456789abcdef01234567}"
         ;;
     *'status --porcelain --untracked-files=normal'*)
-        [ "${BILLWATCH_TEST_DIRTY:-false}" != true ] || printf '%s\n' ' M BillWatch.API/Program.cs'
+        [ "${BILLWATCH_TEST_DIRTY:-false}" != true ] || printf '%s\n' ' M FullWorth.API/Program.cs'
         ;;
     *'ls-files --error-unmatch .billwatch-release'*)
         [ "${BILLWATCH_TEST_MARKER_TRACKED:-false}" = true ] || exit 1
