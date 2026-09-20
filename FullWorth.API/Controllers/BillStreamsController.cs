@@ -67,7 +67,7 @@ public sealed class BillStreamsController : ControllerBase
                     stream.Id)
                 .ToList();
 
-        var transactions =
+        var transactionSummaries =
             await _dbContext.BankTransactions
                 .AsNoTracking()
                 .Where(transaction =>
@@ -81,36 +81,47 @@ public sealed class BillStreamsController : ControllerBase
                     transaction.PostedDate)
                 .ThenByDescending(transaction =>
                     transaction.CreatedAtUtc)
+                .Select(transaction =>
+                    new
+                    {
+                        BillStreamId =
+                            transaction.BillStreamId!.Value,
+                        transaction.Amount
+                    })
                 .ToListAsync(
                     cancellationToken);
+
+        var metricsByStream =
+            transactionSummaries
+                .GroupBy(transaction =>
+                    transaction.BillStreamId)
+                .ToDictionary(
+                    group => group.Key,
+                    group =>
+                    {
+                        var orderedTransactions =
+                            group.ToList();
+
+                        return (
+                            CurrentAmount:
+                                orderedTransactions[0].Amount,
+
+                            PreviousAverage:
+                                orderedTransactions.Count <= 1
+                                    ? 0m
+                                    : orderedTransactions
+                                        .Skip(1)
+                                        .Average(transaction =>
+                                            transaction.Amount));
+                    });
 
         var results =
             streams
                 .Select(stream =>
                 {
-                    var streamTransactions =
-                        transactions
-                            .Where(transaction =>
-                                transaction.BillStreamId ==
-                                stream.Id)
-                            .OrderByDescending(transaction =>
-                                transaction.PostedDate)
-                            .ThenByDescending(transaction =>
-                                transaction.CreatedAtUtc)
-                            .ToList();
-
-                    var currentAmount =
-                        streamTransactions.Count == 0
-                            ? 0m
-                            : streamTransactions[0].Amount;
-
-                    var previousAverage =
-                        streamTransactions.Count <= 1
-                            ? 0m
-                            : streamTransactions
-                                .Skip(1)
-                                .Average(transaction =>
-                                    transaction.Amount);
+                    var metrics =
+                        metricsByStream.GetValueOrDefault(
+                            stream.Id);
 
                     return new BillStreamResult(
                         Id:
@@ -126,10 +137,10 @@ public sealed class BillStreamsController : ControllerBase
                             stream.IsActive,
 
                         CurrentAmount:
-                            currentAmount,
+                            metrics.CurrentAmount,
 
                         PreviousAverage:
-                            previousAverage);
+                            metrics.PreviousAverage);
                 })
                 .ToList();
 
@@ -166,8 +177,8 @@ public sealed class BillStreamsController : ControllerBase
             return NotFound();
         }
 
-        var transactions =
-            await _dbContext.BankTransactions
+        var transactionAmounts =
+            _dbContext.BankTransactions
                 .AsNoTracking()
                 .Where(transaction =>
                     transaction.UserId == userId &&
@@ -179,21 +190,25 @@ public sealed class BillStreamsController : ControllerBase
                     transaction.PostedDate)
                 .ThenByDescending(transaction =>
                     transaction.CreatedAtUtc)
-                .ToListAsync(
-                    cancellationToken);
+                .Select(transaction =>
+                    transaction.Amount);
 
         var currentAmount =
-            transactions.Count == 0
-                ? 0m
-                : transactions[0].Amount;
+            await transactionAmounts
+                .Select(amount =>
+                    (decimal?)amount)
+                .FirstOrDefaultAsync(
+                    cancellationToken)
+            ?? 0m;
 
         var previousAverage =
-            transactions.Count <= 1
-                ? 0m
-                : transactions
-                    .Skip(1)
-                    .Average(transaction =>
-                        transaction.Amount);
+            await transactionAmounts
+                .Skip(1)
+                .Select(amount =>
+                    (decimal?)amount)
+                .AverageAsync(
+                    cancellationToken)
+            ?? 0m;
 
         var statements =
             await _dbContext.BillStatements
