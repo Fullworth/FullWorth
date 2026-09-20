@@ -1,12 +1,8 @@
-using FullWorth.API.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace FullWorth.API.Data.Migrations;
 
-[DbContext(typeof(FullWorthDbContext))]
-[Migration("20260903063500_AddKeyLabelsAndTimestampPreference")]
-public sealed partial class AddKeyLabelsAndTimestampPreference : Migration
+public partial class AddKeyLabelsAndTimestampPreference : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
