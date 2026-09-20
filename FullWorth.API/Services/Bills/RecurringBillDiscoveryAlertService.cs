@@ -27,7 +27,8 @@ public sealed class RecurringBillDiscoveryAlertService
         BillStreamEntity billStream,
         int matchingTransactionCount,
         DateTimeOffset now,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool newlyAddedStream = false)
     {
         if (userId ==
             Guid.Empty)
@@ -99,25 +100,43 @@ public sealed class RecurringBillDiscoveryAlertService
         }
 
         /*
-         * Also protect normal re-runs after the alert has already been
-         * persisted.
+         * A stream created by recurring discovery is already tracked as
+         * Added in this unit of work and has a freshly generated ID. In that
+         * narrow case a persisted duplicate cannot exist, so skip the
+         * otherwise-required database existence query.
+         *
+         * Keep the generic path fully defensive for existing streams and
+         * direct callers.
          */
-        var alreadyPersisted =
-            await _dbContext.BillAlerts
-                .AsNoTracking()
-                .AnyAsync(
-                    alert =>
-                        alert.UserId ==
-                            userId &&
-                        alert.BillStreamId ==
-                            billStream.Id &&
-                        alert.AlertType ==
-                            BillAlertType.NewBill,
-                    cancellationToken);
-
-        if (alreadyPersisted)
+        if (newlyAddedStream)
         {
-            return false;
+            if (_dbContext.Entry(
+                    billStream).State !=
+                EntityState.Added)
+            {
+                throw new InvalidOperationException(
+                    "The new-stream alert fast path requires an Added Bill Stream.");
+            }
+        }
+        else
+        {
+            var alreadyPersisted =
+                await _dbContext.BillAlerts
+                    .AsNoTracking()
+                    .AnyAsync(
+                        alert =>
+                            alert.UserId ==
+                                userId &&
+                            alert.BillStreamId ==
+                                billStream.Id &&
+                            alert.AlertType ==
+                                BillAlertType.NewBill,
+                        cancellationToken);
+
+            if (alreadyPersisted)
+            {
+                return false;
+            }
         }
 
         var providerName =

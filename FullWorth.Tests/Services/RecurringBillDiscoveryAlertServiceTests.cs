@@ -245,6 +245,88 @@ public sealed class RecurringBillDiscoveryAlertServiceTests
                 .ToListAsync());
     }
 
+    [Fact]
+    public async Task NewlyAddedStreamFastPath_CreatesSingleAlertWithoutPersistedLookupRequirement()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var stream =
+            CreateStream(
+                userId);
+
+        dbContext.BillStreams.Add(
+            stream);
+
+        var service =
+            new RecurringBillDiscoveryAlertService(
+                dbContext);
+
+        var firstCreated =
+            await service.EnsureNewBillAlertAsync(
+                userId,
+                stream,
+                3,
+                DateTimeOffset.UtcNow,
+                newlyAddedStream:
+                    true);
+
+        var secondCreated =
+            await service.EnsureNewBillAlertAsync(
+                userId,
+                stream,
+                3,
+                DateTimeOffset.UtcNow,
+                newlyAddedStream:
+                    true);
+
+        Assert.True(
+            firstCreated);
+
+        Assert.False(
+            secondCreated);
+
+        Assert.Single(
+            dbContext.BillAlerts.Local);
+    }
+
+    [Fact]
+    public async Task NewlyAddedStreamFastPath_RejectsPersistedStream()
+    {
+        await using var dbContext =
+            CreateDbContext();
+
+        var userId =
+            Guid.NewGuid();
+
+        var stream =
+            CreateStream(
+                userId);
+
+        dbContext.BillStreams.Add(
+            stream);
+
+        await dbContext.SaveChangesAsync();
+
+        var service =
+            new RecurringBillDiscoveryAlertService(
+                dbContext);
+
+        await Assert.ThrowsAsync<
+            InvalidOperationException>(
+            () =>
+                service.EnsureNewBillAlertAsync(
+                    userId,
+                    stream,
+                    3,
+                    DateTimeOffset.UtcNow,
+                    newlyAddedStream:
+                        true));
+    }
+
     private static FullWorthDbContext
         CreateDbContext()
     {
