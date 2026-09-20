@@ -6,7 +6,7 @@ namespace FullWorth.API.Data.Migrations;
 
 [DbContext(typeof(FullWorthDbContext))]
 [Migration("20260903063500_AddKeyLabelsAndTimestampPreference")]
-public sealed class AddKeyLabelsAndTimestampPreference : Migration
+public sealed partial class AddKeyLabelsAndTimestampPreference : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
