@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color"
+          content="#0B1F3B" />
+    <title>FullWorth — Offline</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, #173a78 0, #0b1f3b 44%, #071426 100%);
+            color: #ffffff;
+        }
+
+        main {
+            width: min(100%, 460px);
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 28px;
+            background: rgba(7, 20, 38, 0.82);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+            text-align: center;
+        }
+
+        .mark {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 22px;
+            display: grid;
+            place-items: end center;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+            padding: 15px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #102a9e, #2563eb 52%, #06b6d4);
+        }
+
+        .mark span {
+            width: 100%;
+            border-radius: 5px;
+            background: linear-gradient(#ffffff, #dff8ff);
+        }
+
+        .mark span:nth-child(1) {
+            height: 24px;
+        }
+
+        .mark span:nth-child(2) {
+            height: 36px;
+        }
+
+        .mark span:nth-child(3) {
+            height: 48px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+
+        p {
+            margin: 14px 0 0;
+            line-height: 1.55;
+            color: #d8e5f5;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 18px;
+            border-radius: 14px;
+            background: #ffffff;
+            color: #0b1f3b;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        small {
+            display: block;
+            margin-top: 18px;
+            line-height: 1.45;
+            color: #9fb3ca;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="mark"
+             aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <h1>You're offline</h1>
+
+        <p>
+            FullWorth keeps your live financial information online rather than
+            storing account pages or financial responses for offline use.
+        </p>
+
+        <a href="/app">
+            Try again
+        </a>
+
+        <small>
+            Reconnect to view accounts, transactions, bills, statements, and alerts.
+        </small>
+    </main>
+</body>
+</html>

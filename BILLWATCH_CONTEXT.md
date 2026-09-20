@@ -28,6 +28,17 @@ This is the durable BillWatch development handoff. Current source, exact-head CI
 
 FullWorth remains transaction-first while expanding into a broader financial-life hub. Bank transactions discover recurring bills. Provider statements/evidence explain why bills changed. AI may produce structured candidate facts, but deterministic code validates evidence, performs arithmetic, enforces ownership/security, compares history, and makes final persistence/alert decisions. AI output is never evidence by itself.
 
+## Client platform direction
+
+FullWorth is moving to a **PWA-first client architecture**.
+
+- `FullWorth.Web` is the target single client for desktop browsers, mobile browsers, and installed home-screen/desktop web-app use.
+- The MAUI client remains transitional until the installed PWA has verified feature parity for authentication, Plaid connection/update flows, transactions, bills, activity, statements, account security/settings, localization, and session-expiry behavior.
+- Do not remove the MAUI project or its CI gate until that parity/cutover checkpoint is explicitly complete.
+- PWA caching must preserve FullWorth financial-data boundaries. Authenticated HTML, BFF/API responses, financial data, statements, tokens, cookies, and account-specific content must never be intentionally persisted into Cache Storage for offline use.
+- The initial service worker may cache only a generic public offline fallback; live FullWorth navigation remains network-first.
+- If native app-store packaging is later required, prefer a thin web-oriented native wrapper after PWA parity rather than rebuilding a second product UI.
+
 ## Repository / stack
 
 Repository: `RealizmModz/BillWatch`
