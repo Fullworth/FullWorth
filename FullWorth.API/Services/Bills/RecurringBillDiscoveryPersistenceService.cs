@@ -102,29 +102,57 @@ public sealed class RecurringBillDiscoveryPersistenceService
          * subscription is not invisible just because its upstream category
          * is broad or missing.
          */
-        var candidateTransactions =
-            persistedTransactions
-                .Where(
-                    IsRecurringCandidateTransaction)
-                .ToList();
-
         var candidateTransactionsByProvider =
-            candidateTransactions
-                .GroupBy(
-                    GetNormalizedMerchantName,
-                    StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group =>
-                        group.Key,
-                    group =>
-                        group.ToList(),
+            new Dictionary<
+                string,
+                List<BankTransactionEntity>>(
                     StringComparer.OrdinalIgnoreCase);
 
         var coreTransactions =
-            candidateTransactions
-                .Select(
-                    ToCoreTransaction)
-                .ToList();
+            new List<CoreBankTransaction>(
+                persistedTransactions.Count);
+
+        foreach (var transaction in
+                 persistedTransactions)
+        {
+            if (transaction.IsPending ||
+                transaction.Amount <=
+                    0m)
+            {
+                continue;
+            }
+
+            var normalizedMerchantName =
+                GetNormalizedMerchantName(
+                    transaction);
+
+            if (string.IsNullOrWhiteSpace(
+                    normalizedMerchantName))
+            {
+                continue;
+            }
+
+            if (!candidateTransactionsByProvider
+                .TryGetValue(
+                    normalizedMerchantName,
+                    out var providerTransactions))
+            {
+                providerTransactions =
+                    [];
+
+                candidateTransactionsByProvider.Add(
+                    normalizedMerchantName,
+                    providerTransactions);
+            }
+
+            providerTransactions.Add(
+                transaction);
+
+            coreTransactions.Add(
+                ToCoreTransaction(
+                    transaction,
+                    normalizedMerchantName));
+        }
 
         var detectedStreams =
             _discoveryService.Discover(
@@ -390,7 +418,9 @@ public sealed class RecurringBillDiscoveryPersistenceService
                             persistedStream,
                             discovery.Transactions.Count,
                             now,
-                            cancellationToken);
+                            cancellationToken,
+                            newlyAddedStream:
+                                true);
 
                 if (alertCreated)
                 {
@@ -500,25 +530,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
             NewBillAlertsCreated:
                 newBillAlertCount);
-    }
-
-    private bool IsRecurringCandidateTransaction(
-        BankTransactionEntity transaction)
-    {
-        if (transaction.IsPending)
-        {
-            return false;
-        }
-
-        if (transaction.Amount <=
-            0m)
-        {
-            return false;
-        }
-
-        return !string.IsNullOrWhiteSpace(
-            GetNormalizedMerchantName(
-                transaction));
     }
 
     private BillCategory ResolveBillCategory(
@@ -705,13 +716,13 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     StringComparison.OrdinalIgnoreCase));
     }
 
-    private CoreBankTransaction ToCoreTransaction(
-        BankTransactionEntity transaction)
+    private static CoreBankTransaction ToCoreTransaction(
+        BankTransactionEntity transaction,
+        string normalizedMerchantName)
     {
         return new CoreBankTransaction(
             merchantName:
-                GetNormalizedMerchantName(
-                    transaction),
+                normalizedMerchantName,
 
             postedDate:
                 transaction.PostedDate,

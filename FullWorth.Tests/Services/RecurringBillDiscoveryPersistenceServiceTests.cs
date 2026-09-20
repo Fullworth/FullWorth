@@ -463,6 +463,17 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             result.BillStreamsCreated);
 
         Assert.Equal(
+            2,
+            result.NewBillAlertsCreated);
+
+        Assert.Equal(
+            2,
+            dbContext.BillAlerts.Count(
+                alert =>
+                    alert.AlertType ==
+                        BillAlertType.NewBill));
+
+        Assert.Equal(
             1,
             result.BillStreamsDeactivated);
 

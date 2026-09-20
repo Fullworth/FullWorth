@@ -444,6 +444,10 @@ public sealed class BillStatementChangeDetectionService
                     currentItems;
             }
 
+            alertsByChangeId.TryGetValue(
+                activeChange.Id,
+                out var preloadedAlerts);
+
             await _evidenceAlertService
                 .ReconcileAsync(
                     userId,
@@ -453,7 +457,9 @@ public sealed class BillStatementChangeDetectionService
                     previousEvidence,
                     currentEvidence,
                     now,
-                    cancellationToken);
+                    cancellationToken,
+                    preloadedAlerts ??
+                        []);
         }
 
         return new BillStatementChangeReconciliationResult(

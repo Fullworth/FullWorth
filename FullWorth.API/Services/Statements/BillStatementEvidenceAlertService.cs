@@ -30,7 +30,8 @@ public sealed class BillStatementEvidenceAlertService
         IReadOnlyList<BillLineItemEntity> previousLineItems,
         IReadOnlyList<BillLineItemEntity> currentLineItems,
         DateTimeOffset now,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<BillAlertEntity>? preloadedAlerts = null)
     {
         if (userId ==
             Guid.Empty)
@@ -85,30 +86,69 @@ public sealed class BillStatementEvidenceAlertService
                 previousLineItems,
                 currentLineItems);
 
-        var existingAlerts =
-            await _dbContext.BillAlerts
-                .Where(
-                    alert =>
-                        alert.UserId ==
-                            userId &&
-                        alert.BillStreamId ==
-                            billStreamId &&
-                        alert.BillChangeId ==
-                            change.Id &&
-                        (
+        List<BillAlertEntity>
+            existingAlerts;
+
+        if (preloadedAlerts is null)
+        {
+            existingAlerts =
+                await _dbContext.BillAlerts
+                    .Where(
+                        alert =>
+                            alert.UserId ==
+                                userId &&
+                            alert.BillStreamId ==
+                                billStreamId &&
+                            alert.BillChangeId ==
+                                change.Id &&
+                            (
+                                alert.AlertType ==
+                                    BillAlertType.NewFee ||
+                                alert.AlertType ==
+                                    BillAlertType.RemovedDiscount
+                            ))
+                    .OrderBy(
+                        alert =>
+                            alert.CreatedAtUtc)
+                    .ThenBy(
+                        alert =>
+                            alert.Id)
+                    .ToListAsync(
+                        cancellationToken);
+        }
+        else
+        {
+            foreach (var alert in
+                     preloadedAlerts)
+            {
+                if (alert.UserId !=
+                        userId ||
+                    alert.BillStreamId !=
+                        billStreamId ||
+                    alert.BillChangeId !=
+                        change.Id)
+                {
+                    throw new InvalidOperationException(
+                        "A preloaded alert does not belong to the requested bill change.");
+                }
+            }
+
+            existingAlerts =
+                preloadedAlerts
+                    .Where(
+                        alert =>
                             alert.AlertType ==
                                 BillAlertType.NewFee ||
                             alert.AlertType ==
-                                BillAlertType.RemovedDiscount
-                        ))
-                .OrderBy(
-                    alert =>
-                        alert.CreatedAtUtc)
-                .ThenBy(
-                    alert =>
-                        alert.Id)
-                .ToListAsync(
-                    cancellationToken);
+                                BillAlertType.RemovedDiscount)
+                    .OrderBy(
+                        alert =>
+                            alert.CreatedAtUtc)
+                    .ThenBy(
+                        alert =>
+                            alert.Id)
+                    .ToList();
+        }
 
         var existingByIdentity =
             new Dictionary<
