@@ -444,6 +444,22 @@
         color: var(--bw-text);
     }
 
+    .pwa-install-action {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .pwa-install-message {
+        margin: 2px 8px 0;
+        color: var(--bw-text-subtle);
+        font-size: 0.72rem;
+        line-height: 1.45;
+    }
+
     .app-topbar {
         height: 64px;
         padding: 0 18px;

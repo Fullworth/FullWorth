@@ -21,6 +21,9 @@
   <data name="Profile" xml:space="preserve"><value>Perfil</value></data>
   <data name="Settings" xml:space="preserve"><value>Configuración</value></data>
   <data name="Account" xml:space="preserve"><value>Cuenta</value></data>
+  <data name="Install FullWorth" xml:space="preserve"><value>Instalar FullWorth</value></data>
+  <data name="On iPhone or iPad, tap Share, then Add to Home Screen." xml:space="preserve"><value>En iPhone o iPad, toca Compartir y luego Añadir a pantalla de inicio.</value></data>
+  <data name="Use your browser menu to install FullWorth as an app." xml:space="preserve"><value>Usa el menú de tu navegador para instalar FullWorth como aplicación.</value></data>
   <data name="Signed in" xml:space="preserve"><value>Sesión iniciada</value></data>
   <data name="Sign out" xml:space="preserve"><value>Cerrar sesión</value></data>
   <data name="Secure session" xml:space="preserve"><value>Sesión segura</value></data>
