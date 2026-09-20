@@ -107,7 +107,7 @@
 
                 <strong>
                     @FormatMoney(
-                        PostedOutflow)
+                        _postedOutflow)
                 </strong>
 
                 <small>
@@ -121,7 +121,7 @@
                 </span>
 
                 <strong>
-                    @PendingCount
+                    @_pendingCount
                 </strong>
 
                 <small>
@@ -151,7 +151,7 @@
                 </option>
 
                 @foreach (var account
-                    in AvailableAccounts)
+                    in _availableAccounts)
                 {
                     <option value="@account.Id.ToString("D")">
                         @GetAccountFilterLabel(
@@ -306,21 +306,13 @@
     private string _selectedAccountId =
         string.Empty;
 
-    private decimal PostedOutflow =>
-        _transactions
-            .Where(
-                transaction =>
-                    !transaction.IsPending &&
-                    transaction.Amount >
-                        0m)
-            .Sum(
-                transaction =>
-                    transaction.Amount);
+    private decimal _postedOutflow;
 
-    private int PendingCount =>
-        _transactions.Count(
-            transaction =>
-                transaction.IsPending);
+    private int _pendingCount;
+
+    private IReadOnlyList<
+        TransactionAccountOption>
+        _availableAccounts = [];
 
     private string GetTransactionsResultLabel(
         int count)
@@ -329,34 +321,6 @@
             ? L["1 transaction"]
             : L["{0} transactions", count];
     }
-
-    private IReadOnlyList<
-        TransactionAccountOption>
-        AvailableAccounts =>
-            _transactions
-                .GroupBy(
-                    transaction =>
-                        transaction.BankAccountId)
-                .Select(
-                    group =>
-                    {
-                        var transaction =
-                            group.First();
-
-                        return new
-                            TransactionAccountOption(
-                                transaction.BankAccountId,
-                                transaction.InstitutionName,
-                                transaction.AccountName,
-                                transaction.AccountMask);
-                    })
-                .OrderBy(
-                    account =>
-                        account.InstitutionName)
-                .ThenBy(
-                    account =>
-                        account.AccountName)
-                .ToList();
 
     private IReadOnlyList<
         BankTransactionViewModel>
@@ -481,6 +445,8 @@
                 result?
                     .ToList()
                 ?? [];
+
+            UpdateTransactionSummaries();
         }
         catch (JSException)
         {
@@ -497,6 +463,51 @@
             _isLoading =
                 false;
         }
+    }
+
+    private void UpdateTransactionSummaries()
+    {
+        _postedOutflow =
+            _transactions
+                .Where(
+                    transaction =>
+                        !transaction.IsPending &&
+                        transaction.Amount >
+                            0m)
+                .Sum(
+                    transaction =>
+                        transaction.Amount);
+
+        _pendingCount =
+            _transactions.Count(
+                transaction =>
+                    transaction.IsPending);
+
+        _availableAccounts =
+            _transactions
+                .GroupBy(
+                    transaction =>
+                        transaction.BankAccountId)
+                .Select(
+                    group =>
+                    {
+                        var transaction =
+                            group.First();
+
+                        return new
+                            TransactionAccountOption(
+                                transaction.BankAccountId,
+                                transaction.InstitutionName,
+                                transaction.AccountName,
+                                transaction.AccountMask);
+                    })
+                .OrderBy(
+                    account =>
+                        account.InstitutionName)
+                .ThenBy(
+                    account =>
+                        account.AccountName)
+                .ToList();
     }
 
     private bool MatchesSelectedAccount(
