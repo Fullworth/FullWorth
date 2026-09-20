@@ -28,6 +28,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Cache backend NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-backend-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-backend-
+
       - name: Restore tests and dependencies
         run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
@@ -69,8 +77,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Cache MAUI NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-maui-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-maui-
+
       - name: Install MAUI workload
-        run: dotnet workload install maui-android
+        run: dotnet workload install maui-android --skip-manifest-update
 
       - name: Restore MAUI Android dependencies
         run: dotnet restore FullWorth.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
