@@ -1,4 +1,4 @@
-name: BillWatch Production Readiness
+name: FullWorth Production Readiness
 
 on:
   schedule:
@@ -45,7 +45,7 @@ jobs:
       - name: Controlled alert-delivery drill
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_failure && matrix.target.name == 'API' }}
         run: |
-          echo "Intentional BillWatch readiness failure drill."
+          echo "Intentional FullWorth readiness failure drill."
           exit 1
 
       - name: Deliver independent readiness failure alert

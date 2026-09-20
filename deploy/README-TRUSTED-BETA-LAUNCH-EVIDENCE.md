@@ -28,7 +28,7 @@ The legal recorder reads the legal-document version directly from the deployed r
 
 ```sh
 BILLWATCH_EXTERNAL_APPROVAL_EVIDENCE_FILE='/secure/billwatch-evidence/legal-approval.env' \
-BILLWATCH_LEGAL_REVIEW_ATTESTATION='I attest that a qualified review of the deployed BillWatch Terms and Privacy documents is complete and approved for trusted private beta.' \
+BILLWATCH_LEGAL_REVIEW_ATTESTATION='I attest that a qualified review of the deployed FullWorth Terms and Privacy documents is complete and approved for trusted private beta.' \
 sh deploy/record-private-beta-external-approval.sh legal /opt/billwatch
 ```
 

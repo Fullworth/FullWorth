@@ -72,8 +72,8 @@ verify_common "$legal" 'legal approval'
 [ "$(read_value "$legal" PASSED_PHASES)" = 'qualified-terms-review-attested,qualified-privacy-review-attested' ] ||
     fail "legal approval evidence has unexpected phases."
 
-legal_source="$root_dir/BillWatch.Core/Legal/BillWatchLegalDocuments.cs"
-[ -f "$legal_source" ] && [ ! -L "$legal_source" ] || fail "BillWatchLegalDocuments.cs must be a regular non-symlink file."
+legal_source="$root_dir/FullWorth.Core/Legal/FullWorthLegalDocuments.cs"
+[ -f "$legal_source" ] && [ ! -L "$legal_source" ] || fail "FullWorthLegalDocuments.cs must be a regular non-symlink file."
 legal_version=$(awk '/CurrentVersion[[:space:]]*=/{getline; line=$0; gsub(/[[:space:]"]/, "", line); sub(/;.*/, "", line); print line; exit}' "$legal_source")
 [ -n "$legal_version" ] || fail "could not determine the deployed legal document version."
 [ "$(read_value "$legal" LEGAL_DOCUMENT_VERSION)" = "$legal_version" ] ||

@@ -1,6 +1,6 @@
-# BillWatch revenue launch gate
+# FullWorth revenue launch gate
 
-BillWatch has a hosted Stripe Checkout and Customer Portal integration for monthly and yearly subscriptions. The existence of that code does not mean the deployed service is ready to charge customers. Keep `BILLWATCH_STRIPE_ENABLED=false` and `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED=false` until the relevant gates below have been proven on the exact release.
+FullWorth has a hosted Stripe Checkout and Customer Portal integration for monthly and yearly subscriptions. The existence of that code does not mean the deployed service is ready to charge customers. Keep `BILLWATCH_STRIPE_ENABLED=false` and `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED=false` until the relevant gates below have been proven on the exact release.
 
 ## 1. Prove the product with controlled users
 
@@ -18,7 +18,7 @@ BillWatch has a hosted Stripe Checkout and Customer Portal integration for month
 ## 3. Prove the payment lifecycle
 
 - Run the [subscription rollout preflight](deploy/README-SUBSCRIPTION-ROLLOUT.md) with enforcement still off.
-- Complete a controlled hosted Checkout purchase, then prove that BillWatch grants paid access only after the configured BillWatch Price is active. Verify that an unrelated Stripe Price never grants access.
+- Complete a controlled hosted Checkout purchase, then prove that FullWorth grants paid access only after the configured FullWorth Price is active. Verify that an unrelated Stripe Price never grants access.
 - Open Customer Portal, cancel the test subscription, and prove that the signed webhook and provider reconciliation update local access correctly. Repeat with a delayed/retried event and a failed or past-due payment case.
 - Run the read-only and opt-in lifecycle probes in [deploy/README-SUBSCRIPTION-ROLLOUT.md](deploy/README-SUBSCRIPTION-ROLLOUT.md). Keep receipt, provider state, local entitlement, and release evidence aligned without recording secrets or financial data in the repository.
 

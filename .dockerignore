@@ -13,6 +13,6 @@
 *.http
 *.sln
 *.slnx
-BillWatch.Tests
+FullWorth.Tests
 Resources
 Platforms
