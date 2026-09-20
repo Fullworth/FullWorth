@@ -1,10 +1,10 @@
-using BillWatch.Core.Legal;
-using BillWatch.Services;
+using FullWorth.Core.Legal;
+using FullWorth.Services;
 using System.ComponentModel;
 using System.Net;
 using System.Runtime.CompilerServices;
 
-namespace BillWatch.ViewModels;
+namespace FullWorth.ViewModels;
 
 public enum LoginPageDestination
 {
@@ -189,7 +189,7 @@ public sealed class LoginPageViewModel : INotifyPropertyChanged
                     email,
                     Password,
                     HasAcceptedTermsAndPrivacy,
-                    BillWatchLegalDocuments.CurrentVersion,
+                    FullWorthLegalDocuments.CurrentVersion,
                     cancellationToken);
                 accountWasCreated = true;
                 await _authenticationService.LoginAsync(email, Password, cancellationToken);

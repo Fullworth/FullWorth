@@ -1,0 +1,413 @@
+﻿@inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.Pages.App.Activity> L
+
+<article class="@GetCardClass()">
+    <div class="@GetIconClass()"
+         aria-hidden="true">
+        <svg class="bw-sprite alert-sprite">
+            <use href="@GetIconSpriteHref()"></use>
+        </svg>
+    </div>
+
+    <div class="alert-card-content">
+        <div class="alert-card-heading">
+            <div>
+                <div class="alert-title-line">
+                    @if (!Alert.IsRead)
+                    {
+                        <span class="unread-dot"
+                              title="@L["Unread"]"></span>
+                    }
+
+                    <strong>
+                        @Alert.Title
+                    </strong>
+                </div>
+
+                <span class="alert-type">
+                    @FormatAlertType(
+                        Alert.AlertType)
+                </span>
+            </div>
+
+            <time datetime="@Alert.CreatedAtUtc.ToString("O")">
+                @FormatDate(
+                    Alert.CreatedAtUtc)
+            </time>
+        </div>
+
+        <p>
+            @Alert.Message
+        </p>
+
+        <div class="alert-card-footer">
+            <div class="alert-meta">
+                <span class="@GetSeverityClass()">
+                    @FormatSeverity(Alert.Severity)
+                </span>
+
+                <span>
+                    @(Alert.IsRead
+                        ? L["Read"].Value
+                        : L["Unread"].Value)
+                </span>
+            </div>
+
+            <div class="alert-actions">
+                @if (!Alert.IsRead)
+                {
+                    <button type="button"
+                            class="alert-secondary-action"
+                            disabled="@IsBusy"
+                            @onclick="HandleMarkReadAsync">
+                        @L["Mark read"]
+                    </button>
+                }
+
+                <button type="button"
+                        class="alert-secondary-action dismiss"
+                        disabled="@IsBusy"
+                        @onclick="HandleDismissAsync">
+                    @L["Dismiss"]
+                </button>
+
+                @if (CanReview)
+                {
+                    <button type="button"
+                            class="alert-primary-action"
+                            disabled="@IsBusy"
+                            @onclick="HandleReviewAsync">
+                        @L["Review"]
+
+                        <span aria-hidden="true">
+                            →
+                        </span>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public AlertCardViewModel Alert
+    {
+        get;
+        set;
+    } = new();
+
+    [Parameter]
+    public bool IsBusy
+    {
+        get;
+        set;
+    }
+
+    [Parameter]
+    public bool CanReview
+    {
+        get;
+        set;
+    }
+
+    [Parameter]
+    public EventCallback<Guid>
+        OnMarkRead
+    {
+        get;
+        set;
+    }
+
+    [Parameter]
+    public EventCallback<Guid>
+        OnDismiss
+    {
+        get;
+        set;
+    }
+
+    [Parameter]
+    public EventCallback<Guid>
+        OnReview
+    {
+        get;
+        set;
+    }
+
+    private async Task HandleMarkReadAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        await OnMarkRead
+            .InvokeAsync(
+                Alert.Id);
+    }
+
+    private async Task HandleDismissAsync()
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        await OnDismiss
+            .InvokeAsync(
+                Alert.Id);
+    }
+
+    private async Task HandleReviewAsync()
+    {
+        if (IsBusy ||
+            !CanReview)
+        {
+            return;
+        }
+
+        await OnReview
+            .InvokeAsync(
+                Alert.Id);
+    }
+
+    private string GetCardClass()
+    {
+        var className =
+            "alert-card";
+
+        if (!Alert.IsRead)
+        {
+            className +=
+                " unread";
+        }
+
+        className +=
+            $" severity-{Alert.Severity.ToLowerInvariant()}";
+
+        return className;
+    }
+
+    private string GetIconClass()
+    {
+        return
+            $"alert-card-icon {GetTypeClass(Alert.AlertType)}";
+    }
+
+    private string GetIconSpriteHref()
+    {
+        var sprite =
+            Alert.AlertType switch
+            {
+                "BillIncrease" =>
+                    "trend-up",
+
+                "BillDecrease" =>
+                    "trend-down",
+
+                "NewFee" =>
+                    "bill",
+
+                "RemovedDiscount" =>
+                    "alert",
+
+                "PaymentDue" =>
+                    "document",
+
+                "ConnectionIssue" =>
+                    "bank",
+
+                "NewBill" =>
+                    "bill",
+
+                _ =>
+                    "alert"
+            };
+
+        return
+            $"/assets/billwatch-sprites.svg#{sprite}";
+    }
+
+    private string GetSeverityClass()
+    {
+        return
+            $"alert-severity {Alert.Severity.ToLowerInvariant()}";
+    }
+
+    private static string GetTypeClass(
+        string? alertType)
+    {
+        return alertType switch
+        {
+            "BillIncrease" =>
+                "increase",
+
+            "BillDecrease" =>
+                "decrease",
+
+            "NewFee" =>
+                "fee",
+
+            "RemovedDiscount" =>
+                "discount",
+
+            "PaymentDue" =>
+                "due",
+
+            "ConnectionIssue" =>
+                "connection",
+
+            "NewBill" =>
+                "new-bill",
+
+            _ =>
+                "unknown"
+        };
+    }
+
+    private string FormatAlertType(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return L["FullWorth alert"].Value;
+        }
+
+        return value switch
+        {
+            "BillIncrease" =>
+                L["Bill increase"].Value,
+
+            "BillDecrease" =>
+                L["Bill decrease"].Value,
+
+            "NewFee" =>
+                L["New fee"].Value,
+
+            "RemovedDiscount" =>
+                L["Removed discount"].Value,
+
+            "PaymentDue" =>
+                L["Payment due"].Value,
+
+            "ConnectionIssue" =>
+                L["Connection issue"].Value,
+
+            "NewBill" =>
+                L["New recurring bill"].Value,
+
+            _ =>
+                value
+        };
+    }
+
+    private string FormatSeverity(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return L["Info"].Value;
+        }
+
+        return L[value].Value;
+    }
+
+    private string FormatDate(
+        DateTimeOffset value)
+    {
+        var local =
+            value.LocalDateTime;
+
+        var today =
+            DateTime.Today;
+
+        if (local.Date ==
+            today)
+        {
+            return
+                $"{L["Today"].Value} · {local:h:mm tt}";
+        }
+
+        if (local.Date ==
+            today.AddDays(-1))
+        {
+            return
+                $"{L["Yesterday"].Value} · {local:h:mm tt}";
+        }
+
+        return local.ToString(
+            "MMM d, yyyy",
+            System.Globalization.CultureInfo.CurrentUICulture);
+    }
+
+    public sealed class AlertCardViewModel
+    {
+        public Guid Id
+        {
+            get;
+            set;
+        }
+
+        public Guid? BillStreamId
+        {
+            get;
+            set;
+        }
+
+        public Guid? BillChangeId
+        {
+            get;
+            set;
+        }
+
+        public string AlertType
+        {
+            get;
+            set;
+        } = string.Empty;
+
+        public string Severity
+        {
+            get;
+            set;
+        } = "Info";
+
+        public string Title
+        {
+            get;
+            set;
+        } = string.Empty;
+
+        public string Message
+        {
+            get;
+            set;
+        } = string.Empty;
+
+        public bool IsRead
+        {
+            get;
+            set;
+        }
+
+        public bool IsDismissed
+        {
+            get;
+            set;
+        }
+
+        public DateTimeOffset CreatedAtUtc
+        {
+            get;
+            set;
+        }
+
+        public DateTimeOffset UpdatedAtUtc
+        {
+            get;
+            set;
+        }
+    }
+}

@@ -4,14 +4,14 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY BillWatch.Core/BillWatch.Core.csproj BillWatch.Core/
-COPY BillWatch.Web/BillWatch.Web.csproj BillWatch.Web/
-RUN dotnet restore BillWatch.Web/BillWatch.Web.csproj
+COPY FullWorth.Core/FullWorth.Core.csproj FullWorth.Core/
+COPY FullWorth.Web/FullWorth.Web.csproj FullWorth.Web/
+RUN dotnet restore FullWorth.Web/FullWorth.Web.csproj
 
-COPY BillWatch.Core/ BillWatch.Core/
-COPY BillWatch.Web/ BillWatch.Web/
+COPY FullWorth.Core/ FullWorth.Core/
+COPY FullWorth.Web/ FullWorth.Web/
 
-RUN dotnet publish BillWatch.Web/BillWatch.Web.csproj \
+RUN dotnet publish FullWorth.Web/FullWorth.Web.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \
@@ -45,4 +45,4 @@ USER $APP_UID
 HEALTHCHECK --interval=30s --timeout=8s --start-period=30s --retries=3 \
     CMD curl --fail --silent --header "Host: $AllowedHosts" http://localhost:8080/health/ready || exit 1
 
-ENTRYPOINT ["dotnet", "BillWatch.Web.dll"]
+ENTRYPOINT ["dotnet", "FullWorth.Web.dll"]

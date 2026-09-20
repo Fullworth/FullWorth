@@ -1,15 +1,15 @@
 using System.Reflection;
-using BillWatch.Core.Configuration;
-using BillWatch.Services;
-using BillWatch.ViewModels;
+using FullWorth.Core.Configuration;
+using FullWorth.Services;
+using FullWorth.ViewModels;
 using Microsoft.Extensions.Logging;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public static class MauiProgram
 {
     private const string ApiBaseUrlMetadataName =
-        "BillWatchApiBaseUrl";
+        "FullWorthApiBaseUrl";
 
     public static MauiApp CreateMauiApp()
     {
@@ -37,7 +37,7 @@ public static class MauiProgram
                     GetApiBaseAddress()
             });
 
-        builder.Services.AddSingleton<BillWatchApiClient>();
+        builder.Services.AddSingleton<FullWorthApiClient>();
         builder.Services.AddSingleton<AuthSession>();
         builder.Services.AddSingleton<AuthenticationService>();
         builder.Services.AddSingleton<BillStreamService>();
@@ -93,7 +93,7 @@ public static class MauiProgram
             false;
 #endif
 
-        return BillWatchApiEndpoint.Parse(
+        return FullWorthApiEndpoint.Parse(
             configuredValue,
             allowLocalDevelopmentEndpoint);
     }

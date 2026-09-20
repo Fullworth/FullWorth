@@ -1,7 +1,7 @@
-﻿using BillWatch.Services;
+﻿using FullWorth.Services;
 using Microsoft.Maui.Controls.Shapes;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public sealed class ActivityPage : ContentPage
 {
@@ -35,7 +35,7 @@ public sealed class ActivityPage : ContentPage
 
         SetDynamicResource(
             StyleProperty,
-            "BillWatchPageStyle");
+            "FullWorthPageStyle");
 
         _loadingIndicator =
             new ActivityIndicator
@@ -181,7 +181,7 @@ public sealed class ActivityPage : ContentPage
             new Label
             {
                 Text =
-                    "BillWatch",
+                    "FullWorth",
 
                 FontSize =
                     21,
@@ -245,7 +245,7 @@ public sealed class ActivityPage : ContentPage
             new Label
             {
                 Text =
-                    "Important changes BillWatch has detected across your bills."
+                    "Important changes FullWorth has detected across your bills."
             };
 
         subtitle.SetDynamicResource(
@@ -314,12 +314,12 @@ public sealed class ActivityPage : ContentPage
         catch (SessionExpiredException)
         {
             ShowError(
-                "Your BillWatch session expired. Please sign in again.");
+                "Your FullWorth session expired. Please sign in again.");
         }
         catch (HttpRequestException)
         {
             ShowError(
-                "BillWatch couldn't load your activity right now.");
+                "FullWorth couldn't load your activity right now.");
         }
         catch (Exception)
         {
@@ -726,12 +726,12 @@ public sealed class ActivityPage : ContentPage
         catch (SessionExpiredException)
         {
             ShowError(
-                "Your BillWatch session expired. Please sign in again.");
+                "Your FullWorth session expired. Please sign in again.");
         }
         catch
         {
             ShowError(
-                "BillWatch couldn't open this bill.");
+                "FullWorth couldn't open this bill.");
         }
     }
 
@@ -750,12 +750,12 @@ public sealed class ActivityPage : ContentPage
         catch (SessionExpiredException)
         {
             ShowError(
-                "Your BillWatch session expired. Please sign in again.");
+                "Your FullWorth session expired. Please sign in again.");
         }
         catch
         {
             ShowError(
-                "BillWatch couldn't open your bank connections.");
+                "FullWorth couldn't open your bank connections.");
         }
     }
 
@@ -786,12 +786,12 @@ public sealed class ActivityPage : ContentPage
         catch (SessionExpiredException)
         {
             ShowError(
-                "Your BillWatch session expired. Please sign in again.");
+                "Your FullWorth session expired. Please sign in again.");
         }
         catch
         {
             ShowError(
-                "BillWatch couldn't dismiss this alert.");
+                "FullWorth couldn't dismiss this alert.");
         }
     }
 
@@ -840,7 +840,7 @@ public sealed class ActivityPage : ContentPage
             new Label
             {
                 Text =
-                    "When BillWatch detects a meaningful bill change or monitoring problem, you'll see it here.",
+                    "When FullWorth detects a meaningful bill change or monitoring problem, you'll see it here.",
 
                 HorizontalTextAlignment =
                     TextAlignment.Center

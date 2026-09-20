@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace BillWatch.Converters;
+namespace FullWorth.Converters;
 
 public sealed class InvertedBoolConverter : IValueConverter
 {

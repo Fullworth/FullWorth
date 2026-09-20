@@ -1,7 +1,7 @@
-﻿using BillWatch.Services;
-using BillWatch.ViewModels;
+﻿using FullWorth.Services;
+using FullWorth.ViewModels;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public partial class BillsPage : ContentPage
 {

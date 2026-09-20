@@ -1,6 +1,6 @@
-﻿using BillWatch.Core.Models;
+﻿using FullWorth.Core.Models;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class DevelopmentDataService
 {

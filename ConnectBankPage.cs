@@ -1,6 +1,6 @@
-﻿using BillWatch.ViewModels;
+﻿using FullWorth.ViewModels;
 
-namespace BillWatch;
+namespace FullWorth;
 
 public sealed class ConnectBankPage : ContentPage
 {
@@ -21,7 +21,7 @@ public sealed class ConnectBankPage : ContentPage
 
         SetDynamicResource(
             StyleProperty,
-            "BillWatchPageStyle");
+            "FullWorthPageStyle");
 
         var backButton =
             new Button
@@ -59,7 +59,7 @@ public sealed class ConnectBankPage : ContentPage
             new Label
             {
                 Text =
-                    "Securely connect and manage the accounts BillWatch uses to monitor recurring bills."
+                    "Securely connect and manage the accounts FullWorth uses to monitor recurring bills."
             };
 
         subtitle.SetDynamicResource(
@@ -132,7 +132,7 @@ public sealed class ConnectBankPage : ContentPage
             new Label
             {
                 Text =
-                    "BillWatch uses transaction history to detect recurring bills and monitor changes. Your bank credentials are handled by Plaid.",
+                    "FullWorth uses transaction history to detect recurring bills and monitor changes. Your bank credentials are handled by Plaid.",
 
                 HorizontalTextAlignment =
                     TextAlignment.Center
@@ -508,7 +508,7 @@ public sealed class ConnectBankPage : ContentPage
             new Label
             {
                 Text =
-                    "BillWatch never receives or stores your bank username or password. Authentication happens through Plaid. Disconnecting removes BillWatch's ability to continue syncing that bank connection."
+                    "FullWorth never receives or stores your bank username or password. Authentication happens through Plaid. Disconnecting removes FullWorth's ability to continue syncing that bank connection."
             };
 
         privacyDescription.SetDynamicResource(
@@ -616,7 +616,7 @@ public sealed class ConnectBankPage : ContentPage
         var confirmed =
             await DisplayAlertAsync(
                 "Disconnect bank",
-                $"Disconnect {connection.InstitutionName}? BillWatch will stop syncing this connection.",
+                $"Disconnect {connection.InstitutionName}? FullWorth will stop syncing this connection.",
                 "Disconnect",
                 "Cancel");
 

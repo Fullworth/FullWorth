@@ -2,20 +2,20 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace BillWatch.Services;
+namespace FullWorth.Services;
 
 public sealed class AuthenticationService
 {
     private static readonly TimeSpan RefreshBeforeExpiration =
         TimeSpan.FromMinutes(1);
 
-    private readonly BillWatchApiClient _apiClient;
+    private readonly FullWorthApiClient _apiClient;
     private readonly AuthSession _authSession;
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public AuthenticationService(
-        BillWatchApiClient apiClient,
+        FullWorthApiClient apiClient,
         AuthSession authSession,
         HttpClient httpClient)
     {
