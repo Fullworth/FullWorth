@@ -652,63 +652,19 @@
 
     private string? _errorMessage;
 
-    private bool HasActiveConnection =>
-        _connections.Any(
-            connection =>
-                connection.Status == 0);
+    private bool HasActiveConnection { get; set; }
 
-    private bool HasConnectionNeedingAttention =>
-        _connections.Any(
-            connection =>
-                connection.Status == 1);
+    private bool HasConnectionNeedingAttention { get; set; }
 
-    private bool IsWaitingForFirstSync =>
-        _connections.Any(
-            connection =>
-                connection.Status == 0 &&
-                connection.LastSuccessfulSyncAtUtc is null);
+    private bool IsWaitingForFirstSync { get; set; }
 
-    private DateTimeOffset?
-        LatestSuccessfulSync =>
-            _connections
-                .Where(
-                    connection =>
-                        connection.Status == 0 &&
-                        connection.LastSuccessfulSyncAtUtc
-                            .HasValue)
-                .Select(
-                    connection =>
-                        connection.LastSuccessfulSyncAtUtc)
-                .OrderByDescending(
-                    value =>
-                        value)
-                .FirstOrDefault();
+    private DateTimeOffset? LatestSuccessfulSync { get; set; }
 
-    private decimal CurrentTotal =>
-        _billStreams.Sum(
-            bill =>
-                Math.Max(
-                    bill.CurrentAmount,
-                    0m));
+    private decimal CurrentTotal { get; set; }
 
-    private int BillsAbovePriorAverage =>
-        _billStreams.Count(
-            bill =>
-                bill.PreviousAverage > 0m &&
-                bill.CurrentAmount >
-                    bill.PreviousAverage);
+    private int BillsAbovePriorAverage { get; set; }
 
-    private BillStreamViewModel?
-        LargestIncrease =>
-            _billStreams
-                .Where(
-                    bill =>
-                        bill.PreviousAverage > 0m &&
-                        bill.CurrentAmount >
-                            bill.PreviousAverage)
-                .OrderByDescending(
-                    GetDifference)
-                .FirstOrDefault();
+    private BillStreamViewModel? LargestIncrease { get; set; }
 
     protected override async Task
         OnAfterRenderAsync(
@@ -827,6 +783,67 @@
                         bill.IsActive)
                 .ToList()
             ?? [];
+
+        UpdateOverviewSummaries();
+    }
+
+    private void UpdateOverviewSummaries()
+    {
+        HasActiveConnection =
+            _connections.Any(
+                connection =>
+                    connection.Status == 0);
+
+        HasConnectionNeedingAttention =
+            _connections.Any(
+                connection =>
+                    connection.Status == 1);
+
+        IsWaitingForFirstSync =
+            _connections.Any(
+                connection =>
+                    connection.Status == 0 &&
+                    connection.LastSuccessfulSyncAtUtc is null);
+
+        LatestSuccessfulSync =
+            _connections
+                .Where(
+                    connection =>
+                        connection.Status == 0 &&
+                        connection.LastSuccessfulSyncAtUtc
+                            .HasValue)
+                .Select(
+                    connection =>
+                        connection.LastSuccessfulSyncAtUtc)
+                .OrderByDescending(
+                    value =>
+                        value)
+                .FirstOrDefault();
+
+        CurrentTotal =
+            _billStreams.Sum(
+                bill =>
+                    Math.Max(
+                        bill.CurrentAmount,
+                        0m));
+
+        BillsAbovePriorAverage =
+            _billStreams.Count(
+                bill =>
+                    bill.PreviousAverage > 0m &&
+                    bill.CurrentAmount >
+                        bill.PreviousAverage);
+
+        LargestIncrease =
+            _billStreams
+                .Where(
+                    bill =>
+                        bill.PreviousAverage > 0m &&
+                        bill.CurrentAmount >
+                            bill.PreviousAverage)
+                .OrderByDescending(
+                    GetDifference)
+                .FirstOrDefault();
     }
 
     private static decimal GetDifference(
