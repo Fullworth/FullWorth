@@ -707,24 +707,47 @@
             var module =
                 await GetLocalTimeModuleAsync();
 
-            foreach (var connection
-                in _connections)
-            {
-                var createdText =
-                    await module.InvokeAsync<
-                        string?>(
-                        "formatLocalDate",
-                        connection.CreatedAtUtc);
+            var timestampInputs =
+                _connections
+                    .Select(
+                        connection =>
+                            new object?[]
+                            {
+                                connection.CreatedAtUtc,
+                                connection.LastSuccessfulSyncAtUtc
+                            })
+                    .ToArray();
 
-                if (!string.IsNullOrWhiteSpace(
-                    createdText))
+            var formattedTimestamps =
+                await module.InvokeAsync<
+                    string?[][]>(
+                    "formatConnectionTimestamps",
+                    new object?[]
+                    {
+                        timestampInputs
+                    });
+
+            for (var index = 0;
+                 index < _connections.Count &&
+                 index < formattedTimestamps.Length;
+                 index++)
+            {
+                var connection =
+                    _connections[index];
+
+                var formatted =
+                    formattedTimestamps[index];
+
+                if (formatted.Length > 0 &&
+                    !string.IsNullOrWhiteSpace(
+                        formatted[0]))
                 {
                     connection.CreatedDisplayText =
-                        createdText;
+                        formatted[0]!;
                 }
 
                 if (connection.LastSuccessfulSyncAtUtc
-                    is not DateTimeOffset lastSync)
+                    is null)
                 {
                     connection.LastSyncDisplayText =
                         L["Not synced yet"].Value;
@@ -732,17 +755,12 @@
                     continue;
                 }
 
-                var lastSyncText =
-                    await module.InvokeAsync<
-                        string?>(
-                        "formatLocalDateTime",
-                        lastSync);
-
-                if (!string.IsNullOrWhiteSpace(
-                    lastSyncText))
+                if (formatted.Length > 1 &&
+                    !string.IsNullOrWhiteSpace(
+                        formatted[1]))
                 {
                     connection.LastSyncDisplayText =
-                        L["Last sync {0}", lastSyncText].Value;
+                        L["Last sync {0}", formatted[1]!].Value;
                 }
             }
         }
