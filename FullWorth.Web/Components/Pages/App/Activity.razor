@@ -96,9 +96,23 @@
     }
     else
     {
+        var unreadCount =
+            _alerts.Count(
+                alert =>
+                    !alert.IsRead);
+
+        var needsAttentionCount =
+            _alerts.Count(
+                alert =>
+                    IsAttentionSeverity(
+                        alert.Severity));
+
+        var filteredAlerts =
+            FilteredAlerts;
+
         <AlertSummary Total="@_alerts.Count"
-                      Unread="@UnreadCount"
-                      NeedsAttention="@NeedsAttentionCount" />
+                      Unread="@unreadCount"
+                      NeedsAttention="@needsAttentionCount" />
 
         <div class="activity-toolbar">
             <div class="activity-filters">
@@ -122,7 +136,7 @@
                     @L["Unread"]
 
                     <span>
-                        @UnreadCount
+                        @unreadCount
                     </span>
                 </button>
 
@@ -134,7 +148,7 @@
                     @L["Needs attention"]
 
                     <span>
-                        @NeedsAttentionCount
+                        @needsAttentionCount
                     </span>
                 </button>
             </div>
@@ -172,7 +186,7 @@
                 </p>
             </section>
         }
-        else if (FilteredAlerts.Count == 0)
+        else if (filteredAlerts.Count == 0)
         {
             <section class="alerts-filter-empty">
                 <strong>
@@ -188,7 +202,7 @@
         {
             <section class="alert-list">
                 @foreach (var alert
-                    in FilteredAlerts)
+                    in filteredAlerts)
                 {
                     <AlertCard @key="alert.Id"
                                Alert="@ToCardViewModel(alert)"
@@ -223,17 +237,6 @@
 
     private ActivityFilter _filter =
         ActivityFilter.All;
-
-    private int UnreadCount =>
-        _alerts.Count(
-            alert =>
-                !alert.IsRead);
-
-    private int NeedsAttentionCount =>
-        _alerts.Count(
-            alert =>
-                IsAttentionSeverity(
-                    alert.Severity));
 
     private IReadOnlyList<
         BillAlertViewModel>
