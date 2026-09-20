@@ -642,25 +642,31 @@
             var module =
                 await GetBffModuleAsync();
 
-            var connectionResult =
-                await module
+            var connectionTask =
+                module
                     .InvokeAsync<
                         BankConnectionViewModel[]>(
-                        "getBankConnections");
+                        "getBankConnections")
+                    .AsTask();
 
-            var accountResult =
-                await module
+            var accountTask =
+                module
                     .InvokeAsync<
                         BankAccountViewModel[]>(
-                        "getBankAccounts");
+                        "getBankAccounts")
+                    .AsTask();
+
+            await Task.WhenAll(
+                connectionTask,
+                accountTask);
 
             _connections =
-                connectionResult?
+                connectionTask.Result?
                     .ToList()
                 ?? [];
 
             _accounts =
-                accountResult?
+                accountTask.Result?
                     .Where(
                         account =>
                             account.IsActive)
