@@ -200,6 +200,76 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public void StatementUpload_RemainsBrowserFileBasedAndNoStore()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var uploadPanel =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Shared",
+                    "StatementUploadPanel.razor"));
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        Assert.Contains(
+            "accept=\".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png\"",
+            uploadPanel,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "private const long MaximumFileSize = 15L * 1024 * 1024;",
+            uploadPanel,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "new FormData()",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "formData.append(",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"X-CSRF-TOKEN\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "cache:",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"no-store\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "FileReader",
+            bff,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "arrayBuffer(",
+            bff,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task InstallHelper_IsPublicAndKeepsWorkerUpdatesOutOfHttpCache()
     {
         using var factory =
