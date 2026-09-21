@@ -23,8 +23,8 @@
     <header class="page-heading subscription-heading">
         <div>
             <span class="page-kicker">@L["FullWorth access"]</span>
-            <h1>@L["Subscription"]</h1>
-            <p>@L["Choose monthly or yearly access, manage an existing paid plan, or redeem a beta access key."]</p>
+            <h1>@L["Plan & access"]</h1>
+            <p>@L["See how your FullWorth access is provided, manage billing when available, or redeem controlled beta access."]</p>
         </div>
     </header>
 
@@ -44,9 +44,13 @@
     {
         @if (_status?.IsActive == true)
         {
-            <section class="subscription-card subscription-status-card">
+            <section class="subscription-card subscription-status-card fw-subscription-hero">
                 <div class="subscription-card-heading">
-                    <div class="subscription-card-icon active" aria-hidden="true">✓</div>
+                    <div class="subscription-card-icon active" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#check"></use>
+                        </svg>
+                    </div>
 
                     <div>
                         <span class="subscription-state active">@L["Active"]</span>
@@ -116,7 +120,7 @@
 
         @if (_status?.IsActive != true && _status?.BillingAvailable == true && _plans.Count > 0)
         {
-            <section class="subscription-pricing-section">
+            <section class="subscription-pricing-section fw-subscription-pricing">
                 <div class="subscription-section-heading">
                     <span class="page-kicker">@L["Simple pricing"]</span>
                     <h2>@L["Choose how you want to pay"]</h2>
@@ -128,7 +132,7 @@
                     {
                         var isYearly = string.Equals(plan.BillingInterval, "yearly", StringComparison.OrdinalIgnoreCase);
 
-                        <article class="subscription-plan-card @(isYearly && YearlyOffersSavings ? "featured" : null)">
+                        <article class="subscription-plan-card fw-subscription-plan @(isYearly && YearlyOffersSavings ? "featured" : null)">
                             @if (isYearly && YearlyOffersSavings)
                             {
                                 <span class="subscription-plan-badge">@L["Best value"]</span>
@@ -180,9 +184,13 @@
         }
         else if (_status?.IsActive != true && _status?.BillingAvailable != true)
         {
-            <section class="subscription-card">
+            <section class="subscription-card fw-subscription-unavailable">
                 <div class="subscription-card-heading">
-                    <div class="subscription-card-icon" aria-hidden="true">◇</div>
+                    <div class="subscription-card-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#subscription"></use>
+                        </svg>
+                    </div>
                     <div>
                         <span class="subscription-state">@L["Paid plans not configured"]</span>
                         <h2>@L["FullWorth paid checkout is not available yet"]</h2>
@@ -194,9 +202,13 @@
 
         @if (_status?.IsActive != true)
         {
-            <section class="subscription-card subscription-access-key-card">
+            <section class="subscription-card subscription-access-key-card fw-subscription-beta">
                 <div class="subscription-card-heading">
-                    <div class="subscription-card-icon" aria-hidden="true">⌁</div>
+                    <div class="subscription-card-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#shield"></use>
+                        </svg>
+                    </div>
                     <div>
                         <span class="subscription-state">@L["Beta access"]</span>
                         <h2>@L["Have an access key?"]</h2>

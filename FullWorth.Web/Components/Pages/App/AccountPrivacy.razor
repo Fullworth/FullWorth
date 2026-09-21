@@ -15,15 +15,18 @@
 <link rel="stylesheet" href="/account-privacy.css" />
 
 <div class="app-page">
-    <a class="privacy-back-link" href="/app/account">
-        ← @L["Account"]
+    <a class="privacy-back-link fw-back-link" href="/app/account">
+        <svg class="bw-sprite" aria-hidden="true">
+            <use href="/assets/billwatch-sprites.svg#chevron-left"></use>
+        </svg>
+        @L["Account"]
     </a>
 
     <header class="page-heading">
         <div>
-            <span class="page-kicker">@L["Your data"]</span>
+            <span class="page-kicker">@L["Data ownership"]</span>
             <h1>@L["Data & privacy"]</h1>
-            <p>@L["Export the FullWorth data associated with your account or permanently delete it."]</p>
+            <p>@L["See what FullWorth keeps, take a portable copy of your data, or permanently remove your account."]</p>
         </div>
     </header>
 
@@ -34,41 +37,83 @@
         </div>
     }
 
-    <section class="privacy-management-card">
-        <div class="privacy-management-icon">↓</div>
+    <section class="fw-privacy-hero">
+        <div class="fw-privacy-hero-copy">
+            <div class="fw-privacy-hero-icon" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#shield"></use>
+                </svg>
+            </div>
 
-        <div class="privacy-management-copy">
-            <span class="panel-kicker">@L["Portable data"]</span>
-            <h2>@L["Export your FullWorth data"]</h2>
-            <p>@L["Download a JSON copy of the financial records FullWorth stores for your account."]</p>
-
-            <div class="privacy-facts">
-                <span>✓ @L["Bank connections and masked accounts"]</span>
-                <span>✓ @L["Transactions, Bill Streams and alerts"]</span>
-                <span>✓ @L["Statement metadata and extracted bill history"]</span>
-                <span>✓ @L["No protected Plaid access tokens"]</span>
-                <span>✓ @L["No internal statement storage paths"]</span>
+            <div>
+                <span class="page-kicker">@L["Your data stays under your control"]</span>
+                <h2>@L["Financial visibility without financial control."]</h2>
+                <p>@L["FullWorth uses your connected financial data to discover recurring bills and explain supported changes. It does not move money or expose protected provider tokens to the client."]</p>
             </div>
         </div>
 
-        <button type="button"
-                class="privacy-primary-button"
-                disabled="@_isExporting"
-                @onclick="ExportDataAsync">
-            @(_isExporting ? L["Preparing export…"] : L["Download data"])
-        </button>
-    </section>
+        <div class="fw-privacy-trust-grid">
+            <div>
+                <span>@L["Ownership"]</span>
+                <strong>@L["User-scoped"]</strong>
+                <small>@L["Financial records stay scoped to your account"]</small>
+            </div>
 
-    <section class="privacy-explanation-card">
-        <div>
-            <span class="panel-kicker">@L["What FullWorth keeps"]</span>
-            <h2>@L["Data exists to explain your bills."]</h2>
+            <div>
+                <span>@L["Bank credentials"]</span>
+                <strong>@L["Not stored"]</strong>
+                <small>@L["Plaid handles bank sign-in credentials"]</small>
+            </div>
+
+            <div>
+                <span>@L["Money movement"]</span>
+                <strong>@L["None"]</strong>
+                <small>@L["FullWorth does not transfer or pay money"]</small>
+            </div>
         </div>
-
-        <p>@L["Transactions are used to discover recurring bills. Statements and extracted line items provide evidence for what changed and why. Alerts surface meaningful findings. FullWorth does not use this data to move money."]</p>
     </section>
 
-    <section class="danger-zone">
+    <section class="fw-privacy-control-grid">
+        <article class="privacy-management-card fw-privacy-export-card">
+            <div class="privacy-management-icon" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#document"></use>
+                </svg>
+            </div>
+
+            <div class="privacy-management-copy">
+                <span class="panel-kicker">@L["Portable data"]</span>
+                <h2>@L["Export your FullWorth data"]</h2>
+                <p>@L["Download a JSON copy of the financial records FullWorth stores for your account."]</p>
+
+                <div class="privacy-facts">
+                    <span>✓ @L["Bank connections and masked accounts"]</span>
+                    <span>✓ @L["Transactions, Bill Streams and alerts"]</span>
+                    <span>✓ @L["Statement metadata and extracted bill history"]</span>
+                    <span>✓ @L["No protected Plaid access tokens"]</span>
+                    <span>✓ @L["No internal statement storage paths"]</span>
+                </div>
+            </div>
+
+            <button type="button"
+                    class="privacy-primary-button"
+                    disabled="@_isExporting"
+                    @onclick="ExportDataAsync">
+                @(_isExporting ? L["Preparing export…"] : L["Download data"])
+            </button>
+        </article>
+
+        <article class="privacy-explanation-card fw-privacy-explanation">
+            <div>
+                <span class="panel-kicker">@L["Why FullWorth keeps data"]</span>
+                <h2>@L["Evidence is what makes explanations trustworthy."]</h2>
+            </div>
+
+            <p>@L["Transactions are used to discover recurring bills. Statements and extracted line items provide evidence for what changed and why. Alerts surface meaningful findings. FullWorth does not use this data to move money."]</p>
+        </article>
+    </section>
+
+    <section class="danger-zone fw-privacy-danger">
         <div class="danger-zone-heading">
             <div class="danger-icon">!</div>
 

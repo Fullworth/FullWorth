@@ -99,6 +99,7 @@ jobs:
             ".env.production.example",
             "AI_SHADOW_CORPUS.md",
             "BILLWATCH_CONTEXT.md",
+            "FULLWORTH_CONTEXT.md",
             "Dockerfile",
             "Dockerfile.web",
             "README.md",

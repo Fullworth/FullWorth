@@ -42,7 +42,7 @@ When sources disagree, use this order:
 1. Current source code.
 2. Exact-head CI results for the branch/commit being considered.
 3. Verified production evidence.
-4. `BILLWATCH_CONTEXT.md` while that legacy filename remains required by continuation tooling.
+4. `FULLWORTH_CONTEXT.md` while that legacy filename remains required by continuation tooling.
 5. This roadmap.
 6. Older planning notes, issue text, stale PR descriptions, and historical chat summaries.
 
@@ -269,11 +269,37 @@ Recent merged development work includes:
 
 ## 4.4 Verified production state
 
-The last explicitly verified guarded production deployment remains:
+The current explicitly verified guarded production deployment is:
 
-`7824cc5f6ddb0231c986a793f15654d0314a8ad5`
+`cbcf261e13636f0330cb9d7be2ce413871e413aa`
 
-A newer commit existing on `master` does not automatically mean it has been verified as deployed.
+Verified on 2026-09-21:
+
+- exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644;
+- guarded production deployment passed;
+- encrypted pre-replacement recovery snapshot beginning `7449ac243947...` was created;
+- API, Web, database, and edge are healthy;
+- release marker and running image revisions match the deployed master release;
+- public readiness and HTTP security-boundary checks passed;
+- private-beta host readiness passed;
+- backup timer and runtime watchdog are active;
+- subscription enforcement remains disabled;
+- non-destructive direct-API smoke passed;
+- non-destructive authenticated Web/BFF smoke passed.
+
+Still not proven by that deployment:
+
+- objective cross-user isolation with a second controlled identity and real controlled foreign-owned fixture;
+- controlled Plaid lifecycle plus human Hosted Link completion;
+- representative statement semantic/OCR acceptance;
+- account-deletion proof;
+- controlled reboot proof;
+- external alert receipt;
+- clean-host restore against the real off-host repository;
+- provider-enforced immutable storage;
+- qualified legal review.
+
+A local-only VPS commit reported as `f9000be` contains a Web-smoke newline-handling fix, but it is not pushed, merged, or deployed and therefore is not repository or production authority.
 
 Production truth must always distinguish:
 
@@ -281,7 +307,7 @@ Production truth must always distinguish:
 - exact-head CI passed;
 - guarded deployment completed;
 - production verification completed;
-- human/provider acceptance completed.
+- human/provider/operator acceptance completed.
 
 Do not collapse these into one status.
 
@@ -373,7 +399,7 @@ Do not delete:
 
 Keep:
 
-- `BILLWATCH_CONTEXT.md` until continuation tooling no longer depends on the legacy filename;
+- `FULLWORTH_CONTEXT.md` until continuation tooling no longer depends on the legacy filename;
 - this roadmap;
 - operational/recovery documentation that is actively referenced;
 - revenue-readiness documentation;
@@ -2024,91 +2050,100 @@ Persistent identifiers require explicit migration.
 
 # 30. Critical path from today
 
-The recommended next sequence is:
+The current release is already deployed and healthy. The next sequence is acceptance-first rather than feature-first.
 
 ## Step 1
 
-Finish #155 CI.
+Review and safely upstream the local-only Web-smoke newline fix reported as `f9000be`.
 
-If green:
+Requirements:
 
-- merge;
-- delete stale branch when possible.
-
-If red:
-
-- diagnose before moving on.
+- obtain the exact diff from the VPS or reproduce the change deliberately in a repository branch;
+- do not treat the local commit as authoritative until reviewed;
+- merge through `development` only after the full exact-head CI gate;
+- do not redeploy merely for a smoke-harness-only fix unless production runtime behavior actually depends on it.
 
 ## Step 2
 
-Get exact-head CI on `feature/experience-performance-profile`.
+Run objective cross-user ownership proof against release `cbcf261e13636f0330cb9d7be2ce413871e413aa`.
 
-If the prior PR is no longer open because the branch was rewritten:
+Use:
 
-- create a replacement PR from the current branch;
-- do not rely on the old CI result.
+- a second controlled identity;
+- real controlled foreign-owned Bill Stream/statement/resource identifiers;
+- expected 404/ownership-denial behavior.
 
-Merge only after exact final head passes.
+Do not substitute guessed IDs.
 
 ## Step 3
 
-Cut a coherent performance/cleanup promotion candidate from `development` once current work stabilizes.
+Run the controlled Plaid lifecycle.
 
-Do not promote merely because `development` is ahead.
+Verify:
 
-Confirm:
-
-- no open blocker;
-- exact-head CI;
-- branch diff understood.
+- Hosted Link opens;
+- a suitable controlled connection completes;
+- connection becomes Active where expected;
+- transaction sync occurs;
+- update/reconnect behavior works;
+- human Hosted Link completion is observed.
 
 ## Step 4
 
-Return to PWA parity matrix.
+With explicit operator approval, run the controlled statement lifecycle.
 
-Highest-value manual checks:
+Use representative operator-known fixtures.
 
-- Android installed PWA;
-- login/session refresh;
-- Plaid popup/return;
-- Transactions;
-- Bills/Bill Detail;
-- statement upload;
-- Settings;
-- navigation/back behavior.
+Verify:
+
+- upload;
+- classification/extraction;
+- OCR where applicable;
+- Bill Stream matching;
+- comparison;
+- explanation;
+- alert/state outcome;
+- ownership.
 
 ## Step 5
 
-Address any parity/performance defects with focused branches.
+Run disposable account-deletion proof against the same release.
 
 ## Step 6
 
-When parity is proven, create dedicated MAUI retirement milestone.
+Run controlled reboot proof.
+
+Confirm:
+
+- services recover;
+- readiness returns;
+- release marker remains correct;
+- backup/watchdog timers remain healthy.
 
 ## Step 7
 
-Resume recurring-detection quality:
-
-- cadence classes;
-- duplicate prevention;
-- amount tolerance;
-- confidence.
+Run independent external alert receipt proof.
 
 ## Step 8
 
-Resume statement “why” accuracy.
+Run clean-host recovery against the actual off-host encrypted repository.
 
 ## Step 9
 
-Execute real-environment private-beta gates.
+Configure and prove provider-enforced immutable/WORM/Object-Lock-equivalent protection.
 
 ## Step 10
 
-Run Internal Beta 0 on real controlled bills.
+Combine same-release evidence and run Internal Beta 0 on real controlled bills.
 
 ## Step 11
 
-Only after trust metrics are acceptable, expand broader financial-life surfaces and revenue rollout.
+Only after trust metrics and remaining external gates are acceptable:
+
+- invite trusted external beta users;
+- continue PWA parity toward MAUI retirement;
+- resume recurrence-quality and statement-explanation expansion;
+- proceed toward revenue rollout.
 
 ---
 

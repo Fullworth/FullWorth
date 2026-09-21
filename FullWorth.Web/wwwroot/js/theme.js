@@ -1,8 +1,22 @@
 ﻿const storageKey = "billwatch-theme";
+const themeColors = {
+    dark: "#0B1F3B",
+    light: "#F7F8FB"
+};
 
 function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
+
+    const themeColor =
+        document.querySelector(
+            'meta[name="theme-color"]');
+
+    if (themeColor) {
+        themeColor.setAttribute(
+            "content",
+            themeColors[theme]);
+    }
 }
 
 function getSavedTheme() {

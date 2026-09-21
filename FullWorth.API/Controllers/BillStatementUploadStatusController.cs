@@ -147,7 +147,7 @@ public sealed class BillStatementUploadStatusController
         }
 
         var downloadName =
-            $"billwatch-statement-{upload.Id:N}{upload.FileExtension}";
+            $"fullworth-statement-{upload.Id:N}{upload.FileExtension}";
 
         return File(
             statementFile,

@@ -63,7 +63,7 @@ public sealed class AccountController : ControllerBase
 
         Response.Headers.Append(
             "Content-Disposition",
-            "attachment; filename=\"billwatch-data-export.json\"");
+            "attachment; filename=\"fullworth-data-export.json\"");
 
         return Ok(export);
     }

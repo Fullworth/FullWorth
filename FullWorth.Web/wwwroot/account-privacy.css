@@ -302,3 +302,316 @@
         width: 100%;
     }
 }
+
+
+/* FullWorth v2 privacy center */
+
+.app-shell .fw-privacy-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(410px, 0.75fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-privacy-hero-copy {
+    min-height: 250px;
+    padding: 28px 30px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 18px;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 92% 2%, rgba(117, 134, 255, 0.24), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-privacy-hero-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #aeb9ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.app-shell .fw-privacy-hero-icon .bw-sprite {
+    width: 26px;
+    height: 26px;
+}
+
+.app-shell .fw-privacy-hero-copy .page-kicker {
+    color: #96a4ff;
+}
+
+.app-shell .fw-privacy-hero-copy h2 {
+    margin: 6px 0 8px;
+    color: #fff;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    line-height: 1.02;
+    font-weight: 740;
+    letter-spacing: -0.05em;
+}
+
+.app-shell .fw-privacy-hero-copy p {
+    max-width: 650px;
+    margin: 0;
+    color: #a7b1cb;
+    font-size: 0.68rem;
+    line-height: 1.6;
+}
+
+.app-shell .fw-privacy-trust-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.app-shell .fw-privacy-trust-grid > div {
+    min-height: 76px;
+    padding: 15px 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-privacy-trust-grid span {
+    color: var(--fw-muted);
+    font-size: 0.55rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-privacy-trust-grid strong {
+    margin-top: 6px;
+    color: var(--fw-ink);
+    font-size: 0.88rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-privacy-trust-grid small {
+    margin-top: 4px;
+    color: var(--fw-faint);
+    font-size: 0.51rem;
+    line-height: 1.4;
+}
+
+.app-shell .fw-privacy-control-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+    gap: 12px;
+}
+
+.app-shell .fw-privacy-export-card,
+.app-shell .fw-privacy-explanation {
+    margin: 0;
+    border-color: var(--fw-line);
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-privacy-export-card {
+    min-height: 230px;
+    padding: 24px;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    border-radius: 24px;
+}
+
+.app-shell .fw-privacy-export-card .privacy-management-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-privacy-export-card .privacy-management-icon .bw-sprite {
+    width: 21px;
+    height: 21px;
+}
+
+.app-shell .fw-privacy-export-card .privacy-management-copy h2,
+.app-shell .fw-privacy-explanation h2 {
+    margin: 5px 0 7px;
+    color: var(--fw-ink);
+    font-size: 1.05rem;
+    font-weight: 740;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-privacy-export-card .privacy-management-copy > p,
+.app-shell .fw-privacy-explanation > p {
+    color: var(--fw-muted);
+    font-size: 0.63rem;
+    line-height: 1.55;
+}
+
+.app-shell .fw-privacy-export-card .privacy-facts {
+    margin-top: 15px;
+    gap: 8px 13px;
+}
+
+.app-shell .fw-privacy-export-card .privacy-facts span {
+    color: var(--fw-faint);
+    font-size: 0.52rem;
+}
+
+.app-shell .fw-privacy-export-card .privacy-primary-button {
+    grid-column: 2;
+    width: fit-content;
+    min-height: 39px;
+    margin-top: 2px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+    font-size: 0.61rem;
+}
+
+.app-shell .fw-privacy-explanation {
+    min-height: 230px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 24px;
+}
+
+.app-shell .fw-privacy-explanation > p {
+    margin-top: 15px;
+}
+
+.app-shell .fw-privacy-danger {
+    padding: 23px 24px;
+    border-color: rgba(217, 83, 74, 0.18);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 96% 0%, rgba(217, 83, 74, 0.09), transparent 35%),
+        var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .fw-privacy-danger .danger-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fw-negative-soft);
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-privacy-danger .danger-kicker {
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-privacy-danger h2 {
+    color: var(--fw-ink);
+    font-size: 1.08rem;
+}
+
+.app-shell .fw-privacy-danger > p {
+    max-width: 760px;
+    color: var(--fw-muted);
+    font-size: 0.62rem;
+}
+
+.app-shell .fw-privacy-danger .delete-consequences {
+    max-width: 760px;
+    padding: 14px 15px;
+    border-color: rgba(217, 83, 74, 0.12);
+    border-radius: 14px;
+    background: rgba(217, 83, 74, 0.035);
+}
+
+.app-shell .fw-privacy-danger .danger-button {
+    min-height: 38px;
+    border-radius: 12px;
+    background: var(--fw-negative-soft);
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-privacy-danger .delete-confirmation {
+    max-width: 680px;
+    padding: 17px;
+    border-radius: 15px;
+    background: rgba(217, 83, 74, 0.04);
+}
+
+.app-shell .fw-privacy-danger .delete-confirmation label {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.app-shell .fw-privacy-danger .delete-confirmation label > span {
+    color: var(--fw-ink-soft);
+    font-size: 0.59rem;
+    font-weight: 710;
+}
+
+.app-shell .fw-privacy-danger .delete-confirmation-input {
+    height: 41px;
+    border-color: rgba(217, 83, 74, 0.2);
+    border-radius: 11px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink);
+    font-size: 0.64rem;
+}
+
+@media (max-width: 960px) {
+    .app-shell .fw-privacy-hero,
+    .app-shell .fw-privacy-control-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-privacy-trust-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .app-shell .fw-privacy-hero-copy {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        padding: 24px 22px;
+    }
+
+    .app-shell .fw-privacy-trust-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-privacy-export-card {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-privacy-export-card .privacy-primary-button {
+        grid-column: 1;
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-privacy-hero {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-privacy-hero-copy,
+    .app-shell .fw-privacy-export-card,
+    .app-shell .fw-privacy-explanation,
+    .app-shell .fw-privacy-danger {
+        border-radius: 20px;
+    }
+
+    .app-shell .fw-privacy-danger {
+        padding: 19px;
+    }
+}

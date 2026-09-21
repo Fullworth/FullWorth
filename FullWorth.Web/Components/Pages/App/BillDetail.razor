@@ -13,9 +13,12 @@
 
 
 <div class="app-page">
-    <a class="detail-back"
+    <a class="detail-back fw-back-link"
        href="/app/bills">
-        ← @L["Bills"]
+        <svg class="bw-sprite" aria-hidden="true">
+            <use href="/assets/billwatch-sprites.svg#chevron-left"></use>
+        </svg>
+        @L["Bills"]
     </a>
 
     @if (_isLoading)
@@ -54,8 +57,8 @@
             FullWorth.Web.Services.ProviderLogoResolver.Resolve(
                 _detail.ProviderName);
 
-        <header class="bill-detail-header">
-            <div class="bill-detail-provider">
+        <section class="fw-detail-hero">
+            <div class="fw-detail-provider-pane">
                 <div class="detail-provider-avatar">
                     @if (!string.IsNullOrWhiteSpace(providerLogoUrl))
                     {
@@ -71,14 +74,14 @@
                     }
                 </div>
 
-                <div>
+                <div class="fw-detail-provider-copy">
                     <span class="page-kicker">
                         @FormatCategory(_detail.Category)
                     </span>
 
                     <h1>@_detail.ProviderName</h1>
 
-                    <div class="detail-status-line">
+                    <div class="fw-detail-provider-meta">
                         <span class="watching-state">
                             <span></span>
                             @L["Watching"]
@@ -90,22 +93,46 @@
                         }
                     </div>
                 </div>
+
+                <div class="fw-detail-current">
+                    <span>@L["Latest transaction"]</span>
+                    <strong>@FormatMoney(_detail.CurrentAmount)</strong>
+
+                    @if (_detail.PreviousAverage > 0m)
+                    {
+                        <small class="@GetDifferenceClass(transactionDifference)">
+                            @FormatDifference(transactionDifference)
+                            @L["vs. prior average"]
+                        </small>
+                    }
+                    else
+                    {
+                        <small>@L["Building comparison history"]</small>
+                    }
+                </div>
             </div>
 
-            <div class="current-bill-amount">
-                <span>@L["Latest transaction"]</span>
+            <div class="fw-detail-evidence-rail">
+                <div>
+                    <span>@L["Prior transaction average"]</span>
+                    <strong>
+                        @(_detail.PreviousAverage > 0m
+                            ? FormatMoney(_detail.PreviousAverage)
+                            : L["Not available"].Value)
+                    </strong>
+                </div>
 
-                <strong>@FormatMoney(_detail.CurrentAmount)</strong>
+                <div>
+                    <span>@L["Processed statements"]</span>
+                    <strong>@_detail.Statements.Count</strong>
+                </div>
 
-                @if (_detail.PreviousAverage > 0m)
-                {
-                    <small class="@GetDifferenceClass(transactionDifference)">
-                        @FormatDifference(transactionDifference)
-                        @L["vs. prior average"]
-                    </small>
-                }
+                <div>
+                    <span>@L["Verified changes"]</span>
+                    <strong>@_detail.Changes.Count</strong>
+                </div>
             </div>
-        </header>
+        </section>
 
         <StatementUploadPanel BillStreamId="@BillStreamId"
                               ProviderName="@_detail.ProviderName"
@@ -113,7 +140,8 @@
 
         @if (latestChange is not null)
         {
-            <section class="@GetDetectedChangeClass(latestChange.AmountDifference)">
+            <section class="fw-detail-change-story">
+                <div class="@GetDetectedChangeClass(latestChange.AmountDifference)">
                 <div class="detected-change-main">
                     <div class="change-eyebrow">
                         @L["Detected statement change"]
@@ -145,9 +173,9 @@
                         <strong>@FormatSignedMoney(latestChange.AnnualizedImpact)</strong>
                     </div>
                 </div>
-            </section>
+                </div>
 
-            <section class="detail-panel explanation-panel">
+                <section class="detail-panel explanation-panel">
                 <div class="panel-heading">
                     <div>
                         <span class="panel-kicker">@L["Why it changed"]</span>
@@ -187,11 +215,12 @@
                         </strong>
                     </div>
                 </div>
+                </section>
             </section>
         }
         else
         {
-            <section class="detail-panel no-explanation-panel">
+            <section class="detail-panel no-explanation-panel fw-detail-unknown">
                 <div class="no-change-icon">?</div>
 
                 <div>
@@ -202,7 +231,7 @@
             </section>
         }
 
-        <div class="detail-grid">
+        <div class="detail-grid fw-detail-history-grid">
             <section class="detail-panel">
                 <div class="panel-heading">
                     <div>

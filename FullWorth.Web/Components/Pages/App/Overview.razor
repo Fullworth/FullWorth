@@ -19,11 +19,11 @@
     <header class="page-heading overview-heading">
         <div>
             <span class="page-kicker">
-                @L["Your bill watch"]
+                @L["FullWorth home"]
             </span>
 
             <h1>
-                @L["Overview"]
+                @L["Financial pulse"]
             </h1>
 
             <p>
@@ -392,118 +392,124 @@
             </div>
         }
 
-        <section class="overview-intro" aria-label="@L["FullWorth status"]">
-            <div class="overview-intro-copy">
-                <span class="overview-status-label">
-                    <span class="overview-status-dot" aria-hidden="true"></span>
+        <section class="fw-pulse" aria-label="@L["FullWorth status"]">
+            <div class="fw-pulse-main">
+                <div class="fw-pulse-state">
+                    <span class="fw-live-dot" aria-hidden="true"></span>
                     @L["Monitoring your recurring bills"]
-                </span>
-                <h2>@L["Your bills, at a glance."]</h2>
-                <p>
-                    @if (BillsAbovePriorAverage == 1)
-                    {
-                        @L["One bill is above its prior transaction average. Review the details before deciding what changed."]
-                    }
-                    else if (BillsAbovePriorAverage > 1)
-                    {
-                        @L["{0} bills are above their prior transaction average. Review the details before deciding what changed.", BillsAbovePriorAverage]
-                    }
-                    else
-                    {
-                        @L["No latest recognized bill amount is above its available prior transaction average."]
-                    }
-                </p>
-                <a class="overview-intro-action" href="/app/bills">
-                    @L["Explore your bills"]
-                    <span aria-hidden="true">→</span>
-                </a>
-            </div>
-            <div class="overview-intro-aside">
-                <span>@L["Last successful bank sync"]</span>
-                @if (LatestSuccessfulSync is not null)
-                {
-                    <strong>
-                        <time datetime="@LatestSuccessfulSync.Value.ToString("O")">
-                            @FormatTimestampFallback(LatestSuccessfulSync.Value)
-                        </time>
-                    </strong>
-                }
-                else
-                {
-                    <strong>@L["Not yet available"]</strong>
-                }
-                <small>@L["FullWorth checks for changes as new transactions arrive."]</small>
-            </div>
-        </section>
+                </div>
 
-        <section class="metric-grid overview-metrics" aria-label="@L["Bill summary"]">
-            <article class="metric-card">
-                <span class="metric-label">
-                    @L["Bills watched"]
+                <span class="fw-pulse-label">
+                    @L["Latest recurring total"]
                 </span>
 
-                <strong class="metric-value">
-                    @_billStreams.Count
-                </strong>
-
-                <span class="metric-footnote">
-                    @L["Active recurring Bill Streams"]
-                </span>
-            </article>
-
-            <article class="metric-card">
-                <span class="metric-label">
-                    @L["Latest charges total"]
-                </span>
-
-                <strong class="metric-value">
+                <strong class="fw-pulse-amount">
                     @FormatMoney(
                         CurrentTotal)
                 </strong>
 
-                <span class="metric-footnote">
-                    @L["Latest recognized charges"]
-                </span>
-            </article>
+                <p class="fw-pulse-summary">
+                    @if (BillsAbovePriorAverage == 1)
+                    {
+                        @L["One recurring bill is currently above its prior transaction average."]
+                    }
+                    else if (BillsAbovePriorAverage > 1)
+                    {
+                        @L["{0} recurring bills are currently above their prior transaction average.", BillsAbovePriorAverage]
+                    }
+                    else
+                    {
+                        @L["Your latest recognized recurring charges are currently at or below their available prior averages."]
+                    }
+                </p>
 
-            <article class="metric-card">
-                <span class="metric-label">
-                    @L["Bills to review"]
-                </span>
+                <div class="fw-pulse-actions">
+                    <a class="fw-primary-action" href="/app/bills">
+                        @L["Review bills"]
+                        <span aria-hidden="true">→</span>
+                    </a>
 
-                <strong class="metric-value">
-                    @BillsAbovePriorAverage
-                </strong>
+                    <a class="fw-quiet-action" href="/app/account/transactions">
+                        @L["Transactions"]
+                    </a>
+                </div>
+            </div>
 
-                <span class="metric-footnote">
-                    @L["Above their prior transaction average"]
-                </span>
-            </article>
+            <div class="fw-pulse-rail">
+                <div class="fw-pulse-stat">
+                    <span>@L["Bills watched"]</span>
+                    <strong>@_billStreams.Count</strong>
+                    <small>@L["Active recurring Bill Streams"]</small>
+                </div>
+
+                <div class="fw-pulse-stat @(BillsAbovePriorAverage > 0 ? "is-alert" : "is-calm")">
+                    <span>@L["Current increases"]</span>
+                    <strong>
+                        @FormatMoney(
+                            CurrentIncreaseTotal)
+                    </strong>
+                    <small>
+                        @if (BillsAbovePriorAverage > 0)
+                        {
+                            @L["Across {0} bills to review", BillsAbovePriorAverage]
+                        }
+                        else
+                        {
+                            @L["No increases to review"]
+                        }
+                    </small>
+                </div>
+
+                <div class="fw-pulse-stat">
+                    <span>@L["Annualized impact"]</span>
+                    <strong>
+                        @FormatMoney(
+                            AnnualizedIncreaseTotal)
+                    </strong>
+                    <small>@L["If current increases persisted for 12 months"]</small>
+                </div>
+
+                <div class="fw-sync-line">
+                    <span>@L["Last successful bank sync"]</span>
+
+                    @if (LatestSuccessfulSync is not null)
+                    {
+                        <strong>
+                            <time datetime="@LatestSuccessfulSync.Value.ToString("O")">
+                                @FormatTimestampFallback(
+                                    LatestSuccessfulSync.Value)
+                            </time>
+                        </strong>
+                    }
+                    else
+                    {
+                        <strong>@L["Not yet available"]</strong>
+                    }
+                </div>
+            </div>
         </section>
 
-        <section class="dashboard-grid">
-            <article class="app-panel bills-panel">
-                <div class="panel-heading">
+        <section class="fw-overview-grid">
+            <article class="fw-watchlist">
+                <div class="fw-section-heading">
                     <div>
                         <span class="panel-kicker">
                             @L["Recurring bills"]
                         </span>
 
                         <h2>
-                            @L["Your bill watchlist"]
+                            @L["Your watchlist"]
                         </h2>
                     </div>
 
                     <a href="/app/bills"
-                       class="text-action">
+                       class="fw-inline-action">
                         @L["View all"]
-                        <span aria-hidden="true">
-                            →
-                        </span>
+                        <span aria-hidden="true">→</span>
                     </a>
                 </div>
 
-                <div class="bill-list">
+                <div class="fw-bill-list">
                     @foreach (var bill
                         in _billStreams
                             .OrderByDescending(
@@ -515,14 +521,13 @@
                             GetDifference(
                                 bill);
 
-                        <a class="bill-row"
+                        <a class="fw-bill-row"
                            href="@($"/app/bills/{bill.Id}")">
-
-                            <div class="bill-avatar">
+                            <div class="fw-bill-logo">
                                 <ProviderLogo ProviderName="@bill.ProviderName" />
                             </div>
 
-                            <div class="bill-info">
+                            <div class="fw-bill-copy">
                                 <strong>
                                     @bill.ProviderName
                                 </strong>
@@ -533,7 +538,7 @@
                                 </span>
                             </div>
 
-                            <div class="bill-amount">
+                            <div class="fw-bill-value">
                                 <strong>
                                     @FormatMoney(
                                         bill.CurrentAmount)
@@ -554,79 +559,137 @@
                                     </span>
                                 }
                             </div>
+
+                            <span class="fw-row-chevron"
+                                  aria-hidden="true">›</span>
                         </a>
                     }
                 </div>
             </article>
 
-            <aside class="app-panel insight-panel">
+            <aside class="fw-signal-card">
                 @if (LargestIncrease is not null)
                 {
                     var increase =
                         GetDifference(
                             LargestIncrease);
 
-                    <span class="panel-kicker">
-                        @L["Largest current increase"]
-                    </span>
+                    <div class="fw-signal-top">
+                        <span class="fw-signal-label">
+                            @L["Needs attention"]
+                        </span>
 
-                    <div class="insight-provider">
-                        @LargestIncrease.ProviderName
+                        <span class="fw-signal-count">
+                            @BillsAbovePriorAverage
+                        </span>
                     </div>
 
-                    <div class="insight-change">
+                    <div class="fw-signal-provider">
+                        <div class="fw-signal-logo">
+                            <ProviderLogo ProviderName="@LargestIncrease.ProviderName" />
+                        </div>
+
+                        <div>
+                            <span>@L["Largest current increase"]</span>
+                            <strong>@LargestIncrease.ProviderName</strong>
+                        </div>
+                    </div>
+
+                    <div class="fw-signal-change">
                         +@FormatMoney(
                             increase)
                     </div>
 
-                    <span class="insight-period">
+                    <span class="fw-signal-period">
                         @L["above its prior transaction average"]
                     </span>
 
-                    <div class="annual-impact">
-                        <span>
-                            @L["Annualized difference"]
-                        </span>
-
+                    <div class="fw-signal-impact">
+                        <span>@L["Annualized difference"]</span>
                         <strong>
                             +@FormatMoney(
                                 increase * 12m)
                         </strong>
                     </div>
 
-                    <p class="evidence-note">
-                        @L["Transaction history confirms that the amount changed. Provider evidence is needed before FullWorth can responsibly explain why."]
+                    <p>
+                        @L["Transaction history confirms the amount changed. FullWorth will only explain why when provider evidence supports it."]
                     </p>
 
-                    <a class="primary-action"
+                    <a class="fw-signal-action"
                        href="@($"/app/bills/{LargestIncrease.Id}")">
-                        @L["Review bill"]
-                        <span aria-hidden="true">
-                            →
-                        </span>
+                        @L["Review evidence"]
+                        <span aria-hidden="true">→</span>
                     </a>
                 }
                 else
                 {
-                    <span class="panel-kicker">
-                        @L["Current status"]
-                    </span>
-
-                    <div class="steady-state">
-                        <div class="steady-check">
-                            ✓
-                        </div>
-
-                        <h2>
-                            @L["No current increases found"]
-                        </h2>
-
-                        <p>
-                            @L["None of the latest recognized bill amounts are above their available prior transaction averages."]
-                        </p>
+                    <div class="fw-signal-top">
+                        <span class="fw-signal-label">
+                            @L["Current status"]
+                        </span>
                     </div>
+
+                    <div class="fw-calm-orb" aria-hidden="true">
+                        ✓
+                    </div>
+
+                    <h2>
+                        @L["Everything looks steady"]
+                    </h2>
+
+                    <p>
+                        @L["None of the latest recognized bill amounts are above their available prior transaction averages."]
+                    </p>
+
+                    <a class="fw-signal-action"
+                       href="/app/activity">
+                        @L["View activity"]
+                        <span aria-hidden="true">→</span>
+                    </a>
                 }
             </aside>
+        </section>
+
+        <section class="fw-destination-row" aria-label="@L["Quick links"]">
+            <a href="/app/account/transactions" class="fw-destination">
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#transactions"></use>
+                    </svg>
+                </span>
+                <span>
+                    <strong>@L["Transactions"]</strong>
+                    <small>@L["Review recent account activity"]</small>
+                </span>
+                <span aria-hidden="true">→</span>
+            </a>
+
+            <a href="/app/account" class="fw-destination">
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#bank"></use>
+                    </svg>
+                </span>
+                <span>
+                    <strong>@L["Accounts"]</strong>
+                    <small>@L["Manage bank connections"]</small>
+                </span>
+                <span aria-hidden="true">→</span>
+            </a>
+
+            <a href="/app/activity" class="fw-destination">
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#activity"></use>
+                    </svg>
+                </span>
+                <span>
+                    <strong>@L["Activity"]</strong>
+                    <small>@L["See alerts and important changes"]</small>
+                </span>
+                <span aria-hidden="true">→</span>
+            </a>
         </section>
     }
 </div>
@@ -659,6 +722,10 @@
     private decimal CurrentTotal { get; set; }
 
     private int BillsAbovePriorAverage { get; set; }
+
+    private decimal CurrentIncreaseTotal { get; set; }
+
+    private decimal AnnualizedIncreaseTotal { get; set; }
 
     private BillStreamViewModel? LargestIncrease { get; set; }
 
@@ -829,6 +896,19 @@
                     bill.PreviousAverage > 0m &&
                     bill.CurrentAmount >
                         bill.PreviousAverage);
+
+        CurrentIncreaseTotal =
+            _billStreams
+                .Where(
+                    bill =>
+                        bill.PreviousAverage > 0m &&
+                        bill.CurrentAmount >
+                            bill.PreviousAverage)
+                .Sum(
+                    GetDifference);
+
+        AnnualizedIncreaseTotal =
+            CurrentIncreaseTotal * 12m;
 
         LargestIncrease =
             _billStreams

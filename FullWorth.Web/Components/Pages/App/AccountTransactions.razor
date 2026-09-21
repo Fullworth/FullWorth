@@ -15,15 +15,18 @@
       href="/account-transactions.css" />
 
 <div class="app-page">
-    <a class="transaction-back-link"
+    <a class="transaction-back-link fw-back-link"
        href="/app/account">
-        ← @L["Account"]
+        <svg class="bw-sprite" aria-hidden="true">
+            <use href="/assets/billwatch-sprites.svg#chevron-left"></use>
+        </svg>
+        @L["Account"]
     </a>
 
     <header class="page-heading">
         <div>
             <span class="page-kicker">
-                @L["Transaction-first intelligence"]
+                @L["Transaction ledger"]
             </span>
 
             <h1>
@@ -85,83 +88,71 @@
         var filteredTransactions =
             FilteredTransactions;
 
-        <section class="transaction-summary-grid">
-            <article>
-                <span>
-                    @L["Loaded"]
-                </span>
-
-                <strong>
-                    @_transactions.Count
-                </strong>
-
-                <small>
-                    @L["Latest {0} transactions", _transactionLoadLimit]
-                </small>
-            </article>
-
-            <article>
-                <span>
-                    @L["Posted outflow"]
-                </span>
-
+        <section class="fw-transactions-pulse">
+            <div class="fw-transactions-total">
+                <span>@L["Posted outflow"]</span>
                 <strong>
                     @FormatMoney(
                         _postedOutflow)
                 </strong>
-
-                <small>
-                    @L["Across the loaded transaction history"]
-                </small>
-            </article>
-
-            <article>
-                <span>
-                    @L["Pending"]
-                </span>
-
-                <strong>
-                    @_pendingCount
-                </strong>
-
-                <small>
-                    @L["Not yet final"]
-                </small>
-            </article>
-        </section>
-
-        <section class="transaction-toolbar">
-            <div class="transaction-search">
-                <span aria-hidden="true">
-                    ⌕
-                </span>
-
-                <input type="search"
-                       placeholder="@L["Search merchant or transaction"]"
-                       autocomplete="off"
-                       @bind="_searchText"
-                       @bind:event="oninput" />
+                <small>@L["Across the currently loaded transaction history"]</small>
             </div>
 
-            <select class="transaction-account-filter"
-                    @bind="_selectedAccountId">
+            <div class="fw-transactions-stats">
+                <div>
+                    <span>@L["Loaded"]</span>
+                    <strong>@_transactions.Count</strong>
+                    <small>@L["Latest {0} records available in this view", _transactionLoadLimit]</small>
+                </div>
 
-                <option value="">
-                    @L["All accounts"]
-                </option>
-
-                @foreach (var account
-                    in _availableAccounts)
-                {
-                    <option value="@account.Id.ToString("D")">
-                        @GetAccountFilterLabel(
-                            account)
-                    </option>
-                }
-            </select>
+                <div class="@(_pendingCount > 0 ? "has-pending" : string.Empty)">
+                    <span>@L["Pending"]</span>
+                    <strong>@_pendingCount</strong>
+                    <small>@L["Not yet final"]</small>
+                </div>
+            </div>
         </section>
 
-        <div class="transaction-result-line">
+        <section class="fw-transactions-ledger">
+            <div class="fw-transactions-toolbar">
+                <div>
+                    <span class="panel-kicker">@L["Transactions"]</span>
+                    <h2>@L["Account activity"]</h2>
+                </div>
+
+                <div class="transaction-toolbar">
+                    <div class="transaction-search">
+                        <svg class="bw-sprite" aria-hidden="true">
+                            <use href="/assets/billwatch-sprites.svg#search"></use>
+                        </svg>
+
+                        <input type="search"
+                               placeholder="@L["Search merchant or transaction"]"
+                               autocomplete="off"
+                               @bind="_searchText"
+                               @bind:event="oninput" />
+                    </div>
+
+                    <select class="transaction-account-filter"
+                            @bind="_selectedAccountId">
+
+                        <option value="">
+                            @L["All accounts"]
+                        </option>
+
+                        @foreach (var account
+                            in _availableAccounts)
+                        {
+                            <option value="@account.Id.ToString("D")">
+                                @GetAccountFilterLabel(
+                                    account)
+                            </option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="transaction-result-line">
             <span>
                 @GetTransactionsResultLabel(
                     filteredTransactions.Count)
@@ -203,7 +194,9 @@
         {
             <section class="transaction-empty">
                 <div>
-                    ↕
+                    <svg class="bw-sprite" aria-hidden="true">
+                        <use href="/assets/billwatch-sprites.svg#transactions"></use>
+                    </svg>
                 </div>
 
                 <h2>
@@ -302,9 +295,10 @@
             </section>
         }
 
-        <div class="transaction-explanation">
-            @L["Plaid reports purchase/outflow amounts as positive transaction values. FullWorth displays those as money leaving the account and credits as money returning."]
-        </div>
+            <div class="transaction-explanation">
+                @L["Plaid reports purchase/outflow amounts as positive transaction values. FullWorth displays those as money leaving the account and credits as money returning."]
+            </div>
+        </section>
     }
 </div>
 

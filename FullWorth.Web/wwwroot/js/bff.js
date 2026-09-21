@@ -676,7 +676,7 @@ export async function downloadAccountExport() {
             objectUrl;
 
         anchor.download =
-            "billwatch-data-export.json";
+            "fullworth-data-export.json";
 
         anchor.rel =
             "noopener";

@@ -1,0 +1,2985 @@
+/* FullWorth v2
+   Consumer-fintech visual system for the authenticated Web/PWA.
+   This layer deliberately changes composition and hierarchy while preserving behavior. */
+
+.app-shell {
+    --fw-canvas: #f2f4f8;
+    --fw-panel: rgba(255, 255, 255, 0.82);
+    --fw-panel-solid: #ffffff;
+    --fw-panel-muted: #f7f8fb;
+    --fw-line: rgba(17, 24, 39, 0.08);
+    --fw-line-strong: rgba(17, 24, 39, 0.13);
+    --fw-ink: #111522;
+    --fw-ink-soft: #3d4658;
+    --fw-muted: #727c90;
+    --fw-faint: #9ca5b5;
+    --fw-accent: #5567f4;
+    --fw-accent-strong: #3f53e8;
+    --fw-accent-soft: rgba(85, 103, 244, 0.1);
+    --fw-positive: #1e9f68;
+    --fw-positive-soft: rgba(30, 159, 104, 0.11);
+    --fw-negative: #d95f5a;
+    --fw-negative-soft: rgba(217, 95, 90, 0.11);
+    --fw-shadow-soft: 0 18px 50px rgba(27, 39, 72, 0.07);
+    --fw-shadow-mid: 0 28px 80px rgba(27, 39, 72, 0.11);
+    --fw-radius-lg: 28px;
+    --fw-radius-md: 20px;
+    --fw-radius-sm: 14px;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px 0 12px 12px;
+    background:
+        radial-gradient(circle at 67% -18%, rgba(92, 111, 255, 0.14), transparent 33rem),
+        radial-gradient(circle at 100% 42%, rgba(76, 178, 255, 0.06), transparent 30rem),
+        var(--fw-canvas);
+}
+
+html:not([data-theme="light"]) .app-shell,
+html[data-theme="dark"] .app-shell {
+    --fw-canvas: #080b12;
+    --fw-panel: rgba(17, 22, 33, 0.82);
+    --fw-panel-solid: #111722;
+    --fw-panel-muted: #0d121c;
+    --fw-line: rgba(255, 255, 255, 0.075);
+    --fw-line-strong: rgba(255, 255, 255, 0.13);
+    --fw-ink: #f7f8fb;
+    --fw-ink-soft: #d2d8e4;
+    --fw-muted: #8994a9;
+    --fw-faint: #626d81;
+    --fw-accent-soft: rgba(103, 120, 255, 0.14);
+    --fw-positive: #58c993;
+    --fw-positive-soft: rgba(88, 201, 147, 0.12);
+    --fw-negative: #ef7b75;
+    --fw-negative-soft: rgba(239, 123, 117, 0.12);
+    --fw-shadow-soft: 0 20px 56px rgba(0, 0, 0, 0.22);
+    --fw-shadow-mid: 0 34px 90px rgba(0, 0, 0, 0.35);
+}
+
+.app-shell .app-sidebar {
+    top: 12px;
+    height: calc(100vh - 24px);
+    margin: 0;
+    padding: 20px 12px 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 28%),
+        var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+    backdrop-filter: blur(26px) saturate(130%);
+    -webkit-backdrop-filter: blur(26px) saturate(130%);
+}
+
+.app-shell .sidebar-top {
+    gap: 30px;
+}
+
+.app-shell .app-brand {
+    width: 100%;
+    padding: 2px 9px;
+    gap: 11px;
+}
+
+.app-shell .app-brand-mark.fw-brand-mark {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    overflow: visible;
+    border-radius: 13px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.app-shell .app-brand-mark.fw-brand-mark img {
+    width: 38px;
+    height: 38px;
+    display: block;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 18px rgba(37, 82, 221, 0.18));
+}
+
+.app-shell .fw-brand-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-shell .fw-brand-copy strong {
+    color: var(--fw-ink);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+}
+
+.app-shell .fw-brand-copy small {
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+    font-weight: 650;
+    letter-spacing: 0.025em;
+}
+
+.app-shell .desktop-app-nav {
+    gap: 5px;
+}
+
+.app-shell .fw-nav-label {
+    padding: 0 12px 6px;
+    color: var(--fw-faint);
+    font-size: 0.54rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-nav-label-secondary {
+    margin-top: 18px;
+}
+
+.app-shell .app-nav-link {
+    min-height: 46px;
+    padding: 0 12px;
+    border-radius: 14px;
+    color: var(--fw-muted);
+    font-size: 0.75rem;
+    font-weight: 690;
+}
+
+.app-shell .app-nav-link:hover {
+    color: var(--fw-ink);
+    background: rgba(108, 122, 154, 0.075);
+    transform: none;
+}
+
+.app-shell .app-nav-link.active {
+    border-color: rgba(91, 109, 248, 0.14);
+    background: linear-gradient(135deg, rgba(88, 106, 246, 0.15), rgba(88, 106, 246, 0.065));
+    color: var(--fw-ink);
+    box-shadow: none;
+}
+
+.app-shell .app-nav-link.active::before {
+    left: -1px;
+    width: 3px;
+    height: 18px;
+    background: #7180ff;
+    box-shadow: 0 0 16px rgba(93, 111, 255, 0.52);
+}
+
+.app-shell .nav-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: rgba(113, 126, 159, 0.06);
+}
+
+.app-shell .app-nav-link.active .nav-icon {
+    background: rgba(91, 109, 248, 0.13);
+    color: #7f8cff;
+}
+
+.app-shell .sidebar-bottom {
+    gap: 10px;
+}
+
+.app-shell .desktop-account-link {
+    min-height: 43px;
+}
+
+.app-shell .sidebar-account {
+    padding: 13px 7px 0;
+}
+
+.app-shell .account-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+}
+
+.app-shell .app-main {
+    border-radius: 28px 0 0 28px;
+    background: transparent;
+}
+
+.app-shell .app-topbar {
+    height: 68px;
+    padding: 0 28px;
+    border-bottom: 0;
+    background: rgba(242, 244, 248, 0.64);
+    box-shadow: none;
+    backdrop-filter: blur(20px) saturate(125%);
+    -webkit-backdrop-filter: blur(20px) saturate(125%);
+}
+
+html:not([data-theme="light"]) .app-shell .app-topbar,
+html[data-theme="dark"] .app-shell .app-topbar {
+    background: rgba(8, 11, 18, 0.68);
+}
+
+.app-shell .topbar-status {
+    min-height: 32px;
+    padding: 0 11px;
+    border: 1px solid var(--fw-line);
+    border-radius: 999px;
+    background: var(--fw-panel);
+    color: var(--fw-muted);
+    box-shadow: none;
+    font-size: 0.59rem;
+}
+
+.app-shell .watch-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--fw-positive);
+    box-shadow: 0 0 0 4px var(--fw-positive-soft);
+}
+
+.app-shell .app-content {
+    width: min(1280px, calc(100% - 56px));
+    padding: 28px 0 88px;
+}
+
+.app-shell .app-page {
+    gap: 24px;
+}
+
+.app-shell .page-heading {
+    align-items: center;
+    gap: 28px;
+}
+
+.app-shell .page-kicker,
+.app-shell .panel-kicker {
+    color: #7382f4;
+    font-size: 0.58rem;
+    font-weight: 820;
+    letter-spacing: 0.14em;
+}
+
+.app-shell .page-heading h1 {
+    margin: 7px 0 8px;
+    color: var(--fw-ink);
+    font-size: clamp(2.35rem, 4vw, 3.35rem);
+    line-height: 0.96;
+    font-weight: 760;
+    letter-spacing: -0.067em;
+}
+
+.app-shell .page-heading p {
+    max-width: 620px;
+    color: var(--fw-muted);
+    font-size: 0.81rem;
+    line-height: 1.6;
+}
+
+.app-shell .status-check-button {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 999px;
+    background: var(--fw-panel);
+    color: var(--fw-ink-soft);
+    box-shadow: none;
+    font-size: 0.65rem;
+    font-weight: 730;
+}
+
+/* Overview v2 */
+
+.app-shell .overview-page {
+    gap: 20px;
+}
+
+.app-shell .overview-heading {
+    margin-bottom: 2px;
+}
+
+.app-shell .fw-pulse {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.76fr);
+    min-height: 390px;
+    overflow: hidden;
+    border: 1px solid rgba(135, 150, 255, 0.2);
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at 84% 10%, rgba(116, 132, 255, 0.3), transparent 32%),
+        radial-gradient(circle at 10% 105%, rgba(63, 186, 255, 0.13), transparent 30%),
+        linear-gradient(135deg, #10182f 0%, #10172a 43%, #17234b 100%);
+    box-shadow: 0 30px 75px rgba(26, 37, 82, 0.23);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-pulse::after {
+    content: "";
+    position: absolute;
+    right: -95px;
+    bottom: -130px;
+    width: 310px;
+    height: 310px;
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 44px rgba(255, 255, 255, 0.018),
+        0 0 0 90px rgba(255, 255, 255, 0.012);
+    pointer-events: none;
+}
+
+.app-shell .fw-pulse-main {
+    position: relative;
+    z-index: 1;
+    padding: clamp(30px, 5vw, 58px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.app-shell .fw-pulse-state {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #c8d0ed;
+    font-size: 0.67rem;
+    font-weight: 720;
+}
+
+.app-shell .fw-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #63d9a7;
+    box-shadow: 0 0 0 5px rgba(99, 217, 167, 0.11);
+}
+
+.app-shell .fw-pulse-label {
+    margin-top: 37px;
+    color: #8f9aba;
+    font-size: 0.62rem;
+    font-weight: 720;
+    letter-spacing: 0.03em;
+}
+
+.app-shell .fw-pulse-amount {
+    margin-top: 7px;
+    color: #ffffff;
+    font-size: clamp(3.75rem, 7vw, 6.2rem);
+    line-height: 0.9;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-pulse-summary {
+    max-width: 560px;
+    margin: 24px 0 0;
+    color: #aeb8d1;
+    font-size: 0.79rem;
+    line-height: 1.65;
+}
+
+.app-shell .fw-pulse-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.app-shell .fw-primary-action,
+.app-shell .fw-quiet-action {
+    min-height: 42px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    border-radius: 13px;
+    font-size: 0.67rem;
+    font-weight: 780;
+    text-decoration: none;
+}
+
+.app-shell .fw-primary-action {
+    background: #f6f7ff;
+    color: #172044;
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.2);
+}
+
+.app-shell .fw-primary-action:hover {
+    background: #e8ebff;
+    color: #172044;
+}
+
+.app-shell .fw-quiet-action {
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    background: rgba(255, 255, 255, 0.055);
+    color: #d1d7ea;
+}
+
+.app-shell .fw-pulse-rail {
+    position: relative;
+    z-index: 1;
+    margin: 14px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-content: stretch;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    background: rgba(4, 8, 19, 0.28);
+}
+
+.app-shell .fw-pulse-stat {
+    min-height: 118px;
+    padding: 17px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.app-shell .fw-pulse-stat > span,
+.app-shell .fw-sync-line > span {
+    color: #8995b4;
+    font-size: 0.58rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-pulse-stat strong {
+    margin-top: 9px;
+    color: #f5f7ff;
+    font-size: 1.55rem;
+    line-height: 1;
+    font-weight: 720;
+    letter-spacing: -0.05em;
+}
+
+.app-shell .fw-pulse-stat small {
+    margin-top: auto;
+    padding-top: 10px;
+    color: #75819f;
+    font-size: 0.53rem;
+    line-height: 1.45;
+}
+
+.app-shell .fw-pulse-stat.is-alert strong {
+    color: #ff9690;
+}
+
+.app-shell .fw-pulse-stat.is-calm strong {
+    color: #75d6ab;
+}
+
+.app-shell .fw-sync-line {
+    grid-column: 1 / -1;
+    min-height: 84px;
+    padding: 15px 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.app-shell .fw-sync-line strong {
+    color: #d5dbed;
+    font-size: 0.65rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.52fr) minmax(310px, 0.72fr);
+    gap: 16px;
+}
+
+.app-shell .fw-watchlist,
+.app-shell .fw-signal-card {
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-watchlist {
+    padding: 24px;
+    background: var(--fw-panel);
+}
+
+.app-shell .fw-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.app-shell .fw-section-heading h2 {
+    margin: 5px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.16rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .fw-inline-action {
+    color: #7482f2;
+    font-size: 0.64rem;
+    font-weight: 760;
+    text-decoration: none;
+}
+
+.app-shell .fw-bill-list {
+    display: grid;
+}
+
+.app-shell .fw-bill-row {
+    min-height: 74px;
+    padding: 9px 4px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 13px;
+    border-top: 1px solid var(--fw-line);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 150ms ease, background 150ms ease;
+}
+
+.app-shell .fw-bill-row:hover {
+    margin: 0 -8px;
+    padding-right: 12px;
+    padding-left: 12px;
+    border-radius: 14px;
+    background: rgba(103, 118, 158, 0.055);
+    transform: translateX(2px);
+}
+
+.app-shell .fw-bill-logo,
+.app-shell .fw-signal-logo {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-bill-logo {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--fw-line);
+    border-radius: 14px;
+}
+
+.app-shell .fw-bill-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell .fw-bill-copy strong {
+    overflow: hidden;
+    color: var(--fw-ink-soft);
+    font-size: 0.77rem;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell .fw-bill-copy span {
+    color: var(--fw-faint);
+    font-size: 0.59rem;
+}
+
+.app-shell .fw-bill-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.app-shell .fw-bill-value strong {
+    color: var(--fw-ink);
+    font-size: 0.82rem;
+    font-weight: 740;
+}
+
+.app-shell .fw-bill-value span {
+    color: var(--fw-faint);
+    font-size: 0.56rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-bill-value .amount-increase {
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-bill-value .amount-decrease {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-row-chevron {
+    color: var(--fw-faint);
+    font-size: 1.12rem;
+}
+
+.app-shell .fw-signal-card {
+    min-height: 100%;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 88% 2%, rgba(255, 128, 121, 0.11), transparent 38%),
+        var(--fw-panel-solid);
+}
+
+.app-shell .fw-signal-top {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-shell .fw-signal-label {
+    color: var(--fw-faint);
+    font-size: 0.58rem;
+    font-weight: 820;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-signal-count {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--fw-negative-soft);
+    color: var(--fw-negative);
+    font-size: 0.62rem;
+    font-weight: 820;
+}
+
+.app-shell .fw-signal-provider {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-top: 31px;
+}
+
+.app-shell .fw-signal-logo {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--fw-line);
+    border-radius: 14px;
+}
+
+.app-shell .fw-signal-provider > div:last-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell .fw-signal-provider span {
+    color: var(--fw-faint);
+    font-size: 0.56rem;
+}
+
+.app-shell .fw-signal-provider strong {
+    overflow: hidden;
+    color: var(--fw-ink-soft);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell .fw-signal-change {
+    margin-top: 24px;
+    color: var(--fw-negative);
+    font-size: clamp(2.9rem, 5vw, 4.1rem);
+    line-height: 0.9;
+    font-weight: 730;
+    letter-spacing: -0.07em;
+}
+
+.app-shell .fw-signal-period {
+    margin-top: 9px;
+    color: var(--fw-muted);
+    font-size: 0.61rem;
+    line-height: 1.45;
+}
+
+.app-shell .fw-signal-impact {
+    margin-top: 22px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-radius: 15px;
+    background: var(--fw-negative-soft);
+}
+
+.app-shell .fw-signal-impact span {
+    color: var(--fw-muted);
+    font-size: 0.58rem;
+}
+
+.app-shell .fw-signal-impact strong {
+    color: var(--fw-negative);
+    font-size: 0.85rem;
+}
+
+.app-shell .fw-signal-card p {
+    margin: 18px 0 22px;
+    color: var(--fw-muted);
+    font-size: 0.65rem;
+    line-height: 1.6;
+}
+
+.app-shell .fw-signal-action {
+    min-height: 40px;
+    margin-top: auto;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border: 1px solid var(--fw-line);
+    border-radius: 13px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+    font-size: 0.64rem;
+    font-weight: 760;
+    text-decoration: none;
+}
+
+.app-shell .fw-calm-orb {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-top: 36px;
+    border-radius: 18px;
+    background: var(--fw-positive-soft);
+    color: var(--fw-positive);
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.app-shell .fw-signal-card h2 {
+    margin: 22px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.28rem;
+    letter-spacing: -0.045em;
+}
+
+.app-shell .fw-destination-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.app-shell .fw-destination {
+    min-height: 78px;
+    padding: 13px 15px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--fw-line);
+    border-radius: 19px;
+    background: var(--fw-panel);
+    color: var(--fw-ink-soft);
+    box-shadow: 0 12px 34px rgba(27, 39, 72, 0.045);
+    text-decoration: none;
+    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.app-shell .fw-destination:hover {
+    border-color: rgba(85, 103, 244, 0.2);
+    box-shadow: var(--fw-shadow-soft);
+    transform: translateY(-2px);
+}
+
+.app-shell .fw-destination-icon {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-destination-icon .bw-sprite {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell .fw-destination > span:nth-child(2) {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell .fw-destination strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.69rem;
+}
+
+.app-shell .fw-destination small {
+    overflow: hidden;
+    color: var(--fw-faint);
+    font-size: 0.55rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell .connection-warning {
+    border: 1px solid rgba(227, 158, 57, 0.18);
+    border-radius: 18px;
+    background: rgba(227, 158, 57, 0.08);
+    box-shadow: none;
+}
+
+/* Existing cards inherit the calmer v2 material treatment while individual pages are migrated. */
+.app-shell .metric-card,
+.app-shell .app-panel,
+.app-shell .empty-dashboard,
+.app-shell .app-error-state,
+.app-shell .account-panel,
+.app-shell .privacy-management-card,
+.app-shell .privacy-explanation-card,
+.app-shell .danger-zone,
+.app-shell .bill-card,
+.app-shell .activity-item,
+.app-shell .alert-card {
+    border-color: var(--fw-line);
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+/* Responsive */
+
+@media (max-width: 1080px) {
+    .app-shell .fw-pulse {
+        grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.8fr);
+    }
+
+    .app-shell .fw-overview-grid {
+        grid-template-columns: minmax(0, 1.2fr) minmax(290px, 0.8fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .app-shell {
+        display: block;
+        padding: 0;
+    }
+
+    .app-shell .app-main {
+        border-radius: 0;
+    }
+
+    .app-shell .app-sidebar {
+        top: auto;
+        height: 72px;
+        margin: 0;
+        padding: 8px;
+        border-radius: 23px;
+    }
+
+    .app-shell .app-content {
+        width: min(100% - 32px, 1280px);
+        padding-top: 24px;
+        padding-bottom: 116px;
+    }
+
+    .app-shell .fw-pulse,
+    .app-shell .fw-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-pulse {
+        min-height: 0;
+    }
+
+    .app-shell .fw-pulse-rail {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 0;
+    }
+
+    .app-shell .fw-sync-line {
+        grid-column: 1 / -1;
+    }
+
+    .app-shell .fw-destination-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .app-shell .app-content {
+        width: min(100% - 22px, 1280px);
+        padding-top: 18px;
+    }
+
+    .app-shell .page-heading {
+        align-items: flex-start;
+    }
+
+    .app-shell .page-heading h1 {
+        font-size: 2.35rem;
+    }
+
+    .app-shell .fw-pulse {
+        border-radius: 25px;
+    }
+
+    .app-shell .fw-pulse-main {
+        padding: 28px 24px 26px;
+    }
+
+    .app-shell .fw-pulse-label {
+        margin-top: 28px;
+    }
+
+    .app-shell .fw-pulse-amount {
+        font-size: clamp(3.3rem, 18vw, 4.8rem);
+    }
+
+    .app-shell .fw-pulse-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-primary-action,
+    .app-shell .fw-quiet-action {
+        width: 100%;
+    }
+
+    .app-shell .fw-pulse-rail {
+        grid-template-columns: 1fr 1fr;
+        margin: 0 10px 10px;
+    }
+
+    .app-shell .fw-pulse-stat:last-of-type {
+        grid-column: 1 / -1;
+    }
+
+    .app-shell .fw-watchlist,
+    .app-shell .fw-signal-card {
+        padding: 20px;
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-bill-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .app-shell .fw-bill-value {
+        grid-column: 2;
+        align-items: flex-start;
+        margin-top: -7px;
+    }
+
+    .app-shell .fw-row-chevron {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+    }
+}
+
+@media (max-width: 460px) {
+    .app-shell .app-topbar {
+        height: 62px;
+        padding: 0 14px;
+    }
+
+    .app-shell .topbar-status {
+        display: none;
+    }
+
+    .app-shell .fw-pulse-rail {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-pulse-stat:last-of-type,
+    .app-shell .fw-sync-line {
+        grid-column: 1;
+    }
+
+    .app-shell .fw-pulse-stat {
+        min-height: 104px;
+    }
+
+    .app-shell .fw-section-heading {
+        align-items: center;
+    }
+
+    .app-shell .fw-destination {
+        min-height: 74px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .fw-bill-row,
+    .app-shell .fw-destination {
+        transition: none;
+    }
+}
+
+
+/* Bills v2 */
+
+.app-shell .bills-page {
+    gap: 18px;
+}
+
+.app-shell .fw-bills-pulse {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(430px, 1fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(86, 104, 244, 0.13), transparent 34%),
+        var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-bills-total {
+    min-height: 218px;
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 96% 2%, rgba(124, 143, 255, 0.21), transparent 32%),
+        linear-gradient(135deg, #111a35, #16234b);
+    color: #f7f8ff;
+}
+
+.app-shell .fw-bills-total > span {
+    color: #9faacc;
+    font-size: 0.61rem;
+    font-weight: 700;
+}
+
+.app-shell .fw-bills-total strong {
+    margin-top: 9px;
+    font-size: clamp(3rem, 6vw, 5rem);
+    line-height: 0.93;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-bills-total small {
+    margin-top: 18px;
+    color: #929dbd;
+    font-size: 0.61rem;
+    line-height: 1.5;
+}
+
+.app-shell .fw-bills-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.app-shell .fw-bills-stat {
+    min-width: 0;
+    min-height: 100%;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+    color: var(--fw-ink);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.app-shell .fw-bills-stat:hover {
+    border-color: rgba(85, 103, 244, 0.2);
+    transform: translateY(-2px);
+}
+
+.app-shell .fw-bills-stat.is-selected {
+    border-color: rgba(85, 103, 244, 0.26);
+    background: var(--fw-accent-soft);
+}
+
+.app-shell .fw-bills-stat > span {
+    color: var(--fw-muted);
+    font-size: 0.59rem;
+    font-weight: 700;
+}
+
+.app-shell .fw-bills-stat strong {
+    margin-top: 18px;
+    color: var(--fw-ink);
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.055em;
+}
+
+.app-shell .fw-bills-stat small {
+    margin-top: auto;
+    padding-top: 18px;
+    color: var(--fw-faint);
+    font-size: 0.52rem;
+    line-height: 1.45;
+}
+
+.app-shell .fw-bills-stat.is-alert strong {
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-bills-stat.is-positive strong {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-bills-alert {
+    min-height: 90px;
+    padding: 17px 18px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(220, 103, 96, 0.16);
+    border-radius: 20px;
+    background: linear-gradient(110deg, rgba(220, 103, 96, 0.095), rgba(220, 103, 96, 0.025)), var(--fw-panel);
+}
+
+.app-shell .fw-bills-alert-icon {
+    width: 43px;
+    height: 43px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: var(--fw-negative-soft);
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-bills-alert-icon .bw-sprite {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell .fw-bills-alert-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell .fw-bills-alert-copy > span {
+    color: var(--fw-negative);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-bills-alert-copy strong {
+    color: var(--fw-ink);
+    font-size: 0.77rem;
+    font-weight: 750;
+}
+
+.app-shell .fw-bills-alert-copy small {
+    max-width: 730px;
+    color: var(--fw-muted);
+    font-size: 0.58rem;
+    line-height: 1.45;
+}
+
+.app-shell .fw-bills-alert-action {
+    min-height: 38px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid rgba(220, 103, 96, 0.18);
+    border-radius: 12px;
+    background: var(--fw-negative-soft);
+    color: var(--fw-ink-soft);
+    font-size: 0.62rem;
+    font-weight: 760;
+    cursor: pointer;
+}
+
+.app-shell .fw-bills-ledger {
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-bills-ledger-head {
+    padding: 22px 24px 17px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.app-shell .fw-bills-ledger-head h2 {
+    margin: 5px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.12rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .fw-bills-ledger-head > span {
+    color: var(--fw-faint);
+    font-size: 0.56rem;
+}
+
+.app-shell .fw-bills-filters {
+    padding: 0 24px 17px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-bills-filters .bill-filter {
+    min-height: 34px;
+    padding: 0 10px;
+    border-color: var(--fw-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-bills-filters .bill-filter.active {
+    border-color: rgba(85, 103, 244, 0.19);
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-bills-list {
+    display: grid;
+}
+
+.app-shell .fw-bills-row {
+    min-height: 88px;
+    padding: 12px 24px;
+    display: grid;
+    grid-template-columns: auto minmax(170px, 1.1fr) minmax(100px, 0.55fr) minmax(90px, 0.5fr) minmax(112px, 0.65fr) auto;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--fw-line);
+    color: inherit;
+    text-decoration: none;
+    transition: background 150ms ease;
+}
+
+.app-shell .fw-bills-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-bills-row:hover {
+    background: rgba(103, 118, 158, 0.045);
+}
+
+.app-shell .fw-bills-row .bill-provider-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+}
+
+.app-shell .fw-bills-provider,
+.app-shell .fw-bills-current,
+.app-shell .fw-bills-change,
+.app-shell .fw-bills-impact {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell .fw-bills-provider strong {
+    overflow: hidden;
+    color: var(--fw-ink-soft);
+    font-size: 0.74rem;
+    font-weight: 740;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell .fw-bills-provider span,
+.app-shell .fw-bills-current span,
+.app-shell .fw-bills-change span,
+.app-shell .fw-bills-impact span {
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+}
+
+.app-shell .fw-bills-current strong,
+.app-shell .fw-bills-change strong,
+.app-shell .fw-bills-impact strong {
+    color: var(--fw-ink);
+    font-size: 0.72rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-bills-change.is-increase strong {
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-bills-change.is-decrease strong {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-bills-evidence {
+    min-width: 0;
+    grid-column: 4 / 6;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-bills-evidence .history-dot {
+    width: 7px;
+    height: 7px;
+    flex: none;
+}
+
+.app-shell .fw-bills-ledger .filtered-empty {
+    min-height: 190px;
+    border: 0;
+    border-radius: 0;
+}
+
+/* Activity v2 */
+
+.app-shell .fw-activity-pulse {
+    min-height: 260px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(390px, 0.85fr);
+    gap: 12px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-activity-pulse-copy {
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 95% 0%, rgba(117, 134, 255, 0.22), transparent 32%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-activity-pulse.has-attention .fw-activity-pulse-copy {
+    background:
+        radial-gradient(circle at 95% 0%, rgba(239, 123, 117, 0.21), transparent 34%),
+        linear-gradient(135deg, #241721, #1c2038 72%);
+}
+
+.app-shell .fw-activity-eyebrow {
+    color: #98a4c6;
+    font-size: 0.57rem;
+    font-weight: 820;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-activity-number {
+    margin-top: 17px;
+    color: #ffffff;
+    font-size: clamp(3.8rem, 7vw, 5.9rem);
+    line-height: 0.87;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-activity-pulse.has-attention .fw-activity-number {
+    color: #ff9a94;
+}
+
+.app-shell .fw-activity-number-label {
+    margin-top: 9px;
+    color: #aeb8d2;
+    font-size: 0.65rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-activity-pulse-copy p {
+    max-width: 560px;
+    margin: 18px 0 0;
+    color: #909cbc;
+    font-size: 0.65rem;
+    line-height: 1.6;
+}
+
+.app-shell .fw-activity-pulse-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.app-shell .fw-activity-pulse-stats > div {
+    min-height: 112px;
+    padding: 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-activity-pulse-stats > div:last-child {
+    grid-column: 1 / -1;
+}
+
+.app-shell .fw-activity-pulse-stats span {
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-activity-pulse-stats strong {
+    margin-top: 9px;
+    color: var(--fw-ink);
+    font-size: 1.75rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.055em;
+}
+
+.app-shell .fw-activity-pulse-stats small {
+    margin-top: 5px;
+    color: var(--fw-faint);
+    font-size: 0.52rem;
+}
+
+.app-shell .fw-activity-feed {
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-activity-feed-head {
+    padding: 22px 24px 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-activity-feed-head h2 {
+    margin: 5px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.12rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .fw-activity-feed .activity-filters {
+    gap: 6px;
+}
+
+.app-shell .fw-activity-feed .activity-filter {
+    min-height: 34px;
+    padding: 0 10px;
+    border-color: var(--fw-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+}
+
+.app-shell .fw-activity-feed .activity-filter.active {
+    border-color: rgba(85, 103, 244, 0.19);
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-activity-feed .activity-action-error {
+    margin: 14px 20px 0;
+}
+
+.app-shell .fw-activity-feed .alert-list {
+    gap: 0;
+}
+
+.app-shell .fw-activity-feed .alert-card {
+    min-height: 132px;
+    margin: 0;
+    padding: 19px 22px;
+    gap: 15px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.app-shell .fw-activity-feed .alert-card:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-activity-feed .alert-card:hover {
+    background: rgba(103, 118, 158, 0.042);
+}
+
+.app-shell .fw-activity-feed .alert-card.unread {
+    background:
+        linear-gradient(90deg, rgba(85, 103, 244, 0.045), transparent 32%);
+}
+
+.app-shell .fw-activity-feed .alert-card.severity-warning,
+.app-shell .fw-activity-feed .alert-card.severity-critical {
+    box-shadow: inset 3px 0 0 var(--fw-negative);
+}
+
+.app-shell .fw-activity-feed .alert-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+}
+
+.app-shell .fw-activity-feed .alert-card-heading strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.75rem;
+    font-weight: 740;
+}
+
+.app-shell .fw-activity-feed .alert-card-heading time {
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+}
+
+.app-shell .fw-activity-feed .alert-type {
+    color: var(--fw-faint);
+    font-size: 0.52rem;
+}
+
+.app-shell .fw-activity-feed .alert-card-content > p {
+    max-width: 850px;
+    margin: 10px 0 14px;
+    color: var(--fw-muted);
+    font-size: 0.64rem;
+    line-height: 1.55;
+}
+
+.app-shell .fw-activity-feed .alert-card-footer {
+    padding-top: 10px;
+    border-top: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-activity-feed .alert-secondary-action,
+.app-shell .fw-activity-feed .alert-primary-action {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-activity-feed .alert-primary-action {
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+    box-shadow: none;
+}
+
+.app-shell .fw-activity-feed .alerts-empty,
+.app-shell .fw-activity-feed .alerts-filter-empty {
+    min-height: 300px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .activity-refresh-button {
+    min-height: 38px;
+    padding: 0 12px;
+    border-color: var(--fw-line);
+    border-radius: 999px;
+    background: var(--fw-panel);
+    color: var(--fw-ink-soft);
+    box-shadow: none;
+}
+
+.app-shell .activity-refresh-button .bw-sprite {
+    width: 15px;
+    height: 15px;
+}
+
+@media (max-width: 1050px) {
+    .app-shell .fw-bills-pulse {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-activity-pulse {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-activity-pulse-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-activity-pulse-stats > div:last-child {
+        grid-column: auto;
+    }
+
+    .app-shell .fw-bills-row {
+        grid-template-columns: auto minmax(150px, 1fr) minmax(90px, .6fr) minmax(88px, .5fr) auto;
+    }
+
+    .app-shell .fw-bills-impact {
+        display: none;
+    }
+
+    .app-shell .fw-bills-evidence {
+        grid-column: 4;
+    }
+}
+
+@media (max-width: 760px) {
+    .app-shell .fw-bills-stats,
+    .app-shell .fw-activity-pulse-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .app-shell .fw-bills-stat:last-child,
+    .app-shell .fw-activity-pulse-stats > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .app-shell .fw-bills-alert {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .app-shell .fw-bills-alert-action {
+        grid-column: 2;
+        width: fit-content;
+    }
+
+    .app-shell .fw-bills-ledger-head,
+    .app-shell .fw-activity-feed-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-bills-filters,
+    .app-shell .fw-activity-feed .activity-filters {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+
+    .app-shell .fw-bills-filters::-webkit-scrollbar,
+    .app-shell .fw-activity-feed .activity-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .app-shell .fw-bills-row {
+        min-height: 98px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .app-shell .fw-bills-current {
+        align-items: flex-end;
+    }
+
+    .app-shell .fw-bills-change,
+    .app-shell .fw-bills-evidence {
+        grid-column: 2;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .app-shell .fw-bills-impact {
+        display: none;
+    }
+
+    .app-shell .fw-bills-row .fw-row-chevron {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+    }
+
+    .app-shell .fw-activity-feed .alert-card {
+        padding: 17px;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-bills-pulse,
+    .app-shell .fw-activity-pulse {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-bills-total,
+    .app-shell .fw-activity-pulse-copy {
+        padding: 24px 22px;
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-bills-total {
+        min-height: 190px;
+    }
+
+    .app-shell .fw-bills-stats,
+    .app-shell .fw-activity-pulse-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-bills-stat:last-child,
+    .app-shell .fw-activity-pulse-stats > div:last-child {
+        grid-column: 1;
+    }
+
+    .app-shell .fw-bills-alert {
+        grid-template-columns: 1fr;
+        gap: 11px;
+    }
+
+    .app-shell .fw-bills-alert-action {
+        grid-column: 1;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .app-shell .fw-bills-ledger,
+    .app-shell .fw-activity-feed {
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-bills-ledger-head,
+    .app-shell .fw-activity-feed-head {
+        padding: 19px 18px 14px;
+    }
+
+    .app-shell .fw-bills-filters {
+        padding: 0 18px 14px;
+    }
+
+    .app-shell .fw-bills-row {
+        padding: 13px 18px;
+    }
+
+    .app-shell .fw-activity-feed .activity-filters {
+        padding-bottom: 1px;
+    }
+
+    .app-shell .fw-activity-feed .alert-card-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-activity-feed .alert-actions {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .fw-bills-stat,
+    .app-shell .fw-bills-row {
+        transition: none;
+    }
+}
+
+
+/* Account hub v2 */
+
+.app-shell .fw-account-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(390px, 0.85fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-account-identity {
+    min-height: 246px;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 92% 6%, rgba(114, 131, 255, 0.24), transparent 33%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-account-identity .identity-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #dce2ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+    font-size: 1rem;
+}
+
+.app-shell .fw-account-identity-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.app-shell .fw-account-identity-copy > span {
+    color: #8f9aba;
+    font-size: 0.58rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-account-identity-copy > strong {
+    overflow: hidden;
+    color: #fff;
+    font-size: clamp(1.2rem, 2.5vw, 1.75rem);
+    font-weight: 730;
+    letter-spacing: -0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-shell .fw-account-session {
+    width: fit-content;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #aab5d2;
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-account-session .security-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #63d9a7;
+    box-shadow: 0 0 0 4px rgba(99, 217, 167, 0.1);
+}
+
+.app-shell .fw-account-hero-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.app-shell .fw-account-hero-actions a {
+    min-height: 39px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.055);
+    color: #d1d7ea;
+    font-size: 0.59rem;
+    font-weight: 740;
+    text-decoration: none;
+}
+
+.app-shell .fw-account-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.app-shell .fw-account-stats > div {
+    min-height: 112px;
+    padding: 17px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-account-stats > div:last-child {
+    grid-column: 1 / -1;
+}
+
+.app-shell .fw-account-stats span {
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-account-stats strong {
+    margin-top: 9px;
+    color: var(--fw-ink);
+    font-size: 1.8rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.055em;
+}
+
+.app-shell .fw-account-stats small {
+    margin-top: 7px;
+    color: var(--fw-faint);
+    font-size: 0.52rem;
+    line-height: 1.4;
+}
+
+.app-shell .fw-account-stats .has-attention strong {
+    color: var(--fw-negative);
+}
+
+.app-shell .fw-account-stats .is-healthy strong {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-account-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.app-shell .fw-account-shortcuts > a {
+    min-height: 84px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    border: 1px solid var(--fw-line);
+    border-radius: 20px;
+    background: var(--fw-panel);
+    color: var(--fw-ink-soft);
+    box-shadow: 0 12px 34px rgba(27, 39, 72, 0.045);
+    text-decoration: none;
+    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.app-shell .fw-account-shortcuts > a:hover {
+    border-color: rgba(85, 103, 244, 0.2);
+    box-shadow: var(--fw-shadow-soft);
+    transform: translateY(-2px);
+}
+
+.app-shell .fw-account-shortcut-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-account-shortcut-icon .bw-sprite {
+    width: 19px;
+    height: 19px;
+}
+
+.app-shell .fw-account-shortcuts > a > span:nth-child(2) {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.app-shell .fw-account-shortcuts strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.7rem;
+}
+
+.app-shell .fw-account-shortcuts small {
+    color: var(--fw-faint);
+    font-size: 0.55rem;
+    line-height: 1.4;
+}
+
+.app-shell .fw-connect-bank-card {
+    min-height: 142px;
+    padding: 20px 22px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    border-color: rgba(85, 103, 244, 0.16);
+    border-radius: 22px;
+    background:
+        linear-gradient(110deg, rgba(85, 103, 244, 0.085), rgba(85, 103, 244, 0.02)),
+        var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .fw-connect-bank-card .connect-bank-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-connect-bank-card .connect-bank-copy h2 {
+    margin-top: 5px;
+    font-size: 1.08rem;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-connect-bank-card .connect-bank-copy p {
+    max-width: 660px;
+    font-size: 0.65rem;
+    line-height: 1.5;
+}
+
+.app-shell .fw-connect-bank-card .plaid-security-note {
+    margin-top: 10px;
+    font-size: 0.56rem;
+}
+
+.app-shell .fw-connect-bank-card .connect-bank-button {
+    min-height: 41px;
+    padding: 0 15px;
+    border-radius: 13px;
+}
+
+.app-shell .account-grid {
+    gap: 14px;
+}
+
+.app-shell .fw-account-collection {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px;
+    background: var(--fw-panel);
+}
+
+.app-shell .fw-account-collection .account-panel-heading {
+    margin: 0;
+    padding: 21px 22px 16px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-account-collection .account-panel-heading h2 {
+    margin-top: 5px;
+    font-size: 1.08rem;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-account-collection .account-count {
+    min-width: 29px;
+    height: 29px;
+    border-color: var(--fw-line);
+    background: var(--fw-panel-muted);
+    color: var(--fw-muted);
+}
+
+.app-shell .fw-account-collection .connection-attention-summary {
+    margin: 14px 16px 0;
+    border-radius: 15px;
+}
+
+.app-shell .fw-account-collection .connection-list,
+.app-shell .fw-account-collection .financial-account-list {
+    gap: 0;
+}
+
+.app-shell .fw-account-collection .connection-row,
+.app-shell .fw-account-collection .financial-account-row {
+    margin: 0;
+    padding: 16px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-account-collection .connection-row:last-child,
+.app-shell .fw-account-collection .financial-account-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-account-collection .connection-row:hover,
+.app-shell .fw-account-collection .financial-account-row:hover {
+    background: rgba(103, 118, 158, 0.04);
+}
+
+.app-shell .fw-account-collection .account-empty {
+    min-height: 160px;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+}
+
+.app-shell .fw-account-trust-strip {
+    min-height: 110px;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .fw-account-trust-strip .privacy-copy h2 {
+    font-size: 1rem;
+}
+
+.app-shell .fw-account-trust-strip .privacy-copy p {
+    font-size: 0.61rem;
+}
+
+@media (max-width: 980px) {
+    .app-shell .fw-account-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-account-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-account-stats > div:last-child {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 700px) {
+    .app-shell .fw-account-shortcuts,
+    .app-shell .fw-account-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-account-stats > div:last-child {
+        grid-column: 1;
+    }
+
+    .app-shell .fw-connect-bank-card {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .app-shell .fw-connect-bank-card .connect-bank-actions {
+        grid-column: 2;
+        align-items: flex-start;
+    }
+
+    .app-shell .fw-account-trust-strip {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .app-shell .fw-account-trust-strip .privacy-points {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-account-hero {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-account-identity {
+        min-height: 220px;
+        padding: 24px 20px;
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-account-hero-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-account-hero-actions a {
+        justify-content: space-between;
+    }
+
+    .app-shell .fw-connect-bank-card {
+        grid-template-columns: 1fr;
+        padding: 18px;
+    }
+
+    .app-shell .fw-connect-bank-card .connect-bank-actions {
+        grid-column: 1;
+        width: 100%;
+    }
+
+    .app-shell .fw-connect-bank-card .connect-bank-button {
+        width: 100%;
+    }
+
+    .app-shell .fw-account-trust-strip {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .fw-account-shortcuts > a {
+        transition: none;
+    }
+}
+
+
+/* Bill Detail v2 */
+
+.app-shell .fw-back-link {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--fw-muted);
+    font-size: 0.59rem;
+    font-weight: 720;
+    text-decoration: none;
+}
+
+.app-shell .fw-back-link .bw-sprite {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell .fw-back-link:hover {
+    color: var(--fw-ink);
+}
+
+.app-shell .fw-detail-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.65fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 30px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-detail-provider-pane {
+    min-height: 300px;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 17px;
+    border-radius: 23px;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(117, 134, 255, 0.25), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-detail-provider-pane .detail-provider-avatar {
+    width: 64px;
+    height: 64px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #dce2ff;
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-provider-copy {
+    min-width: 0;
+}
+
+.app-shell .fw-detail-provider-copy .page-kicker {
+    color: #93a1ff;
+}
+
+.app-shell .fw-detail-provider-copy h1 {
+    margin: 7px 0 8px;
+    overflow: hidden;
+    color: #fff;
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    line-height: 0.95;
+    font-weight: 740;
+    letter-spacing: -0.065em;
+    text-overflow: ellipsis;
+}
+
+.app-shell .fw-detail-provider-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #95a1bd;
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-detail-provider-meta .watching-state {
+    border-color: rgba(99, 217, 167, 0.14);
+    background: rgba(99, 217, 167, 0.07);
+    color: #85dcb7;
+}
+
+.app-shell .fw-detail-current {
+    grid-column: 1 / -1;
+    padding-top: 22px;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-shell .fw-detail-current > span {
+    color: #8f9aba;
+    font-size: 0.58rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-detail-current > strong {
+    margin-top: 7px;
+    color: #fff;
+    font-size: clamp(3.2rem, 6.8vw, 5.5rem);
+    line-height: 0.9;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-detail-current > small {
+    margin-top: 12px;
+    color: #9aa6c4;
+    font-size: 0.6rem;
+}
+
+.app-shell .fw-detail-current .detail-amount-difference.increase {
+    color: #ff9a94;
+}
+
+.app-shell .fw-detail-current .detail-amount-difference.decrease {
+    color: #7fddb6;
+}
+
+.app-shell .fw-detail-evidence-rail {
+    display: grid;
+    gap: 10px;
+}
+
+.app-shell .fw-detail-evidence-rail > div {
+    min-height: 88px;
+    padding: 17px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-detail-evidence-rail span {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-detail-evidence-rail strong {
+    margin-top: 8px;
+    color: var(--fw-ink);
+    font-size: 1.2rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .statement-upload-panel {
+    padding: 18px 20px;
+    border-color: rgba(85, 103, 244, 0.15);
+    border-radius: 22px;
+    background:
+        linear-gradient(110deg, rgba(85, 103, 244, 0.065), rgba(85, 103, 244, 0.015)),
+        var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .statement-upload-heading h2 {
+    margin-top: 4px;
+    font-size: 1rem;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .statement-upload-heading p {
+    font-size: 0.61rem;
+}
+
+.app-shell .statement-upload-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .statement-file-picker {
+    min-height: 52px;
+    border-color: var(--fw-line);
+    border-radius: 14px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .statement-upload-button {
+    min-height: 41px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr);
+    gap: 12px;
+    padding: 14px;
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card {
+    min-height: 250px;
+    margin: 0;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 0;
+    border-radius: 21px;
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.increase {
+    background:
+        radial-gradient(circle at 90% 0%, rgba(239, 123, 117, 0.18), transparent 36%),
+        var(--fw-negative-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.decrease {
+    background:
+        radial-gradient(circle at 90% 0%, rgba(88, 201, 147, 0.18), transparent 36%),
+        var(--fw-positive-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.steady {
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-detail-change-story .change-eyebrow {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values {
+    margin-top: 20px;
+    gap: 11px;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values span,
+.app-shell .fw-detail-change-story .change-impact-stack span {
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values strong {
+    color: var(--fw-ink);
+    font-size: 1.15rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack {
+    margin-top: 22px;
+    gap: 8px;
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack > div {
+    padding: 12px 13px;
+    border: 1px solid var(--fw-line);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack strong {
+    color: var(--fw-ink);
+    font-size: 0.78rem;
+}
+
+.app-shell .fw-detail-change-story .explanation-panel {
+    margin: 0;
+    padding: 25px;
+    border: 0;
+    border-radius: 21px;
+    background: var(--fw-panel-solid);
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story .explanation-panel .panel-heading h2 {
+    font-size: 1.08rem;
+}
+
+.app-shell .fw-detail-change-story .change-description {
+    margin: 20px 0;
+    color: var(--fw-ink-soft);
+    font-size: 0.78rem;
+    line-height: 1.7;
+}
+
+.app-shell .fw-detail-change-story .evidence-metadata {
+    gap: 8px;
+}
+
+.app-shell .fw-detail-change-story .evidence-metadata > div {
+    padding: 11px 12px;
+    border-color: var(--fw-line);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-detail-unknown {
+    min-height: 150px;
+    border-radius: 22px;
+    background:
+        linear-gradient(110deg, rgba(85, 103, 244, 0.05), transparent),
+        var(--fw-panel);
+}
+
+.app-shell .fw-detail-history-grid {
+    gap: 14px;
+}
+
+.app-shell .fw-detail-history-grid > .detail-panel {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px;
+    background: var(--fw-panel);
+}
+
+.app-shell .fw-detail-history-grid > .detail-panel > .panel-heading {
+    margin: 0;
+    padding: 20px 22px 15px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-detail-history-grid .statement-list,
+.app-shell .fw-detail-history-grid .change-history-list {
+    gap: 0;
+}
+
+.app-shell .fw-detail-history-grid .statement-row,
+.app-shell .fw-detail-history-grid .change-history-row {
+    margin: 0;
+    padding: 15px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-detail-history-grid .statement-row:last-child,
+.app-shell .fw-detail-history-grid .change-history-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-detail-history-grid .statement-row:hover,
+.app-shell .fw-detail-history-grid .change-history-row:hover {
+    background: rgba(103, 118, 158, 0.04);
+}
+
+.app-shell .fw-detail-history-grid .detail-empty {
+    min-height: 170px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Transactions v2 */
+
+.app-shell .fw-transactions-pulse {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-transactions-total {
+    min-height: 220px;
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 92% 2%, rgba(117, 134, 255, 0.24), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-transactions-total > span {
+    color: #9ba6c6;
+    font-size: 0.6rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-transactions-total > strong {
+    margin-top: 9px;
+    color: #fff;
+    font-size: clamp(3.2rem, 6.8vw, 5rem);
+    line-height: 0.91;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-transactions-total > small {
+    margin-top: 17px;
+    color: #919dbc;
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-transactions-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.app-shell .fw-transactions-stats > div {
+    min-height: 104px;
+    padding: 17px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-transactions-stats span {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-transactions-stats strong {
+    margin-top: 8px;
+    color: var(--fw-ink);
+    font-size: 1.75rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.055em;
+}
+
+.app-shell .fw-transactions-stats small {
+    margin-top: 6px;
+    color: var(--fw-faint);
+    font-size: 0.51rem;
+    line-height: 1.4;
+}
+
+.app-shell .fw-transactions-stats .has-pending strong {
+    color: #d89a45;
+}
+
+.app-shell .fw-transactions-ledger {
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-transactions-toolbar {
+    padding: 21px 23px 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-transactions-toolbar h2 {
+    margin: 5px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.08rem;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-toolbar {
+    min-width: min(540px, 55%);
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.58fr);
+    gap: 8px;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search,
+.app-shell .fw-transactions-toolbar .transaction-account-filter {
+    min-height: 39px;
+    border-color: var(--fw-line-strong);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search {
+    padding-left: 11px;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search .bw-sprite {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--fw-faint);
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search input {
+    font-size: 0.62rem;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-account-filter {
+    padding: 0 10px;
+    font-size: 0.6rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-result-line {
+    min-height: 48px;
+    padding: 9px 22px;
+    border-bottom: 1px solid var(--fw-line);
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-history-load-button {
+    min-height: 31px;
+    padding: 0 10px;
+    border-color: var(--fw-line);
+    border-radius: 10px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-history-error {
+    margin: 12px 20px 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-list {
+    gap: 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row {
+    min-height: 78px;
+    margin: 0;
+    padding: 13px 22px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row:hover {
+    background: rgba(103, 118, 158, 0.04);
+}
+
+.app-shell .fw-transactions-ledger .transaction-copy strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.7rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-transactions-ledger .transaction-copy > span,
+.app-shell .fw-transactions-ledger .transaction-copy small {
+    color: var(--fw-faint);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-date strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.63rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-date span {
+    color: var(--fw-faint);
+    font-size: 0.51rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount {
+    font-size: 0.72rem;
+    font-weight: 740;
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.outflow {
+    color: var(--fw-ink);
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.credit {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-transactions-ledger .transaction-empty {
+    min-height: 280px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-transactions-ledger .transaction-empty > div .bw-sprite {
+    width: 24px;
+    height: 24px;
+}
+
+.app-shell .fw-transactions-ledger .transaction-explanation {
+    margin: 0;
+    padding: 13px 22px;
+    border: 0;
+    border-top: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: var(--fw-panel-muted);
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+    .app-shell .fw-detail-hero,
+    .app-shell .fw-detail-change-story,
+    .app-shell .fw-transactions-pulse {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-detail-evidence-rail,
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-transactions-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-transactions-toolbar .transaction-toolbar {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 720px) {
+    .app-shell .fw-detail-evidence-rail {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-detail-provider-pane {
+        grid-template-columns: auto minmax(0, 1fr);
+        min-height: 260px;
+        padding: 24px 22px;
+    }
+
+    .app-shell .fw-detail-history-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-toolbar .transaction-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-date {
+        display: none;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-detail-hero,
+    .app-shell .fw-detail-change-story,
+    .app-shell .fw-transactions-pulse {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-detail-provider-pane,
+    .app-shell .fw-transactions-total {
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-detail-provider-pane {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+        min-height: 0;
+    }
+
+    .app-shell .fw-detail-current {
+        margin-top: 8px;
+    }
+
+    .app-shell .fw-detail-change-story .detected-change-card,
+    .app-shell .fw-detail-change-story .explanation-panel {
+        min-height: 0;
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-detail-change-story .detected-change-values {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-detail-change-story .detail-arrow {
+        transform: rotate(90deg);
+    }
+
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-total {
+        min-height: 190px;
+        padding: 24px 22px;
+    }
+
+    .app-shell .fw-transactions-ledger {
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-transactions-toolbar {
+        padding: 18px;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-result-line,
+    .app-shell .fw-transactions-ledger .transaction-row,
+    .app-shell .fw-transactions-ledger .transaction-explanation {
+        padding-right: 18px;
+        padding-left: 18px;
+    }
+}
