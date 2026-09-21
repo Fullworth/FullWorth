@@ -16,7 +16,12 @@ public sealed class BillMerchantNormalizerTests
     [InlineData("MIDCO ONLINE PAYMENT", "MIDCO")]
     [InlineData("MIDCO*123456", "MIDCO")]
     [InlineData("MIDCO - 9876", "MIDCO")]
-    public void Normalize_MidcoVariants_ReturnSameMerchant(
+    [InlineData("MIDCO AUTOPAYMENT", "MIDCO")]
+    [InlineData("MIDCO PMT", "MIDCO")]
+    [InlineData("MIDCO RECURRING PURCHASE", "MIDCO")]
+    [InlineData("MIDCO CHECKCARD 4829AB", "MIDCO")]
+    [InlineData("MIDCO A123456", "MIDCO")]
+    public void Normalize_TransactionDescriptionVariants_ReturnSameMerchant(
         string input,
         string expected)
     {
@@ -43,15 +48,19 @@ public sealed class BillMerchantNormalizerTests
             result);
     }
 
-    [Fact]
-    public void Normalize_PreservesMeaningfulWords()
+    [Theory]
+    [InlineData("Black Hills Energy", "BLACK HILLS ENERGY")]
+    [InlineData("7ELEVEN", "7ELEVEN")]
+    [InlineData("Studio 54", "STUDIO 54")]
+    public void Normalize_PreservesMeaningfulMerchantWords(
+        string input,
+        string expected)
     {
         var result =
-            _normalizer.Normalize(
-                "Black Hills Energy");
+            _normalizer.Normalize(input);
 
         Assert.Equal(
-            "BLACK HILLS ENERGY",
+            expected,
             result);
     }
 
