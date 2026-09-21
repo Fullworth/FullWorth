@@ -505,6 +505,10 @@
 
     private bool _actionSucceeded;
 
+    private bool _connectButtonWired;
+
+    private bool _reconnectButtonsNeedWiring;
+
     private string? _errorMessage;
 
     private string? _actionMessage;
@@ -523,10 +527,16 @@
             var module =
                 await GetBffModuleAsync();
 
-            await module.InvokeVoidAsync(
-                "wirePlaidConnectButton",
-                "connect-bank-button",
-                "connect-bank-status");
+            if (!_connectButtonWired)
+            {
+                await module.InvokeVoidAsync(
+                    "wirePlaidConnectButton",
+                    "connect-bank-button",
+                    "connect-bank-status");
+
+                _connectButtonWired =
+                    true;
+            }
 
             if (firstRender)
             {
@@ -537,12 +547,16 @@
                 return;
             }
 
-            if (!_isLoading &&
+            if (_reconnectButtonsNeedWiring &&
+                !_isLoading &&
                 string.IsNullOrWhiteSpace(
                     _errorMessage))
             {
                 await WireReconnectButtonsAsync(
                     module);
+
+                _reconnectButtonsNeedWiring =
+                    false;
             }
         }
         catch (JSException)
@@ -621,8 +635,6 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
-
-        StateHasChanged();
     }
 
     private async Task LoadAsync()
@@ -668,6 +680,9 @@
                             account.IsActive)
                     .ToList()
                 ?? [];
+
+            _reconnectButtonsNeedWiring =
+                true;
 
             await PopulateConnectionDisplayTimesAsync();
         }
