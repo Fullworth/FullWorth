@@ -67,7 +67,12 @@ public sealed class BillStreamsController : ControllerBase
                     stream.Id)
                 .ToList();
 
-        var transactionSummaries =
+        /*
+         * Calculate stream metrics in PostgreSQL instead of loading every
+         * historical transaction into API memory. The correlated subqueries
+         * stay ownership-scoped and return one compact row per Bill Stream.
+         */
+        var metricsByStream =
             await _dbContext.BankTransactions
                 .AsNoTracking()
                 .Where(transaction =>
@@ -77,43 +82,45 @@ public sealed class BillStreamsController : ControllerBase
                         transaction.BillStreamId.Value) &&
                     !transaction.IsRemoved &&
                     !transaction.IsPending)
-                .OrderByDescending(transaction =>
-                    transaction.PostedDate)
-                .ThenByDescending(transaction =>
-                    transaction.CreatedAtUtc)
-                .Select(transaction =>
+                .GroupBy(transaction =>
+                    transaction.BillStreamId!.Value)
+                .Select(group =>
                     new
                     {
                         BillStreamId =
-                            transaction.BillStreamId!.Value,
-                        transaction.Amount
+                            group.Key,
+
+                        CurrentAmount =
+                            group
+                                .OrderByDescending(transaction =>
+                                    transaction.PostedDate)
+                                .ThenByDescending(transaction =>
+                                    transaction.CreatedAtUtc)
+                                .Select(transaction =>
+                                    transaction.Amount)
+                                .First(),
+
+                        PreviousAverage =
+                            group.Count() <= 1
+                                ? 0m
+                                : group
+                                    .OrderByDescending(transaction =>
+                                        transaction.PostedDate)
+                                    .ThenByDescending(transaction =>
+                                        transaction.CreatedAtUtc)
+                                    .Skip(1)
+                                    .Average(transaction =>
+                                        transaction.Amount)
                     })
-                .ToListAsync(
+                .ToDictionaryAsync(
+                    metric =>
+                        metric.BillStreamId,
+                    metric =>
+                        (
+                            metric.CurrentAmount,
+                            metric.PreviousAverage
+                        ),
                     cancellationToken);
-
-        var metricsByStream =
-            transactionSummaries
-                .GroupBy(transaction =>
-                    transaction.BillStreamId)
-                .ToDictionary(
-                    group => group.Key,
-                    group =>
-                    {
-                        var orderedTransactions =
-                            group.ToList();
-
-                        return (
-                            CurrentAmount:
-                                orderedTransactions[0].Amount,
-
-                            PreviousAverage:
-                                orderedTransactions.Count <= 1
-                                    ? 0m
-                                    : orderedTransactions
-                                        .Skip(1)
-                                        .Average(transaction =>
-                                            transaction.Amount));
-                    });
 
         var results =
             streams
