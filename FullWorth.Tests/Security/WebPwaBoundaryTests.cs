@@ -148,6 +148,43 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public void MobileNavigation_KeepsAccountAsAPrimaryDestination()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var layout =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "AppLayout.razor"));
+
+        var shellStyles =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "app-shell.css"));
+
+        Assert.Contains(
+            """
+            <NavLink href="/app/account"
+                         class="mobile-bottom-link"
+            """,
+            layout,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+            shellStyles,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InstallHelper_IsPublicAndKeepsWorkerUpdatesOutOfHttpCache()
     {
         using var factory =
@@ -192,5 +229,32 @@ public sealed class WebPwaBoundaryTests
             "/api/",
             body,
             StringComparison.OrdinalIgnoreCase);
+    }
+    private static string FindRepositoryRoot()
+    {
+        var directory =
+            new DirectoryInfo(
+                AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            if (File.Exists(
+                    Path.Combine(
+                        directory.FullName,
+                        "FullWorth.slnx")) &&
+                Directory.Exists(
+                    Path.Combine(
+                        directory.FullName,
+                        "FullWorth.Web")))
+            {
+                return directory.FullName;
+            }
+
+            directory =
+                directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not locate the FullWorth repository root.");
     }
 }
