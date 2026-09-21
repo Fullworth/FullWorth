@@ -13,12 +13,20 @@
 
 <link rel="stylesheet" href="/account-settings.css" />
 
-<div class="app-page settings-page">
+<div class="app-page settings-page fw-profile-page">
+    <a class="fw-back-link profile-back-link"
+       href="/app/account">
+        <svg class="bw-sprite" aria-hidden="true">
+            <use href="/assets/billwatch-sprites.svg#chevron-left"></use>
+        </svg>
+        @L["Account"]
+    </a>
+
     <header class="page-heading">
         <div>
-            <span class="page-kicker">@L["Account"]</span>
+            <span class="page-kicker">@L["Personal profile"]</span>
             <h1>@L["Profile"]</h1>
-            <p>@L["Manage the personal information FullWorth keeps for your account."]</p>
+            <p>@L["Keep the small amount of personal information FullWorth uses to address you separate from your financial data."]</p>
         </div>
     </header>
 
@@ -38,20 +46,28 @@
         </div>
     }
 
-    <section class="settings-card">
-        <div class="settings-copy">
-            <span class="panel-kicker">@L["Profile"]</span>
-            <h2>@L["Display name"]</h2>
-            <p>@L["This is the name FullWorth can use to personalize your account. It is optional and does not change your sign-in email."]</p>
+    <section class="settings-card fw-profile-card">
+        <div class="settings-card-heading fw-profile-heading">
+            <div class="settings-card-icon is-blue" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#account"></use>
+                </svg>
+            </div>
+
+            <div class="settings-copy">
+                <span class="panel-kicker">@L["Profile"]</span>
+                <h2>@L["Display name"]</h2>
+                <p>@L["This is the name FullWorth can use to personalize your account. It is optional and does not change your sign-in email."]</p>
+            </div>
         </div>
 
         @if (_security is null)
         {
-            <p>@L["Loading profile…"]</p>
+            <p class="fw-profile-loading">@L["Loading profile…"]</p>
         }
         else
         {
-            <div class="settings-grid two-column">
+            <div class="settings-grid two-column fw-profile-grid">
                 <label class="settings-field">
                     <span>@L["Display name"]</span>
                     <input type="text"
@@ -68,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="settings-actions">
+            <div class="settings-actions fw-profile-actions">
                 <button type="button"
                         class="primary-action"
                         disabled="@_isBusy"
@@ -82,7 +98,7 @@
                 </a>
             </div>
 
-            <p class="security-note">
+            <p class="security-note fw-profile-note">
                 @L["FullWorth deliberately keeps this profile small. Your bank data remains separate and is not used as profile information."]
             </p>
         }
