@@ -17,7 +17,7 @@
     <header class="page-heading">
         <div>
             <span class="page-kicker">
-                @L["FullWorth alerts"]
+                @L["Financial signal feed"]
             </span>
 
             <h1>
@@ -38,9 +38,9 @@
                     disabled="@_isMutating"
                     @onclick="ReloadAsync">
 
-                <span aria-hidden="true">
-                    ↻
-                </span>
+                <svg class="bw-sprite" aria-hidden="true">
+                    <use href="/assets/billwatch-sprites.svg#refresh"></use>
+                </svg>
 
                 @L["Refresh"]
             </button>
@@ -108,110 +108,149 @@
         var filteredAlerts =
             FilteredAlerts;
 
-        <AlertSummary Total="@_alerts.Count"
-                      Unread="@unreadCount"
-                      NeedsAttention="@needsAttentionCount" />
-
-        <div class="activity-toolbar">
-            <div class="activity-filters">
-                <button type="button"
-                        class="@GetFilterClass(
-                                                ActivityFilter.All)"
-                        @onclick="() => SetFilter(ActivityFilter.All)">
-
-                    @L["All"]
-
-                    <span>
-                        @_alerts.Count
-                    </span>
-                </button>
-
-                <button type="button"
-                        class="@GetFilterClass(
-                                                ActivityFilter.Unread)"
-                        @onclick="() => SetFilter(ActivityFilter.Unread)">
-
-                    @L["Unread"]
-
-                    <span>
-                        @unreadCount
-                    </span>
-                </button>
-
-                <button type="button"
-                        class="@GetFilterClass(
-                                                ActivityFilter.Attention)"
-                        @onclick="() => SetFilter(ActivityFilter.Attention)">
-
-                    @L["Needs attention"]
-
-                    <span>
-                        @needsAttentionCount
-                    </span>
-                </button>
-            </div>
-
-            <span class="activity-retention-note">
-                @L["Showing up to 100 recent active alerts"]
-            </span>
-        </div>
-
-        @if (!string.IsNullOrWhiteSpace(
-            _actionError))
-        {
-            <div class="activity-action-error">
-                @_actionError
-            </div>
-        }
-
-        @if (_alerts.Count == 0)
-        {
-            <section class="alerts-empty">
-                <div class="alerts-empty-icon">
-                    ✓
-                </div>
-
-                <span class="page-kicker">
-                    @L["All quiet"]
+        <section class="@GetActivityPulseClass(needsAttentionCount)"
+                 aria-label="@L["Activity summary"]">
+            <div class="fw-activity-pulse-copy">
+                <span class="fw-activity-eyebrow">
+                    @(needsAttentionCount > 0
+                        ? L["Needs your attention"]
+                        : L["All quiet"])
                 </span>
 
-                <h2>
-                    @L["No FullWorth alerts yet."]
-                </h2>
-
-                <p>
-                    @L["FullWorth will surface meaningful recurring-bill changes and account issues here when evidence supports them."]
-                </p>
-            </section>
-        }
-        else if (filteredAlerts.Count == 0)
-        {
-            <section class="alerts-filter-empty">
-                <strong>
-                    @L["Nothing in this view."]
+                <strong class="fw-activity-number">
+                    @needsAttentionCount
                 </strong>
 
-                <span>
-                    @L["Try another activity filter."]
+                <span class="fw-activity-number-label">
+                    @(needsAttentionCount == 1
+                        ? L["active alert worth reviewing"]
+                        : L["active alerts worth reviewing"])
                 </span>
-            </section>
-        }
-        else
-        {
-            <section class="alert-list">
-                @foreach (var alert
-                    in filteredAlerts)
-                {
-                    <AlertCard @key="alert.Id"
-                               Alert="@ToCardViewModel(alert)"
-                               IsBusy="@IsAlertBusy(alert.Id)"
-                               CanReview="@CanReview(alert)"
-                               OnMarkRead="@HandleMarkReadAsync"
-                               OnDismiss="@HandleDismissAsync"
-                               OnReview="@HandleReviewAsync" />
-                }
-            </section>
-        }
+
+                <p>
+                    @if (needsAttentionCount > 0)
+                    {
+                        @L["FullWorth found financial activity that may need review. Open an item to see the evidence and next step."]
+                    }
+                    else
+                    {
+                        @L["There are no warning or critical alerts waiting for you right now."]
+                    }
+                </p>
+            </div>
+
+            <div class="fw-activity-pulse-stats">
+                <div>
+                    <span>@L["Unread"]</span>
+                    <strong>@unreadCount</strong>
+                </div>
+
+                <div>
+                    <span>@L["Recent activity"]</span>
+                    <strong>@_alerts.Count</strong>
+                </div>
+
+                <div>
+                    <span>@L["Retention"]</span>
+                    <strong>100</strong>
+                    <small>@L["latest active alerts"]</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="fw-activity-feed">
+            <div class="fw-activity-feed-head">
+                <div>
+                    <span class="panel-kicker">@L["Activity"]</span>
+                    <h2>@L["Your financial feed"]</h2>
+                </div>
+
+                <div class="activity-filters">
+                    <button type="button"
+                            class="@GetFilterClass(ActivityFilter.All)"
+                            aria-pressed="@(_filter == ActivityFilter.All)"
+                            @onclick="() => SetFilter(ActivityFilter.All)">
+                        @L["All"]
+                        <span>@_alerts.Count</span>
+                    </button>
+
+                    <button type="button"
+                            class="@GetFilterClass(ActivityFilter.Unread)"
+                            aria-pressed="@(_filter == ActivityFilter.Unread)"
+                            @onclick="() => SetFilter(ActivityFilter.Unread)">
+                        @L["Unread"]
+                        <span>@unreadCount</span>
+                    </button>
+
+                    <button type="button"
+                            class="@GetFilterClass(ActivityFilter.Attention)"
+                            aria-pressed="@(_filter == ActivityFilter.Attention)"
+                            @onclick="() => SetFilter(ActivityFilter.Attention)">
+                        @L["Attention"]
+                        <span>@needsAttentionCount</span>
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(
+                _actionError))
+            {
+                <div class="activity-action-error">
+                    @_actionError
+                </div>
+            }
+
+            @if (_alerts.Count == 0)
+            {
+                <section class="alerts-empty">
+                    <div class="alerts-empty-icon">
+                        <svg class="bw-sprite" aria-hidden="true">
+                            <use href="/assets/billwatch-sprites.svg#check"></use>
+                        </svg>
+                    </div>
+
+                    <span class="page-kicker">
+                        @L["All quiet"]
+                    </span>
+
+                    <h2>
+                        @L["No FullWorth alerts yet."]
+                    </h2>
+
+                    <p>
+                        @L["FullWorth will surface meaningful recurring-bill changes and account issues here when evidence supports them."]
+                    </p>
+                </section>
+            }
+            else if (filteredAlerts.Count == 0)
+            {
+                <section class="alerts-filter-empty">
+                    <strong>
+                        @L["Nothing in this view."]
+                    </strong>
+
+                    <span>
+                        @L["Try another activity filter."]
+                    </span>
+                </section>
+            }
+            else
+            {
+                <section class="alert-list">
+                    @foreach (var alert
+                        in filteredAlerts)
+                    {
+                        <AlertCard @key="alert.Id"
+                                   Alert="@ToCardViewModel(alert)"
+                                   IsBusy="@IsAlertBusy(alert.Id)"
+                                   CanReview="@CanReview(alert)"
+                                   OnMarkRead="@HandleMarkReadAsync"
+                                   OnDismiss="@HandleDismissAsync"
+                                   OnReview="@HandleReviewAsync" />
+                    }
+                </section>
+            }
+        </section>
     }
 </div>
 
@@ -360,6 +399,14 @@
                 filter
             ? "activity-filter active"
             : "activity-filter";
+    }
+
+    private static string GetActivityPulseClass(
+        int needsAttentionCount)
+    {
+        return needsAttentionCount > 0
+            ? "fw-activity-pulse has-attention"
+            : "fw-activity-pulse is-calm";
     }
 
     private bool IsAlertBusy(
