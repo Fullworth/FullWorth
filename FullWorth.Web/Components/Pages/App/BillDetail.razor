@@ -223,7 +223,7 @@
                 else
                 {
                     <div class="statement-list">
-                        @foreach (var statement in _detail.Statements.OrderByDescending(item => item.PeriodEnd))
+                        @foreach (var statement in _detail.Statements)
                         {
                             <article class="statement-row">
                                 <div class="statement-date-icon">
@@ -266,7 +266,7 @@
                 else
                 {
                     <div class="change-history-list">
-                        @foreach (var change in _detail.Changes.OrderByDescending(item => item.DetectedAtUtc))
+                        @foreach (var change in _detail.Changes)
                         {
                             <article class="change-history-row">
                                 <div class="@GetHistoryIndicatorClass(change.AmountDifference)"></div>
@@ -315,9 +315,7 @@
             : $"{_detail.ProviderName} — FullWorth";
 
     private BillChangeViewModel? LatestChange =>
-        _detail?.Changes
-            .OrderByDescending(change => change.DetectedAtUtc)
-            .FirstOrDefault();
+        _detail?.Changes.FirstOrDefault();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -333,7 +331,6 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
-        StateHasChanged();
     }
 
     private async Task HandleStatementProcessedAsync()
@@ -352,7 +349,6 @@
             _errorMessage = L["The statement finished processing, but FullWorth could not refresh this bill."];
         }
 
-        StateHasChanged();
     }
 
     private async Task LoadAsync()
