@@ -17,6 +17,11 @@
     <path d="M6 7h13M16 4l3 3-3 3"/>
     <path d="M18 17H5M8 14l-3 3 3 3"/>
   </symbol>
+  <symbol id="refresh" viewBox="0 0 24 24">
+    <path d="M20 7v5h-5"/>
+    <path d="M4 17v-5h5"/>
+    <path d="M6.1 8.4A7 7 0 0 1 18.5 7M5.5 17A7 7 0 0 0 17.9 15.6"/>
+  </symbol>
   <symbol id="account" viewBox="0 0 24 24">
     <circle cx="12" cy="8" r="4"/>
     <path d="M4 21c0-3.7 3.6-6.5 8-6.5s8 2.8 8 6.5"/>
