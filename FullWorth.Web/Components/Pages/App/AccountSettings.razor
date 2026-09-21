@@ -255,6 +255,49 @@
 
             <section class="settings-card settings-card-compact">
                 <div class="settings-card-heading">
+                    <div class="settings-card-icon is-blue" aria-hidden="true">⚡</div>
+                    <div class="settings-copy">
+                        <h2>@L["Experience performance"]</h2>
+                        <p>@L["Tune visual effects and data-loading size for this device and network. Financial features stay the same at every level."]</p>
+                    </div>
+                </div>
+
+                @if (_isLoadingPreference)
+                {
+                    <div class="settings-loading">@L["Loading preference…"]</div>
+                }
+                else
+                {
+                    <label class="settings-field">
+                        <span>@L["Performance profile"]</span>
+                        <select id="experience-performance-profile"
+                                disabled="@_isBusy"
+                                @bind="_selectedPerformanceProfile">
+                            <option value="auto">@L["Auto — recommended"]</option>
+                            <option value="efficiency">@L["Efficiency — older devices or slower networks"]</option>
+                            <option value="balanced">@L["Balanced — moderate effects and data"]</option>
+                            <option value="high">@L["High — richest experience and largest data window"]</option>
+                        </select>
+                    </label>
+
+                    <div class="settings-value-row compact-value-row">
+                        <span>@L["Currently applied"]</span>
+                        <strong>@GetEffectivePerformanceLabel()</strong>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button type="button"
+                                class="secondary-action"
+                                disabled="@_isBusy"
+                                @onclick="SavePerformanceProfileAsync">
+                            @L["Apply to this device"]
+                        </button>
+                    </div>
+                }
+            </section>
+
+            <section class="settings-card settings-card-compact">
+                <div class="settings-card-heading">
                     <div class="settings-card-icon is-muted" aria-hidden="true">◇</div>
                     <div class="settings-copy">
                         <h2>@L["Privacy"]</h2>
@@ -417,6 +460,8 @@
     private bool _isLoadingPreference = true;
     private bool _dialogOpenRequested;
     private string _selectedMode = "Local12Hour";
+    private string _selectedPerformanceProfile = "auto";
+    private string _effectivePerformanceProfile = "balanced";
     private string? _pageError;
     private string? _pageSuccess;
     private AccountSecurityViewModel? _security;
@@ -461,11 +506,43 @@
             {
                 _timeModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/local-time.js");
                 _securityModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/account-security.js");
-                var preferenceTask = _timeModule.InvokeAsync<AccountPreferenceViewModel>("getTimestampPreference").AsTask();
-                var securityTask = _securityModule.InvokeAsync<AccountSecurityViewModel>("getAccountSecurity").AsTask();
-                await Task.WhenAll(preferenceTask, securityTask);
-                _selectedMode = NormalizeMode(preferenceTask.Result.TimestampDisplayMode);
-                _security = securityTask.Result;
+
+                var preferenceTask =
+                    _timeModule
+                        .InvokeAsync<AccountPreferenceViewModel>(
+                            "getTimestampPreference")
+                        .AsTask();
+
+                var securityTask =
+                    _securityModule
+                        .InvokeAsync<AccountSecurityViewModel>(
+                            "getAccountSecurity")
+                        .AsTask();
+
+                var performanceTask =
+                    JS.InvokeAsync<PerformanceProfileViewModel>(
+                            "FullWorthPerformance.getPreference")
+                        .AsTask();
+
+                await Task.WhenAll(
+                    preferenceTask,
+                    securityTask,
+                    performanceTask);
+
+                _selectedMode =
+                    NormalizeMode(
+                        preferenceTask.Result.TimestampDisplayMode);
+
+                _security =
+                    securityTask.Result;
+
+                _selectedPerformanceProfile =
+                    NormalizePerformanceProfile(
+                        performanceTask.Result.Selected);
+
+                _effectivePerformanceProfile =
+                    NormalizeEffectivePerformanceProfile(
+                        performanceTask.Result.Effective);
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException)
             {
@@ -694,6 +771,51 @@
         }, L["FullWorth could not save that preference. Please try again."].Value);
     }
 
+    private async Task SavePerformanceProfileAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        await RunActionAsync(
+            async () =>
+            {
+                var preference =
+                    await JS.InvokeAsync<PerformanceProfileViewModel>(
+                        "FullWorthPerformance.savePreference",
+                        _selectedPerformanceProfile);
+
+                _selectedPerformanceProfile =
+                    NormalizePerformanceProfile(
+                        preference.Selected);
+
+                _effectivePerformanceProfile =
+                    NormalizeEffectivePerformanceProfile(
+                        preference.Effective);
+
+                SetSuccess(
+                    L["Performance profile applied to this device."].Value);
+            },
+            L["FullWorth could not apply that performance profile. Please try again."].Value);
+    }
+
+    private string GetEffectivePerformanceLabel()
+    {
+        return _effectivePerformanceProfile switch
+        {
+            "efficiency" =>
+                L["Efficiency"].Value,
+
+            "high" =>
+                L["High"].Value,
+
+            _ =>
+                L["Balanced"].Value
+        };
+    }
+
+
     private async Task RunActionAsync(Func<Task> action, string fallbackMessage)
     {
         _isBusy = true;
@@ -803,6 +925,41 @@
     private static string GetExternalProviderDisplayName(string provider) => provider switch { "google" => "Google", "apple" => "Apple", "microsoft" => "Microsoft", _ => "External provider" };
     private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static string NormalizeMode(string? value) => string.Equals(value, "Utc", StringComparison.OrdinalIgnoreCase) ? "Utc" : "Local12Hour";
+    private static string NormalizePerformanceProfile(
+        string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "efficiency" =>
+                "efficiency",
+
+            "balanced" =>
+                "balanced",
+
+            "high" =>
+                "high",
+
+            _ =>
+                "auto"
+        };
+    }
+
+    private static string NormalizeEffectivePerformanceProfile(
+        string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "efficiency" =>
+                "efficiency",
+
+            "high" =>
+                "high",
+
+            _ =>
+                "balanced"
+        };
+    }
+
 
     private static string? CreateAuthenticatorQrDataUri(string? otpAuthUri)
     {
@@ -826,6 +983,11 @@
 
     private enum SecurityDialog { None, ChangePassword, ChangeEmail, RecoveryCodes, ReplaceAuthenticator, DisableTwoFactor, SetupTwoFactor }
     private sealed class AccountPreferenceViewModel { public string TimestampDisplayMode { get; set; } = "Local12Hour"; }
+    private sealed class PerformanceProfileViewModel
+    {
+        public string Selected { get; set; } = "auto";
+        public string Effective { get; set; } = "balanced";
+    }
     private sealed class AccountSecurityViewModel
     {
         public string Email { get; set; } = string.Empty;

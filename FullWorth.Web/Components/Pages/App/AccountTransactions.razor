@@ -96,7 +96,7 @@
                 </strong>
 
                 <small>
-                    @L["Latest {0} transactions", TransactionLoadLimit]
+                    @L["Latest {0} transactions", _transactionLoadLimit]
                 </small>
             </article>
 
@@ -167,10 +167,10 @@
                     filteredTransactions.Count)
             </span>
 
-            @if (_transactions.Count == TransactionLoadLimit)
+            @if (_transactions.Count == _transactionLoadLimit)
             {
                 <small>
-                    @L["Showing the newest {0} records", TransactionLoadLimit]
+                    @L["Showing the newest {0} records", _transactionLoadLimit]
                 </small>
             }
         </div>
@@ -285,7 +285,8 @@
 </div>
 
 @code {
-    private const int TransactionLoadLimit = 500;
+    private int _transactionLoadLimit =
+        500;
 
     private IJSObjectReference?
         _bffModule;
@@ -413,13 +414,20 @@
                     "import",
                     "./js/bff.js");
 
+            _transactionLoadLimit =
+                Math.Clamp(
+                    await JS.InvokeAsync<int>(
+                        "FullWorthPerformance.getTransactionLoadLimit"),
+                    50,
+                    500);
+
             await using var streamModule =
                 await JS.InvokeAsync<IJSObjectReference>(
                     "import", "./js/transaction-stream.js");
 
             await using var streamReference =
                 await streamModule.InvokeAsync<IJSStreamReference>(
-                    "getBankTransactionsStream", TransactionLoadLimit);
+                    "getBankTransactionsStream", _transactionLoadLimit);
 
             await using var stream =
                 await streamReference.OpenReadStreamAsync(4 * 1024 * 1024);

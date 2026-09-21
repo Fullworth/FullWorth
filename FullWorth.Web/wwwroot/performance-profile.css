@@ -1,0 +1,45 @@
+/*
+ * FullWorth performance profiles adjust presentation cost only.
+ * Financial functionality, authentication, ownership, and data integrity
+ * are identical at every level.
+ */
+
+html[data-fullworth-performance="efficiency"] {
+    scroll-behavior: auto;
+}
+
+html[data-fullworth-performance="efficiency"] *,
+html[data-fullworth-performance="efficiency"] *::before,
+html[data-fullworth-performance="efficiency"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+}
+
+html[data-fullworth-performance="efficiency"] .app-sidebar,
+html[data-fullworth-performance="efficiency"] .app-topbar,
+html[data-fullworth-performance="efficiency"] .mobile-menu-sheet,
+html[data-fullworth-performance="efficiency"] .settings-dialog-shell {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+html[data-fullworth-performance="high"] {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-fullworth-performance] {
+        scroll-behavior: auto;
+    }
+
+    html[data-fullworth-performance] *,
+    html[data-fullworth-performance] *::before,
+    html[data-fullworth-performance] *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        transition-delay: 0ms !important;
+    }
+}
