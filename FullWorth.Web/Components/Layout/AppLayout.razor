@@ -17,17 +17,29 @@
                href="/app"
                aria-label="@L["FullWorth dashboard"]">
 
-                <span class="app-brand-mark">
-                    <span></span>
+                <span class="app-brand-mark fw-brand-mark">
+                    <img src="/assets/fullworth/fullworth-mark.svg"
+                         alt=""
+                         aria-hidden="true" />
                 </span>
 
-                <strong>
-                    FullWorth
-                </strong>
+                <span class="fw-brand-copy">
+                    <strong>
+                        FullWorth
+                    </strong>
+
+                    <small>
+                        @L["Financial intelligence"]
+                    </small>
+                </span>
             </a>
 
             <nav class="app-nav desktop-app-nav"
                  aria-label="@L["FullWorth navigation"]">
+
+                <span class="fw-nav-label">
+                    @L["Money"]
+                </span>
 
                 <NavLink href="/app"
                          Match="NavLinkMatch.All"
@@ -75,11 +87,19 @@
                     </span>
                 </NavLink>
 
+                <span class="fw-nav-label fw-nav-label-secondary">
+                    @L["Manage"]
+                </span>
+
                 <AdminNavLink />
 
                 <NavLink href="/app/subscription"
                          class="app-nav-link">
-                    <span class="nav-icon" aria-hidden="true">◆</span>
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#subscription"></use>
+                        </svg>
+                    </span>
                     <span>@L["Subscription"]</span>
                 </NavLink>
 
@@ -95,7 +115,11 @@
 
                 <NavLink href="/app/account/settings"
                          class="app-nav-link">
-                    <span class="nav-icon" aria-hidden="true">⚙</span>
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#settings"></use>
+                        </svg>
+                    </span>
                     <span>@L["Settings"]</span>
                 </NavLink>
             </nav>
@@ -191,7 +215,11 @@
 
                                 <NavLink href="/app/subscription"
                                          class="app-nav-link">
-                                    <span class="nav-icon" aria-hidden="true">◆</span>
+                                    <span class="nav-icon" aria-hidden="true">
+                                        <svg class="bw-sprite">
+                                            <use href="/assets/billwatch-sprites.svg#subscription"></use>
+                                        </svg>
+                                    </span>
                                     <span>@L["Subscription"]</span>
                                 </NavLink>
 
@@ -207,7 +235,11 @@
 
                                 <NavLink href="/app/account/settings"
                                          class="app-nav-link">
-                                    <span class="nav-icon" aria-hidden="true">⚙</span>
+                                    <span class="nav-icon" aria-hidden="true">
+                                        <svg class="bw-sprite">
+                                            <use href="/assets/billwatch-sprites.svg#settings"></use>
+                                        </svg>
+                                    </span>
                                     <span>@L["Settings"]</span>
                                 </NavLink>
 
