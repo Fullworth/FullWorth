@@ -230,6 +230,21 @@ public sealed class WebPwaBoundaryTests
             StringComparison.Ordinal);
 
         Assert.Contains(
+            "popupClosedPendingChecks",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "popupClosedPendingChecks >=",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "text.popupClosed",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
             "credentials:",
             bff,
             StringComparison.Ordinal);
