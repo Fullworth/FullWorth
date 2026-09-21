@@ -1,6 +1,6 @@
 # FullWorth Current Context (legacy filename retained)
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ## FullWorth brand transition
 
@@ -48,9 +48,10 @@ Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `2282fcc0a2e3f6ed22c9a7f533d5b0552739072f`
-- `development`: `e90e5b08c26e2c0c44a67e59bd766e41db649efe`
-- PR #141 promoted the PWA and performance batch to `master` as `2282fcc0a2e3f6ed22c9a7f533d5b0552739072f`; its exact promotion head passed all three required jobs before merge, and the post-merge push CI is the release gate for that merge commit.
+- `master`: `cbcf261e13636f0330cb9d7be2ce413871e413aa`
+- `development`: `cbcf261e13636f0330cb9d7be2ce413871e413aa`
+- PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
+- `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
 - PR #96 synchronized the Slack-compatible readiness-alert payload into `development` as `0253f08581417f9e41293481fccbcaf5da301ede`.
 - PR #98 promoted the secure private-beta acceptance hardening to `master` as `3622b57c84c035c30a63bea070f53195635a62eb`. CI #534 passed all three required jobs on exact head `0253f085...`.
 - PR #99 fixed HTML-encoded ASP.NET Core Identity confirmation-link parsing and merged into `development` as `847e17a20c97352114aafb7ef407da8a40882591`.
@@ -78,18 +79,25 @@ Production path: `/opt/billwatch`
 
 ## Current verified production state
 
-The last explicitly verified guarded production deployment is:
+The current explicitly verified guarded production deployment is:
 
-`7824cc5f6ddb0231c986a793f15654d0314a8ad5`
+`cbcf261e13636f0330cb9d7be2ce413871e413aa`
 
-On 2026-09-17, the production host was fast-forwarded to that exact verified `master` release and deployed only through `deploy/deploy-production.sh .env.production`.
+On 2026-09-21, the production host was updated to that exact verified `master` release and deployed only through `deploy/deploy-production.sh .env.production`.
 
-- The first guarded attempt stopped at the release-ID preflight before any deployment because `BILLWATCH_RELEASE_ID` still named the prior release. The value was corrected to the checked-out commit and the guarded path was then rerun.
-- The deployment created and verified encrypted Restic recovery snapshot `ba25d867d7444e6dff4ae27b3785b188c94838c98fac8f96692fa826b4ad3ba8` before replacing services.
-- API, web, database, and edge became healthy. Public API/Web readiness, release integrity, permissions/exposure boundaries, no-store/security headers, antiforgery issuance, and protected logout all passed.
-- `verify-production.sh` and `verify-beta-readiness.sh` passed. The backup timer and runtime watchdog are enabled and active; subscription enforcement remains safely disabled.
+- The guarded deployment completed successfully.
+- The deployment created and verified encrypted Restic recovery snapshot `7449ac243947...` before replacing services. The full snapshot identifier remains an operator-side production artifact; do not infer or invent the omitted suffix in repository documentation.
+- API, Web, database, and edge are healthy.
+- The release marker and running image revisions match `cbcf261e13636f0330cb9d7be2ce413871e413aa`.
+- Public API/Web readiness and HTTP security-boundary verification passed.
+- Private-beta host readiness passed.
+- Subscription enforcement remains safely disabled.
+- The backup timer and runtime watchdog are active.
+- Non-destructive direct-API smoke passed against the deployed release.
+- Non-destructive authenticated Web/BFF smoke passed using a protected newline-normalized temporary credential.
+- The deployed release does **not** contain the later Web-smoke newline-handling fix. A local-only VPS commit was reported as `f9000be`, but it is not pushed to GitHub, is not part of `master`, is not deployed, and must not be treated as source authority until its exact diff is reviewed and merged through the normal repository/CI path.
 
-This verifies the guarded release and host prerequisites. It does **not** prove authenticated browser/BFF/API workflows, cross-user isolation, Plaid behavior, statement accuracy, clean-host recovery, external alert delivery, or legal review.
+This verifies the guarded release, host prerequisites, non-destructive direct-API smoke, and non-destructive authenticated Web/BFF smoke. It does **not** yet prove objective cross-user isolation, the controlled Plaid lifecycle, representative statement semantics/OCR, hosted-link human completion, reboot behavior, external alert receipt, clean-host recovery against the real off-host repository, provider-enforced immutable storage, account-deletion evidence, or qualified legal review.
 
 ## Verified P0/private-beta code position
 
@@ -129,20 +137,22 @@ These capabilities are code/CI verified. They are **not** proof that the deploye
 
 ## Current machine-verifiable P0 position
 
-The exact PR #100 promotion head passed the complete CI gate. No unresolved compile/test/CI/container/recovery failure is known from that change.
+The exact PR #163 promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed the complete CI #644 gate, and guarded production deployment of master release `cbcf261e13636f0330cb9d7be2ce413871e413aa` completed successfully.
+
+Non-destructive direct-API smoke and authenticated Web/BFF smoke have now also passed against that deployed release.
 
 Most remaining private-beta P0 items are real-environment acceptance gates, not missing generic application code. Do not manufacture synthetic evidence.
 
 In particular:
 
-- authenticated browser/BFF/direct-API smoke must be run against the deployed release with controlled identities;
-- objective cross-user Web/BFF ownership smoke requires a second controlled identity and real controlled fixture;
-- disposable account-deletion evidence must be produced and matched to the deployed release;
-- human Plaid Hosted Link/update-mode behavior and Active/sync verification require real observation;
-- representative statement semantic/OCR accuracy requires operator-known facts;
+- objective cross-user Web/BFF ownership proof requires a second controlled identity plus a controlled foreign-owned statement/resource fixture;
+- the Plaid lifecycle requires a controlled account with a suitable real/sandbox connection, and Hosted Link completion remains a human interaction gate;
+- representative statement lifecycle/semantic/OCR acceptance requires explicit approval to upload a controlled fixture with operator-known facts;
+- disposable account-deletion evidence must still be produced and matched to the deployed release;
+- controlled reboot proof remains an explicit operator action;
+- independent external alert receipt must be observed;
 - clean-host restore must use the actual off-host repository;
 - provider-enforced immutable/Object-Lock/WORM/equivalent protection must be configured and proven;
-- independent alert receipt must be observed;
 - qualified legal review of the exact Terms/Privacy version remains external evidence.
 
 ## Production/rollout rules
@@ -159,14 +169,14 @@ In particular:
 
 Before trusted external beta invitations:
 
-1. Run authenticated direct API/Web-BFF/admin/access-key/Plaid/statement/subscription smoke with controlled identities and fixtures against release `7824cc5...`.
-2. Run objective cross-user Web/BFF ownership smoke with a second controlled identity.
-3. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
-4. Complete human Plaid Hosted Link/update-mode observation and Active/sync verification.
-5. Review representative PDF/scanned-PDF/JPG/PNG extraction/OCR fields and bill-change explanations against operator-known facts.
+1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against release `cbcf261e...`.
+2. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
+3. Exercise the controlled Plaid connect/update lifecycle with a suitable account and complete the Hosted Link human-interaction observation.
+4. With explicit approval, upload controlled representative PDF/scanned-PDF/JPG/PNG fixtures and review extraction/OCR fields plus bill-change explanations against operator-known facts.
+5. Run controlled reboot proof.
 6. Run clean-host restore against the actual off-host repository.
 7. Configure and prove provider-enforced immutable/protected backup recovery.
-8. Run independent alert-observation proof and personally confirm both destinations.
+8. Run independent alert-observation proof and personally confirm intended destinations.
 9. Combine same-release technical, alert, Plaid, recovery, and acceptance evidence.
 10. Complete Internal Beta 0 on real controlled bills with explicit expected subscription state where known.
 11. Obtain qualified review of the exact deployed Terms/Privacy version.
@@ -174,9 +184,11 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. The guarded production deployment of `master` release `7824cc5f6ddb0231c986a793f15654d0314a8ad5` completed and passed production plus beta-host prerequisite verification on 2026-09-17.
-2. Production has a verified pre-deployment encrypted recovery snapshot `ba25d867...`; append-only backup maintenance remains separate from the production client.
-3. The highest-value next step is real deployed authenticated browser/BFF/direct-API acceptance with controlled identities, followed by the objective cross-user ownership proof.
-4. Do not manufacture acceptance evidence. Human/provider gates remain as listed above.
-5. If acceptance exposes a concrete defect, stop progression, create a focused branch from current `development`, fix it, and require the full three-job CI gate before merge.
-6. Preserve every security invariant above and all user-owned data ownership boundaries.
+1. Guarded production deployment of `master` release `cbcf261e13636f0330cb9d7be2ce413871e413aa` completed successfully on 2026-09-21; API, Web, database, and edge are healthy and the release marker/image revisions match.
+2. A verified encrypted pre-replacement recovery snapshot beginning `7449ac243947...` was created. Backup timer and runtime watchdog remain active.
+3. Non-destructive direct-API smoke and authenticated Web/BFF smoke both passed against the deployed release.
+4. The next highest-value acceptance gate is objective cross-user ownership proof using a second controlled identity and a controlled foreign-owned fixture, followed by controlled Plaid and statement-lifecycle observation.
+5. The locally committed Web-smoke newline fix `f9000be` is not pushed, merged, or deployed. Review its exact diff and put it through the normal development PR + full CI path before relying on it.
+6. Do not manufacture acceptance evidence. Human/provider/operator gates remain as listed above.
+7. If acceptance exposes a concrete defect, stop progression, create a focused branch from current `development`, fix it, and require the full three-job CI gate before merge.
+8. Preserve every security invariant above and all user-owned data ownership boundaries.
