@@ -560,3 +560,340 @@ html[data-theme="light"] .subscription-plan-card {
         right: 12px;
     }
 }
+
+
+/* FullWorth v2 subscription surface */
+
+.app-shell .subscription-page {
+    max-width: 1180px;
+    padding-bottom: 58px;
+}
+
+.app-shell .subscription-heading {
+    margin-bottom: 18px;
+}
+
+.app-shell .fw-subscription-hero {
+    min-height: 300px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(380px, 0.75fr);
+    align-items: stretch;
+    gap: 12px;
+    border-color: var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.app-shell .fw-subscription-hero::before {
+    display: none;
+}
+
+.app-shell .fw-subscription-hero .subscription-card-heading {
+    min-height: 100%;
+    padding: 28px 30px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: center;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 94% 0%, rgba(88, 201, 147, 0.18), transparent 33%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-subscription-hero .subscription-card-icon.active {
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(99, 217, 167, 0.14);
+    border-radius: 16px;
+    background: rgba(99, 217, 167, 0.1);
+    color: #7fddb6;
+    box-shadow: none;
+}
+
+.app-shell .fw-subscription-hero .subscription-card-icon .bw-sprite {
+    width: 23px;
+    height: 23px;
+}
+
+.app-shell .fw-subscription-hero .subscription-state.active {
+    border-color: rgba(99, 217, 167, 0.14);
+    background: rgba(99, 217, 167, 0.08);
+    color: #7fddb6;
+}
+
+.app-shell .fw-subscription-hero .subscription-card-heading h2 {
+    color: #fff;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    letter-spacing: -0.05em;
+}
+
+.app-shell .fw-subscription-hero .subscription-card-heading p {
+    color: #9ca7c4;
+    font-size: 0.66rem;
+}
+
+.app-shell .fw-subscription-hero .subscription-status-grid {
+    grid-column: 2;
+    align-self: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+}
+
+.app-shell .fw-subscription-hero .subscription-status-grid > div {
+    padding: 13px 15px;
+    border-color: var(--fw-line);
+    border-radius: 15px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-subscription-hero .subscription-status-grid span {
+    color: var(--fw-muted);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-subscription-hero .subscription-status-grid strong {
+    color: var(--fw-ink);
+    font-size: 0.72rem;
+}
+
+.app-shell .fw-subscription-hero .subscription-notice,
+.app-shell .fw-subscription-hero .subscription-actions-row {
+    grid-column: 1 / -1;
+}
+
+.app-shell .fw-subscription-hero .subscription-actions-row {
+    padding: 0 2px 2px;
+}
+
+.app-shell .subscription-action {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+    font-size: 0.62rem;
+}
+
+.app-shell .subscription-action.secondary {
+    border-color: var(--fw-line);
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+}
+
+.app-shell .fw-subscription-pricing {
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.app-shell .fw-subscription-pricing .subscription-section-heading {
+    padding: 2px 1px 0;
+}
+
+.app-shell .fw-subscription-pricing .subscription-section-heading h2 {
+    color: var(--fw-ink);
+    font-size: 1.22rem;
+    font-weight: 750;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .fw-subscription-pricing .subscription-section-heading p {
+    color: var(--fw-muted);
+    font-size: 0.65rem;
+}
+
+.app-shell .fw-subscription-pricing .subscription-plan-grid {
+    gap: 12px;
+}
+
+.app-shell .fw-subscription-plan {
+    min-height: 360px;
+    gap: 20px;
+    padding: 24px;
+    border-color: var(--fw-line);
+    border-radius: 24px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.app-shell .fw-subscription-plan::before {
+    display: none;
+}
+
+.app-shell .fw-subscription-plan.featured {
+    border-color: rgba(85, 103, 244, 0.22);
+    background:
+        radial-gradient(circle at 96% 0%, rgba(85, 103, 244, 0.14), transparent 34%),
+        var(--fw-panel);
+}
+
+.app-shell .fw-subscription-plan .subscription-plan-label {
+    color: var(--fw-muted);
+    font-size: 0.65rem;
+}
+
+.app-shell .fw-subscription-plan .subscription-plan-price strong {
+    color: var(--fw-ink);
+    font-size: clamp(2.65rem, 5vw, 3.75rem);
+    font-weight: 720;
+}
+
+.app-shell .fw-subscription-plan .subscription-plan-price span,
+.app-shell .fw-subscription-plan small {
+    color: var(--fw-faint);
+}
+
+.app-shell .fw-subscription-plan .subscription-feature-list {
+    border-color: var(--fw-line);
+}
+
+.app-shell .fw-subscription-plan .subscription-feature-list span {
+    color: var(--fw-muted);
+    font-size: 0.62rem;
+}
+
+.app-shell .fw-subscription-plan .subscription-plan-badge {
+    top: 15px;
+    right: 15px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+    box-shadow: none;
+}
+
+.app-shell .fw-subscription-beta,
+.app-shell .fw-subscription-unavailable {
+    padding: 22px 24px;
+    border-color: var(--fw-line);
+    border-radius: 23px;
+    background: var(--fw-panel);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.app-shell .fw-subscription-beta::before,
+.app-shell .fw-subscription-unavailable::before {
+    display: none;
+}
+
+.app-shell .fw-subscription-beta .subscription-card-icon,
+.app-shell .fw-subscription-unavailable .subscription-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+    box-shadow: none;
+}
+
+.app-shell .fw-subscription-beta .subscription-card-icon .bw-sprite,
+.app-shell .fw-subscription-unavailable .subscription-card-icon .bw-sprite {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell .fw-subscription-beta .subscription-card-heading h2,
+.app-shell .fw-subscription-unavailable .subscription-card-heading h2 {
+    color: var(--fw-ink);
+    font-size: 1.05rem;
+}
+
+.app-shell .fw-subscription-beta .subscription-card-heading p,
+.app-shell .fw-subscription-unavailable .subscription-card-heading p {
+    color: var(--fw-muted);
+    font-size: 0.63rem;
+}
+
+.app-shell .fw-subscription-beta .subscription-key-panel {
+    padding: 15px;
+    border-color: var(--fw-line);
+    border-radius: 14px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-subscription-beta .subscription-card input {
+    min-height: 42px;
+    border-color: var(--fw-line-strong);
+    border-radius: 11px;
+    background: var(--fw-panel-solid);
+    color: var(--fw-ink);
+    font-size: 0.66rem;
+}
+
+.app-shell .subscription-footer {
+    padding-top: 8px;
+    color: var(--fw-faint);
+    font-size: 0.56rem;
+}
+
+.app-shell .subscription-footer a,
+.app-shell .subscription-legal-copy a {
+    color: #7583f5;
+}
+
+@media (max-width: 900px) {
+    .app-shell .fw-subscription-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-subscription-hero .subscription-status-grid {
+        grid-column: 1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .app-shell .fw-subscription-hero {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-subscription-hero .subscription-card-heading {
+        padding: 24px 22px;
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-subscription-hero .subscription-status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-subscription-pricing .subscription-plan-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-subscription-plan,
+    .app-shell .fw-subscription-beta,
+    .app-shell .fw-subscription-unavailable {
+        border-radius: 20px;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-subscription-hero .subscription-card-heading {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-subscription-beta,
+    .app-shell .fw-subscription-unavailable,
+    .app-shell .fw-subscription-plan {
+        padding: 20px;
+    }
+
+    .app-shell .fw-subscription-beta .subscription-key-entry {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .subscription-action,
+    .app-shell .subscription-card input {
+        transition: none;
+    }
+}
