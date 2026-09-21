@@ -330,12 +330,6 @@
                     MatchesSelectedAccount)
                 .Where(
                     MatchesSearch)
-                .OrderByDescending(
-                    transaction =>
-                        transaction.PostedDate)
-                .ThenByDescending(
-                    transaction =>
-                        transaction.Id)
                 .ToList();
 
     protected override async Task
@@ -355,8 +349,6 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
-
-        StateHasChanged();
     }
 
     private async Task SyncNowAsync()
@@ -403,8 +395,6 @@
             _isRefreshing =
                 false;
         }
-
-        StateHasChanged();
     }
 
     private async Task LoadAsync()
