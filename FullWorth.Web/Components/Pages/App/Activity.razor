@@ -256,12 +256,6 @@
                             _ =>
                                 true
                         })
-                .OrderByDescending(
-                    alert =>
-                        alert.CreatedAtUtc)
-                .ThenByDescending(
-                    alert =>
-                        alert.Id)
                 .ToList();
 
     protected override async Task
@@ -299,8 +293,6 @@
         }
 
         await LoadAsync();
-
-        StateHasChanged();
     }
 
     private async Task LoadAsync()
