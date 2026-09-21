@@ -19,11 +19,11 @@
     <header class="page-heading overview-heading">
         <div>
             <span class="page-kicker">
-                @L["Your bill watch"]
+                @L["FullWorth home"]
             </span>
 
             <h1>
-                @L["Overview"]
+                @L["Financial pulse"]
             </h1>
 
             <p>
@@ -653,7 +653,11 @@
 
         <section class="fw-destination-row" aria-label="@L["Quick links"]">
             <a href="/app/account/transactions" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">↕</span>
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#transactions"></use>
+                    </svg>
+                </span>
                 <span>
                     <strong>@L["Transactions"]</strong>
                     <small>@L["Review recent account activity"]</small>
@@ -662,7 +666,11 @@
             </a>
 
             <a href="/app/account" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">⌁</span>
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#bank"></use>
+                    </svg>
+                </span>
                 <span>
                     <strong>@L["Accounts"]</strong>
                     <small>@L["Manage bank connections"]</small>
@@ -671,7 +679,11 @@
             </a>
 
             <a href="/app/activity" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">◉</span>
+                <span class="fw-destination-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#activity"></use>
+                    </svg>
+                </span>
                 <span>
                     <strong>@L["Activity"]</strong>
                     <small>@L["See alerts and important changes"]</small>
