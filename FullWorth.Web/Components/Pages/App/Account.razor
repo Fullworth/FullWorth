@@ -17,105 +17,119 @@
     <header class="page-heading">
         <div>
             <span class="page-kicker">
-                @L["FullWorth account"]
+                @L["Financial connections"]
             </span>
 
             <h1>
-                @L["Account"]
+                @L["Account hub"]
             </h1>
 
             <p>
-                @L["Connections, financial data, privacy, and your FullWorth account."]
+                @L["Manage the institutions and financial accounts FullWorth can see, plus your transaction and privacy controls."]
             </p>
         </div>
     </header>
 
-    <section class="account-identity-card">
-        <div class="identity-avatar">
-            <AuthorizeView>
-                <Authorized Context="auth">
-                    @GetInitial(
-                        auth.User.Identity?.Name)
-                </Authorized>
-            </AuthorizeView>
-        </div>
-
-        <div class="identity-copy">
-            <span>
-                @L["Signed in as"]
-            </span>
-
-            <AuthorizeView>
-                <Authorized Context="auth">
-                    <strong>
-                        @GetDisplayName(
+    <section class="fw-account-hero">
+        <div class="fw-account-identity">
+            <div class="identity-avatar">
+                <AuthorizeView>
+                    <Authorized Context="auth">
+                        @GetInitial(
                             auth.User.Identity?.Name)
-                    </strong>
-                </Authorized>
-            </AuthorizeView>
-        </div>
-
-        <div class="identity-security">
-            <span class="security-dot"></span>
-            @L["Authenticated session"]
-        </div>
-    </section>
-
-    <section class="account-tools-grid">
-        <a class="account-tool-card"
-           href="/app/account/transactions">
-
-            <div class="account-tool-icon">
-                ↕
+                    </Authorized>
+                </AuthorizeView>
             </div>
 
-            <div>
-                <span class="panel-kicker">
-                    @L["Transaction data"]
-                </span>
+            <div class="fw-account-identity-copy">
+                <span>@L["Signed in as"]</span>
 
-                <h2>
-                    @L["Transactions"]
-                </h2>
+                <AuthorizeView>
+                    <Authorized Context="auth">
+                        <strong>
+                            @GetDisplayName(
+                                auth.User.Identity?.Name)
+                        </strong>
+                    </Authorized>
+                </AuthorizeView>
 
-                <p>
-                    @L["Review the bank transactions FullWorth uses to discover recurring bills."]
-                </p>
+                <div class="fw-account-session">
+                    <span class="security-dot"></span>
+                    @L["Authenticated session"]
+                </div>
             </div>
 
-            <span class="account-tool-arrow">
-                →
-            </span>
-        </a>
+            <div class="fw-account-hero-actions">
+                <a href="/app/account/settings">
+                    @L["Security settings"]
+                    <span aria-hidden="true">→</span>
+                </a>
 
-        <a class="account-tool-card"
-           href="/app/account/privacy">
-
-            <div class="account-tool-icon">
-                ⛨
-            </div>
-
-            <div>
-                <span class="panel-kicker">
-                    @L["Ownership & privacy"]
-                </span>
-
-                <h2>
+                <a href="/app/account/privacy">
                     @L["Data & privacy"]
-                </h2>
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
 
-                <p>
-                    @L["Export your FullWorth data or permanently delete your account."]
-                </p>
+        <div class="fw-account-stats">
+            <div>
+                <span>@L["Institutions"]</span>
+                <strong>@(_isLoading ? "—" : _connections.Count.ToString())</strong>
+                <small>@L["Connected bank relationships"]</small>
             </div>
 
-            <span class="account-tool-arrow">
-                →
+            <div>
+                <span>@L["Financial accounts"]</span>
+                <strong>@(_isLoading ? "—" : _accounts.Count.ToString())</strong>
+                <small>@L["Accounts currently available"]</small>
+            </div>
+
+            <div class="@(AttentionCount > 0 ? "has-attention" : "is-healthy")">
+                <span>@L["Needs attention"]</span>
+                <strong>@(_isLoading ? "—" : AttentionCount.ToString())</strong>
+                <small>
+                    @(AttentionCount > 0
+                        ? L["Connection repair required"]
+                        : L["Connections look healthy"])
+                </small>
+            </div>
+        </div>
+    </section>
+
+    <section class="fw-account-shortcuts" aria-label="@L["Account tools"]">
+        <a href="/app/account/transactions">
+            <span class="fw-account-shortcut-icon" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#transactions"></use>
+                </svg>
             </span>
+
+            <span>
+                <strong>@L["Transactions"]</strong>
+                <small>@L["See the transaction evidence FullWorth uses"]</small>
+            </span>
+
+            <span aria-hidden="true">→</span>
+        </a>
+
+        <a href="/app/account/privacy">
+            <span class="fw-account-shortcut-icon" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#shield"></use>
+                </svg>
+            </span>
+
+            <span>
+                <strong>@L["Data & privacy"]</strong>
+                <small>@L["Export your data or manage account deletion"]</small>
+            </span>
+
+            <span aria-hidden="true">→</span>
         </a>
     </section>
 
-    <section class="connect-bank-card">
+    <section class="connect-bank-card fw-connect-bank-card">
         <div class="connect-bank-icon">
             <svg viewBox="0 0 24 24"
                  fill="none"
@@ -219,7 +233,7 @@
     else
     {
         <div class="account-grid">
-            <section class="account-panel">
+            <section class="account-panel fw-account-collection">
                 <div class="account-panel-heading">
                     <div>
                         <span class="panel-kicker">
@@ -356,7 +370,7 @@
                 }
             </section>
 
-            <section class="account-panel">
+            <section class="account-panel fw-account-collection">
                 <div class="account-panel-heading">
                     <div>
                         <span class="panel-kicker">
@@ -436,7 +450,7 @@
             </section>
         </div>
 
-        <section class="privacy-panel">
+        <section class="privacy-panel fw-account-trust-strip">
             <div class="privacy-icon">
                 <svg viewBox="0 0 24 24"
                      fill="none"
