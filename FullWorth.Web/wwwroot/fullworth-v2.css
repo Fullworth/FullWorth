@@ -2239,3 +2239,747 @@ html[data-theme="dark"] .app-shell .app-topbar {
         transition: none;
     }
 }
+
+
+/* Bill Detail v2 */
+
+.app-shell .fw-back-link {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--fw-muted);
+    font-size: 0.59rem;
+    font-weight: 720;
+    text-decoration: none;
+}
+
+.app-shell .fw-back-link .bw-sprite {
+    width: 14px;
+    height: 14px;
+}
+
+.app-shell .fw-back-link:hover {
+    color: var(--fw-ink);
+}
+
+.app-shell .fw-detail-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.65fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 30px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-detail-provider-pane {
+    min-height: 300px;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 17px;
+    border-radius: 23px;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(117, 134, 255, 0.25), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-detail-provider-pane .detail-provider-avatar {
+    width: 64px;
+    height: 64px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #dce2ff;
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-provider-copy {
+    min-width: 0;
+}
+
+.app-shell .fw-detail-provider-copy .page-kicker {
+    color: #93a1ff;
+}
+
+.app-shell .fw-detail-provider-copy h1 {
+    margin: 7px 0 8px;
+    overflow: hidden;
+    color: #fff;
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    line-height: 0.95;
+    font-weight: 740;
+    letter-spacing: -0.065em;
+    text-overflow: ellipsis;
+}
+
+.app-shell .fw-detail-provider-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #95a1bd;
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-detail-provider-meta .watching-state {
+    border-color: rgba(99, 217, 167, 0.14);
+    background: rgba(99, 217, 167, 0.07);
+    color: #85dcb7;
+}
+
+.app-shell .fw-detail-current {
+    grid-column: 1 / -1;
+    padding-top: 22px;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-shell .fw-detail-current > span {
+    color: #8f9aba;
+    font-size: 0.58rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-detail-current > strong {
+    margin-top: 7px;
+    color: #fff;
+    font-size: clamp(3.2rem, 6.8vw, 5.5rem);
+    line-height: 0.9;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-detail-current > small {
+    margin-top: 12px;
+    color: #9aa6c4;
+    font-size: 0.6rem;
+}
+
+.app-shell .fw-detail-current .detail-amount-difference.increase {
+    color: #ff9a94;
+}
+
+.app-shell .fw-detail-current .detail-amount-difference.decrease {
+    color: #7fddb6;
+}
+
+.app-shell .fw-detail-evidence-rail {
+    display: grid;
+    gap: 10px;
+}
+
+.app-shell .fw-detail-evidence-rail > div {
+    min-height: 88px;
+    padding: 17px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-detail-evidence-rail span {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-detail-evidence-rail strong {
+    margin-top: 8px;
+    color: var(--fw-ink);
+    font-size: 1.2rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .statement-upload-panel {
+    padding: 18px 20px;
+    border-color: rgba(85, 103, 244, 0.15);
+    border-radius: 22px;
+    background:
+        linear-gradient(110deg, rgba(85, 103, 244, 0.065), rgba(85, 103, 244, 0.015)),
+        var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .statement-upload-heading h2 {
+    margin-top: 4px;
+    font-size: 1rem;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .statement-upload-heading p {
+    font-size: 0.61rem;
+}
+
+.app-shell .statement-upload-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .statement-file-picker {
+    min-height: 52px;
+    border-color: var(--fw-line);
+    border-radius: 14px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .statement-upload-button {
+    min-height: 41px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr);
+    gap: 12px;
+    padding: 14px;
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card {
+    min-height: 250px;
+    margin: 0;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 0;
+    border-radius: 21px;
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.increase {
+    background:
+        radial-gradient(circle at 90% 0%, rgba(239, 123, 117, 0.18), transparent 36%),
+        var(--fw-negative-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.decrease {
+    background:
+        radial-gradient(circle at 90% 0%, rgba(88, 201, 147, 0.18), transparent 36%),
+        var(--fw-positive-soft);
+}
+
+.app-shell .fw-detail-change-story .detected-change-card.steady {
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-detail-change-story .change-eyebrow {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values {
+    margin-top: 20px;
+    gap: 11px;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values span,
+.app-shell .fw-detail-change-story .change-impact-stack span {
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+}
+
+.app-shell .fw-detail-change-story .detected-change-values strong {
+    color: var(--fw-ink);
+    font-size: 1.15rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack {
+    margin-top: 22px;
+    gap: 8px;
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack > div {
+    padding: 12px 13px;
+    border: 1px solid var(--fw-line);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.app-shell .fw-detail-change-story .change-impact-stack strong {
+    color: var(--fw-ink);
+    font-size: 0.78rem;
+}
+
+.app-shell .fw-detail-change-story .explanation-panel {
+    margin: 0;
+    padding: 25px;
+    border: 0;
+    border-radius: 21px;
+    background: var(--fw-panel-solid);
+    box-shadow: none;
+}
+
+.app-shell .fw-detail-change-story .explanation-panel .panel-heading h2 {
+    font-size: 1.08rem;
+}
+
+.app-shell .fw-detail-change-story .change-description {
+    margin: 20px 0;
+    color: var(--fw-ink-soft);
+    font-size: 0.78rem;
+    line-height: 1.7;
+}
+
+.app-shell .fw-detail-change-story .evidence-metadata {
+    gap: 8px;
+}
+
+.app-shell .fw-detail-change-story .evidence-metadata > div {
+    padding: 11px 12px;
+    border-color: var(--fw-line);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-detail-unknown {
+    min-height: 150px;
+    border-radius: 22px;
+    background:
+        linear-gradient(110deg, rgba(85, 103, 244, 0.05), transparent),
+        var(--fw-panel);
+}
+
+.app-shell .fw-detail-history-grid {
+    gap: 14px;
+}
+
+.app-shell .fw-detail-history-grid > .detail-panel {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px;
+    background: var(--fw-panel);
+}
+
+.app-shell .fw-detail-history-grid > .detail-panel > .panel-heading {
+    margin: 0;
+    padding: 20px 22px 15px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-detail-history-grid .statement-list,
+.app-shell .fw-detail-history-grid .change-history-list {
+    gap: 0;
+}
+
+.app-shell .fw-detail-history-grid .statement-row,
+.app-shell .fw-detail-history-grid .change-history-row {
+    margin: 0;
+    padding: 15px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-detail-history-grid .statement-row:last-child,
+.app-shell .fw-detail-history-grid .change-history-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-detail-history-grid .statement-row:hover,
+.app-shell .fw-detail-history-grid .change-history-row:hover {
+    background: rgba(103, 118, 158, 0.04);
+}
+
+.app-shell .fw-detail-history-grid .detail-empty {
+    min-height: 170px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Transactions v2 */
+
+.app-shell .fw-transactions-pulse {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 28px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-transactions-total {
+    min-height: 220px;
+    padding: 28px 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 92% 2%, rgba(117, 134, 255, 0.24), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+}
+
+.app-shell .fw-transactions-total > span {
+    color: #9ba6c6;
+    font-size: 0.6rem;
+    font-weight: 690;
+}
+
+.app-shell .fw-transactions-total > strong {
+    margin-top: 9px;
+    color: #fff;
+    font-size: clamp(3.2rem, 6.8vw, 5rem);
+    line-height: 0.91;
+    font-weight: 720;
+    letter-spacing: -0.075em;
+}
+
+.app-shell .fw-transactions-total > small {
+    margin-top: 17px;
+    color: #919dbc;
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-transactions-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.app-shell .fw-transactions-stats > div {
+    min-height: 104px;
+    padding: 17px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--fw-line);
+    border-radius: 18px;
+    background: var(--fw-panel-solid);
+}
+
+.app-shell .fw-transactions-stats span {
+    color: var(--fw-muted);
+    font-size: 0.56rem;
+    font-weight: 680;
+}
+
+.app-shell .fw-transactions-stats strong {
+    margin-top: 8px;
+    color: var(--fw-ink);
+    font-size: 1.75rem;
+    line-height: 1;
+    font-weight: 730;
+    letter-spacing: -0.055em;
+}
+
+.app-shell .fw-transactions-stats small {
+    margin-top: 6px;
+    color: var(--fw-faint);
+    font-size: 0.51rem;
+    line-height: 1.4;
+}
+
+.app-shell .fw-transactions-stats .has-pending strong {
+    color: #d89a45;
+}
+
+.app-shell .fw-transactions-ledger {
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-transactions-toolbar {
+    padding: 21px 23px 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--fw-line);
+}
+
+.app-shell .fw-transactions-toolbar h2 {
+    margin: 5px 0 0;
+    color: var(--fw-ink);
+    font-size: 1.08rem;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-toolbar {
+    min-width: min(540px, 55%);
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.58fr);
+    gap: 8px;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search,
+.app-shell .fw-transactions-toolbar .transaction-account-filter {
+    min-height: 39px;
+    border-color: var(--fw-line-strong);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search {
+    padding-left: 11px;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search .bw-sprite {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--fw-faint);
+}
+
+.app-shell .fw-transactions-toolbar .transaction-search input {
+    font-size: 0.62rem;
+}
+
+.app-shell .fw-transactions-toolbar .transaction-account-filter {
+    padding: 0 10px;
+    font-size: 0.6rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-result-line {
+    min-height: 48px;
+    padding: 9px 22px;
+    border-bottom: 1px solid var(--fw-line);
+    color: var(--fw-muted);
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-history-load-button {
+    min-height: 31px;
+    padding: 0 10px;
+    border-color: var(--fw-line);
+    border-radius: 10px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-history-error {
+    margin: 12px 20px 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-list {
+    gap: 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row {
+    min-height: 78px;
+    margin: 0;
+    padding: 13px 22px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-transactions-ledger .transaction-row:hover {
+    background: rgba(103, 118, 158, 0.04);
+}
+
+.app-shell .fw-transactions-ledger .transaction-copy strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.7rem;
+    font-weight: 730;
+}
+
+.app-shell .fw-transactions-ledger .transaction-copy > span,
+.app-shell .fw-transactions-ledger .transaction-copy small {
+    color: var(--fw-faint);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-date strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.63rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-date span {
+    color: var(--fw-faint);
+    font-size: 0.51rem;
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount {
+    font-size: 0.72rem;
+    font-weight: 740;
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.outflow {
+    color: var(--fw-ink);
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.credit {
+    color: var(--fw-positive);
+}
+
+.app-shell .fw-transactions-ledger .transaction-empty {
+    min-height: 280px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.app-shell .fw-transactions-ledger .transaction-empty > div .bw-sprite {
+    width: 24px;
+    height: 24px;
+}
+
+.app-shell .fw-transactions-ledger .transaction-explanation {
+    margin: 0;
+    padding: 13px 22px;
+    border: 0;
+    border-top: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: var(--fw-panel-muted);
+    color: var(--fw-faint);
+    font-size: 0.53rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+    .app-shell .fw-detail-hero,
+    .app-shell .fw-detail-change-story,
+    .app-shell .fw-transactions-pulse {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-detail-evidence-rail,
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .app-shell .fw-transactions-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-transactions-toolbar .transaction-toolbar {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 720px) {
+    .app-shell .fw-detail-evidence-rail {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-detail-provider-pane {
+        grid-template-columns: auto minmax(0, 1fr);
+        min-height: 260px;
+        padding: 24px 22px;
+    }
+
+    .app-shell .fw-detail-history-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-toolbar .transaction-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-date {
+        display: none;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-shell .fw-detail-hero,
+    .app-shell .fw-detail-change-story,
+    .app-shell .fw-transactions-pulse {
+        padding: 10px;
+        border-radius: 23px;
+    }
+
+    .app-shell .fw-detail-provider-pane,
+    .app-shell .fw-transactions-total {
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-detail-provider-pane {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+        min-height: 0;
+    }
+
+    .app-shell .fw-detail-current {
+        margin-top: 8px;
+    }
+
+    .app-shell .fw-detail-change-story .detected-change-card,
+    .app-shell .fw-detail-change-story .explanation-panel {
+        min-height: 0;
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .app-shell .fw-detail-change-story .detected-change-values {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-detail-change-story .detail-arrow {
+        transform: rotate(90deg);
+    }
+
+    .app-shell .fw-transactions-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-transactions-total {
+        min-height: 190px;
+        padding: 24px 22px;
+    }
+
+    .app-shell .fw-transactions-ledger {
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-transactions-toolbar {
+        padding: 18px;
+    }
+
+    .app-shell .fw-transactions-ledger .transaction-result-line,
+    .app-shell .fw-transactions-ledger .transaction-row,
+    .app-shell .fw-transactions-ledger .transaction-explanation {
+        padding-right: 18px;
+        padding-left: 18px;
+    }
+}
