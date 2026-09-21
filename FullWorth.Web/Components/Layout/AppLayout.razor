@@ -327,7 +327,7 @@
 @code {
     private IJSObjectReference? _timeModule;
     private bool _mobileMenuOpen;
-    private bool _showInstallAction = true;
+    private bool _showInstallAction;
     private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -354,11 +354,18 @@
 
         try
         {
-            _showInstallAction =
+            var showInstallAction =
                 !await JS.InvokeAsync<bool>(
                     "FullWorthPwa.isStandalone");
 
-            StateHasChanged();
+            if (showInstallAction !=
+                _showInstallAction)
+            {
+                _showInstallAction =
+                    showInstallAction;
+
+                StateHasChanged();
+            }
         }
         catch (JSException)
         {
