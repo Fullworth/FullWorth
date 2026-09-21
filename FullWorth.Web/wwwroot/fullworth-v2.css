@@ -2427,7 +2427,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     color: #7583f5;
 }
 
-.app-shell .statement-picker {
+.app-shell .statement-file-picker {
     min-height: 52px;
     border-color: var(--fw-line);
     border-radius: 14px;
@@ -2828,11 +2828,17 @@ html[data-theme="dark"] .app-shell .app-topbar {
     font-size: 0.51rem;
 }
 
-.app-shell .fw-transactions-ledger .transaction-amount,
-.app-shell .fw-transactions-ledger .transaction-amount-outflow,
-.app-shell .fw-transactions-ledger .transaction-amount-credit {
+.app-shell .fw-transactions-ledger .transaction-amount {
     font-size: 0.72rem;
     font-weight: 740;
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.outflow {
+    color: var(--fw-ink);
+}
+
+.app-shell .fw-transactions-ledger .transaction-amount.credit {
+    color: var(--fw-positive);
 }
 
 .app-shell .fw-transactions-ledger .transaction-empty {
