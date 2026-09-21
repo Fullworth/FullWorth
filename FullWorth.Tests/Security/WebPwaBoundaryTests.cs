@@ -114,12 +114,10 @@ public sealed class WebPwaBoundaryTests
             body,
             StringComparison.Ordinal);
 
-        Assert.Equal(
-            1,
+        Assert.Single(
             Regex.Matches(
-                    body,
-                    @"cache\.add\(")
-                .Count);
+                body,
+                @"cache\.add\("));
 
         Assert.DoesNotContain(
             "cache.put",
@@ -170,13 +168,9 @@ public sealed class WebPwaBoundaryTests
                     "wwwroot",
                     "app-shell.css"));
 
-        Assert.Contains(
-            """
-            <NavLink href="/app/account"
-                         class="mobile-bottom-link"
-            """,
-            layout,
-            StringComparison.Ordinal);
+        Assert.Matches(
+            @"<NavLink\s+href=""/app/account""\s+class=""mobile-bottom-link""",
+            layout);
 
         Assert.Contains(
             "grid-template-columns: repeat(5, minmax(0, 1fr));",
