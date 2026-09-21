@@ -137,6 +137,17 @@
                     <span>@L["Activity"]</span>
                 </NavLink>
 
+                <NavLink href="/app/account"
+                         class="mobile-bottom-link"
+                         @onclick="CloseMobileMenu">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#account"></use>
+                        </svg>
+                    </span>
+                    <span>@L["Account"]</span>
+                </NavLink>
+
                 <div class="@GetMobileMenuClass()"
                      @onkeydown="HandleMobileMenuKeyDown">
                     <button type="button"
@@ -198,16 +209,6 @@
                                          class="app-nav-link">
                                     <span class="nav-icon" aria-hidden="true">⚙</span>
                                     <span>@L["Settings"]</span>
-                                </NavLink>
-
-                                <NavLink href="/app/account"
-                                         class="app-nav-link">
-                                    <span class="nav-icon" aria-hidden="true">
-                                        <svg class="bw-sprite">
-                                            <use href="/assets/billwatch-sprites.svg#account"></use>
-                                        </svg>
-                                    </span>
-                                    <span>@L["Account"]</span>
                                 </NavLink>
 
                                 @if (_showInstallAction)
