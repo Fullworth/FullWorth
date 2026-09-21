@@ -40,17 +40,15 @@
 
     <header class="settings-header">
         <div>
-            <span class="page-kicker">@L["Settings"]</span>
-            <h1>@L["Account & security"]</h1>
-            <p>@L["Manage sign-in protection and account preferences. Sensitive credentials appear only when an action needs them."]</p>
+            <span class="page-kicker">@L["Account protection"]</span>
+            <h1>@L["Security & preferences"]</h1>
+            <p>@L["Keep your FullWorth account protected and choose how this device presents your financial information. Sensitive credentials appear only when an action needs them."]</p>
         </div>
     </header>
 
     <nav class="settings-tabs" aria-label="@L["Settings sections"]">
         <span class="settings-tab is-active" aria-current="page">@L["Security"]</span>
-        <span class="settings-tab is-future" aria-disabled="true">@L["Notifications"] <small>@L["Soon"]</small></span>
-        <span class="settings-tab is-future" aria-disabled="true">@L["Appearance"] <small>@L["Soon"]</small></span>
-        <a class="settings-tab" href="/app/account/privacy">@L["Privacy"]</a>
+        <a class="settings-tab" href="/app/account/privacy">@L["Data & privacy"]</a>
     </nav>
 
     @if (_security is null)
@@ -66,7 +64,11 @@
     else
     {
         <section class="security-overview">
-            <div class="security-overview-mark" aria-hidden="true">✓</div>
+            <div class="security-overview-mark" aria-hidden="true">
+                <svg class="bw-sprite">
+                    <use href="/assets/billwatch-sprites.svg#shield"></use>
+                </svg>
+            </div>
             <div class="security-overview-copy">
                 <span class="panel-kicker">@L["Security status"]</span>
                 <h2>@GetSecurityHeadline()</h2>
@@ -84,10 +86,10 @@
             </div>
         </section>
 
-        <div class="settings-card-grid">
+        <div class="settings-card-grid fw-settings-center">
             <section class="settings-card settings-card-wide">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-purple" aria-hidden="true">◈</div>
+                    <div class="settings-card-icon is-purple" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#shield"></use></svg></div>
                     <div class="settings-copy">
                         <div class="settings-title-line">
                             <h2>@L["Two-factor authentication"]</h2>
@@ -128,7 +130,7 @@
 
             <section class="settings-card">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-blue" aria-hidden="true">✉</div>
+                    <div class="settings-card-icon is-blue" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#account"></use></svg></div>
                     <div class="settings-copy">
                         <div class="settings-title-line">
                             <h2>@L["Email"]</h2>
@@ -156,7 +158,7 @@
 
             <section class="settings-card">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-purple" aria-hidden="true">▣</div>
+                    <div class="settings-card-icon is-purple" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#settings"></use></svg></div>
                     <div class="settings-copy">
                         <h2>@L["Password"]</h2>
                         <p>@L["Change your FullWorth password only when you need to."]</p>
@@ -177,7 +179,7 @@
             {
                 <section class="settings-card settings-card-wide">
                     <div class="settings-card-heading">
-                        <div class="settings-card-icon is-blue" aria-hidden="true">◇</div>
+                        <div class="settings-card-icon is-blue" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#account"></use></svg></div>
                         <div class="settings-copy">
                             <h2>@L["Sign-in methods"]</h2>
                             <p>@L["Connect a trusted provider to this FullWorth account. Provider tokens stay server-side."]</p>
@@ -228,9 +230,9 @@
                 </section>
             }
 
-            <section class="settings-card settings-card-compact">
+            <section class="settings-card settings-card-compact fw-device-preference">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-muted" aria-hidden="true">◷</div>
+                    <div class="settings-card-icon is-muted" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#activity"></use></svg></div>
                     <div class="settings-copy">
                         <h2>@L["Timestamp display"]</h2>
                         <p>@L["Choose how FullWorth displays dates and times."]</p>
@@ -253,9 +255,9 @@
                 }
             </section>
 
-            <section class="settings-card settings-card-compact">
+            <section class="settings-card settings-card-compact fw-device-preference">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-blue" aria-hidden="true">⚡</div>
+                    <div class="settings-card-icon is-blue" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#trend-up"></use></svg></div>
                     <div class="settings-copy">
                         <h2>@L["Experience performance"]</h2>
                         <p>@L["Tune visual effects and data-loading size for this device and network. Financial features stay the same at every level."]</p>
@@ -296,15 +298,15 @@
                 }
             </section>
 
-            <section class="settings-card settings-card-compact">
+            <section class="settings-card settings-card-compact fw-device-preference">
                 <div class="settings-card-heading">
-                    <div class="settings-card-icon is-muted" aria-hidden="true">◇</div>
+                    <div class="settings-card-icon is-muted" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#shield"></use></svg></div>
                     <div class="settings-copy">
                         <h2>@L["Privacy"]</h2>
                         <p>@L["Review how FullWorth handles account, transaction, and statement information."]</p>
                     </div>
                 </div>
-                <a href="/privacy" class="secondary-link">@L["View privacy information"] <span aria-hidden="true">→</span></a>
+                <a href="/app/account/privacy" class="secondary-link">@L["Open data & privacy"] <span aria-hidden="true">→</span></a>
             </section>
         </div>
     }
