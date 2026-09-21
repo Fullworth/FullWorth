@@ -20,21 +20,13 @@ public sealed class WebTransactionPerformanceBoundaryTests
                     "App",
                     "AccountTransactions.razor"));
 
-        Assert.Contains(
-            """
-            private const int ExpandedTransactionLoadLimit =
-                    250;
-            """,
-            transactionsPage,
-            StringComparison.Ordinal);
+        Assert.Matches(
+            @"ExpandedTransactionLoadLimit\s*=\s*250;",
+            transactionsPage);
 
-        Assert.Contains(
-            """
-            private const int MaximumTransactionLoadLimit =
-                    500;
-            """,
-            transactionsPage,
-            StringComparison.Ordinal);
+        Assert.Matches(
+            @"MaximumTransactionLoadLimit\s*=\s*500;",
+            transactionsPage);
 
         Assert.Contains(
             "private async Task LoadMoreAsync()",
@@ -59,13 +51,9 @@ public sealed class WebTransactionPerformanceBoundaryTests
                     RegexOptions.CultureInvariant)
                 .Count);
 
-        Assert.Contains(
-            """
-            _transactionLoadLimit =
-                    previousLimit;
-            """,
-            transactionsPage,
-            StringComparison.Ordinal);
+        Assert.Matches(
+            @"_transactionLoadLimit\s*=\s*previousLimit;",
+            transactionsPage);
     }
 
     private static string FindRepositoryRoot()
