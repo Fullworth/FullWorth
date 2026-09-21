@@ -59,6 +59,18 @@ public sealed class WebPwaBoundaryTests
                     "display")
                 .GetString());
 
+        Assert.Equal(
+            "#0B1F3B",
+            root.GetProperty(
+                    "theme_color")
+                .GetString());
+
+        Assert.Equal(
+            "#0B1F3B",
+            root.GetProperty(
+                    "background_color")
+                .GetString());
+
         var iconSizes =
             root.GetProperty(
                     "icons")
@@ -143,6 +155,49 @@ public sealed class WebPwaBoundaryTests
             "sessionStorage",
             body,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ThemeScripts_SynchronizeBrowserChromeWithSelectedTheme()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var bootstrap =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "theme-bootstrap.js"));
+
+        var theme =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "theme.js"));
+
+        foreach (var script in new[] { bootstrap, theme })
+        {
+            Assert.Contains(
+                "meta[name=\"theme-color\"]",
+                script,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "#0B1F3B",
+                script,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "#F7F8FB",
+                script,
+                StringComparison.Ordinal);
+        }
     }
 
     [Fact]

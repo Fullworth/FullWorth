@@ -776,7 +776,7 @@ public sealed class FullWorthBffProxyService
         if (string.IsNullOrWhiteSpace(
                 candidateFileName))
         {
-            return "billwatch-statement";
+            return "fullworth-statement";
         }
 
         var unquoted =
@@ -798,7 +798,7 @@ public sealed class FullWorthBffProxyService
 
         return string.IsNullOrWhiteSpace(
                 safeFileName)
-            ? "billwatch-statement"
+            ? "fullworth-statement"
             : safeFileName;
     }
 
