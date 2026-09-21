@@ -19,7 +19,7 @@
     <header class="page-heading bills-page-heading">
         <div>
             <span class="page-kicker">
-                @L["Your bill watchlist"]
+                @L["Recurring commitments"]
             </span>
 
             <h1>
@@ -31,29 +31,6 @@
             </p>
         </div>
 
-        @if (!_isLoading &&
-             string.IsNullOrWhiteSpace(_errorMessage))
-        {
-            <div class="bills-heading-summary">
-                <strong>
-                    @_billStreams.Count
-                </strong>
-
-                <span>
-                    @L["monitored"]
-                </span>
-
-                <div class="summary-divider"></div>
-
-                <strong>
-                    @FormatMoney(_totalCurrent)
-                </strong>
-
-                <span>
-                    @L["latest charges"]
-                </span>
-            </div>
-        }
     </header>
 
     @if (_isLoading)
@@ -120,187 +97,183 @@
         var filteredBills =
             FilteredBills;
 
+        <section class="fw-bills-pulse" aria-label="@L["Bill summary"]">
+            <div class="fw-bills-total">
+                <span>@L["Latest recurring total"]</span>
+                <strong>@FormatMoney(_totalCurrent)</strong>
+                <small>@L["Across {0} monitored recurring bills", _billStreams.Count]</small>
+            </div>
+
+            <div class="fw-bills-stats">
+                <button type="button"
+                        class="@GetPulseFilterClass(BillFilter.Increased, "is-alert")"
+                        aria-pressed="@(_filter == BillFilter.Increased)"
+                        @onclick="() => SetFilter(BillFilter.Increased)">
+                    <span>@L["Increased"]</span>
+                    <strong>@_increasedCount</strong>
+                    <small>@FormatMoney(_increaseTotal) @L["more per cycle"]</small>
+                </button>
+
+                <button type="button"
+                        class="@GetPulseFilterClass(BillFilter.Decreased, "is-positive")"
+                        aria-pressed="@(_filter == BillFilter.Decreased)"
+                        @onclick="() => SetFilter(BillFilter.Decreased)">
+                    <span>@L["Decreased"]</span>
+                    <strong>@_decreasedCount</strong>
+                    <small>@L["Below prior averages"]</small>
+                </button>
+
+                <button type="button"
+                        class="@GetPulseFilterClass(BillFilter.NoHistory, string.Empty)"
+                        aria-pressed="@(_filter == BillFilter.NoHistory)"
+                        @onclick="() => SetFilter(BillFilter.NoHistory)">
+                    <span>@L["Building history"]</span>
+                    <strong>@_noHistoryCount</strong>
+                    <small>@L["Waiting for comparison evidence"]</small>
+                </button>
+            </div>
+        </section>
+
         @if (_increasedCount > 0)
         {
-            <section class="bills-change-focus" aria-label="@L["Bills with increases"]">
-                <div class="bills-change-icon" aria-hidden="true">↗</div>
-                <div>
-                    <span class="bills-change-eyebrow">@L["Worth a closer look"]</span>
-                    <h2>
-                        @if (_increasedCount == 1)
-                        {
-                            @L["One bill is above its prior average"]
-                        }
-                        else
-                        {
-                            @L["{0} bills are above their prior average", _increasedCount]
-                        }
-                    </h2>
-                    <p>@L["A higher transaction amount does not establish the cause. Open a bill to review its available history and evidence."]</p>
+            <section class="fw-bills-alert" aria-label="@L["Bills with increases"]">
+                <div class="fw-bills-alert-icon" aria-hidden="true">
+                    <svg class="bw-sprite">
+                        <use href="/assets/billwatch-sprites.svg#trend-up"></use>
+                    </svg>
                 </div>
+
+                <div class="fw-bills-alert-copy">
+                    <span>@L["Worth a closer look"]</span>
+                    <strong>
+                        @L["{0} in current recurring increases", FormatMoney(_increaseTotal)]
+                    </strong>
+                    <small>
+                        @L["That is {0} annualized if these increases persist. Transaction amounts show what changed; provider evidence is still required to explain why.", FormatMoney(_increaseTotal * 12m)]
+                    </small>
+                </div>
+
                 <button type="button"
-                        class="bills-change-action"
+                        class="fw-bills-alert-action"
                         @onclick="() => SetFilter(BillFilter.Increased)">
-                    @L["Show increases"]
+                    @L["Review increases"]
                     <span aria-hidden="true">→</span>
                 </button>
             </section>
         }
 
-        <div class="bills-filter-heading">
-            <div>
-                <span class="panel-kicker">@L["Browse your bills"]</span>
-                <h2>@L["Filter by change"]</h2>
+        <section class="fw-bills-ledger">
+            <div class="fw-bills-ledger-head">
+                <div>
+                    <span class="panel-kicker">@L["Recurring bills"]</span>
+                    <h2>@L["Bill ledger"]</h2>
+                </div>
+
+                <span aria-live="polite">
+                    @L["Showing {0} of {1}", filteredBills.Count, _billStreams.Count]
+                </span>
             </div>
-            <span aria-live="polite">@L["Showing {0} of {1} bills", filteredBills.Count, _billStreams.Count]</span>
-        </div>
 
-        <div class="bill-filter-bar" role="group" aria-label="@L["Filter bills by change"]">
-            <button type="button"
-                    class="@GetFilterClass(BillFilter.All)"
-                    aria-pressed="@(_filter == BillFilter.All)"
-                    @onclick="() => SetFilter(BillFilter.All)">
-                @L["All"]
-                <span>@_billStreams.Count</span>
-            </button>
+            <div class="fw-bills-filters"
+                 role="group"
+                 aria-label="@L["Filter bills by change"]">
+                <button type="button"
+                        class="@GetFilterClass(BillFilter.All)"
+                        aria-pressed="@(_filter == BillFilter.All)"
+                        @onclick="() => SetFilter(BillFilter.All)">
+                    @L["All"]
+                    <span>@_billStreams.Count</span>
+                </button>
 
-            <button type="button"
-                    class="@GetFilterClass(BillFilter.Increased)"
-                    aria-pressed="@(_filter == BillFilter.Increased)"
-                    @onclick="() => SetFilter(BillFilter.Increased)">
-                @L["Increased"]
-                <span>@_increasedCount</span>
-            </button>
+                <button type="button"
+                        class="@GetFilterClass(BillFilter.Increased)"
+                        aria-pressed="@(_filter == BillFilter.Increased)"
+                        @onclick="() => SetFilter(BillFilter.Increased)">
+                    @L["Increased"]
+                    <span>@_increasedCount</span>
+                </button>
 
-            <button type="button"
-                    class="@GetFilterClass(BillFilter.Decreased)"
-                    aria-pressed="@(_filter == BillFilter.Decreased)"
-                    @onclick="() => SetFilter(BillFilter.Decreased)">
-                @L["Decreased"]
-                <span>@_decreasedCount</span>
-            </button>
+                <button type="button"
+                        class="@GetFilterClass(BillFilter.Decreased)"
+                        aria-pressed="@(_filter == BillFilter.Decreased)"
+                        @onclick="() => SetFilter(BillFilter.Decreased)">
+                    @L["Decreased"]
+                    <span>@_decreasedCount</span>
+                </button>
 
-            <button type="button"
-                    class="@GetFilterClass(BillFilter.NoHistory)"
-                    aria-pressed="@(_filter == BillFilter.NoHistory)"
-                    @onclick="() => SetFilter(BillFilter.NoHistory)">
-                @L["Building history"]
-                <span>@_noHistoryCount</span>
-            </button>
-        </div>
-
-        @if (filteredBills.Count == 0)
-        {
-            <div class="filtered-empty">
-                @L["No bills match this filter."]
+                <button type="button"
+                        class="@GetFilterClass(BillFilter.NoHistory)"
+                        aria-pressed="@(_filter == BillFilter.NoHistory)"
+                        @onclick="() => SetFilter(BillFilter.NoHistory)">
+                    @L["Building history"]
+                    <span>@_noHistoryCount</span>
+                </button>
             </div>
-        }
-        else
-        {
-            <section class="bill-card-grid">
-                @foreach (var bill in filteredBills)
-                {
-                    var difference =
-                        GetDifference(
-                            bill);
 
-                    <a class="bill-card"
-                       href="@($"/app/bills/{bill.Id}")">
+            @if (filteredBills.Count == 0)
+            {
+                <div class="filtered-empty">
+                    @L["No bills match this filter."]
+                </div>
+            }
+            else
+            {
+                <div class="fw-bills-list">
+                    @foreach (var bill in filteredBills)
+                    {
+                        var difference =
+                            GetDifference(
+                                bill);
 
-                        <div class="bill-card-top">
-                            <div class="bill-provider">
-                                <div class="@GetBillAvatarClass(bill.Category)"
-                                     aria-hidden="true">
-                                    <ProviderLogo ProviderName="@bill.ProviderName">
-                                        <FallbackContent>
-                                            <svg class="bw-sprite bill-category-sprite">
-                                                <use href="@GetBillSpriteHref(bill.Category)"></use>
-                                            </svg>
-                                        </FallbackContent>
-                                    </ProviderLogo>
-                                </div>
-
-                                <div>
-                                    <h2>
-                                        @bill.ProviderName
-                                    </h2>
-
-                                    <span>
-                                        @FormatCategory(
-                                            bill.Category)
-                                    </span>
-                                </div>
+                        <a class="fw-bills-row"
+                           href="@($"/app/bills/{bill.Id}")">
+                            <div class="@GetBillAvatarClass(bill.Category)"
+                                 aria-hidden="true">
+                                <ProviderLogo ProviderName="@bill.ProviderName">
+                                    <FallbackContent>
+                                        <svg class="bw-sprite bill-category-sprite">
+                                            <use href="@GetBillSpriteHref(bill.Category)"></use>
+                                        </svg>
+                                    </FallbackContent>
+                                </ProviderLogo>
                             </div>
 
-                            <span class="watching-state">
-                                <span></span>
-                                @L["Watching"]
-                            </span>
-                        </div>
+                            <div class="fw-bills-provider">
+                                <strong>@bill.ProviderName</strong>
+                                <span>@FormatCategory(bill.Category)</span>
+                            </div>
 
-                        <div class="bill-current">
-                            <span>
-                                @L["Current amount"]
-                            </span>
+                            <div class="fw-bills-current">
+                                <span>@L["Current"]</span>
+                                <strong>@FormatMoney(bill.CurrentAmount)</strong>
+                            </div>
 
-                            <strong>
-                                @FormatMoney(
-                                    bill.CurrentAmount)
-                            </strong>
-                        </div>
-
-                        @if (bill.PreviousAverage > 0m)
-                        {
-                            <div class="@GetChangePanelClass(
-                                difference)">
-
-                                <div>
-                                    <span>
-                                        @L["vs. prior average"]
-                                    </span>
-
-                                    <strong>
-                                        @FormatDifference(
-                                            difference)
-                                    </strong>
+                            @if (bill.PreviousAverage > 0m)
+                            {
+                                <div class="@GetLedgerChangeClass(difference)">
+                                    <span>@L["Change"]</span>
+                                    <strong>@FormatDifference(difference)</strong>
                                 </div>
 
-                                <div>
-                                    <span>
-                                        @GetAnnualizedLabel(
-                                            difference)
-                                    </span>
-
-                                    <strong>
-                                        @FormatAnnualized(
-                                            bill,
-                                            difference)
-                                    </strong>
+                                <div class="fw-bills-impact">
+                                    <span>@GetAnnualizedLabel(difference)</span>
+                                    <strong>@FormatAnnualized(bill, difference)</strong>
                                 </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="bill-history-state">
-                                <span class="history-dot"></span>
+                            }
+                            else
+                            {
+                                <div class="fw-bills-evidence">
+                                    <span class="history-dot"></span>
+                                    <span>@L["Building history"]</span>
+                                </div>
+                            }
 
-                                @L["More transaction history is needed before FullWorth can compare this bill."]
-                            </div>
-                        }
-
-                        <div class="bill-card-footer">
-                            <span>
-                                @L["See bill history"]
-                            </span>
-
-                            <span aria-hidden="true">
-                                →
-                            </span>
-                        </div>
-                    </a>
-                }
-            </section>
-        }
+                            <span class="fw-row-chevron" aria-hidden="true">›</span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
     }
 </div>
 
@@ -326,6 +299,8 @@
     private int _decreasedCount;
 
     private int _noHistoryCount;
+
+    private decimal _increaseTotal;
 
     private IReadOnlyList<BillStreamViewModel>
         FilteredBills =>
@@ -388,6 +363,29 @@
         return _filter == filter
             ? "bill-filter active"
             : "bill-filter";
+    }
+
+    private string GetPulseFilterClass(
+        BillFilter filter,
+        string stateClass)
+    {
+        var className =
+            "fw-bills-stat";
+
+        if (!string.IsNullOrWhiteSpace(
+                stateClass))
+        {
+            className +=
+                $" {stateClass}";
+        }
+
+        if (_filter == filter)
+        {
+            className +=
+                " is-selected";
+        }
+
+        return className;
     }
 
     private async Task LoadAsync()
@@ -464,6 +462,15 @@
             _billStreams.Count(
                 bill =>
                     bill.PreviousAverage <= 0m);
+
+        _increaseTotal =
+            _billStreams
+                .Where(
+                    bill =>
+                        bill.PreviousAverage > 0m &&
+                        GetDifference(bill) > 0m)
+                .Sum(
+                    GetDifference);
     }
 
     private static decimal GetDifference(
@@ -545,6 +552,22 @@
 
         return
             $"-{FormatMoney(Math.Abs(annualizedImpact))}{L["/yr"].Value}";
+    }
+
+    private static string GetLedgerChangeClass(
+        decimal difference)
+    {
+        if (difference > 0m)
+        {
+            return "fw-bills-change is-increase";
+        }
+
+        if (difference < 0m)
+        {
+            return "fw-bills-change is-decrease";
+        }
+
+        return "fw-bills-change";
     }
 
     private static string GetChangePanelClass(
