@@ -5,20 +5,10 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
-<link rel="stylesheet"
-      href="/theme.css" />
 
-<link rel="stylesheet"
-      href="/app-shell.css" />
 
-<link rel="stylesheet"
-      href="/app-pages.css" />
 
-<link rel="stylesheet"
-      href="/premium-app.css" />
 
-<link rel="stylesheet"
-      href="/app-controls.css" />
 
 <div class="app-shell">
     <aside class="app-sidebar">
@@ -337,7 +327,7 @@
 @code {
     private IJSObjectReference? _timeModule;
     private bool _mobileMenuOpen;
-    private bool _showInstallAction = true;
+    private bool _showInstallAction;
     private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -364,11 +354,18 @@
 
         try
         {
-            _showInstallAction =
+            var showInstallAction =
                 !await JS.InvokeAsync<bool>(
                     "FullWorthPwa.isStandalone");
 
-            StateHasChanged();
+            if (showInstallAction !=
+                _showInstallAction)
+            {
+                _showInstallAction =
+                    showInstallAction;
+
+                StateHasChanged();
+            }
         }
         catch (JSException)
         {
