@@ -60,23 +60,16 @@
 
 .auth-brand-mark {
     position: relative;
-    width: 31px;
-    height: 31px;
-    border-radius: 10px;
-    background: linear-gradient(145deg, #244bf1, #687fff);
-    box-shadow: 0 8px 22px rgba(37, 75, 241, 0.27);
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: transparent url("/assets/fullworth/fullworth-mark.svg") center / contain no-repeat;
+    box-shadow: none;
+    filter: drop-shadow(0 9px 18px rgba(37, 82, 221, 0.18));
 }
 
     .auth-brand-mark span {
-        position: absolute;
-        width: 13px;
-        height: 13px;
-        top: 9px;
-        left: 9px;
-        border: 2px solid white;
-        border-top-color: transparent;
-        border-radius: 50%;
-        transform: rotate(-28deg);
+        display: none;
     }
 
 .auth-card {
@@ -489,5 +482,36 @@
     .form-options {
         align-items: flex-start;
         flex-direction: column;
+    }
+}
+
+
+/* FullWorth v2 authentication polish */
+
+.site-shell .auth-card {
+    border-color: var(--bw-border);
+    background:
+        radial-gradient(circle at 100% 0%, rgba(91, 109, 248, 0.055), transparent 20rem),
+        var(--bw-surface-soft);
+}
+
+.site-shell .auth-brand strong {
+    letter-spacing: -0.045em;
+}
+
+.site-shell .auth-heading h1 {
+    color: var(--bw-text);
+}
+
+.site-shell .field input,
+.site-shell .external-signin-button,
+.site-shell .password-rules,
+.site-shell .legal-consent {
+    border-color: var(--bw-border);
+}
+
+@media (max-width: 520px) {
+    .site-shell .auth-brand {
+        margin-bottom: 24px;
     }
 }
