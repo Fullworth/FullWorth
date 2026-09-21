@@ -5,20 +5,10 @@
 @inject IJSRuntime JS
 @inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
-<link rel="stylesheet"
-      href="/theme.css" />
 
-<link rel="stylesheet"
-      href="/app-shell.css" />
 
-<link rel="stylesheet"
-      href="/app-pages.css" />
 
-<link rel="stylesheet"
-      href="/premium-app.css" />
 
-<link rel="stylesheet"
-      href="/app-controls.css" />
 
 <div class="app-shell">
     <aside class="app-sidebar">
@@ -147,6 +137,17 @@
                     <span>@L["Activity"]</span>
                 </NavLink>
 
+                <NavLink href="/app/account"
+                         class="mobile-bottom-link"
+                         @onclick="CloseMobileMenu">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#account"></use>
+                        </svg>
+                    </span>
+                    <span>@L["Account"]</span>
+                </NavLink>
+
                 <div class="@GetMobileMenuClass()"
                      @onkeydown="HandleMobileMenuKeyDown">
                     <button type="button"
@@ -208,16 +209,6 @@
                                          class="app-nav-link">
                                     <span class="nav-icon" aria-hidden="true">⚙</span>
                                     <span>@L["Settings"]</span>
-                                </NavLink>
-
-                                <NavLink href="/app/account"
-                                         class="app-nav-link">
-                                    <span class="nav-icon" aria-hidden="true">
-                                        <svg class="bw-sprite">
-                                            <use href="/assets/billwatch-sprites.svg#account"></use>
-                                        </svg>
-                                    </span>
-                                    <span>@L["Account"]</span>
                                 </NavLink>
 
                                 @if (_showInstallAction)
@@ -337,7 +328,7 @@
 @code {
     private IJSObjectReference? _timeModule;
     private bool _mobileMenuOpen;
-    private bool _showInstallAction = true;
+    private bool _showInstallAction;
     private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -364,11 +355,18 @@
 
         try
         {
-            _showInstallAction =
+            var showInstallAction =
                 !await JS.InvokeAsync<bool>(
                     "FullWorthPwa.isStandalone");
 
-            StateHasChanged();
+            if (showInstallAction !=
+                _showInstallAction)
+            {
+                _showInstallAction =
+                    showInstallAction;
+
+                StateHasChanged();
+            }
         }
         catch (JSException)
         {

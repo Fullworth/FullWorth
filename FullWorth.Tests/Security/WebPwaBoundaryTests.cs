@@ -114,12 +114,10 @@ public sealed class WebPwaBoundaryTests
             body,
             StringComparison.Ordinal);
 
-        Assert.Equal(
-            1,
+        Assert.Single(
             Regex.Matches(
-                    body,
-                    @"cache\.add\(")
-                .Count);
+                body,
+                @"cache\.add\("));
 
         Assert.DoesNotContain(
             "cache.put",
@@ -145,6 +143,260 @@ public sealed class WebPwaBoundaryTests
             "sessionStorage",
             body,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void MobileNavigation_KeepsAccountAsAPrimaryDestination()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var layout =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "AppLayout.razor"));
+
+        var shellStyles =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "app-shell.css"));
+
+        Assert.Matches(
+            @"<NavLink\s+href=""/app/account""\s+class=""mobile-bottom-link""",
+            layout);
+
+        Assert.Contains(
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
+            shellStyles,
+            StringComparison.Ordinal);
+
+        var settings =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Pages",
+                    "App",
+                    "AccountSettings.razor"));
+
+        Assert.Contains(
+            "href=\"/app/account/privacy\"",
+            settings,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BffClient_RedirectsExpiredSessionsAndKeepsReadsNoStore()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        Assert.Contains(
+            "response.status === 401",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "window.location.assign(",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/login\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "popupClosedPendingChecks",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "popupClosedPendingChecks >=",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "text.popupClosed",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "credentials:",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"same-origin\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"no-store\"",
+            bff,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StatementUpload_RemainsBrowserFileBasedAndNoStore()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var uploadPanel =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Shared",
+                    "StatementUploadPanel.razor"));
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        Assert.Contains(
+            "accept=\".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png\"",
+            uploadPanel,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "private const long MaximumFileSize = 15L * 1024 * 1024;",
+            uploadPanel,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "new FormData()",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "formData.append(",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"X-CSRF-TOKEN\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "cache:",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"no-store\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "FileReader",
+            bff,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "arrayBuffer(",
+            bff,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PerformanceProfile_UsesIdleStaticStylePrefetchWithoutFinancialRequests()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/js/performance-profile.js");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.Contains(
+            "\"/account-settings.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/account-transactions.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/account-privacy.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/subscription.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"requestIdleCallback\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "link.rel =",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"prefetch\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Matches(
+            @"fullworthPerformance\s*===\s*""efficiency""",
+            body);
+
+        Assert.DoesNotContain(
+            "/bff/",
+            body,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "/api/",
+            body,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotMatch(
+            @"(?i)(?<![A-Za-z0-9_])fetch\s*\(",
+            body);
     }
 
     [Fact]
@@ -192,5 +444,32 @@ public sealed class WebPwaBoundaryTests
             "/api/",
             body,
             StringComparison.OrdinalIgnoreCase);
+    }
+    private static string FindRepositoryRoot()
+    {
+        var directory =
+            new DirectoryInfo(
+                AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            if (File.Exists(
+                    Path.Combine(
+                        directory.FullName,
+                        "FullWorth.slnx")) &&
+                Directory.Exists(
+                    Path.Combine(
+                        directory.FullName,
+                        "FullWorth.Web")))
+            {
+                return directory.FullName;
+            }
+
+            directory =
+                directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not locate the FullWorth repository root.");
     }
 }

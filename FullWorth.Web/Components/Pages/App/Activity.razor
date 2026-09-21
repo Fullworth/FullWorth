@@ -12,8 +12,6 @@
 
 <PageTitle>@L["Activity — FullWorth"]</PageTitle>
 
-<link rel="stylesheet"
-      href="/activity-alerts.css" />
 
 <div class="app-page">
     <header class="page-heading">
@@ -256,12 +254,6 @@
                             _ =>
                                 true
                         })
-                .OrderByDescending(
-                    alert =>
-                        alert.CreatedAtUtc)
-                .ThenByDescending(
-                    alert =>
-                        alert.Id)
                 .ToList();
 
     protected override async Task
@@ -299,8 +291,6 @@
         }
 
         await LoadAsync();
-
-        StateHasChanged();
     }
 
     private async Task LoadAsync()

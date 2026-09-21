@@ -37,7 +37,7 @@
 
         <button type="button"
                 class="secondary-action"
-                disabled="@(_isLoading || _isRefreshing)"
+                disabled="@(_isLoading || _isRefreshing || _isLoadingMore)"
                 @onclick="SyncNowAsync">
             @(_isRefreshing
                 ? L["Syncing…"]
@@ -96,7 +96,7 @@
                 </strong>
 
                 <small>
-                    @L["Latest {0} transactions", TransactionLoadLimit]
+                    @L["Latest {0} transactions", _transactionLoadLimit]
                 </small>
             </article>
 
@@ -167,13 +167,37 @@
                     filteredTransactions.Count)
             </span>
 
-            @if (_transactions.Count == TransactionLoadLimit)
-            {
-                <small>
-                    @L["Showing the newest {0} records", TransactionLoadLimit]
-                </small>
-            }
+            <div class="transaction-history-actions">
+                @if (_transactions.Count == _transactionLoadLimit)
+                {
+                    <small>
+                        @L["Showing the newest {0} records", _transactionLoadLimit]
+                    </small>
+                }
+
+                @if (CanLoadMoreTransactions ||
+                     _isLoadingMore)
+                {
+                    <button type="button"
+                            class="transaction-history-load-button"
+                            disabled="@_isLoadingMore"
+                            @onclick="LoadMoreAsync">
+                        @(_isLoadingMore
+                            ? L["Loading older…"]
+                            : L["Load older transactions"])
+                    </button>
+                }
+            </div>
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(
+            _loadMoreError))
+        {
+            <div class="transaction-history-error"
+                 role="alert">
+                @_loadMoreError
+            </div>
+        }
 
         @if (_transactions.Count == 0)
         {
@@ -285,7 +309,20 @@
 </div>
 
 @code {
-    private const int TransactionLoadLimit = 500;
+    private const int ExpandedTransactionLoadLimit =
+        250;
+
+    private const int MaximumTransactionLoadLimit =
+        500;
+
+    private int _transactionLoadLimit =
+        MaximumTransactionLoadLimit;
+
+    private bool _hasResolvedInitialTransactionLoadLimit;
+
+    private bool _isLoadingMore;
+
+    private string? _loadMoreError;
 
     private IJSObjectReference?
         _bffModule;
@@ -314,6 +351,13 @@
         TransactionAccountOption>
         _availableAccounts = [];
 
+    private bool CanLoadMoreTransactions =>
+        !_isLoadingMore &&
+        _transactions.Count ==
+            _transactionLoadLimit &&
+        _transactionLoadLimit <
+            MaximumTransactionLoadLimit;
+
     private string GetTransactionsResultLabel(
         int count)
     {
@@ -330,12 +374,6 @@
                     MatchesSelectedAccount)
                 .Where(
                     MatchesSearch)
-                .OrderByDescending(
-                    transaction =>
-                        transaction.PostedDate)
-                .ThenByDescending(
-                    transaction =>
-                        transaction.Id)
                 .ToList();
 
     protected override async Task
@@ -355,13 +393,12 @@
     private async Task ReloadAsync()
     {
         await LoadAsync();
-
-        StateHasChanged();
     }
 
     private async Task SyncNowAsync()
     {
-        if (_isRefreshing)
+        if (_isRefreshing ||
+            _isLoadingMore)
         {
             return;
         }
@@ -403,8 +440,6 @@
             _isRefreshing =
                 false;
         }
-
-        StateHasChanged();
     }
 
     private async Task LoadAsync()
@@ -415,38 +450,13 @@
         _errorMessage =
             null;
 
+        _loadMoreError =
+            null;
+
         try
         {
-            _bffModule ??=
-                await JS.InvokeAsync<
-                    IJSObjectReference>(
-                    "import",
-                    "./js/bff.js");
-
-            await using var streamModule =
-                await JS.InvokeAsync<IJSObjectReference>(
-                    "import", "./js/transaction-stream.js");
-
-            await using var streamReference =
-                await streamModule.InvokeAsync<IJSStreamReference>(
-                    "getBankTransactionsStream", TransactionLoadLimit);
-
-            await using var stream =
-                await streamReference.OpenReadStreamAsync(4 * 1024 * 1024);
-
-            var result =
-                await System.Text.Json.JsonSerializer.DeserializeAsync<
-                    BankTransactionViewModel[]>(
-                    stream,
-                    new System.Text.Json.JsonSerializerOptions(
-                        System.Text.Json.JsonSerializerDefaults.Web));
-
-            _transactions =
-                result?
-                    .ToList()
-                ?? [];
-
-            UpdateTransactionSummaries();
+            await EnsureInitialTransactionLoadLimitAsync();
+            await LoadTransactionsCoreAsync();
         }
         catch (JSException)
         {
@@ -463,6 +473,117 @@
             _isLoading =
                 false;
         }
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (!CanLoadMoreTransactions)
+        {
+            return;
+        }
+
+        var previousLimit =
+            _transactionLoadLimit;
+
+        _transactionLoadLimit =
+            GetNextTransactionLoadLimit();
+
+        _isLoadingMore =
+            true;
+
+        _loadMoreError =
+            null;
+
+        StateHasChanged();
+
+        try
+        {
+            await LoadTransactionsCoreAsync();
+        }
+        catch (JSException)
+        {
+            _transactionLoadLimit =
+                previousLimit;
+
+            _loadMoreError =
+                L["FullWorth could not load older transactions. Try again."];
+        }
+        catch (Exception)
+        {
+            _transactionLoadLimit =
+                previousLimit;
+
+            _loadMoreError =
+                L["Something went wrong while loading older transactions."];
+        }
+        finally
+        {
+            _isLoadingMore =
+                false;
+        }
+    }
+
+    private async Task EnsureInitialTransactionLoadLimitAsync()
+    {
+        if (_hasResolvedInitialTransactionLoadLimit)
+        {
+            return;
+        }
+
+        _transactionLoadLimit =
+            Math.Clamp(
+                await JS.InvokeAsync<int>(
+                    "FullWorthPerformance.getTransactionLoadLimit"),
+                50,
+                MaximumTransactionLoadLimit);
+
+        _hasResolvedInitialTransactionLoadLimit =
+            true;
+    }
+
+    private int GetNextTransactionLoadLimit()
+    {
+        return _transactionLoadLimit <
+            ExpandedTransactionLoadLimit
+                ? ExpandedTransactionLoadLimit
+                : MaximumTransactionLoadLimit;
+    }
+
+    private async Task LoadTransactionsCoreAsync()
+    {
+        _bffModule ??=
+            await JS.InvokeAsync<
+                IJSObjectReference>(
+                "import",
+                "./js/bff.js");
+
+        await using var streamModule =
+            await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./js/transaction-stream.js");
+
+        await using var streamReference =
+            await streamModule.InvokeAsync<IJSStreamReference>(
+                "getBankTransactionsStream",
+                _transactionLoadLimit);
+
+        await using var stream =
+            await streamReference.OpenReadStreamAsync(
+                4 * 1024 * 1024);
+
+        var result =
+            await System.Text.Json.JsonSerializer.DeserializeAsync<
+                BankTransactionViewModel[]>(
+                stream,
+                new System.Text.Json.JsonSerializerOptions(
+                    System.Text.Json.JsonSerializerDefaults.Web));
+
+        _transactions =
+            result?
+                .ToList()
+            ?? [];
+
+        UpdateTransactionSummaries();
     }
 
     private void UpdateTransactionSummaries()
