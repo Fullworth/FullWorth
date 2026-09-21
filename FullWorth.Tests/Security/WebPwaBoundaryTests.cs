@@ -182,6 +182,21 @@ public sealed class WebPwaBoundaryTests
             "grid-template-columns: repeat(5, minmax(0, 1fr));",
             shellStyles,
             StringComparison.Ordinal);
+
+        var settings =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Pages",
+                    "App",
+                    "AccountSettings.razor"));
+
+        Assert.Contains(
+            "href=\"/app/account/privacy\"",
+            settings,
+            StringComparison.Ordinal);
     }
 
     [Fact]
