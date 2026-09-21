@@ -200,6 +200,52 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public void BffClient_RedirectsExpiredSessionsAndKeepsReadsNoStore()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        Assert.Contains(
+            "response.status === 401",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "window.location.assign(",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/login\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "credentials:",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"same-origin\"",
+            bff,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"no-store\"",
+            bff,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StatementUpload_RemainsBrowserFileBasedAndNoStore()
     {
         var repositoryRoot =
