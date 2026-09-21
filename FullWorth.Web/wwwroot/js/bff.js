@@ -14,6 +14,9 @@ const plaidUiText = {
         canceled:
             "Bank connection was canceled.",
 
+        popupClosed:
+            "The Plaid window was closed before FullWorth confirmed the connection. You can try again.",
+
         expired:
             "The secure Plaid session expired. Try again.",
 
@@ -67,6 +70,9 @@ const plaidUiText = {
 
         canceled:
             "Se canceló la conexión bancaria.",
+
+        popupClosed:
+            "La ventana de Plaid se cerró antes de que FullWorth confirmara la conexión. Puedes intentarlo de nuevo.",
 
         expired:
             "La sesión segura de Plaid caducó. Inténtalo de nuevo.",
@@ -400,6 +406,9 @@ async function waitForPlaidCompletion(
         Date.now() +
         (10 * 60 * 1000);
 
+    let popupClosedPendingChecks =
+        0;
+
     while (Date.now() <
         deadline) {
 
@@ -417,6 +426,33 @@ async function waitForPlaidCompletion(
 
         if (state ===
             "pending") {
+            let popupClosed =
+                false;
+
+            try {
+                popupClosed =
+                    plaidWindow.closed;
+            } catch {
+            }
+
+            if (popupClosed) {
+                popupClosedPendingChecks +=
+                    1;
+
+                if (popupClosedPendingChecks >=
+                    5) {
+                    setConnectStatus(
+                        statusElement,
+                        text.popupClosed,
+                        "neutral");
+
+                    return;
+                }
+            } else {
+                popupClosedPendingChecks =
+                    0;
+            }
+
             continue;
         }
 
