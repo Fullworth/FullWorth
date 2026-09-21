@@ -909,3 +909,330 @@ a.settings-tab:focus-visible {
         transition: none;
     }
 }
+
+
+/* FullWorth v2 settings composition */
+
+.app-shell .settings-page {
+    max-width: 1180px;
+    padding-bottom: 56px;
+}
+
+.app-shell .settings-header {
+    margin-bottom: 14px;
+}
+
+.app-shell .settings-header h1 {
+    margin: 7px 0 8px;
+    color: var(--fw-ink);
+    font-size: clamp(2.35rem, 4vw, 3.35rem);
+    line-height: 0.96;
+    font-weight: 760;
+    letter-spacing: -0.067em;
+}
+
+.app-shell .settings-header p {
+    max-width: 680px;
+    color: var(--fw-muted);
+    font-size: 0.81rem;
+    line-height: 1.6;
+}
+
+.app-shell .settings-tabs {
+    margin-bottom: 16px;
+    padding: 3px;
+    border-color: var(--fw-line);
+    border-radius: 999px;
+    background: var(--fw-panel);
+    box-shadow: none;
+}
+
+.app-shell .settings-tab {
+    min-height: 36px;
+    padding: 0 13px;
+    border-radius: 999px;
+    color: var(--fw-muted);
+    font-size: 0.62rem;
+    font-weight: 740;
+}
+
+.app-shell .settings-tab.is-active {
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+    box-shadow: none;
+}
+
+.app-shell .security-overview {
+    min-height: 170px;
+    margin-bottom: 14px;
+    padding: 25px 27px;
+    border-color: rgba(119, 137, 255, 0.18);
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at 92% 7%, rgba(117, 134, 255, 0.26), transparent 34%),
+        linear-gradient(135deg, #10182f, #17244b);
+    color: #f8f9ff;
+    box-shadow: 0 24px 60px rgba(23, 34, 77, 0.18);
+}
+
+.app-shell .security-overview-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #aeb9ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.app-shell .security-overview-mark .bw-sprite {
+    width: 24px;
+    height: 24px;
+}
+
+.app-shell .security-overview-copy .panel-kicker {
+    color: #95a2ff;
+}
+
+.app-shell .security-overview-copy h2 {
+    margin: 5px 0 6px;
+    color: #fff;
+    font-size: 1.28rem;
+    font-weight: 740;
+    letter-spacing: -0.04em;
+}
+
+.app-shell .security-overview-copy p {
+    max-width: 650px;
+    color: #a8b2cc;
+    font-size: 0.68rem;
+    line-height: 1.55;
+}
+
+.app-shell .security-status-pill {
+    min-height: 32px;
+    border-color: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.055);
+    color: #c7cee2;
+    font-size: 0.58rem;
+}
+
+.app-shell .fw-settings-center {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--fw-line);
+    border-radius: 26px;
+    background: var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-settings-center .settings-card {
+    min-width: 0;
+    grid-column: 1 / -1;
+    gap: 14px;
+    padding: 21px 23px;
+    border: 0;
+    border-bottom: 1px solid var(--fw-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.app-shell .fw-settings-center .settings-card:last-child {
+    border-bottom: 0;
+}
+
+.app-shell .fw-settings-center .fw-device-preference {
+    grid-column: auto;
+    border-right: 1px solid var(--fw-line);
+    background: rgba(103, 118, 158, 0.025);
+}
+
+.app-shell .fw-settings-center .fw-device-preference:nth-last-child(1) {
+    border-right: 0;
+}
+
+.app-shell .fw-settings-center .settings-card-heading {
+    gap: 12px;
+}
+
+.app-shell .fw-settings-center .settings-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-settings-center .settings-card-icon.is-muted {
+    background: rgba(112, 126, 160, 0.08);
+    color: var(--fw-muted);
+}
+
+.app-shell .fw-settings-center .settings-card-icon .bw-sprite {
+    width: 18px;
+    height: 18px;
+}
+
+.app-shell .fw-settings-center .settings-copy h2,
+.app-shell .fw-settings-center .authenticator-setup h3 {
+    color: var(--fw-ink);
+    font-size: 0.9rem;
+    font-weight: 740;
+    letter-spacing: -0.025em;
+}
+
+.app-shell .fw-settings-center .settings-copy p,
+.app-shell .fw-settings-center .authenticator-setup p {
+    max-width: 780px;
+    color: var(--fw-muted);
+    font-size: 0.64rem;
+    line-height: 1.5;
+}
+
+.app-shell .fw-settings-center .security-badge {
+    min-height: 23px;
+    padding: 0 8px;
+    font-size: 0.55rem;
+}
+
+.app-shell .fw-settings-center .security-stat-row {
+    max-width: 560px;
+    gap: 8px;
+}
+
+.app-shell .fw-settings-center .security-stat-row > div,
+.app-shell .fw-settings-center .settings-value-row {
+    padding: 10px 12px;
+    border-color: var(--fw-line);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-settings-center .security-stat-row span,
+.app-shell .fw-settings-center .settings-value-row > span {
+    color: var(--fw-faint);
+    font-size: 0.57rem;
+}
+
+.app-shell .fw-settings-center .security-stat-row strong,
+.app-shell .fw-settings-center .settings-value-row > strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.69rem;
+}
+
+.app-shell .fw-settings-center .settings-actions {
+    gap: 7px;
+}
+
+.app-shell .fw-settings-center .settings-actions button {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 11px;
+    font-size: 0.6rem;
+}
+
+.app-shell .fw-settings-center .settings-actions .primary-action {
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+}
+
+.app-shell .fw-settings-center .settings-actions .secondary-action {
+    border-color: var(--fw-line);
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+}
+
+.app-shell .fw-settings-center .provider-row {
+    gap: 8px;
+}
+
+.app-shell .fw-settings-center .provider-item {
+    padding: 10px 12px;
+    border-color: var(--fw-line);
+    border-radius: 12px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-settings-center .settings-field > span {
+    color: var(--fw-ink-soft);
+    font-size: 0.63rem;
+}
+
+.app-shell .fw-settings-center .settings-field input,
+.app-shell .fw-settings-center .settings-field select {
+    min-height: 42px;
+    border-color: var(--fw-line-strong);
+    border-radius: 11px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink);
+    font-size: 0.65rem;
+}
+
+.app-shell .fw-settings-center .secondary-link {
+    color: #7583f5;
+    font-size: 0.62rem;
+}
+
+.app-shell .fw-device-preference .settings-actions {
+    margin-top: auto;
+}
+
+/* Dialogs remain action-scoped, but inherit the v2 material language. */
+.app-shell + .settings-dialog,
+.settings-dialog {
+    border-color: var(--fw-line-strong, rgba(255, 255, 255, 0.12));
+    border-radius: 24px;
+}
+
+.settings-dialog-header {
+    padding: 22px 23px 17px;
+}
+
+.settings-dialog-header h2 {
+    font-size: 1.22rem;
+    letter-spacing: -0.04em;
+}
+
+.settings-dialog-body {
+    padding: 19px 23px 23px;
+}
+
+@media (max-width: 900px) {
+    .app-shell .fw-settings-center {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-settings-center .fw-device-preference {
+        grid-column: 1;
+        border-right: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .app-shell .settings-header h1 {
+        font-size: 2.3rem;
+    }
+
+    .app-shell .settings-tabs {
+        width: fit-content;
+    }
+
+    .app-shell .security-overview {
+        padding: 21px;
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-settings-center {
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-settings-center .settings-card {
+        padding: 18px;
+    }
+
+    .app-shell .fw-settings-center .settings-actions > button {
+        flex: 1 1 150px;
+    }
+}
