@@ -103,6 +103,43 @@
         color: var(--bw-text-subtle);
     }
 
+.transaction-history-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.transaction-history-load-button {
+    min-height: 32px;
+    padding: 7px 11px;
+    border: 1px solid var(--bw-border);
+    border-radius: 10px;
+    background: var(--bw-surface-soft);
+    color: var(--bw-text-secondary);
+    font: inherit;
+    font-size: 0.58rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+    .transaction-history-load-button:hover:not(:disabled) {
+        border-color: color-mix(in srgb, var(--bw-accent) 42%, var(--bw-border));
+        color: var(--bw-text);
+    }
+
+    .transaction-history-load-button:disabled {
+        cursor: wait;
+        opacity: 0.62;
+    }
+
+.transaction-history-error {
+    margin-top: -4px;
+    color: var(--bw-danger);
+    font-size: 0.58rem;
+}
+
 .transaction-list {
     overflow: hidden;
     border: 1px solid var(--bw-border);
