@@ -818,7 +818,7 @@ html[data-theme="light"] .subscription-plan-card {
     background: var(--fw-panel-muted);
 }
 
-.app-shell .fw-subscription-beta .subscription-card input {
+.app-shell .fw-subscription-beta input {
     min-height: 42px;
     border-color: var(--fw-line-strong);
     border-radius: 11px;
