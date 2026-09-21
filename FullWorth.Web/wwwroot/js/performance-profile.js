@@ -10,6 +10,23 @@
             "high"
         ]);
 
+    const balancedRouteStylePrefetchUrls = [
+        "/account-settings.css",
+        "/account-transactions.css"
+    ];
+
+    const highRouteStylePrefetchUrls = [
+        ...balancedRouteStylePrefetchUrls,
+        "/account-privacy.css",
+        "/subscription.css"
+    ];
+
+    let routeStylePrefetchStarted =
+        false;
+
+    let routeStylePrefetchScheduled =
+        false;
+
     function normalizeProfile(value) {
         const normalized =
             String(value ?? "")
@@ -109,10 +126,126 @@
             .fullworthPerformancePreference =
                 selected;
 
+        scheduleRouteStylePrefetch();
+
         return {
             selected,
             effective
         };
+    }
+
+    function getRouteStylePrefetchUrls() {
+        switch (
+            document.documentElement.dataset
+                .fullworthPerformance) {
+            case "high":
+                return highRouteStylePrefetchUrls;
+
+            case "balanced":
+                return balancedRouteStylePrefetchUrls;
+
+            default:
+                return [];
+        }
+    }
+
+    function prefetchRouteStyles() {
+        if (routeStylePrefetchStarted) {
+            return;
+        }
+
+        const urls =
+            getRouteStylePrefetchUrls();
+
+        if (urls.length === 0) {
+            return;
+        }
+
+        routeStylePrefetchStarted =
+            true;
+
+        for (const url of urls) {
+            const existing =
+                document.querySelector(
+                    `link[href="${url}"]`);
+
+            if (existing) {
+                continue;
+            }
+
+            const link =
+                document.createElement(
+                    "link");
+
+            link.rel =
+                "prefetch";
+
+            link.as =
+                "style";
+
+            link.href =
+                url;
+
+            document.head.appendChild(
+                link);
+        }
+    }
+
+    function runRouteStylePrefetchWhenIdle() {
+        const run =
+            () => {
+                routeStylePrefetchScheduled =
+                    false;
+
+                if (
+                    document.documentElement.dataset
+                        .fullworthPerformance ===
+                    "efficiency") {
+                    return;
+                }
+
+                prefetchRouteStyles();
+            };
+
+        if ("requestIdleCallback" in window) {
+            window.requestIdleCallback(
+                run,
+                {
+                    timeout:
+                        3000
+                });
+
+            return;
+        }
+
+        window.setTimeout(
+            run,
+            1500);
+    }
+
+    function scheduleRouteStylePrefetch() {
+        if (routeStylePrefetchStarted ||
+            routeStylePrefetchScheduled ||
+            getRouteStylePrefetchUrls().length === 0) {
+            return;
+        }
+
+        routeStylePrefetchScheduled =
+            true;
+
+        if (document.readyState ===
+            "complete") {
+            runRouteStylePrefetchWhenIdle();
+            return;
+        }
+
+        window.addEventListener(
+            "load",
+            runRouteStylePrefetchWhenIdle,
+            {
+                once:
+                    true
+            });
     }
 
     function transactionLoadLimit() {
