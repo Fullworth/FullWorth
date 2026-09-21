@@ -325,6 +325,81 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public async Task PerformanceProfile_UsesIdleStaticStylePrefetchWithoutFinancialRequests()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/js/performance-profile.js");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.Contains(
+            "\"/account-settings.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/account-transactions.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/account-privacy.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"/subscription.css\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"requestIdleCallback\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "link.rel =",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"prefetch\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Matches(
+            @"fullworthPerformance\s*===\s*""efficiency""",
+            body);
+
+        Assert.DoesNotContain(
+            "/bff/",
+            body,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "/api/",
+            body,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotMatch(
+            @"(?i)(?<![A-Za-z0-9_])fetch\s*\(",
+            body);
+    }
+
+    [Fact]
     public async Task InstallHelper_IsPublicAndKeepsWorkerUpdatesOutOfHttpCache()
     {
         using var factory =
