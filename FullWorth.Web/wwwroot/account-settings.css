@@ -1236,3 +1236,158 @@ a.settings-tab:focus-visible {
         flex: 1 1 150px;
     }
 }
+
+
+/* FullWorth v2 profile polish */
+
+.app-shell .fw-profile-page {
+    max-width: 980px;
+}
+
+.app-shell .fw-profile-page .profile-back-link {
+    margin-bottom: 2px;
+}
+
+.app-shell .fw-profile-card {
+    min-height: 290px;
+    padding: 26px;
+    gap: 22px;
+    border-color: var(--fw-line);
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at 96% 0%, rgba(85, 103, 244, 0.08), transparent 34%),
+        var(--fw-panel);
+    box-shadow: var(--fw-shadow-soft);
+}
+
+.app-shell .fw-profile-heading {
+    gap: 14px;
+}
+
+.app-shell .fw-profile-heading .settings-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fw-accent-soft);
+    color: #7583f5;
+}
+
+.app-shell .fw-profile-heading .settings-card-icon .bw-sprite {
+    width: 20px;
+    height: 20px;
+}
+
+.app-shell .fw-profile-card .settings-copy h2 {
+    margin-top: 4px;
+    color: var(--fw-ink);
+    font-size: 1.08rem;
+    font-weight: 740;
+    letter-spacing: -0.035em;
+}
+
+.app-shell .fw-profile-card .settings-copy p {
+    max-width: 680px;
+    color: var(--fw-muted);
+    font-size: 0.65rem;
+    line-height: 1.55;
+}
+
+.app-shell .fw-profile-grid {
+    gap: 10px;
+}
+
+.app-shell .fw-profile-grid .settings-field {
+    padding: 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 15px;
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .fw-profile-grid .settings-field > span {
+    color: var(--fw-muted);
+    font-size: 0.58rem;
+}
+
+.app-shell .fw-profile-grid .settings-field input {
+    min-height: 42px;
+    border-color: var(--fw-line-strong);
+    border-radius: 11px;
+    background: var(--fw-panel-solid);
+    color: var(--fw-ink);
+    font-size: 0.66rem;
+}
+
+.app-shell .fw-profile-grid .settings-field strong {
+    color: var(--fw-ink-soft);
+    font-size: 0.72rem;
+}
+
+.app-shell .fw-profile-grid .settings-field small {
+    color: var(--fw-faint);
+    font-size: 0.54rem;
+}
+
+.app-shell .fw-profile-actions {
+    gap: 8px;
+}
+
+.app-shell .fw-profile-actions .primary-action,
+.app-shell .fw-profile-actions .secondary-action {
+    min-height: 38px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 0.61rem;
+    text-decoration: none;
+}
+
+.app-shell .fw-profile-actions .primary-action {
+    background: linear-gradient(135deg, #5368f4, #7381ff);
+    box-shadow: none;
+}
+
+.app-shell .fw-profile-actions .secondary-action {
+    border-color: var(--fw-line);
+    background: var(--fw-panel-muted);
+    color: var(--fw-ink-soft);
+}
+
+.app-shell .fw-profile-note {
+    margin: 0;
+    padding: 13px 14px;
+    border: 1px solid var(--fw-line);
+    border-radius: 13px;
+    background: var(--fw-panel-muted);
+    color: var(--fw-faint);
+    font-size: 0.57rem;
+    line-height: 1.5;
+}
+
+.app-shell .fw-profile-loading {
+    color: var(--fw-muted);
+    font-size: 0.65rem;
+}
+
+@media (max-width: 640px) {
+    .app-shell .fw-profile-card {
+        min-height: 0;
+        padding: 20px;
+        border-radius: 22px;
+    }
+
+    .app-shell .fw-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell .fw-profile-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .app-shell .fw-profile-actions .primary-action,
+    .app-shell .fw-profile-actions .secondary-action {
+        width: 100%;
+    }
+}
