@@ -249,7 +249,7 @@ public sealed class BillStatementUploadStatusAuthorizationTests
             response.Content.Headers.ContentType?.MediaType);
 
         Assert.Equal(
-            $"billwatch-statement-{upload.Id:N}.pdf",
+            $"fullworth-statement-{upload.Id:N}.pdf",
             response.Content.Headers.ContentDisposition?
                 .FileName?
                 .Trim('"'));
