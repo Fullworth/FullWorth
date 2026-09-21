@@ -37,7 +37,7 @@
 
         <button type="button"
                 class="secondary-action"
-                disabled="@(_isLoading || _isRefreshing)"
+                disabled="@(_isLoading || _isRefreshing || _isLoadingMore)"
                 @onclick="SyncNowAsync">
             @(_isRefreshing
                 ? L["Syncing…"]
