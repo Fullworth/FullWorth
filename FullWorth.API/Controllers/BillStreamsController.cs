@@ -163,52 +163,79 @@ public sealed class BillStreamsController : ControllerBase
             return NotFound();
         }
 
-        var stream =
+        /*
+         * Read the stream and its transaction metrics in one database round
+         * trip. The scalar subqueries remain ownership-scoped and avoid
+         * issuing separate queries for current amount and prior average.
+         */
+        var streamSnapshot =
             await _dbContext.BillStreams
                 .AsNoTracking()
-                .SingleOrDefaultAsync(
+                .Where(
                     candidate =>
-                        candidate.Id == billStreamId &&
-                        candidate.UserId == userId,
+                        candidate.Id ==
+                            billStreamId &&
+                        candidate.UserId ==
+                            userId)
+                .Select(
+                    candidate =>
+                        new
+                        {
+                            candidate.Id,
+                            candidate.ProviderName,
+                            candidate.Category,
+                            candidate.IsActive,
+
+                            CurrentAmount =
+                                _dbContext.BankTransactions
+                                    .Where(transaction =>
+                                        transaction.UserId ==
+                                            userId &&
+                                        transaction.BillStreamId ==
+                                            billStreamId &&
+                                        !transaction.IsRemoved &&
+                                        !transaction.IsPending)
+                                    .OrderByDescending(transaction =>
+                                        transaction.PostedDate)
+                                    .ThenByDescending(transaction =>
+                                        transaction.CreatedAtUtc)
+                                    .Select(transaction =>
+                                        (decimal?)transaction.Amount)
+                                    .FirstOrDefault(),
+
+                            PreviousAverage =
+                                _dbContext.BankTransactions
+                                    .Where(transaction =>
+                                        transaction.UserId ==
+                                            userId &&
+                                        transaction.BillStreamId ==
+                                            billStreamId &&
+                                        !transaction.IsRemoved &&
+                                        !transaction.IsPending)
+                                    .OrderByDescending(transaction =>
+                                        transaction.PostedDate)
+                                    .ThenByDescending(transaction =>
+                                        transaction.CreatedAtUtc)
+                                    .Skip(1)
+                                    .Select(transaction =>
+                                        (decimal?)transaction.Amount)
+                                    .Average()
+                        })
+                .SingleOrDefaultAsync(
                     cancellationToken);
 
-        if (stream is null)
+        if (streamSnapshot is null)
         {
             return NotFound();
         }
 
-        var transactionAmounts =
-            _dbContext.BankTransactions
-                .AsNoTracking()
-                .Where(transaction =>
-                    transaction.UserId == userId &&
-                    transaction.BillStreamId ==
-                        billStreamId &&
-                    !transaction.IsRemoved &&
-                    !transaction.IsPending)
-                .OrderByDescending(transaction =>
-                    transaction.PostedDate)
-                .ThenByDescending(transaction =>
-                    transaction.CreatedAtUtc)
-                .Select(transaction =>
-                    transaction.Amount);
-
         var currentAmount =
-            await transactionAmounts
-                .Select(amount =>
-                    (decimal?)amount)
-                .FirstOrDefaultAsync(
-                    cancellationToken)
-            ?? 0m;
+            streamSnapshot.CurrentAmount ??
+            0m;
 
         var previousAverage =
-            await transactionAmounts
-                .Skip(1)
-                .Select(amount =>
-                    (decimal?)amount)
-                .AverageAsync(
-                    cancellationToken)
-            ?? 0m;
+            streamSnapshot.PreviousAverage ??
+            0m;
 
         var statements =
             await _dbContext.BillStatements
@@ -262,16 +289,16 @@ public sealed class BillStreamsController : ControllerBase
         return Ok(
             new BillStreamDetailResult(
                 Id:
-                    stream.Id,
+                    streamSnapshot.Id,
 
                 ProviderName:
-                    stream.ProviderName,
+                    streamSnapshot.ProviderName,
 
                 Category:
-                    stream.Category.ToString(),
+                    streamSnapshot.Category.ToString(),
 
                 IsActive:
-                    stream.IsActive,
+                    streamSnapshot.IsActive,
 
                 CurrentAmount:
                     currentAmount,
