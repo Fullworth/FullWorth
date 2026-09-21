@@ -84,7 +84,7 @@ public static class BffEndpointMappings
         });
 
         bff.MapGet("/account/export", async (HttpContext context, FullWorthBffProxyService proxy) =>
-            await proxy.ForwardDownloadAsync(context, "/api/account/export", "billwatch-data-export.json", "application/json; charset=utf-8", context.RequestAborted));
+            await proxy.ForwardDownloadAsync(context, "/api/account/export", "fullworth-data-export.json", "application/json; charset=utf-8", context.RequestAborted));
         bff.MapDelete("/account", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy) =>
         {
             await antiforgery.ValidateRequestAsync(context);
