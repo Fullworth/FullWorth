@@ -42,7 +42,7 @@ When sources disagree, use this order:
 1. Current source code.
 2. Exact-head CI results for the branch/commit being considered.
 3. Verified production evidence.
-4. `BILLWATCH_CONTEXT.md` while that legacy filename remains required by continuation tooling.
+4. `FULLWORTH_CONTEXT.md` while that legacy filename remains required by continuation tooling.
 5. This roadmap.
 6. Older planning notes, issue text, stale PR descriptions, and historical chat summaries.
 
@@ -399,7 +399,7 @@ Do not delete:
 
 Keep:
 
-- `BILLWATCH_CONTEXT.md` until continuation tooling no longer depends on the legacy filename;
+- `FULLWORTH_CONTEXT.md` as the authoritative continuation context;
 - this roadmap;
 - operational/recovery documentation that is actively referenced;
 - revenue-readiness documentation;
