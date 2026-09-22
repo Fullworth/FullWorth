@@ -22,13 +22,49 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect backend-relevant changes
+        id: backend_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $docsOnlyExactFiles = @(
+            "AI_SHADOW_CORPUS.md",
+            "BILLWATCH_CONTEXT.md",
+            "FULLWORTH_CONTEXT.md",
+            "README.md",
+            "REVENUE_READINESS.md"
+          )
+
+          $required = $false
+
+          foreach ($file in $changedFiles) {
+            if (-not ($docsOnlyExactFiles -contains $file)) {
+              $required = $true
+              break
+            }
+          }
+
+          "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Install .NET 10
+        if: steps.backend_changes.outputs.required == 'true'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       - name: Cache backend NuGet packages
+        if: steps.backend_changes.outputs.required == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -37,15 +73,19 @@ jobs:
             nuget-${{ runner.os }}-backend-
 
       - name: Restore tests and dependencies
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build backend
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet build FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-restore
 
       - name: Install EF migration verifier
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet tool install --global dotnet-ef --version 10.0.11
 
       - name: Verify committed migrations match the model
+        if: steps.backend_changes.outputs.required == 'true'
         env:
           ASPNETCORE_ENVIRONMENT: Development
           ConnectionStrings__BillWatchDatabase: Host=localhost;Database=billwatch_ci_model_check;Username=billwatch;Password=ci-model-check-only
@@ -58,9 +98,11 @@ jobs:
           --configuration Release
 
       - name: Run tests
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet test FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-build --no-restore
 
       - name: Verify transaction stream regression
+        if: steps.backend_changes.outputs.required == 'true'
         run: node --test FullWorth.Tests/transaction-stream.test.mjs
 
   maui:
