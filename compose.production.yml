@@ -27,7 +27,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
-      AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST};${BILLWATCH_LEGACY_HOST:-legacy-api.localhost}
+      AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ConnectionStrings__BillWatchDatabase: Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
       Database__MigrateOnStartup: "true"
       Subscription__EnforcementEnabled: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED:-false}
