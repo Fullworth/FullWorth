@@ -5,93 +5,80 @@
 <PageTitle>@L["FullWorth — Your financial life in one place"]</PageTitle>
 
 <div class="landing-page">
-    <section class="hero">
+    <section class="hero" id="top">
         <div class="hero-copy">
-            <div class="eyebrow"><span></span>@L["One clear view of your money"]</div>
-            <h1>@L["Your entire financial life."] <span>@L["One app."]</span></h1>
-            <p>@L["FullWorth brings accounts, spending, recurring bills, and important changes together so you can see what matters without digging through separate apps."]</p>
+            <div class="eyebrow">@L["Take control of your money"]</div>
+            <h1>@L["See the big picture."]<br />@L["Save more."] <span>@L["Live better."]</span></h1>
+            <p>@L["FullWorth brings your bills, spending, debt, and financial health together in one place — then helps you spot the changes that actually matter."]</p>
             <div class="hero-actions">
-                <a class="primary-button" href="/register">@L["Get started"] <span aria-hidden="true">→</span></a>
-                <a class="secondary-button" href="#inside">@L["See what's inside"]</a>
+                <a class="primary-button" href="/register">@L["Get started free"] <span aria-hidden="true">→</span></a>
+                <a class="secondary-button" href="#how-it-works"><span class="play" aria-hidden="true">▶</span>@L["See how it works"]</a>
             </div>
             <div class="trust-row">
-                <span>✓ @L["Read-only financial visibility"]</span>
-                <span>✓ @L["No money movement"]</span>
-                <span>✓ @L["Evidence-first insights"]</span>
+                <span><b>◇</b><span><strong>@L["Secure & private"]</strong><small>@L["Read-only visibility"]</small></span></span>
+                <span><b>ϟ</b><span><strong>@L["Evidence-first"]</strong><small>@L["Spot changes early"]</small></span></span>
+                <span><b>▯</b><span><strong>@L["Web & mobile"]</strong><small>@L["One responsive app"]</small></span></span>
             </div>
         </div>
 
-        <div class="snapshot" aria-label="@L["Example FullWorth financial overview"]">
-            <div class="snapshot-top">
-                <div>
-                    <span class="snapshot-label">@L["Financial overview"]</span>
-                    <strong>$18,420</strong>
-                    <small>@L["Example net position"]</small>
+        <div class="phone-wrap" aria-label="@L["Example FullWorth mobile dashboard"]">
+            <div class="phone-glow"></div>
+            <div class="phone">
+                <div class="phone-notch"></div>
+                <div class="phone-screen">
+                    <div class="mobile-brand"><span class="mini-bars"><i></i><i></i><i></i></span><strong>FullWorth</strong><span class="avatar">●</span></div>
+                    <div class="net-worth-card"><span>@L["Total net worth"]</span><strong>$24,845</strong><small>↗ 1.8%</small><div class="sparkline">⌁⌁╱⌁╱╱</div></div>
+                    <div class="phone-metrics"><div><span>@L["Total assets"]</span><strong>$36,420</strong></div><div><span>@L["Total debt"]</span><strong>$11,575</strong></div></div>
+                    <div class="cash-flow"><span>@L["Monthly cash flow"]</span><strong>+$1,420</strong><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+                    <div class="recent-title"><strong>@L["Recent bill changes"]</strong><span>@L["View all"]</span></div>
+                    <div class="bill-list">
+                        <div><b>◎</b><span><strong>@L["Internet"]</strong><small>$84.99 → $89.99</small></span><em>+$5.00</em></div>
+                        <div><b>◇</b><span><strong>@L["Electricity"]</strong><small>$142.30 → $129.90</small></span><em class="down">-$12.40</em></div>
+                        <div><b>N</b><span><strong>@L["Streaming"]</strong><small>$15.99 → $17.99</small></span><em>+$2.00</em></div>
+                    </div>
+                    <div class="phone-nav"><span>⌂<small>@L["Home"]</small></span><span>▤<small>@L["Bills"]</small></span><span>◔<small>@L["Spending"]</small></span><span>◎<small>@L["Goals"]</small></span><span>☰<small>@L["More"]</small></span></div>
                 </div>
-                <span class="live-pill"><i></i>@L["Connected"]</span>
-            </div>
-
-            <div class="metric-grid">
-                <div><span>@L["Cash"]</span><strong>$6,840</strong><small>@L["Across 2 accounts"]</small></div>
-                <div><span>@L["Debt"]</span><strong>$3,120</strong><small>@L["Across 2 accounts"]</small></div>
-                <div><span>@L["Spent this month"]</span><strong>$2,486</strong><small>@L["Example activity"]</small></div>
-                <div><span>@L["Recurring monthly"]</span><strong>$1,294</strong><small>@L["11 detected bills"]</small></div>
-            </div>
-
-            <div class="signal-card">
-                <div class="signal-icon">!</div>
-                <div>
-                    <span>@L["Bill change detected"]</span>
-                    <strong>@L["Internet increased by $25/month"]</strong>
-                    <small>@L["$300 annualized impact · explanation available"]</small>
-                </div>
-                <span class="signal-arrow">→</span>
             </div>
         </div>
     </section>
 
-    <section class="capability-strip" id="inside">
-        <article><span>01</span><strong>@L["See the whole picture"]</strong><p>@L["Bring connected accounts and financial activity into one calm overview."]</p></article>
-        <article><span>02</span><strong>@L["Understand your spending"]</strong><p>@L["See transactions and recurring costs without maintaining another budget."]</p></article>
-        <article><span>03</span><strong>@L["Catch changes early"]</strong><p>@L["Surface meaningful bill increases and their monthly and annual impact."]</p></article>
+    <section class="feature-strip" id="features">
+        <article><span>▤</span><strong>@L["Track bills"]</strong><p>@L["Detect recurring costs and meaningful changes."]</p></article>
+        <article><span>◕</span><strong>@L["Monitor spending"]</strong><p>@L["See where your money goes without maintaining a budget."]</p></article>
+        <article><span>◎</span><strong>@L["Understand debt"]</strong><p>@L["Keep balances visible alongside the rest of your finances."]</p></article>
+        <article><span>↗</span><strong>@L["Build your worth"]</strong><p>@L["See your financial position and progress together."]</p></article>
     </section>
 
-    <section class="intelligence-section">
-        <div class="section-copy">
-            <div class="section-kicker">@L["More than a dashboard"]</div>
-            <h2>@L["Know what changed,"] <span>@L["not just what you spent."]</span></h2>
-            <p>@L["FullWorth starts with real transaction activity. When trustworthy statement evidence is available, it can connect a recurring increase to the charges behind it instead of guessing."]</p>
-            <div class="principles">
-                <div><b>✓</b><span><strong>@L["Transaction-first"]</strong><small>@L["Actual money movement comes first."]</small></span></div>
-                <div><b>✓</b><span><strong>@L["Evidence-backed"]</strong><small>@L["Explanations stay tied to validated evidence."]</small></span></div>
-                <div><b>✓</b><span><strong>@L["Real impact"]</strong><small>@L["See monthly changes and annualized cost."]</small></span></div>
-            </div>
+    <section class="product-section" id="how-it-works">
+        <div class="desktop-preview" aria-label="@L["Example FullWorth desktop dashboard"]">
+            <aside><div class="preview-brand">▥ FullWorth</div><b>@L["Dashboard"]</b><span>@L["Bills"]</span><span>@L["Spending"]</span><span>@L["Debt"]</span><span>@L["Activity"]</span><span>@L["Statements"]</span><span>@L["Settings"]</span></aside>
+            <main>
+                <div class="preview-head"><div><strong>@L["Good morning."]</strong><small>@L["Here's your financial overview."]</small></div><span>@L["Example"]</span></div>
+                <div class="desktop-metrics"><div><span>@L["Cash"]</span><strong>$8,420</strong><small>↑ 4%</small></div><div><span>@L["Debt"]</span><strong>$11,575</strong><small class="negative">↑ 2%</small></div><div><span>@L["Monthly spending"]</span><strong>$2,340</strong><small>↓ 6%</small></div><div><span>@L["Recurring bills"]</span><strong>$1,120</strong><small>12 @L["active"]</small></div></div>
+                <div class="chart-grid"><div class="donut-card"><strong>@L["Spending by category"]</strong><div class="donut"><span>$2,340<small>@L["This month"]</small></span></div></div><div class="trend-card"><strong>@L["Net worth trend"]</strong><div class="trend-line">╱╱╱╱╱╱╱</div><span>$24,845</span></div></div>
+            </main>
         </div>
 
-        <div class="change-card">
-            <div class="change-head"><span>@L["Recurring bill"]</span><b>@L["Increase detected"]</b></div>
-            <div class="provider-row"><div class="provider-mark">I</div><div><strong>@L["Internet"]</strong><small>@L["Monthly service"]</small></div></div>
-            <div class="price-row"><span>$79.99</span><i>→</i><strong>$104.99</strong></div>
-            <div class="impact-row"><div><span>@L["Monthly change"]</span><strong>+$25</strong></div><div><span>@L["Annual impact"]</span><strong>+$300</strong></div></div>
-            <div class="reason-row"><span>@L["Why it changed"]</span><strong>@L["Promotion ended + service fee"]</strong></div>
+        <div class="product-copy">
+            <div class="section-kicker">@L["Powerful insights"]</div>
+            <h2>@L["More than a bill tracker."] <span>@L["A clearer financial life."]</span></h2>
+            <p>@L["FullWorth connects the pieces of your financial life and turns real activity into useful context — without pretending to know what the evidence cannot prove."]</p>
+            <ul>
+                <li>@L["Automatic recurring-bill detection"]</li>
+                <li>@L["Transaction and spending visibility"]</li>
+                <li>@L["Debt and account overview"]</li>
+                <li>@L["Evidence-backed bill change explanations"]</li>
+                <li>@L["Secure, user-scoped financial records"]</li>
+                <li>@L["Responsive web experience"]</li>
+            </ul>
         </div>
-    </section>
-
-    <section class="security-section">
-        <div>
-            <div class="section-kicker">@L["Designed for financial data"]</div>
-            <h2>@L["Visibility without control of your money."]</h2>
-        </div>
-        <p>@L["FullWorth is designed to monitor and explain financial activity, not move money. Private financial records remain behind authenticated, user-scoped access."]</p>
-        <div class="security-points"><span>✓ @L["Read-only product model"]</span><span>✓ @L["User-scoped records"]</span><span>✓ @L["No invented explanations"]</span></div>
     </section>
 
     <section class="closing-section">
-        <div>
-            <span>@L["FULLWORTH"]</span>
-            <h2>@L["See your money clearly."]</h2>
-            <p>@L["Accounts, transactions, recurring costs, and meaningful changes — together."]</p>
-        </div>
-        <a href="/register">@L["Create your account"] <span aria-hidden="true">→</span></a>
+        <div class="section-kicker">@L["A brighter financial future"]</div>
+        <h2>@L["Ready to see the whole picture?"]</h2>
+        <p>@L["Bring the important parts of your financial life together with FullWorth."]</p>
+        <div class="closing-actions"><a href="/register">@L["Get started free"] <span>→</span></a><a href="#features">@L["Explore features"]</a></div>
+        <div class="closing-trust"><span>✓ @L["No money movement"]</span><span>✓ @L["Read-only monitoring"]</span><span>✓ @L["Evidence-first explanations"]</span></div>
     </section>
 </div>
