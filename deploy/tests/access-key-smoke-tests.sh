@@ -110,7 +110,7 @@ run_smoke()
 
 : > "$curl_log"
 run_smoke > "$temp_dir/out"
-grep -Fq 'BillWatch access-key lifecycle smoke passed.' "$temp_dir/out" || fail "happy-path lifecycle did not complete."
+grep -Fq 'FullWorth access-key lifecycle smoke passed.' "$temp_dir/out" || fail "happy-path lifecycle did not complete."
 grep -Fq 'PASS plaintext access key is one-time only' "$temp_dir/out" || fail "plaintext one-time boundary was not checked."
 grep -Fq 'PASS revoked access key rejected' "$temp_dir/out" || fail "post-revocation rejection was not checked."
 
