@@ -280,6 +280,39 @@ jobs:
 
           "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
+      - name: Detect visual-acceptance changes
+        id: visual_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $required = $false
+
+          foreach ($file in $changedFiles) {
+            if ($file.StartsWith(
+                    "FullWorth.Web/",
+                    [System.StringComparison]::Ordinal) -or
+                $file.StartsWith(
+                    "FullWorth.VisualTests/",
+                    [System.StringComparison]::Ordinal) -or
+                [string]::Equals(
+                    $file,
+                    ".github/workflows/ci.yml",
+                    [System.StringComparison]::Ordinal)) {
+              $required = $true
+              break
+            }
+          }
+
+          "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
@@ -345,6 +378,29 @@ jobs:
       - name: Verify web HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 --resolve web.localhost:443:127.0.0.1 https://web.localhost/health/ready
+
+      - name: Install visual acceptance dependencies
+        if: steps.visual_changes.outputs.required == 'true'
+        run: npm --prefix FullWorth.VisualTests install --no-audit --no-fund
+
+      - name: Install Chromium for visual acceptance
+        if: steps.visual_changes.outputs.required == 'true'
+        run: npm --prefix FullWorth.VisualTests exec playwright install --with-deps chromium
+
+      - name: Capture visual acceptance screenshots
+        if: steps.visual_changes.outputs.required == 'true'
+        env:
+          FULLWORTH_VISUAL_BASE_URL: https://web.localhost
+        run: node FullWorth.VisualTests/visual-acceptance.mjs
+
+      - name: Upload visual acceptance screenshots
+        if: always() && steps.visual_changes.outputs.required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fullworth-visual-${{ github.run_id }}
+          path: FullWorth.VisualTests/artifacts
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify production HTTP security boundaries
         if: steps.container_changes.outputs.required == 'true'
