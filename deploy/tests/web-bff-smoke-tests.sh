@@ -44,6 +44,8 @@ headers=""
 request="GET"
 url=""
 has_two_factor=false
+password_secret_file=""
+second_factor_secret_file=""
 
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
@@ -64,7 +66,15 @@ do
             ;;
         --data-urlencode)
             case "$2" in
-                twoFactor=true) has_two_factor=true ;;
+                twoFactor=true)
+                    has_two_factor=true
+                    ;;
+                password@*)
+                    password_secret_file="${2#password@}"
+                    ;;
+                twoFactorCode@*|recoveryCode@*)
+                    second_factor_secret_file="${2#*@}"
+                    ;;
             esac
             shift 2
             ;;
@@ -85,6 +95,35 @@ do
 done
 
 [ -n "$url" ] || exit 90
+
+validate_secret_file()
+{
+    secret_file="$1"
+    expected_value="$2"
+
+    [ -f "$secret_file" ] || exit 93
+
+    line_count="$(
+        wc -l < "$secret_file" |
+            tr -d '[:space:]'
+    )"
+    [ "$line_count" = "0" ] || exit 94
+
+    secret_value="$(cat "$secret_file")"
+    [ "$secret_value" = "$expected_value" ] || exit 95
+}
+
+if [ -n "$password_secret_file" ]; then
+    validate_secret_file \
+        "$password_secret_file" \
+        'WebSmokePassword!123456'
+fi
+
+if [ -n "$second_factor_secret_file" ]; then
+    validate_secret_file \
+        "$second_factor_secret_file" \
+        '123456'
+fi
 
 code=200
 body='{}'
@@ -157,7 +196,7 @@ EOF
 chmod 700 "$fake_bin/curl"
 
 password_file="$temp_dir/password"
-printf '%s\n' 'WebSmokePassword!123456' > "$password_file"
+printf '%s\r\n' 'WebSmokePassword!123456' > "$password_file"
 chmod 600 "$password_file"
 
 two_factor_file="$temp_dir/two-factor"
@@ -248,6 +287,17 @@ if run_smoke FAKE_EXPORT_SECRET=true > /dev/null 2>&1; then
     fail "Web/BFF smoke harness accepted an export containing a protected credential field."
 fi
 
+printf '%s\n%s\n' \
+    'WebSmokePassword!123456' \
+    'unexpected-second-line' \
+    > "$password_file"
+chmod 600 "$password_file"
+
+if run_smoke > /dev/null 2>&1; then
+    fail "Web/BFF smoke harness accepted a multi-line password file."
+fi
+
+printf '%s\r\n' 'WebSmokePassword!123456' > "$password_file"
 chmod 644 "$password_file"
 if run_smoke > /dev/null 2>&1; then
     fail "Web/BFF smoke harness accepted an insecure password-file mode."
