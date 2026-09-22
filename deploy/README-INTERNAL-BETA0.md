@@ -1,4 +1,4 @@
-# BillWatch Internal Beta 0 acceptance
+# FullWorth Internal Beta 0 acceptance
 
 `deploy/run-internal-beta0.sh` composes the guarded production smoke/review harnesses into one release-pinned acceptance run. It is intended for controlled private-beta accounts on the exact deployed release; it is not a CI substitute and it does not bypass any child harness safety control.
 
@@ -37,7 +37,7 @@ sh /opt/billwatch/deploy/smoke-account-deletion.sh \
   https://api.billbeacon.net
 ```
 
-The password file must be an absolute, mode-600, non-symlink file outside the deployment checkout. The evidence destination must also be an absolute path outside the checkout and must not already exist. The throwaway identity is rejected if it matches another configured BillWatch smoke identity.
+The password file must be an absolute, mode-600, non-symlink file outside the deployment checkout. The evidence destination must also be an absolute path outside the checkout and must not already exist. The throwaway identity is rejected if it matches another configured FullWorth smoke identity.
 
 The harness proves that the disposable account exists and can export its own data, deletes it through `DELETE /api/account`, verifies the old bearer identity no longer resolves through account export, and verifies the deleted credentials receive HTTP 401 on a new login attempt. A 2FA requirement, staff-role protection, Plaid revocation failure, or statement-storage failure is treated as a deletion failure; the harness does not bypass or weaken those protections.
 
