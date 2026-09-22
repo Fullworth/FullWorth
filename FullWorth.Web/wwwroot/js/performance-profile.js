@@ -109,6 +109,21 @@
             : normalized;
     }
 
+    function getExecutionModeForProfile(
+        effectiveProfile) {
+
+        switch (effectiveProfile) {
+            case "high":
+                return "local";
+
+            case "balanced":
+                return "hybrid";
+
+            default:
+                return "server";
+        }
+    }
+
     function applyProfile(preference) {
         const selected =
             normalizeProfile(
@@ -118,6 +133,10 @@
             resolveProfile(
                 selected);
 
+        const executionMode =
+            getExecutionModeForProfile(
+                effective);
+
         document.documentElement.dataset
             .fullworthPerformance =
                 effective;
@@ -126,11 +145,16 @@
             .fullworthPerformancePreference =
                 selected;
 
+        document.documentElement.dataset
+            .fullworthExecution =
+                executionMode;
+
         scheduleRouteStylePrefetch();
 
         return {
             selected,
-            effective
+            effective,
+            executionMode
         };
     }
 
@@ -289,6 +313,17 @@
 
         getTransactionLoadLimit() {
             return transactionLoadLimit();
+        },
+
+        getExecutionMode() {
+            const effective =
+                document.documentElement.dataset
+                    .fullworthPerformance ??
+                resolveProfile(
+                    getStoredPreference());
+
+            return getExecutionModeForProfile(
+                effective);
         }
     };
 
