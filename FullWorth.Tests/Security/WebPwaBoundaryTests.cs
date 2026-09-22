@@ -155,6 +155,16 @@ public sealed class WebPwaBoundaryTests
             "sessionStorage",
             body,
             StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "\"SKIP_WAITING\"",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Single(
+            Regex.Matches(
+                body,
+                @"self\.skipWaiting\(\)"));
     }
 
     [Fact]

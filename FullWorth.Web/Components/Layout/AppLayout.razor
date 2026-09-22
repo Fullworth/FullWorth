@@ -357,6 +357,22 @@
             <ThemeToggle />
         </header>
 
+        @if (_pwaUpdateAvailable)
+        {
+            <div class="pwa-update-notice"
+                 role="status"
+                 aria-live="polite">
+                <span>@L["A new version of FullWorth is ready."]</span>
+                <button type="button"
+                        @onclick="ApplyPwaUpdateAsync"
+                        disabled="@_pwaUpdateApplying">
+                    @(_pwaUpdateApplying
+                        ? L["Updating FullWorth…"]
+                        : L["Refresh to update"])
+                </button>
+            </div>
+        }
+
         <main class="app-content">
             @Body
         </main>
@@ -365,8 +381,11 @@
 
 @code {
     private IJSObjectReference? _timeModule;
+    private DotNetObjectReference<AppLayout>? _pwaCallback;
     private bool _mobileMenuOpen;
     private bool _showInstallAction;
+    private bool _pwaUpdateAvailable;
+    private bool _pwaUpdateApplying;
     private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -393,6 +412,12 @@
 
         try
         {
+            _pwaCallback = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync(
+                "FullWorthPwa.setUpdateCallback",
+                _pwaCallback);
+
             var showInstallAction =
                 !await JS.InvokeAsync<bool>(
                     "FullWorthPwa.isStandalone");
@@ -410,6 +435,41 @@
         {
             // Installation is progressive enhancement. FullWorth remains
             // fully usable when the browser does not expose PWA helpers.
+        }
+    }
+
+    [JSInvokable]
+    public Task OnPwaUpdateAvailableAsync()
+    {
+        _pwaUpdateAvailable = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyPwaUpdateAsync()
+    {
+        if (_pwaUpdateApplying)
+        {
+            return;
+        }
+
+        _pwaUpdateApplying = true;
+
+        try
+        {
+            var result = await JS.InvokeAsync<string>(
+                "FullWorthPwa.applyUpdate");
+
+            if (!string.Equals(
+                    result,
+                    "reloaded",
+                    StringComparison.Ordinal))
+            {
+                _pwaUpdateApplying = false;
+            }
+        }
+        catch (JSException)
+        {
+            _pwaUpdateApplying = false;
         }
     }
 
@@ -575,6 +635,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _pwaCallback?.Dispose();
+
         if (_timeModule is null)
         {
             return;

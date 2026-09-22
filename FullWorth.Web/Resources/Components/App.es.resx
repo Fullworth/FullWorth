@@ -27,6 +27,9 @@
   <data name="Signed in" xml:space="preserve"><value>Sesión iniciada</value></data>
   <data name="Sign out" xml:space="preserve"><value>Cerrar sesión</value></data>
   <data name="Secure session" xml:space="preserve"><value>Sesión segura</value></data>
+  <data name="A new version of FullWorth is ready." xml:space="preserve"><value>Hay una nueva versión de FullWorth disponible.</value></data>
+  <data name="Updating FullWorth…" xml:space="preserve"><value>Actualizando FullWorth…</value></data>
+  <data name="Refresh to update" xml:space="preserve"><value>Actualizar ahora</value></data>
   <data name="FullWorth user" xml:space="preserve"><value>Usuario de FullWorth</value></data>
   <data name="FullWorth home" xml:space="preserve"><value>Inicio de FullWorth</value></data>
   <data name="Primary navigation" xml:space="preserve"><value>Navegación principal</value></data>
