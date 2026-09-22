@@ -1,0 +1,1 @@
+.fw-card{padding:var(--fw-space-5,24px);border:1px solid var(--bw-border);border-radius:var(--fw-radius-card,16px);background:var(--bw-surface);color:var(--bw-text)}.fw-card--elevated{background:var(--bw-bg-elevated);box-shadow:var(--bw-card-shadow)}
