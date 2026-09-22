@@ -84,6 +84,17 @@ The remaining UI acceptance gate is real installed-device / interaction acceptan
 
 Do not claim those installed-device or human-interaction gates complete from Playwright screenshots alone.
 
+## Cost-aware validation cadence
+
+FullWorth is pre-revenue, so validation is risk-based rather than continuously exhaustive:
+- ordinary documentation and low-risk changes use the cheapest relevant local or CI checks;
+- UI-only changes use targeted browser acceptance when the affected Web surface changes, without automatically requiring unrelated backend or MAUI validation;
+- authentication, ownership, database, payment, deployment, security, or workflow changes retain the full required CI gate;
+- installed-device and full end-to-end acceptance are release-candidate or materially affected-change gates, not hourly activity;
+- external production readiness monitoring is manual-only until beta/revenue operations justify recurring monitoring cost.
+
+Existing browser and offline proofs should not be rerun without relevant source changes or new evidence.
+
 ## Repository / stack
 
 Repository: `RealizmModz/FullWorth`

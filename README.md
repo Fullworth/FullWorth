@@ -168,7 +168,7 @@ Production credentials, `.env.production`, raw statements, extracted statement t
 
 ## External readiness monitoring
 
-The `FullWorth Production Readiness` GitHub Actions workflow probes production from outside the deployment host every 15 minutes. It remains skipped until the repository variable `BILLWATCH_PRODUCTION_URL` is set to the hostname-only HTTPS origin, for example `https://api.billbeacon.net`.
+The `FullWorth Production Readiness` GitHub Actions workflow is manual-only while FullWorth is pre-revenue, so it does not create recurring runner or production probe cost. Dispatch it deliberately for a beta/release readiness check after setting the repository variable `BILLWATCH_PRODUCTION_URL` to the hostname-only HTTPS origin, for example `https://api.billbeacon.net`.
 
 The probe rejects credentials, ports, paths, redirects, local/internal hostnames, and DNS results in private, loopback, or link-local address ranges. It performs three bounded HTTPS attempts and accepts only FullWorth's exact readiness response. No application credential or API key is sent.
 
