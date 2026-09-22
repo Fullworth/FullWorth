@@ -25,6 +25,9 @@ public sealed class WebBffCheckoutAuthenticationTests
     {
         using var factory = new FullWorthWebFactory();
         using var client = factory.CreateHttpsClient();
+        client.DefaultRequestHeaders.Add(
+            "X-FullWorth-Test-UserId",
+            "11111111-1111-1111-1111-111111111111");
 
         using var antiforgeryResponse = await client.GetAsync("/bff/antiforgery");
         antiforgeryResponse.EnsureSuccessStatusCode();
