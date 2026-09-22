@@ -267,7 +267,7 @@ try {
   const emailDialog = page.locator("dialog.settings-dialog");
   await emailDialog.waitFor({ state: "visible", timeout: 10000 });
 
-  if ((await emailDialog.locator("#settings-dialog-title").textContent())?.trim() !== "Change email") {
+  if ((await emailDialog.locator("#settings-dialog-title").textContent())?.trim() !== "Change email address") {
     throw new Error("Expected Change email dialog title.");
   }
 
