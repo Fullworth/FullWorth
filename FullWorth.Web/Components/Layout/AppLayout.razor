@@ -274,6 +274,27 @@
                                         </p>
                                     }
                                 }
+
+                                <form method="post"
+                                      action="/auth/logout"
+                                      class="mobile-logout-form">
+
+                                    <AntiforgeryToken />
+
+                                    <button type="submit"
+                                            class="app-nav-link mobile-logout-action">
+                                        <span class="nav-icon"
+                                              aria-hidden="true">
+                                            <svg class="bw-sprite">
+                                                <use href="/assets/billwatch-sprites.svg#logout"></use>
+                                            </svg>
+                                        </span>
+
+                                        <span>
+                                            @L["Sign out"]
+                                        </span>
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     }
