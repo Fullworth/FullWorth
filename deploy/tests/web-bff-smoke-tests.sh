@@ -45,6 +45,22 @@ request="GET"
 url=""
 has_two_factor=false
 
+credential_file_has_line_break()
+{
+    path="$1"
+
+    [ -s "$path" ] || return 1
+
+    last_byte="$(
+        tail -c 1 "$path" |
+            od -An -tuC |
+            tr -d '[:space:]'
+    )"
+
+    [ "$last_byte" = "10" ] ||
+        [ "$last_byte" = "13" ]
+}
+
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
 while [ "$#" -gt 0 ]
@@ -64,7 +80,16 @@ do
             ;;
         --data-urlencode)
             case "$2" in
-                twoFactor=true) has_two_factor=true ;;
+                twoFactor=true)
+                    has_two_factor=true
+                    ;;
+                password@*|twoFactorCode@*|recoveryCode@*)
+                    credential_file="${2#*@}"
+
+                    if credential_file_has_line_break "$credential_file"; then
+                        exit 93
+                    fi
+                    ;;
             esac
             shift 2
             ;;
@@ -157,12 +182,16 @@ EOF
 chmod 700 "$fake_bin/curl"
 
 password_file="$temp_dir/password"
-printf '%s\n' 'WebSmokePassword!123456' > "$password_file"
+printf '%s\r\n' 'WebSmokePassword!123456' > "$password_file"
 chmod 600 "$password_file"
 
 two_factor_file="$temp_dir/two-factor"
 printf '%s\n' '123456' > "$two_factor_file"
 chmod 600 "$two_factor_file"
+
+recovery_file="$temp_dir/recovery"
+printf '%s\r\n' 'RECOVERY-CODE-123456' > "$recovery_file"
+chmod 600 "$recovery_file"
 
 run_smoke()
 {
@@ -212,6 +241,17 @@ grep -Fq 'BillWatch authenticated Web/BFF smoke harness passed.' "$temp_dir/two-
     fail "two-factor Web/BFF smoke path did not complete."
 if grep -Fq '123456' "$curl_log"; then
     fail "authenticator code appeared in curl process arguments."
+fi
+
+: > "$curl_log"
+run_smoke \
+    FAKE_REQUIRE_2FA=true \
+    BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE="$recovery_file" \
+    > "$temp_dir/recovery.out"
+grep -Fq 'BillWatch authenticated Web/BFF smoke harness passed.' "$temp_dir/recovery.out" ||
+    fail "recovery-code Web/BFF smoke path did not complete."
+if grep -Fq 'RECOVERY-CODE-123456' "$curl_log"; then
+    fail "recovery code appeared in curl process arguments."
 fi
 
 if run_smoke FAKE_REQUIRE_2FA=true > /dev/null 2>&1; then
