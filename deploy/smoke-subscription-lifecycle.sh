@@ -345,4 +345,4 @@ else
     printf '%s\n' 'SKIP provider subscription sync (safe default)'
 fi
 
-printf '%s\n' 'BillWatch subscription lifecycle smoke harness passed.'
+printf '%s\n' 'FullWorth subscription lifecycle smoke harness passed.'
