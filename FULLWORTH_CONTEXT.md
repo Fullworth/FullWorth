@@ -1,6 +1,20 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
+
+## Current migration checkpoint — 2026-09-22
+
+This checkpoint supersedes the older branch/domain summaries below; historical production evidence remains historical.
+
+- Repository: `RealizmModz/FullWorth`; integration branch: `development`.
+- Inspected development head: `e193ebfcee001ea8d631e33b3ef4f62d36050d59`. PR #208 merged canonical FullWorth legal, identity-email, and Stripe return-URL defaults; PR #209 merged the canonical API/Web monitoring targets.
+- FullWorth CI #724 ([run 35776695007](https://github.com/RealizmModz/FullWorth/actions/runs/35776695007)) passed on that exact head: backend build/tests and EF verification, MAUI Android build, and Linux production-container/security/backup/recovery checks. Browser visual acceptance was skipped by the existing change detector.
+- At inspection, PR #210 remained open from `development` to `master`, whose base was `603df521c8b3ada7f84d29e3a47f4b55aaaa70ff`. This documentation batch does not merge that promotion or authorize deployment.
+- This migration batch aligns README release-build and monitoring examples with the committed `fullworth.org` / `api.fullworth.org` defaults. It also corrects the outdated monitoring-variable instructions and documents the existing controlled alert-delivery drill. No runtime, workflow, authentication, ownership, or deployment behavior changes.
+- Remaining names are classified deliberately: cookie/Data Protection strings, claims, secure-storage/browser preference keys, Stripe metadata, database/configuration identifiers, environment variables, service/volume/path names, OAuth callbacks, and the legacy email sender retain compatibility significance. Internal CSS/DOM/sprite identifiers do not require cosmetic churn.
+- Preserve `security@billbeacon.net` and legacy domain aliases until their separate external-provider/retirement checks are complete. Committed canonical URLs and successful CI are not evidence of a production domain cutover or deployment.
+- Resume after this documentation batch by checking PR #210 and current branch heads, then obtaining the outstanding installed-device and real-environment evidence below. Do not repeat the completed product/namespace rename or infer acceptance from automated CI.
+- Production was not accessed during this checkpoint. The last deployment evidence recorded below remains `cbcf261e13636f0330cb9d7be2ce413871e413aa`; newer runtime state must be verified separately.
 
 ## FullWorth brand transition
 
