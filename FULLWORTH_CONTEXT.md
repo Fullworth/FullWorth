@@ -255,3 +255,4 @@ Before trusted external beta invitations:
 10. The Web/BFF smoke newline-handling loose end is closed in repository authority by PR #197. The old VPS-only `f9000be` commit is not needed as implementation authority and must not be treated as deployed evidence.
 11. The remaining real-environment private-beta gates in this document still apply; do not manufacture acceptance evidence.
 12. Preserve every security invariant above and every user-owned data ownership boundary.
+13. Frontend UI-library work is now active on `feat/ui-foundation-primitives` at `a9f502d`: reusable `FwCard` and `FwSectionHeader` primitives plus shared UI spacing, surface, border, accent, radius, and shadow tokens were added. The Web project builds with 0 warnings and 0 errors. Continue by migrating one high-value page (Overview or Bills) to these primitives before adding more components; keep backend work paused.
