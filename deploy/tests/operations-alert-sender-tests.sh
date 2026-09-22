@@ -56,7 +56,7 @@ PATH="$fake_bin:$PATH" \
 BILLWATCH_TEST_PAYLOAD_FILE="$generic_payload" \
     sh "$root_dir/deploy/send-operations-alert.sh" "$deployment" readiness-test manual >/dev/null
 
-grep -Fq '"source":"billwatch-production"' "$generic_payload" || fail "generic webhook payload lost the BillWatch source metadata."
+grep -Fq '"source":"billwatch-production"' "$generic_payload" || fail "generic webhook payload lost the FullWorth source metadata."
 grep -Fq '"event":"readiness-test"' "$generic_payload" || fail "generic webhook payload lost the event metadata."
 grep -Fq '"unit":"manual"' "$generic_payload" || fail "generic webhook payload lost the unit metadata."
 if grep -Fq '"text":' "$generic_payload"; then
@@ -69,7 +69,7 @@ PATH="$fake_bin:$PATH" \
 BILLWATCH_TEST_PAYLOAD_FILE="$slack_payload" \
     sh "$root_dir/deploy/send-operations-alert.sh" "$deployment" readiness-test manual >/dev/null
 
-grep -Fq '"text":"BillWatch production alert\nSource: billwatch-production\nEvent: readiness-test\nUnit: manual\nHost:' "$slack_payload" ||
+grep -Fq '"text":"FullWorth production alert\nSource: billwatch-production\nEvent: readiness-test\nUnit: manual\nHost:' "$slack_payload" ||
     fail "Slack incoming webhook payload was not rendered as a readable Slack message."
 grep -Fq '\nOccurred at UTC:' "$slack_payload" || fail "Slack payload omitted the UTC timestamp label."
 if grep -Fq '"source":"billwatch-production"' "$slack_payload"; then
