@@ -41,7 +41,7 @@ FullWorth is moving to a **PWA-first client architecture**.
 
 ## FullWorth v2 UI position
 
-The consumer-facing v2 overhaul, installed-PWA polish, schema-drift repair, and refreshed public landing experience are current on `development` at `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`.
+The consumer-facing v2 overhaul, installed-PWA polish, schema-drift repair, refreshed public landing experience, and GitHub-rendered visual-acceptance fixes are current on `development` at `fcac43b0853da349d543438cdea2012137814ed6`.
 
 Covered consumer surfaces:
 - App shell/navigation and installed-PWA/mobile navigation.
@@ -61,15 +61,24 @@ Covered consumer surfaces:
 
 `/app/admin` remains intentionally internal/staff-oriented and was not part of the consumer-fintech visual overhaul.
 
-The next UI gate is **real visual acceptance**, not another structural redesign:
-- desktop browser;
-- responsive mobile browser;
+GitHub-rendered visual acceptance is now established for the public/auth experience plus the authenticated desktop and responsive-mobile browser surfaces.
+
+- PR #182 added the production-like Playwright screenshot harness.
+- PR #183 fixed broken public landing-page navigation anchors found in the first screenshot review.
+- PR #184 expanded visual coverage and added public-anchor assertions.
+- PR #185 fixed the duplicate mobile active-navigation state when the Menu sheet is open; exact head `8669734e21153836fd9f9681382fbaaf65fba805` passed CI #678 before merge.
+- PR #186 made Menu represent secondary mobile routes such as Profile and Subscription; exact head `fd1f2c891cd3d376d51d2943ce4a550df6b9a6d8` passed CI #679 before merge. The resulting screenshots were visually checked and confirmed the intended active-state behavior.
+
+The remaining UI acceptance gate is real installed-device / interaction acceptance rather than another browser screenshot redesign:
 - installed Android PWA;
 - installed/added-to-home-screen iOS PWA where available;
-- dark/light theme;
-- keyboard resize, back navigation, install/update behavior, Plaid Hosted Link return, file picker, session expiry, and security dialogs.
+- keyboard resize and browser/device back navigation;
+- install/update behavior;
+- Plaid Hosted Link return;
+- statement file picker;
+- session expiry and security dialogs.
 
-Do not promote the v2 release to `master` until real rendering has been visually accepted and any concrete defects found during that pass are fixed through normal branch + PR + full CI.
+Do not claim those installed-device or human-interaction gates complete from Playwright screenshots alone.
 
 ## Repository / stack
 
@@ -80,11 +89,11 @@ Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `cbcf261e13636f0330cb9d7be2ce413871e413aa`
-- `development`: `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`
+- `master`: `19f83716a475c9ab5060a6681e06eb86dad62394`
+- `development`: `fcac43b0853da349d543438cdea2012137814ed6`
 - PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
 - `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
-- Since that release baseline, the FullWorth v2 consumer UI overhaul was completed on `development`. PRs #168–#171 finished Account/Settings, Bill Detail/Transactions, Privacy/Subscription, Profile, and final brand consistency. PR #173 added installed-PWA theme/chrome and remaining user-visible FullWorth filename polish and merged as `623ed33fc50f09b42e72b85daf34c049ca1dd2b7` after CI #655 passed. PR #174 added the forward-only idempotent repair migration for `AspNetUsers.TimestampDisplayMode` / `SubscriptionAccessKeys.Label`; exact head `b49b1b4392b5ee4fa840df2039d0cada85f1d46c` passed CI #656 before squash merge `91d4e2028504648c2f3f7be8489f0460f99c7c00`. PR #175 then redesigned the public landing page around the broader FullWorth financial-hub promise; exact head `ae8d693b356e310ea5cd0604e6e0d5af716cde5c` passed CI #657 before merge `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`.
+- Since that release baseline, the FullWorth v2 consumer UI overhaul was completed on `development`. PRs #168–#171 finished Account/Settings, Bill Detail/Transactions, Privacy/Subscription, Profile, and final brand consistency. PR #173 added installed-PWA theme/chrome and remaining user-visible FullWorth filename polish and merged as `623ed33fc50f09b42e72b85daf34c049ca1dd2b7` after CI #655 passed. PR #174 added the forward-only idempotent repair migration for `AspNetUsers.TimestampDisplayMode` / `SubscriptionAccessKeys.Label`; exact head `b49b1b4392b5ee4fa840df2039d0cada85f1d46c` passed CI #656 before squash merge `91d4e2028504648c2f3f7be8489f0460f99c7c00`. PR #175 redesigned the public landing page; exact head `ae8d693b356e310ea5cd0604e6e0d5af716cde5c` passed CI #657 before merge `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`. PR #178 then promoted that verified development state to `master` as merge commit `19f83716a475c9ab5060a6681e06eb86dad62394`; that GitHub promotion is **not** evidence that production was redeployed. PRs #181–#186 subsequently added efficient docs-only CI detection, GitHub-rendered visual acceptance, and the concrete browser/mobile navigation fixes described above, with current `development` at `fcac43b0853da349d543438cdea2012137814ed6`.
 - PR #96 synchronized the Slack-compatible readiness-alert payload into `development` as `0253f08581417f9e41293481fccbcaf5da301ede`.
 - PR #98 promoted the secure private-beta acceptance hardening to `master` as `3622b57c84c035c30a63bea070f53195635a62eb`. CI #534 passed all three required jobs on exact head `0253f085...`.
 - PR #99 fixed HTML-encoded ASP.NET Core Identity confirmation-link parsing and merged into `development` as `847e17a20c97352114aafb7ef407da8a40882591`.
@@ -217,13 +226,13 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Current `development` is `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`. It contains the completed consumer v2 overhaul, PR #173 PWA polish, PR #174 schema-drift repair, and PR #175 public landing redesign; each contributing exact head passed the complete required CI gate before merge.
-2. Production remains the verified `master` release `cbcf261e13636f0330cb9d7be2ce413871e413aa`; do not claim the current development UI or schema repair is deployed yet.
-3. The previously observed local login failure caused by missing `AspNetUsers.TimestampDisplayMode` is addressed in source by PR #174's idempotent forward repair migration. A local environment must pull current `development` and restart the API before using that repair.
-4. Perform real visual acceptance of the PWA on desktop and mobile/installed contexts. Source-level tests are not a substitute for this gate.
-5. During visual acceptance, verify the public landing page plus Overview, Bills, Bill Detail, Activity, Account, Transactions, Settings/security dialogs, Privacy, Subscription, Profile, auth flows, theme switching, mobile bottom navigation, keyboard resize, back navigation, statement file picker, Plaid Hosted Link return, session expiry, and service-worker update behavior.
-6. If visual acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require full exact-head CI before merge.
-7. After visual acceptance is genuinely complete, create the release promotion PR from verified `development` to `master`, run full CI on the exact promotion head, then use only the guarded production deployment path.
+1. Current `development` is `fcac43b0853da349d543438cdea2012137814ed6`. It contains the completed consumer v2 work plus PRs #182–#186 for GitHub-rendered browser visual acceptance and the concrete landing/mobile-navigation defects found by that pass.
+2. Current GitHub `master` is `19f83716a475c9ab5060a6681e06eb86dad62394` from PR #178. Production is still explicitly verified at `cbcf261e13636f0330cb9d7be2ce413871e413aa`; do not infer that the newer master or development state is deployed.
+3. Desktop and responsive-mobile browser rendering has been visually reviewed through the CI screenshot artifacts. The broken public anchors, duplicate Menu/route highlight, and missing Menu current-state on secondary mobile routes were fixed through focused PRs with exact-head CI.
+4. Do **not** repeat that browser screenshot audit unless relevant source changes or new evidence warrants it.
+5. The next UI acceptance work is real installed-device / interaction validation: installed Android PWA, iOS home-screen PWA where available, keyboard resize, back navigation, install/update behavior, Plaid Hosted Link return, statement file picker, session expiry, and security dialogs.
+6. If that real-device acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require exact-head CI before merge.
+7. Do not promote the latest `development` state to `master` merely from the GitHub screenshot pass; complete the remaining real-device gates that materially require installed/browser interaction first.
 8. The locally committed Web-smoke newline fix `f9000be` remains unpushed/unreviewed and is not source authority. Review its exact diff separately before relying on it.
-9. The remaining real-environment private-beta gates in this document still apply after UI promotion; do not manufacture acceptance evidence.
+9. The remaining real-environment private-beta gates in this document still apply; do not manufacture acceptance evidence.
 10. Preserve every security invariant above and every user-owned data ownership boundary.
