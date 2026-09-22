@@ -18,7 +18,7 @@
     --bw-border: rgba(15, 23, 42, 0.08);
     --bw-border-strong: rgba(15, 23, 42, 0.14);
     --bw-header-bg: rgba(247, 248, 251, 0.86);
-    --bw-header-glow: rgba(84, 124, 255, 0.11);
+    --bw-header-glow: rgba(201, 157, 67, 0.10);\n    --fw-brand: #b88931;\n    --fw-brand-strong: #8f6825;\n    --fw-brand-soft: #f7edd4;\n    --fw-positive: #258a5a;\n    --fw-negative: #c6524a;\n    --fw-warning: #b7791f;
     --bw-card-shadow: 0 20px 60px rgba(18, 31, 64, 0.08);
 }
 
@@ -41,7 +41,7 @@ html[data-theme="dark"] {
     --bw-border: rgba(255, 255, 255, 0.075);
     --bw-border-strong: rgba(255, 255, 255, 0.14);
     --bw-header-bg: rgba(9, 13, 23, 0.82);
-    --bw-header-glow: rgba(71, 95, 255, 0.13);
+    --bw-header-glow: rgba(229, 189, 98, 0.12);\n    --fw-brand: #e5bd62;\n    --fw-brand-strong: #f4d783;\n    --fw-brand-soft: #352b18;\n    --fw-positive: #39e29a;\n    --fw-negative: #ff7670;\n    --fw-warning: #e9a944;
     --bw-card-shadow: 0 25px 80px rgba(0, 0, 0, 0.34);
 }
 
