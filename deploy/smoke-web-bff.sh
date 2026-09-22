@@ -43,6 +43,31 @@ require_secret_file()
     [ "$mode" = "600" ] || fail "$label must have mode 600." 64
 }
 
+normalize_form_secret_file()
+{
+    source_path="$1"
+    destination_path="$2"
+    label="$3"
+
+    form_secret="$(cat "$source_path")"
+    carriage_return="$(printf '\r_')"
+    carriage_return="${carriage_return%_}"
+
+    case "$form_secret" in
+        *"$carriage_return")
+            form_secret="${form_secret%"$carriage_return"}"
+            ;;
+    esac
+
+    [ -n "$form_secret" ] ||
+        fail "$label must contain a non-empty value." 64
+
+    printf '%s' "$form_secret" > "$destination_path"
+    chmod 600 "$destination_path"
+
+    unset form_secret carriage_return
+}
+
 if [ -z "$web_base_url" ]; then
     fail "Usage: $0 <https-web-base-url>" 64
 fi
@@ -99,6 +124,30 @@ fi
 
 work_directory="$(mktemp -d)"
 chmod 700 "$work_directory"
+
+password_form_file="$work_directory/password-form-value"
+normalize_form_secret_file \
+    "$password_file" \
+    "$password_form_file" \
+    "BILLWATCH_WEB_SMOKE_PASSWORD_FILE"
+
+two_factor_form_file=
+if [ -n "$two_factor_code_file" ]; then
+    two_factor_form_file="$work_directory/two-factor-form-value"
+    normalize_form_secret_file \
+        "$two_factor_code_file" \
+        "$two_factor_form_file" \
+        "BILLWATCH_WEB_SMOKE_TWO_FACTOR_CODE_FILE"
+fi
+
+recovery_form_file=
+if [ -n "$recovery_code_file" ]; then
+    recovery_form_file="$work_directory/recovery-form-value"
+    normalize_form_secret_file \
+        "$recovery_code_file" \
+        "$recovery_form_file" \
+        "BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE"
+fi
 
 cleanup()
 {
@@ -172,7 +221,7 @@ post_login()
         --cookie-jar "$cookie_jar" \
         --header 'Content-Type: application/x-www-form-urlencoded' \
         --data-urlencode "email=$email" \
-        --data-urlencode "password@$password_file" \
+        --data-urlencode "password@$password_form_file" \
         --data-urlencode "__RequestVerificationToken@$antiforgery_token_file"
 
     case "$second_factor_kind" in
@@ -215,10 +264,10 @@ case "$location" in
     /login\?twoFactor=true*)
         if [ -n "$two_factor_code_file" ]; then
             second_factor_kind="authenticator"
-            second_factor_file="$two_factor_code_file"
+            second_factor_file="$two_factor_form_file"
         elif [ -n "$recovery_code_file" ]; then
             second_factor_kind="recovery"
-            second_factor_file="$recovery_code_file"
+            second_factor_file="$recovery_form_file"
         else
             fail "The account requires two-factor authentication. Supply a current mode-600 authenticator-code file or recovery-code file." 65
         fi
