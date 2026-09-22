@@ -242,6 +242,22 @@ public sealed class WebPwaBoundaryTests
             shellStyles,
             StringComparison.Ordinal);
 
+        Assert.Matches(
+            @"<form\s+method=""post""\s+action=""/auth/logout""\s+class=""mobile-logout-form"">",
+            layout);
+
+        Assert.Equal(
+            2,
+            Regex.Matches(
+                    layout,
+                    @"<AntiforgeryToken\s*/>")
+                .Count);
+
+        Assert.Contains(
+            "mobile-logout-action",
+            shellStyles,
+            StringComparison.Ordinal);
+
         var settings =
             File.ReadAllText(
                 Path.Combine(
