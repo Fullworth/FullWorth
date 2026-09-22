@@ -114,7 +114,7 @@ public sealed class WebTransactionPerformanceBoundaryTests
             performanceProfile);
 
         Assert.Contains(
-            "return "server";",
+            "return \"server\";",
             performanceProfile,
             StringComparison.Ordinal);
 
@@ -124,12 +124,12 @@ public sealed class WebTransactionPerformanceBoundaryTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            ""./transaction-filter-worker.js"",
+            "\"./transaction-filter-worker.js\"",
             transactionStream,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "getExecutionMode() !== "local"",
+            "getExecutionMode() !== \"local\"",
             transactionStream,
             StringComparison.Ordinal);
 
@@ -144,7 +144,7 @@ public sealed class WebTransactionPerformanceBoundaryTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            ""filter"",
+            "\"filter\"",
             transactionWorker,
             StringComparison.Ordinal);
 
