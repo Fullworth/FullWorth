@@ -187,6 +187,51 @@ try {
   });
 
   await page.goto("/app", { waitUntil: "domcontentloaded" });
+  await settle(".mobile-bottom-nav");
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/app/bills", { timeout: 10000 }),
+    page.locator('.mobile-bottom-nav > a[href="/app/bills"]').click()
+  ]);
+  await settle(".mobile-bottom-nav");
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/app/activity", { timeout: 10000 }),
+    page.locator('.mobile-bottom-nav > a[href="/app/activity"]').click()
+  ]);
+  await settle(".mobile-bottom-nav");
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/app/bills", { timeout: 10000 }),
+    page.goBack()
+  ]);
+  await settle(".mobile-bottom-nav");
+
+  const billsBackActiveHref =
+    await page.locator(".mobile-bottom-nav > .mobile-bottom-link.active").getAttribute("href");
+
+  if (billsBackActiveHref !== "/app/bills") {
+    throw new Error(
+      `Expected browser Back to restore Bills as the active mobile route; got ${billsBackActiveHref ?? "none"}.`
+    );
+  }
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/app", { timeout: 10000 }),
+    page.goBack()
+  ]);
+  await settle(".mobile-bottom-nav");
+
+  const overviewBackActiveHref =
+    await page.locator(".mobile-bottom-nav > .mobile-bottom-link.active").getAttribute("href");
+
+  if (overviewBackActiveHref !== "/app") {
+    throw new Error(
+      `Expected browser Back to restore Overview as the active mobile route; got ${overviewBackActiveHref ?? "none"}.`
+    );
+  }
+
+  await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
 
   const serviceWorkerState = await page.evaluate(async () => {
