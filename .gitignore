@@ -12,6 +12,9 @@
 
 # Private financial statement corpus: never commit raw statement text,
 # OCR output, reviewer truth, or provider/model results.
+.private/FullWorth.AiShadowCorpus/
+FullWorth.AiShadowCorpus/
+# Legacy path remains ignored during the guarded brand migration.
 .private/BillWatch.AiShadowCorpus/
 BillWatch.AiShadowCorpus/
 

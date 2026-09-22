@@ -21,7 +21,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                     corpusRootDirectory:
                         Path.Combine(
                             Path.GetTempPath(),
-                            $"missing-billwatch-corpus-{Guid.NewGuid():N}"),
+                            $"missing-fullworth-corpus-{Guid.NewGuid():N}"),
                     caseIds:
                         [
                             "case-001",
@@ -618,7 +618,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             Path =
                 System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
-                    $"billwatch-provider-corpus-test-{Guid.NewGuid():N}");
+                    $"fullworth-provider-corpus-test-{Guid.NewGuid():N}");
 
             Directory.CreateDirectory(
                 Path);
