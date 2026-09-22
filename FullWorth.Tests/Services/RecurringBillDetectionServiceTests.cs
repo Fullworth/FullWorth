@@ -77,6 +77,30 @@ public sealed class RecurringBillDetectionServiceTests
     }
 
     [Fact]
+    public void Detect_MerchantDescriptionVariants_AreCombined()
+    {
+        var transactions = new[]
+        {
+            Transaction("Example Subscription AUTOPAY", 2026, 1, 12, 8.99m),
+            Transaction("EXAMPLE SUBSCRIPTION PAYMENT 482913", 2026, 2, 12, 8.99m),
+            Transaction("Example Subscription", 2026, 3, 12, 8.99m)
+        };
+
+        var result =
+            Assert.Single(
+                _service.Detect(
+                    transactions));
+
+        Assert.Equal(
+            3,
+            result.TransactionCount);
+
+        Assert.Equal(
+            "Example Subscription",
+            result.MerchantName);
+    }
+
+    [Fact]
     public void Detect_TwoNonMonthlyOccurrences_AreNotPromoted()
     {
         var transactions = new[]

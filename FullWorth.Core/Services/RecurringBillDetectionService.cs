@@ -7,6 +7,7 @@ public sealed class RecurringBillDetectionService
     private const int MinimumMonthlyDays = 23;
     private const int MaximumMonthlyDays = 38;
     private const decimal ApproximateMonthDays = 30.4375m;
+    private readonly BillMerchantNormalizer _merchantNormalizer = new();
 
     public IReadOnlyList<RecurringBillDetectionResult> Detect(
         IEnumerable<BankTransaction> transactions)
@@ -21,9 +22,15 @@ public sealed class RecurringBillDetectionService
         var results = new List<RecurringBillDetectionResult>();
 
         foreach (var merchantGroup in postedTransactions.GroupBy(
-                     transaction => transaction.MerchantName,
+                     transaction => _merchantNormalizer.Normalize(
+                         transaction.MerchantName),
                      StringComparer.OrdinalIgnoreCase))
         {
+            if (string.IsNullOrWhiteSpace(merchantGroup.Key))
+            {
+                continue;
+            }
+
             var merchantTransactions = merchantGroup
                 .OrderBy(transaction => transaction.PostedDate)
                 .ToList();
@@ -54,6 +61,16 @@ public sealed class RecurringBillDetectionService
 
             var latestTransaction =
                 merchantTransactions[^1];
+
+            var displayMerchantName =
+                merchantTransactions
+                    .GroupBy(
+                        transaction => transaction.MerchantName,
+                        StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(group => group.Count())
+                    .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                    .First()
+                    .Key;
 
             var previousTransactions =
                 merchantTransactions
@@ -98,7 +115,7 @@ public sealed class RecurringBillDetectionService
 
             results.Add(
                 new RecurringBillDetectionResult(
-                    MerchantName: merchantGroup.Key,
+                    MerchantName: displayMerchantName,
                     Frequency: RecurringBillFrequency.Monthly,
                     AverageAmount: historicalAverage,
                     LatestAmount: latestTransaction.Amount,
