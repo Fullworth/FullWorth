@@ -1,0 +1,16 @@
+<FwCard Class="fw-metric">
+    <span class="fw-metric__label">@Label</span>
+    <strong class="fw-metric__value">@Value</strong>
+    @if (!string.IsNullOrWhiteSpace(Detail))
+    {
+        <small class="fw-metric__detail @DetailClass">@Detail</small>
+    }
+</FwCard>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Detail { get; set; }
+    [Parameter] public string Tone { get; set; } = "neutral";
+    private string DetailClass => $"fw-metric__detail--{Tone}";
+}
