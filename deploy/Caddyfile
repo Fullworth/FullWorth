@@ -23,3 +23,39 @@
 
     reverse_proxy web:8080
 }
+
+www.{$BILLWATCH_WEB_HOST} {
+    encode zstd gzip
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=31536000"
+    }
+
+    redir https://{$BILLWATCH_WEB_HOST}{uri} permanent
+}
+
+{$BILLWATCH_LEGACY_HOST:legacy-api.localhost} {
+    encode zstd gzip
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=31536000"
+    }
+
+    reverse_proxy api:8080 {
+        header_up Host {$BILLWATCH_HOST}
+    }
+}
+
+{$BILLWATCH_LEGACY_WEB_HOST:legacy-web.localhost},
+www.{$BILLWATCH_LEGACY_WEB_HOST:legacy-web.localhost} {
+    encode zstd gzip
+
+    header {
+        -Server
+        Strict-Transport-Security "max-age=31536000"
+    }
+
+    redir https://{$BILLWATCH_WEB_HOST}{uri} permanent
+}
