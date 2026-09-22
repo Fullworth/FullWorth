@@ -1,6 +1,6 @@
-# BillWatch backup trust separation
+# FullWorth backup trust separation
 
-BillWatch separates routine production backup capture from destructive repository maintenance.
+FullWorth separates routine production backup capture from destructive repository maintenance.
 
 ## Production backup role
 
@@ -16,7 +16,7 @@ The production storage credential should independently be restricted by the stor
 
 ## Trusted maintenance role
 
-Retention requires a separate trusted host and a protected mode-600 environment file outside the BillWatch checkout. That file must contain the encrypted repository credentials plus:
+Retention requires a separate trusted host and a protected mode-600 environment file outside the FullWorth checkout. That file must contain the encrypted repository credentials plus:
 
 ```text
 BILLWATCH_RELEASE_ID=<exact-release-sha>
@@ -41,6 +41,6 @@ Never place the delete-capable maintenance environment or credentials on the pro
 
 ## Provider immutability
 
-This trust split fixes BillWatch's own unsafe coupling between routine backup capture and delete-capable retention. It does **not** by itself close the provider-immutability launch gate.
+This trust split fixes FullWorth's own unsafe coupling between routine backup capture and delete-capable retention. It does **not** by itself close the provider-immutability launch gate.
 
 Before trusted external beta, configure and test provider-side Object Lock/WORM/append-only protection or an equivalent design. Recovery must be proven from the protected storage path. Restic maintenance for append-only repositories must be performed from a separately secured administrative client; do not grant routine production backup capture unrestricted delete authority.
