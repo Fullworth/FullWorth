@@ -38,7 +38,7 @@ jobs:
           $headSha = "${{ github.event.pull_request.head.sha }}"
           $changedFiles = @(git diff --name-only "$baseSha...$headSha")
 
-          $docsOnlyExactFiles = @(
+          $backendSafeExactFiles = @(
             "AI_SHADOW_CORPUS.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
@@ -46,10 +46,27 @@ jobs:
             "REVENUE_READINESS.md"
           )
 
+          $backendSafePrefixes = @(
+            "FullWorth.VisualTests/"
+          )
+
           $required = $false
 
           foreach ($file in $changedFiles) {
-            if (-not ($docsOnlyExactFiles -contains $file)) {
+            $safe = $backendSafeExactFiles -contains $file
+
+            if (-not $safe) {
+              foreach ($prefix in $backendSafePrefixes) {
+                if ($file.StartsWith(
+                    $prefix,
+                    [System.StringComparison]::Ordinal)) {
+                  $safe = $true
+                  break
+                }
+              }
+            }
+
+            if (-not $safe) {
               $required = $true
               break
             }
@@ -133,6 +150,7 @@ jobs:
             "FullWorth.API/",
             "FullWorth.Web/",
             "FullWorth.Tests/",
+            "FullWorth.VisualTests/",
             "deploy/"
           )
 
@@ -244,6 +262,7 @@ jobs:
             "FullWorth.API/",
             "FullWorth.Core/",
             "FullWorth.Web/",
+            "FullWorth.VisualTests/",
             "deploy/"
           )
 
