@@ -1,5 +1,49 @@
 (() => {
     let deferredInstallPrompt = null;
+    let serviceWorkerRegistration = null;
+    let updateCallback = null;
+    let updateAvailable = false;
+
+    function announceUpdate() {
+        if (updateAvailable) {
+            return;
+        }
+
+        updateAvailable = true;
+
+        if (updateCallback) {
+            void updateCallback.invokeMethodAsync(
+                "OnPwaUpdateAvailableAsync");
+        }
+    }
+
+    function watchRegistration(registration) {
+        serviceWorkerRegistration = registration;
+
+        if (registration.waiting &&
+            navigator.serviceWorker.controller) {
+            announceUpdate();
+        }
+
+        registration.addEventListener(
+            "updatefound",
+            () => {
+                const worker = registration.installing;
+
+                if (!worker) {
+                    return;
+                }
+
+                worker.addEventListener(
+                    "statechange",
+                    () => {
+                        if (worker.state === "installed" &&
+                            navigator.serviceWorker.controller) {
+                            announceUpdate();
+                        }
+                    });
+            });
+    }
 
     function isStandalone() {
         return Boolean(
@@ -45,6 +89,64 @@
     window.FullWorthPwa = {
         isStandalone,
 
+        setUpdateCallback(callback) {
+            updateCallback = callback;
+
+            if (updateAvailable && updateCallback) {
+                void updateCallback.invokeMethodAsync(
+                    "OnPwaUpdateAvailableAsync");
+            }
+        },
+
+        async applyUpdate() {
+            const registration =
+                serviceWorkerRegistration;
+
+            if (!registration) {
+                return "unavailable";
+            }
+
+            if (!registration.waiting) {
+                await registration.update();
+            }
+
+            const waitingWorker =
+                registration.waiting;
+
+            if (!waitingWorker) {
+                return "unavailable";
+            }
+
+            return await new Promise(resolve => {
+                let settled = false;
+
+                const finish = result => {
+                    if (settled) {
+                        return;
+                    }
+
+                    settled = true;
+                    resolve(result);
+                };
+
+                navigator.serviceWorker.addEventListener(
+                    "controllerchange",
+                    () => {
+                        finish("reloaded");
+                        window.location.reload();
+                    },
+                    { once: true });
+
+                waitingWorker.postMessage({
+                    type: "SKIP_WAITING"
+                });
+
+                window.setTimeout(
+                    () => finish("timeout"),
+                    10000);
+            });
+        },
+
         async install() {
             if (isStandalone()) {
                 return "installed";
@@ -84,12 +186,15 @@
         "load",
         async () => {
             try {
-                await navigator.serviceWorker.register(
+                const registration =
+                    await navigator.serviceWorker.register(
                     "/service-worker.js",
                     {
                         scope: "/",
                         updateViaCache: "none"
                     });
+
+                watchRegistration(registration);
             }
             catch {
                 // PWA registration is progressive enhancement.

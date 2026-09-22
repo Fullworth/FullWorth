@@ -43,6 +43,47 @@ require_secret_file()
     [ "$mode" = "600" ] || fail "$label must have mode 600." 64
 }
 
+normalize_secret_file()
+{
+    source_path="$1"
+    destination_path="$2"
+    label="$3"
+
+    : > "$destination_path"
+    chmod 600 "$destination_path"
+
+    if awk '
+        NR > 1 { exit 2 }
+        {
+            sub(/\r$/, "")
+            if (length($0) == 0) {
+                exit 3
+            }
+
+            printf "%s", $0
+        }
+        END {
+            if (NR == 0) {
+                exit 3
+            }
+        }
+    ' "$source_path" > "$destination_path"; then
+        :
+    else
+        status="$?"
+        rm -f "$destination_path"
+
+        case "$status" in
+            2) fail "$label must contain exactly one line." 64 ;;
+            3) fail "$label must not be empty." 64 ;;
+            *) fail "Unable to normalize $label." 70 ;;
+        esac
+    fi
+
+    [ -s "$destination_path" ] ||
+        fail "$label must not be empty." 64
+}
+
 if [ -z "$web_base_url" ]; then
     fail "Usage: $0 <https-web-base-url>" 64
 fi
@@ -111,6 +152,30 @@ cleanup()
 
 trap cleanup EXIT HUP INT TERM
 
+login_password_file="$work_directory/password.txt"
+normalize_secret_file \
+    "$password_file" \
+    "$login_password_file" \
+    "Web smoke password"
+
+login_two_factor_code_file=""
+if [ -n "$two_factor_code_file" ]; then
+    login_two_factor_code_file="$work_directory/two-factor.txt"
+    normalize_secret_file \
+        "$two_factor_code_file" \
+        "$login_two_factor_code_file" \
+        "Web smoke authenticator code"
+fi
+
+login_recovery_code_file=""
+if [ -n "$recovery_code_file" ]; then
+    login_recovery_code_file="$work_directory/recovery-code.txt"
+    normalize_secret_file \
+        "$recovery_code_file" \
+        "$login_recovery_code_file" \
+        "Web smoke recovery code"
+fi
+
 cookie_jar="$work_directory/cookies.txt"
 login_page="$work_directory/login.html"
 login_headers="$work_directory/login-headers.txt"
@@ -172,7 +237,7 @@ post_login()
         --cookie-jar "$cookie_jar" \
         --header 'Content-Type: application/x-www-form-urlencoded' \
         --data-urlencode "email=$email" \
-        --data-urlencode "password@$password_file" \
+        --data-urlencode "password@$login_password_file" \
         --data-urlencode "__RequestVerificationToken@$antiforgery_token_file"
 
     case "$second_factor_kind" in
@@ -215,10 +280,10 @@ case "$location" in
     /login\?twoFactor=true*)
         if [ -n "$two_factor_code_file" ]; then
             second_factor_kind="authenticator"
-            second_factor_file="$two_factor_code_file"
+            second_factor_file="$login_two_factor_code_file"
         elif [ -n "$recovery_code_file" ]; then
             second_factor_kind="recovery"
-            second_factor_file="$recovery_code_file"
+            second_factor_file="$login_recovery_code_file"
         else
             fail "The account requires two-factor authentication. Supply a current mode-600 authenticator-code file or recovery-code file." 65
         fi

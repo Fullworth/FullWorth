@@ -314,7 +314,8 @@
     }
 
     .mobile-bottom-link.active,
-    .mobile-more-menu.is-open > .mobile-menu-trigger {
+    .mobile-more-menu.is-open > .mobile-menu-trigger,
+    .mobile-more-menu.is-current > .mobile-menu-trigger {
         border-color: rgba(98, 119, 255, 0.28);
         background: linear-gradient(145deg, rgba(62, 86, 225, 0.28), rgba(75, 96, 221, 0.14));
         color: var(--bw-text);
@@ -453,7 +454,7 @@
         cursor: pointer;
     }
 
-    .pwa-install-message {
+.pwa-install-message {
         margin: 2px 8px 0;
         color: var(--bw-text-subtle);
         font-size: 0.72rem;
@@ -473,6 +474,36 @@
         width: min(100% - 30px, 1220px);
         padding: 30px 0 calc(132px + env(safe-area-inset-bottom));
     }
+}
+
+.pwa-update-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 42px;
+    padding: 8px 18px;
+    border-bottom: 1px solid rgba(98, 119, 255, 0.2);
+    background: color-mix(in srgb, var(--bw-surface-soft) 82%, transparent);
+    color: var(--bw-text-secondary);
+    font-size: 0.76rem;
+}
+
+.pwa-update-notice button {
+    min-height: 28px;
+    padding: 0 11px;
+    border: 1px solid rgba(98, 119, 255, 0.32);
+    border-radius: 999px;
+    background: rgba(98, 119, 255, 0.12);
+    color: var(--bw-text);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.pwa-update-notice button:disabled {
+    cursor: wait;
+    opacity: 0.65;
 }
 
 @media (max-width: 520px) {

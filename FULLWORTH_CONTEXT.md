@@ -41,7 +41,7 @@ FullWorth is moving to a **PWA-first client architecture**.
 
 ## FullWorth v2 UI position
 
-The consumer-facing v2 overhaul is complete on `development` at `1d32665e83b90e868d4369d1f7525a482dba7e51`.
+The consumer-facing v2 overhaul, installed-PWA polish, schema-drift repair, refreshed public landing experience, GitHub-rendered visual-acceptance fixes, browser PWA/offline proof, responsive-browser Back navigation proof, browser session-expiry hardening, browser security-dialog acceptance, and the user-visible PWA update path are current on `development` at `6db99dda0bc02fbb0440579da4924a82257ba786`.
 
 Covered consumer surfaces:
 - App shell/navigation and installed-PWA/mobile navigation.
@@ -55,18 +55,46 @@ Covered consumer surfaces:
 - Subscription / plan & access.
 - Profile.
 - Public/auth brand consistency using the approved FullWorth mark.
+- Installed-PWA launch/theme chrome polish and FullWorth user-visible export/statement filenames from PR #173.
+- Forward-only repair migration for known `TimestampDisplayMode` / subscription-key label schema drift from PR #174.
+- Broader FullWorth financial-hub public landing experience from PR #175.
 
 `/app/admin` remains intentionally internal/staff-oriented and was not part of the consumer-fintech visual overhaul.
 
-The next UI gate is **real visual acceptance**, not another structural redesign:
-- desktop browser;
-- responsive mobile browser;
+GitHub-rendered visual acceptance is now established for the public/auth experience plus the authenticated desktop and responsive-mobile browser surfaces.
+
+- PR #182 added the production-like Playwright screenshot harness.
+- PR #183 fixed broken public landing-page navigation anchors found in the first screenshot review.
+- PR #184 expanded visual coverage and added public-anchor assertions.
+- PR #185 fixed the duplicate mobile active-navigation state when the Menu sheet is open; exact head `8669734e21153836fd9f9681382fbaaf65fba805` passed CI #678 before merge.
+- PR #186 made Menu represent secondary mobile routes such as Profile and Subscription; exact head `fd1f2c891cd3d376d51d2943ce4a550df6b9a6d8` passed CI #679 before merge. The resulting screenshots were visually checked and confirmed the intended active-state behavior.
+- PR #188 added real Chromium service-worker/offline acceptance. Exact head `feda0a755c1f813ece70c07e554cf89873e217d8` proved that the FullWorth service worker registers with `updateViaCache=none` and that authenticated `/app` navigation falls back to the generic public offline page rather than cached financial UI when Chromium is forced offline. The Linux production-container/PWA/recovery job passed on the original successful attempt and then passed two additional same-commit reruns to check for flakiness.
+- PR #189 added responsive-mobile browser history acceptance. Exact head `2607ab8d21b2166cb29caaf5d707b13aa8d04376` passed CI #687; Chromium navigates Overview → Bills → Activity through the real bottom nav, then browser Back twice must restore the prior URLs and active route states. This is browser-history proof, not Android/iOS hardware-back proof.
+- PR #191 exposed and fixed a real browser session-expiry defect: unauthenticated cookie challenges for `/bff` could redirect `fetch()` to login HTML, preventing the BFF JavaScript from observing the expected 401. `/bff` cookie challenges now return 401 and access-denied responses return 403, while ordinary page requests keep login redirects. Exact head `703d3e474827f557550a45b9735c15ef4d5ab43c` passed full CI #691 and an additional same-head Linux production-container/PWA/recovery rerun; Chromium clears the authenticated cookie, invokes the real BFF module, and requires fail-closed navigation to `/login` with no authenticated app shell remaining.
+- PR #193 added responsive-mobile Chromium acceptance for the real Change password and Change email security dialogs. Exact head `77b22b34ca757b8f92f7ba08f89c2edec2bed9f0` passed CI run `35687185230` across backend/tests, MAUI Android, and Linux production-container/PWA/recovery gates, then merged to `development` as `d11f528`. The acceptance verifies dialog titles, accessible descriptions, close behavior, and Escape dismissal; it does not replace installed-device validation.
+- PR #196 added a user-visible installed-PWA update path. Review caught and fixed an activation-lifecycle defect before merge: the service worker still called `skipWaiting()` during install, which bypassed the waiting-worker state required by the Refresh-to-update flow. Exact final head `fc188d5bf4098aab7abf6693bd855a9c59655113` passed full CI #699 across backend/tests, MAUI gating, Chromium/production-container security checks, and recovery, then squash-merged to `development` as `6db99dda0bc02fbb0440579da4924a82257ba786`. The regression test now enforces the controlled `SKIP_WAITING` activation path. Real installed-device update acceptance remains open.
+
+The remaining UI acceptance gate is real installed-device / interaction acceptance rather than another browser screenshot redesign:
 - installed Android PWA;
 - installed/added-to-home-screen iOS PWA where available;
-- dark/light theme;
-- keyboard resize, back navigation, install/update behavior, Plaid Hosted Link return, file picker, session expiry, and security dialogs.
+- keyboard resize and Android/iOS hardware-back behavior;
+- installed-PWA install/update behavior on real devices (the visible waiting-worker update path is code/CI verified by PR #196, but installed-device behavior is not yet proven);
+- Plaid Hosted Link return;
+- statement file picker;
+- security dialogs in installed/mobile contexts (browser-dialog behavior is covered by PR #193; installed-device behavior remains open).
 
-Do not promote the v2 release to `master` until real rendering has been visually accepted and any concrete defects found during that pass are fixed through normal branch + PR + full CI.
+Do not claim those installed-device or human-interaction gates complete from Playwright screenshots alone.
+
+## Cost-aware validation cadence
+
+FullWorth is pre-revenue, so validation is risk-based rather than continuously exhaustive:
+- ordinary documentation and low-risk changes use the cheapest relevant local or CI checks;
+- UI-only changes use targeted browser acceptance when the affected Web surface changes, without automatically requiring unrelated backend or MAUI validation;
+- authentication, ownership, database, payment, deployment, security, or workflow changes retain the full required CI gate;
+- installed-device and full end-to-end acceptance are release-candidate or materially affected-change gates, not hourly activity;
+- external production readiness monitoring is manual-only until beta/revenue operations justify recurring monitoring cost.
+
+Existing browser and offline proofs should not be rerun without relevant source changes or new evidence.
 
 ## Repository / stack
 
@@ -77,11 +105,11 @@ Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `cbcf261e13636f0330cb9d7be2ce413871e413aa`
-- `development`: `1d32665e83b90e868d4369d1f7525a482dba7e51`
+- `master`: `19f83716a475c9ab5060a6681e06eb86dad62394`
+- Latest code-bearing `development` merge: `d86c7ac09650a6605f9262ede22a339a3f25d757` (PR #197 Web/BFF protected-secret newline normalization; exact head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770`, full CI #700). Later handoff-only commits may advance the branch without changing product/runtime behavior.
 - PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
 - `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
-- Since that release baseline, the FullWorth v2 consumer UI overhaul was completed on `development`. PRs #168–#171 finished Account/Settings, Bill Detail/Transactions, Privacy/Subscription, Profile, and final brand consistency. Exact-head CI passed before each merge. The current v2 development head is `1d32665e83b90e868d4369d1f7525a482dba7e51`.
+- Since that release baseline, the FullWorth v2 consumer UI overhaul was completed on `development`. PRs #168–#171 finished Account/Settings, Bill Detail/Transactions, Privacy/Subscription, Profile, and final brand consistency. PR #173 added installed-PWA theme/chrome and remaining user-visible FullWorth filename polish and merged as `623ed33fc50f09b42e72b85daf34c049ca1dd2b7` after CI #655 passed. PR #174 added the forward-only idempotent repair migration for `AspNetUsers.TimestampDisplayMode` / `SubscriptionAccessKeys.Label`; exact head `b49b1b4392b5ee4fa840df2039d0cada85f1d46c` passed CI #656 before squash merge `91d4e2028504648c2f3f7be8489f0460f99c7c00`. PR #175 redesigned the public landing page; exact head `ae8d693b356e310ea5cd0604e6e0d5af716cde5c` passed CI #657 before merge `f16dcf6f5ae1ec6ca35e4aec8ecada1b12693d80`. PR #178 then promoted that verified development state to `master` as merge commit `19f83716a475c9ab5060a6681e06eb86dad62394`; that GitHub promotion is **not** evidence that production was redeployed. PRs #181–#186 subsequently added efficient docs-only CI detection, GitHub-rendered visual acceptance, and the concrete browser/mobile navigation fixes described above. PR #176 updated `Microsoft.NET.Test.Sdk` to 18.10.1 after a fresh rebase/exact-head CI pass; PR #177 updated `actions/cache` from v4 to v6 after a fresh rebase and full three-job CI pass. PR #188 then added the real-browser PWA/offline boundary proof described above. PR #189 added responsive-browser Back navigation acceptance. PR #191 fixed the BFF cookie-challenge/session-expiry defect found by Chromium acceptance and added production-cookie plus real-browser regression coverage. PR #193 added responsive-mobile security-dialog acceptance. PR #195 adopted the cost-aware validation cadence and disabled recurring production-readiness scheduling while preserving manual dispatch. PR #196 added the controlled user-visible PWA update flow described above. PR #197 independently closed the repository-visible Web/BFF smoke newline-handling defect: protected password/authenticator/recovery files are normalized into protected one-line temporary copies, ordinary LF/CRLF endings are not submitted as part of the secret, empty or multi-line files fail closed, and regression coverage now detects the behavior. Exact head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770` passed full CI #700 before squash merge `d86c7ac09650a6605f9262ede22a339a3f25d757`. Current `development` is `d86c7ac09650a6605f9262ede22a339a3f25d757`.
 - PR #96 synchronized the Slack-compatible readiness-alert payload into `development` as `0253f08581417f9e41293481fccbcaf5da301ede`.
 - PR #98 promoted the secure private-beta acceptance hardening to `master` as `3622b57c84c035c30a63bea070f53195635a62eb`. CI #534 passed all three required jobs on exact head `0253f085...`.
 - PR #99 fixed HTML-encoded ASP.NET Core Identity confirmation-link parsing and merged into `development` as `847e17a20c97352114aafb7ef407da8a40882591`.
@@ -103,6 +131,7 @@ Production path: `/opt/billwatch`
 - Staff roles do not grant access to another user's financial evidence.
 - Statement storage paths never leave the API; signature/type/size validation remains enforced.
 - Financial/auth API and BFF responses remain no-store.
+- Cookie-auth challenges under `/bff` return status codes (401/403) rather than login-page redirects so browser BFF clients can fail closed on expired/invalid sessions; normal page authentication redirects remain intact.
 - Production requires persistent Data Protection keys, explicit statement storage, Plaid credentials, AllowedHosts, and trusted reverse-proxy configuration.
 - Never log raw statements, full account numbers, auth/Plaid/provider tokens, passwords, recovery codes, provider/database/Restic secrets, or private operations webhooks.
 - AI-derived persistence remains disabled; deterministic extraction remains production persistence.
@@ -125,7 +154,7 @@ On 2026-09-21, the production host was updated to that exact verified `master` r
 - The backup timer and runtime watchdog are active.
 - Non-destructive direct-API smoke passed against the deployed release.
 - Non-destructive authenticated Web/BFF smoke passed using a protected newline-normalized temporary credential.
-- The deployed release does **not** contain the later Web-smoke newline-handling fix. A local-only VPS commit was reported as `f9000be`, but it is not pushed to GitHub, is not part of `master`, is not deployed, and must not be treated as source authority until its exact diff is reviewed and merged through the normal repository/CI path.
+- The deployed release does **not** contain the repository Web/BFF protected-secret newline normalization later merged through PR #197. An earlier VPS-only commit reported as `f9000be` remains unreviewed historical local state and is not source authority; PR #197 is the reviewed repository implementation. Do not infer that either the PR #197 merge or that old local commit is deployed.
 
 This verifies the guarded release, host prerequisites, non-destructive direct-API smoke, and non-destructive authenticated Web/BFF smoke. It does **not** yet prove objective cross-user isolation, the controlled Plaid lifecycle, representative statement semantics/OCR, hosted-link human completion, reboot behavior, external alert receipt, clean-host recovery against the real off-host repository, provider-enforced immutable storage, account-deletion evidence, or qualified legal review.
 
@@ -214,12 +243,15 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. The consumer-facing FullWorth v2 UI overhaul is complete on `development` at `1d32665e83b90e868d4369d1f7525a482dba7e51`; the exact heads for the final v2 slices passed the complete three-job CI/container/recovery gate before merge.
-2. Production remains the verified `master` release `cbcf261e13636f0330cb9d7be2ce413871e413aa`; do not claim v2 is deployed yet.
-3. Perform real visual acceptance of the PWA on desktop and mobile/installed contexts. Source-level tests are not a substitute for this gate.
-4. During visual acceptance, verify Overview, Bills, Bill Detail, Activity, Account, Transactions, Settings/security dialogs, Privacy, Subscription, Profile, auth flows, theme switching, mobile bottom navigation, keyboard resize, back navigation, statement file picker, Plaid Hosted Link return, session expiry, and service-worker update behavior.
-5. If visual acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require full exact-head CI before merge.
-6. After visual acceptance is genuinely complete, create the release promotion PR from verified `development` to `master`, run full CI on the exact promotion head, then use only the guarded production deployment path.
-7. The locally committed Web-smoke newline fix `f9000be` remains unpushed/unreviewed and is not source authority. Review its exact diff separately before relying on it.
-8. The remaining real-environment private-beta gates in this document still apply after UI promotion; do not manufacture acceptance evidence.
-9. Preserve every security invariant above and every user-owned data ownership boundary.
+1. The latest code-bearing `development` merge is `d86c7ac09650a6605f9262ede22a339a3f25d757` (PR #197 squash merge; exact Web/BFF secret-normalization head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770`, full CI #700). It contains the completed consumer v2 work, PRs #182–#186 for GitHub-rendered visual acceptance/navigation fixes, dependency maintenance from PRs #176/#177, PR #188's Chromium PWA/offline proof, PR #189's responsive-browser Back navigation proof, PR #191's BFF session-expiry fix/acceptance, PR #193's browser security-dialog acceptance, PR #195's cost-aware validation cadence, PR #196's controlled user-visible PWA update flow, and PR #197's protected Web/BFF smoke secret-file newline normalization.
+2. Current GitHub `master` is `19f83716a475c9ab5060a6681e06eb86dad62394` from PR #178. Production is still explicitly verified at `cbcf261e13636f0330cb9d7be2ce413871e413aa`; do not infer that the newer master or development state is deployed.
+3. Desktop and responsive-mobile browser rendering has been visually reviewed through the CI screenshot artifacts. The broken public anchors, duplicate Menu/route highlight, and missing Menu current-state on secondary mobile routes were fixed through focused PRs with exact-head CI.
+4. Chromium now also proves the service-worker/offline security boundary in the production-like CI stack: the worker registers, bypasses HTTP cache for updates, and an offline authenticated `/app` reload renders only the generic offline fallback. This exact-head Linux gate passed three times total on PR #188 (initial successful attempt plus two same-commit reruns).
+5. Chromium also proves responsive-browser Back navigation and fail-closed session-expiry behavior. PR #191's final exact head passed full CI plus one extra same-head Linux production/PWA/recovery rerun.
+6. Do **not** repeat the browser screenshot, Chromium offline-boundary, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants it.
+7. The next UI acceptance work is real installed-device / interaction validation: installed Android PWA, iOS home-screen PWA where available, keyboard resize, Android/iOS hardware-back behavior, real-device install/update behavior, Plaid Hosted Link return, and statement file picker. PR #196 provides the controlled waiting-worker Refresh-to-update path and passed full CI, but that is not a substitute for installed-device update acceptance. Browser security-dialog behavior is covered by PR #193; installed-device dialog behavior remains part of the device gate.
+8. If that real-device acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require exact-head CI before merge.
+9. Do not promote the latest `development` state to `master` merely from GitHub browser evidence; complete the remaining real-device gates that materially require installed/browser interaction first.
+10. The Web/BFF smoke newline-handling loose end is closed in repository authority by PR #197. The old VPS-only `f9000be` commit is not needed as implementation authority and must not be treated as deployed evidence.
+11. The remaining real-environment private-beta gates in this document still apply; do not manufacture acceptance evidence.
+12. Preserve every security invariant above and every user-owned data ownership boundary.

@@ -22,14 +22,67 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect backend-relevant changes
+        id: backend_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $backendSafeExactFiles = @(
+            "AI_SHADOW_CORPUS.md",
+            "BILLWATCH_CONTEXT.md",
+            "FULLWORTH_CONTEXT.md",
+            "README.md",
+            "REVENUE_READINESS.md"
+          )
+
+          $backendSafePrefixes = @(
+            "FullWorth.VisualTests/"
+          )
+
+          $required = $false
+
+          foreach ($file in $changedFiles) {
+            $safe = $backendSafeExactFiles -contains $file
+
+            if (-not $safe) {
+              foreach ($prefix in $backendSafePrefixes) {
+                if ($file.StartsWith(
+                    $prefix,
+                    [System.StringComparison]::Ordinal)) {
+                  $safe = $true
+                  break
+                }
+              }
+            }
+
+            if (-not $safe) {
+              $required = $true
+              break
+            }
+          }
+
+          "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Install .NET 10
+        if: steps.backend_changes.outputs.required == 'true'
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       - name: Cache backend NuGet packages
-        uses: actions/cache@v4
+        if: steps.backend_changes.outputs.required == 'true'
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-backend-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
@@ -37,15 +90,19 @@ jobs:
             nuget-${{ runner.os }}-backend-
 
       - name: Restore tests and dependencies
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build backend
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet build FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-restore
 
       - name: Install EF migration verifier
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet tool install --global dotnet-ef --version 10.0.11
 
       - name: Verify committed migrations match the model
+        if: steps.backend_changes.outputs.required == 'true'
         env:
           ASPNETCORE_ENVIRONMENT: Development
           ConnectionStrings__BillWatchDatabase: Host=localhost;Database=billwatch_ci_model_check;Username=billwatch;Password=ci-model-check-only
@@ -58,9 +115,11 @@ jobs:
           --configuration Release
 
       - name: Run tests
+        if: steps.backend_changes.outputs.required == 'true'
         run: dotnet test FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-build --no-restore
 
       - name: Verify transaction stream regression
+        if: steps.backend_changes.outputs.required == 'true'
         run: node --test FullWorth.Tests/transaction-stream.test.mjs
 
   maui:
@@ -91,6 +150,7 @@ jobs:
             "FullWorth.API/",
             "FullWorth.Web/",
             "FullWorth.Tests/",
+            "FullWorth.VisualTests/",
             "deploy/"
           )
 
@@ -140,7 +200,7 @@ jobs:
 
       - name: Cache MAUI NuGet packages
         if: steps.maui_changes.outputs.required == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-maui-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
@@ -202,6 +262,7 @@ jobs:
             "FullWorth.API/",
             "FullWorth.Core/",
             "FullWorth.Web/",
+            "FullWorth.VisualTests/",
             "deploy/"
           )
 
@@ -232,6 +293,39 @@ jobs:
             }
 
             if ($required) {
+              break
+            }
+          }
+
+          "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Detect visual-acceptance changes
+        id: visual_changes
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "pull_request") {
+            "required=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          $baseSha = "${{ github.event.pull_request.base.sha }}"
+          $headSha = "${{ github.event.pull_request.head.sha }}"
+          $changedFiles = @(git diff --name-only "$baseSha...$headSha")
+
+          $required = $false
+
+          foreach ($file in $changedFiles) {
+            if ($file.StartsWith(
+                    "FullWorth.Web/",
+                    [System.StringComparison]::Ordinal) -or
+                $file.StartsWith(
+                    "FullWorth.VisualTests/",
+                    [System.StringComparison]::Ordinal) -or
+                [string]::Equals(
+                    $file,
+                    ".github/workflows/ci.yml",
+                    [System.StringComparison]::Ordinal)) {
+              $required = $true
               break
             }
           }
@@ -303,6 +397,29 @@ jobs:
       - name: Verify web HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 --resolve web.localhost:443:127.0.0.1 https://web.localhost/health/ready
+
+      - name: Install visual acceptance dependencies
+        if: steps.visual_changes.outputs.required == 'true'
+        run: npm --prefix FullWorth.VisualTests install --no-audit --no-fund
+
+      - name: Install Chromium for visual acceptance
+        if: steps.visual_changes.outputs.required == 'true'
+        run: npm --prefix FullWorth.VisualTests exec playwright install --with-deps chromium
+
+      - name: Capture visual acceptance screenshots
+        if: steps.visual_changes.outputs.required == 'true'
+        env:
+          FULLWORTH_VISUAL_BASE_URL: https://web.localhost
+        run: node FullWorth.VisualTests/visual-acceptance.mjs
+
+      - name: Upload visual acceptance screenshots
+        if: always() && steps.visual_changes.outputs.required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fullworth-visual-${{ github.run_id }}
+          path: FullWorth.VisualTests/artifacts
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify production HTTP security boundaries
         if: steps.container_changes.outputs.required == 'true'

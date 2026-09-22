@@ -10,6 +10,9 @@ namespace FullWorth.Web.Services;
 public sealed class AdminBffWriteProxyService(
     IHttpClientFactory httpClientFactory)
 {
+    private const string SubscriptionCheckoutPath =
+        "/api/subscription/checkout";
+
     private const string SubscriptionRedemptionPath =
         "/api/subscription/access-keys/redeem";
 
@@ -348,6 +351,12 @@ public sealed class AdminBffWriteProxyService(
                 "/api/admin/",
                 StringComparison.Ordinal);
 
+        var isSubscriptionCheckoutPath =
+            string.Equals(
+                requestUri,
+                SubscriptionCheckoutPath,
+                StringComparison.Ordinal);
+
         var isSubscriptionRedemptionPath =
             string.Equals(
                 requestUri,
@@ -388,6 +397,7 @@ public sealed class AdminBffWriteProxyService(
                 StringComparison.Ordinal);
 
         if (!isAdminPath &&
+            !isSubscriptionCheckoutPath &&
             !isSubscriptionRedemptionPath &&
             !isAccountPreferencesPath &&
             !isAccountSecurityPath &&

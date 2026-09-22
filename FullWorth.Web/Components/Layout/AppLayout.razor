@@ -3,6 +3,7 @@
 @implements IAsyncDisposable
 
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
 
@@ -130,6 +131,7 @@
                 <NavLink href="/app"
                          Match="NavLinkMatch.All"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -141,6 +143,7 @@
 
                 <NavLink href="/app/bills"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -152,6 +155,7 @@
 
                 <NavLink href="/app/activity"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -163,6 +167,7 @@
 
                 <NavLink href="/app/account"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -179,7 +184,8 @@
                             @onclick="ToggleMobileMenu"
                             aria-expanded="@_mobileMenuOpen.ToString().ToLowerInvariant()"
                             aria-controls="billwatch-mobile-menu"
-                            aria-haspopup="true">
+                            aria-haspopup="true"
+                            aria-current="@GetMobileMenuAriaCurrent()">
                         <span class="mobile-menu-icon" aria-hidden="true">
                             <span></span>
                             <span></span>
@@ -351,6 +357,22 @@
             <ThemeToggle />
         </header>
 
+        @if (_pwaUpdateAvailable)
+        {
+            <div class="pwa-update-notice"
+                 role="status"
+                 aria-live="polite">
+                <span>@L["A new version of FullWorth is ready."]</span>
+                <button type="button"
+                        @onclick="ApplyPwaUpdateAsync"
+                        disabled="@_pwaUpdateApplying">
+                    @(_pwaUpdateApplying
+                        ? L["Updating FullWorth…"]
+                        : L["Refresh to update"])
+                </button>
+            </div>
+        }
+
         <main class="app-content">
             @Body
         </main>
@@ -359,8 +381,11 @@
 
 @code {
     private IJSObjectReference? _timeModule;
+    private DotNetObjectReference<AppLayout>? _pwaCallback;
     private bool _mobileMenuOpen;
     private bool _showInstallAction;
+    private bool _pwaUpdateAvailable;
+    private bool _pwaUpdateApplying;
     private string? _installMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -387,6 +412,12 @@
 
         try
         {
+            _pwaCallback = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync(
+                "FullWorthPwa.setUpdateCallback",
+                _pwaCallback);
+
             var showInstallAction =
                 !await JS.InvokeAsync<bool>(
                     "FullWorthPwa.isStandalone");
@@ -404,6 +435,41 @@
         {
             // Installation is progressive enhancement. FullWorth remains
             // fully usable when the browser does not expose PWA helpers.
+        }
+    }
+
+    [JSInvokable]
+    public Task OnPwaUpdateAvailableAsync()
+    {
+        _pwaUpdateAvailable = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyPwaUpdateAsync()
+    {
+        if (_pwaUpdateApplying)
+        {
+            return;
+        }
+
+        _pwaUpdateApplying = true;
+
+        try
+        {
+            var result = await JS.InvokeAsync<string>(
+                "FullWorthPwa.applyUpdate");
+
+            if (!string.Equals(
+                    result,
+                    "reloaded",
+                    StringComparison.Ordinal))
+            {
+                _pwaUpdateApplying = false;
+            }
+        }
+        catch (JSException)
+        {
+            _pwaUpdateApplying = false;
         }
     }
 
@@ -470,9 +536,75 @@
 
     private string GetMobileMenuClass()
     {
-        return _mobileMenuOpen
-            ? "mobile-more-menu is-open"
+        var isCurrentRoute =
+            IsMobileMenuRoute();
+
+        if (_mobileMenuOpen)
+        {
+            return isCurrentRoute
+                ? "mobile-more-menu is-current is-open"
+                : "mobile-more-menu is-open";
+        }
+
+        return isCurrentRoute
+            ? "mobile-more-menu is-current"
             : "mobile-more-menu";
+    }
+
+    private string? GetMobileMenuAriaCurrent()
+    {
+        return IsMobileMenuRoute()
+            ? "page"
+            : null;
+    }
+
+    private bool IsMobileMenuRoute()
+    {
+        var path =
+            Navigation.ToBaseRelativePath(
+                Navigation.Uri);
+
+        var queryIndex =
+            path.IndexOfAny(['?', '#']);
+
+        if (queryIndex >= 0)
+        {
+            path =
+                path[..queryIndex];
+        }
+
+        path =
+            path.TrimEnd('/');
+
+        return IsRouteOrChild(
+                path,
+                "app/subscription")
+            || IsRouteOrChild(
+                path,
+                "app/profile")
+            || IsRouteOrChild(
+                path,
+                "app/admin");
+    }
+
+    private static bool IsRouteOrChild(
+        string path,
+        string route)
+    {
+        return string.Equals(
+                path,
+                route,
+                StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(
+                $"{route}/",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetMobileNavActiveClass()
+    {
+        return _mobileMenuOpen
+            ? "mobile-route-active-suppressed"
+            : "active";
     }
 
     private static string GetInitial(
@@ -503,6 +635,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _pwaCallback?.Dispose();
+
         if (_timeModule is null)
         {
             return;
