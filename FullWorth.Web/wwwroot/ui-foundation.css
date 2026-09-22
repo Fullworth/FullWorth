@@ -1,0 +1,18 @@
+:root {
+    --fw-ui-space-xs: 0.375rem;
+    --fw-ui-space-sm: 0.75rem;
+    --fw-ui-space-md: 1rem;
+    --fw-ui-space-lg: 1.25rem;
+    --fw-ui-space-xl: 1.5rem;
+    --fw-ui-radius-md: 0.875rem;
+    --fw-ui-radius-lg: 1.25rem;
+    --fw-ui-accent: #2dd4bf;
+    --fw-ui-accent-border: rgba(45, 212, 191, 0.35);
+    --fw-ui-accent-surface: rgba(45, 212, 191, 0.08);
+    --fw-ui-border: rgba(148, 163, 184, 0.2);
+    --fw-ui-border-strong: rgba(148, 163, 184, 0.4);
+    --fw-ui-surface: rgba(255, 255, 255, 0.04);
+    --fw-ui-surface-muted: rgba(148, 163, 184, 0.08);
+    --fw-ui-shadow: 0 1rem 2.5rem rgba(2, 8, 23, 0.12);
+    --fw-ui-shadow-hover: 0 1.25rem 3rem rgba(2, 8, 23, 0.18);
+}

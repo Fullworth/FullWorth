@@ -1,0 +1,58 @@
+.fw-ui-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--fw-ui-space-lg, 1.25rem);
+    margin-bottom: var(--fw-ui-space-lg, 1.25rem);
+}
+
+.fw-ui-section-header-copy {
+    min-width: 0;
+}
+
+.fw-ui-section-header h2 {
+    margin: 0;
+    color: var(--fw-ui-heading, inherit);
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+}
+
+.fw-ui-section-header p {
+    max-width: 44rem;
+    margin: 0.5rem 0 0;
+    color: var(--fw-ui-muted, inherit);
+    line-height: 1.55;
+}
+
+.fw-ui-section-eyebrow {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--fw-ui-accent, #2dd4bf);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.fw-ui-section-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fw-ui-section-header-center {
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .fw-ui-section-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .fw-ui-section-header-actions {
+        width: 100%;
+    }
+}

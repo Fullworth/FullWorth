@@ -1,0 +1,44 @@
+<header class="fw-ui-section-header @AlignmentClass" @attributes="AdditionalAttributes">
+    <div class="fw-ui-section-header-copy">
+        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+        {
+            <span class="fw-ui-section-eyebrow">@Eyebrow</span>
+        }
+
+        <h2>@Title</h2>
+
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p>@Description</p>
+        }
+    </div>
+
+    @if (Actions is not null)
+    {
+        <div class="fw-ui-section-header-actions">
+            @Actions
+        </div>
+    }
+</header>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string Alignment { get; set; } = "start";
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string AlignmentClass => $"fw-ui-section-header-{Alignment.Trim().ToLowerInvariant()}";
+}

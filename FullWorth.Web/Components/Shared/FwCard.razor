@@ -1,0 +1,42 @@
+<section class="fw-ui-card @VariantClass @(Interactive ? "fw-ui-card-interactive" : string.Empty)"
+         @attributes="AdditionalAttributes">
+    @if (Header is not null)
+    {
+        <div class="fw-ui-card-header">
+            @Header
+        </div>
+    }
+
+    <div class="fw-ui-card-body">
+        @ChildContent
+    </div>
+
+    @if (Footer is not null)
+    {
+        <div class="fw-ui-card-footer">
+            @Footer
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? Header { get; set; }
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    [Parameter]
+    public string Variant { get; set; } = "default";
+
+    [Parameter]
+    public bool Interactive { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string VariantClass => $"fw-ui-card-{Variant.Trim().ToLowerInvariant()}";
+}
