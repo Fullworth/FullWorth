@@ -164,6 +164,61 @@ public sealed class SupportedBillCategoryClassifierTests
             category);
     }
 
+    [Theory]
+    [InlineData("GENERAL_SERVICES_TELECOM")]
+    [InlineData("GENERAL_SERVICES_SOFTWARE")]
+    [InlineData("GENERAL_SERVICES_CLOUD")]
+    public void TryClassify_RecurringTechnologyService_ReturnsOther(
+        string detailedCategory)
+    {
+        var result =
+            _classifier.TryClassify(
+                "GENERAL_SERVICES",
+                detailedCategory,
+                out var category);
+
+        Assert.True(result);
+        Assert.Equal(
+            BillCategory.Other,
+            category);
+    }
+
+    [Theory]
+    [InlineData("GENERAL_MERCHANDISE_DIGITAL_GOODS")]
+    [InlineData("GENERAL_MERCHANDISE_SUBSCRIPTION")]
+    public void TryClassify_DigitalSubscription_ReturnsOther(
+        string detailedCategory)
+    {
+        var result =
+            _classifier.TryClassify(
+                "GENERAL_MERCHANDISE",
+                detailedCategory,
+                out var category);
+
+        Assert.True(result);
+        Assert.Equal(
+            BillCategory.Other,
+            category);
+    }
+
+    [Theory]
+    [InlineData("PERSONAL_CARE_GYMS_AND_FITNESS")]
+    [InlineData("PERSONAL_CARE_MEMBERSHIP")]
+    public void TryClassify_FitnessMembership_ReturnsOther(
+        string detailedCategory)
+    {
+        var result =
+            _classifier.TryClassify(
+                "PERSONAL_CARE",
+                detailedCategory,
+                out var category);
+
+        Assert.True(result);
+        Assert.Equal(
+            BillCategory.Other,
+            category);
+    }
+
     [Fact]
     public void TryClassify_IsCaseInsensitive()
     {

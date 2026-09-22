@@ -5,11 +5,14 @@ namespace FullWorth.Core.Services;
 public sealed class BillStreamDiscoveryService
 {
     private readonly RecurringBillDetectionService _recurringBillDetectionService;
+    private readonly BillMerchantNormalizer _merchantNormalizer;
 
     public BillStreamDiscoveryService()
     {
         _recurringBillDetectionService =
             new RecurringBillDetectionService();
+        _merchantNormalizer =
+            new BillMerchantNormalizer();
     }
 
     public IReadOnlyList<BillStream> Discover(
@@ -38,8 +41,10 @@ public sealed class BillStreamDiscoveryService
                 transactionList
                     .Where(transaction =>
                         string.Equals(
-                            transaction.MerchantName,
-                            detectedBill.MerchantName,
+                            _merchantNormalizer.Normalize(
+                                transaction.MerchantName),
+                            _merchantNormalizer.Normalize(
+                                detectedBill.MerchantName),
                             StringComparison.OrdinalIgnoreCase))
                     .OrderBy(transaction =>
                         transaction.PostedDate)
@@ -49,8 +54,10 @@ public sealed class BillStreamDiscoveryService
                 statementList
                     .Where(statement =>
                         string.Equals(
-                            statement.ProviderName,
-                            detectedBill.MerchantName,
+                            _merchantNormalizer.Normalize(
+                                statement.ProviderName),
+                            _merchantNormalizer.Normalize(
+                                detectedBill.MerchantName),
                             StringComparison.OrdinalIgnoreCase))
                     .OrderBy(statement =>
                         statement.BillingPeriodStart)

@@ -510,6 +510,12 @@ public sealed class RecurringBillDiscoveryPersistenceService
             TransactionsAnalyzed:
                 coreTransactions.Count,
 
+            RecurringCandidatesDetected:
+                detectedStreams.Count,
+
+            RecurringCandidatesRejected:
+                detectedStreams.Count - acceptedDiscoveries.Count,
+
             BillsDiscovered:
                 acceptedDiscoveries.Count,
 
@@ -762,6 +768,8 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
 public sealed record RecurringBillDiscoveryPersistenceResult(
     int TransactionsAnalyzed,
+    int RecurringCandidatesDetected,
+    int RecurringCandidatesRejected,
     int BillsDiscovered,
     int BillStreamsCreated,
     int BillStreamsUpdated,

@@ -42,6 +42,14 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         Assert.Equal(
             1,
+            result.RecurringCandidatesDetected);
+
+        Assert.Equal(
+            0,
+            result.RecurringCandidatesRejected);
+
+        Assert.Equal(
+            1,
             result.BillStreamsCreated);
 
         var billStream =
@@ -237,6 +245,14 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.Equal(
             0,
             result.BillsDiscovered);
+
+        Assert.Equal(
+            1,
+            result.RecurringCandidatesDetected);
+
+        Assert.Equal(
+            1,
+            result.RecurringCandidatesRejected);
 
         Assert.Empty(
             dbContext.BillStreams);

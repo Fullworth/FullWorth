@@ -48,7 +48,55 @@ public sealed class SupportedBillCategoryClassifier
                     "INSURANCE") ||
                 ContainsCategory(
                     categoryDetailed,
-                    "STORAGE")
+                    "STORAGE") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "TELECOM") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "SOFTWARE") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "CLOUD")
+            ))
+        {
+            category =
+                BillCategory.Other;
+
+            return true;
+        }
+
+        if (EqualsCategory(
+                categoryPrimary,
+                "GENERAL_MERCHANDISE") &&
+            (
+                ContainsCategory(
+                    categoryDetailed,
+                    "SUBSCRIPTION") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "DIGITAL")
+            ))
+        {
+            category =
+                BillCategory.Other;
+
+            return true;
+        }
+
+        if (EqualsCategory(
+                categoryPrimary,
+                "PERSONAL_CARE") &&
+            (
+                ContainsCategory(
+                    categoryDetailed,
+                    "GYM") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "FITNESS") ||
+                ContainsCategory(
+                    categoryDetailed,
+                    "MEMBERSHIP")
             ))
         {
             category =
