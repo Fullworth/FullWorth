@@ -3,6 +3,7 @@
 @implements IAsyncDisposable
 
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
 
@@ -183,7 +184,8 @@
                             @onclick="ToggleMobileMenu"
                             aria-expanded="@_mobileMenuOpen.ToString().ToLowerInvariant()"
                             aria-controls="billwatch-mobile-menu"
-                            aria-haspopup="true">
+                            aria-haspopup="true"
+                            aria-current="@GetMobileMenuAriaCurrent()">
                         <span class="mobile-menu-icon" aria-hidden="true">
                             <span></span>
                             <span></span>
@@ -474,9 +476,68 @@
 
     private string GetMobileMenuClass()
     {
-        return _mobileMenuOpen
-            ? "mobile-more-menu is-open"
+        var isCurrentRoute =
+            IsMobileMenuRoute();
+
+        if (_mobileMenuOpen)
+        {
+            return isCurrentRoute
+                ? "mobile-more-menu is-current is-open"
+                : "mobile-more-menu is-open";
+        }
+
+        return isCurrentRoute
+            ? "mobile-more-menu is-current"
             : "mobile-more-menu";
+    }
+
+    private string? GetMobileMenuAriaCurrent()
+    {
+        return IsMobileMenuRoute()
+            ? "page"
+            : null;
+    }
+
+    private bool IsMobileMenuRoute()
+    {
+        var path =
+            Navigation.ToBaseRelativePath(
+                Navigation.Uri);
+
+        var queryIndex =
+            path.IndexOfAny(['?', '#']);
+
+        if (queryIndex >= 0)
+        {
+            path =
+                path[..queryIndex];
+        }
+
+        path =
+            path.TrimEnd('/');
+
+        return IsRouteOrChild(
+                path,
+                "app/subscription")
+            || IsRouteOrChild(
+                path,
+                "app/profile")
+            || IsRouteOrChild(
+                path,
+                "app/admin");
+    }
+
+    private static bool IsRouteOrChild(
+        string path,
+        string route)
+    {
+        return string.Equals(
+                path,
+                route,
+                StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(
+                $"{route}/",
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private string GetMobileNavActiveClass()
