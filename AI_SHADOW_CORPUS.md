@@ -2,7 +2,7 @@
 
 This repository intentionally contains no real provider statements, OCR text, account data, model output, or ground-truth financial facts.
 
-Keep any corpus in an encrypted, access-controlled location outside the repository. If a temporary local corpus must exist beneath the repository during development, use only `.private/BillWatch.AiShadowCorpus/`; Git ignores that directory.
+Keep any corpus in an encrypted, access-controlled location outside the repository. If a temporary local corpus must exist beneath the repository during development, use only `.private/FullWorth.AiShadowCorpus/`; Git ignores that directory. The legacy `.private/BillWatch.AiShadowCorpus/` path remains ignored during migration so an existing private corpus cannot be accidentally committed.
 
 Each case uses a non-sensitive identifier containing only letters, digits, hyphens, and underscores. A future offline-only runner accepts only these fixed names beneath that case directory:
 
