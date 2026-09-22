@@ -31,7 +31,7 @@ public sealed class IdentityEmailOptions
     {
         get;
         set;
-    } = "https://billbeacon.net";
+    } = "https://fullworth.org";
 }
 
 public sealed class IdentityEmailOptionsValidator
