@@ -72,7 +72,7 @@ if [ -z "$email" ]; then
         fail "BILLWATCH_SMOKE_EMAIL is required for non-interactive smoke tests." 64
     fi
 
-    printf 'BillWatch smoke-test account email: ' >&2
+    printf 'FullWorth smoke-test account email: ' >&2
     IFS= read -r email
 fi
 
@@ -92,7 +92,7 @@ else
         fail "BILLWATCH_SMOKE_PASSWORD_FILE is required for non-interactive smoke tests." 64
     fi
 
-    printf 'BillWatch password: ' >&2
+    printf 'FullWorth password: ' >&2
     stty -echo
     trap 'stty echo 2>/dev/null || true' EXIT HUP INT TERM
     IFS= read -r password
@@ -381,4 +381,4 @@ else
     printf '%s\n' 'SKIP mutation probes (safe default)'
 fi
 
-printf '%s\n' 'BillWatch private-beta smoke harness passed.'
+printf '%s\n' 'FullWorth private-beta smoke harness passed.'
