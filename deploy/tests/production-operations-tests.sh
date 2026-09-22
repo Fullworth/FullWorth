@@ -103,7 +103,7 @@ expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"
-sed -i 's/app\.billwatch\.test/api.fullworth.test/' "$same_host_env"
+sed -i 's/app\.fullworth\.test/api.fullworth.test/' "$same_host_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$same_host_env"
 
 invalid_plaid_env="$temp_dir/invalid-plaid.env"
