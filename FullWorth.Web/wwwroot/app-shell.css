@@ -454,6 +454,25 @@
         cursor: pointer;
     }
 
+    .mobile-logout-form {
+        margin: 5px 0 0;
+    }
+
+    .mobile-logout-action {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        color: #ef746c;
+    }
+
+    .mobile-menu-links .mobile-logout-action:hover {
+        color: #ff847d;
+        background: rgba(221, 73, 66, 0.09);
+    }
+
 .pwa-install-message {
         margin: 2px 8px 0;
         color: var(--bw-text-subtle);
