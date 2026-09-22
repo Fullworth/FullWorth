@@ -122,6 +122,8 @@ validate_positive_integer()
 
 host=$(read_value BILLWATCH_HOST)
 web_host=$(read_value BILLWATCH_WEB_HOST)
+legacy_host=$(read_optional_value BILLWATCH_LEGACY_HOST)
+legacy_web_host=$(read_optional_value BILLWATCH_LEGACY_WEB_HOST)
 release_id=$(read_value BILLWATCH_RELEASE_ID)
 acme_email=$(read_value ACME_EMAIL)
 database_password=$(read_value BILLWATCH_DATABASE_PASSWORD)
@@ -153,6 +155,25 @@ validate_public_hostname BILLWATCH_WEB_HOST "$web_host"
 
 [ "$host" != "$web_host" ] ||
     fail "BILLWATCH_HOST and BILLWATCH_WEB_HOST must be different hostnames."
+
+if [ -n "$legacy_host" ] || [ -n "$legacy_web_host" ]; then
+    [ -n "$legacy_host" ] ||
+        fail "BILLWATCH_LEGACY_HOST is required when BILLWATCH_LEGACY_WEB_HOST is set."
+    [ -n "$legacy_web_host" ] ||
+        fail "BILLWATCH_LEGACY_WEB_HOST is required when BILLWATCH_LEGACY_HOST is set."
+
+    reject_unsafe_env_value BILLWATCH_LEGACY_HOST "$legacy_host"
+    reject_unsafe_env_value BILLWATCH_LEGACY_WEB_HOST "$legacy_web_host"
+    validate_public_hostname BILLWATCH_LEGACY_HOST "$legacy_host"
+    validate_public_hostname BILLWATCH_LEGACY_WEB_HOST "$legacy_web_host"
+
+    [ "$legacy_host" != "$legacy_web_host" ] ||
+        fail "BILLWATCH_LEGACY_HOST and BILLWATCH_LEGACY_WEB_HOST must be different hostnames."
+    [ "$legacy_host" != "$host" ] ||
+        fail "BILLWATCH_LEGACY_HOST must differ from BILLWATCH_HOST."
+    [ "$legacy_web_host" != "$web_host" ] ||
+        fail "BILLWATCH_LEGACY_WEB_HOST must differ from BILLWATCH_WEB_HOST."
+fi
 
 case "$release_id" in
     *[!0-9a-f]*|'')
