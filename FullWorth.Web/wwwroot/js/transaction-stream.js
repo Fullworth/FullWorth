@@ -13,7 +13,7 @@ const pendingWorkerRequests =
     new Map();
 
 function getExecutionMode() {
-    return window.FullWorthPerformance
+    return globalThis.FullWorthPerformance
         ?.getExecutionMode?.() ??
         "server";
 }
