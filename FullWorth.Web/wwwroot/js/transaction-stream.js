@@ -202,6 +202,7 @@ async function applyLocalFilter(
     searchInput,
     accountSelect,
     resultCount,
+    emptyState,
     rows) {
 
     filterState = {
@@ -250,6 +251,11 @@ async function applyLocalFilter(
     updateResultLabel(
         resultCount,
         visibleCount);
+
+    if (emptyState) {
+        emptyState.hidden =
+            visibleCount !== 0;
+    }
 }
 
 export async function getBankTransactionsStream(take) {
@@ -284,7 +290,8 @@ export async function getBankTransactionsStream(take) {
 export async function activateLocalTransactionFiltering(
     searchInputId,
     accountSelectId,
-    resultCountId) {
+    resultCountId,
+    emptyStateId) {
 
     if (getExecutionMode() !== "local" ||
         currentTransactionIndex.length === 0) {
@@ -302,6 +309,10 @@ export async function activateLocalTransactionFiltering(
     const resultCount =
         document.getElementById(
             resultCountId);
+
+    const emptyState =
+        document.getElementById(
+            emptyStateId);
 
     const rows =
         Array.from(
@@ -350,6 +361,7 @@ export async function activateLocalTransactionFiltering(
                     searchInput,
                     accountSelect,
                     resultCount,
+                    emptyState,
                     rows);
             }
             catch {
