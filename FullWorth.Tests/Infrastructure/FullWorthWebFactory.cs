@@ -56,9 +56,19 @@ public sealed class FullWorthWebFactory : WebApplicationFactory<WebAssemblyMarke
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
+            var userId =
+                Request.Headers.TryGetValue(
+                    "X-FullWorth-Test-UserId",
+                    out var configuredUserId) &&
+                Guid.TryParse(
+                    configuredUserId.ToString(),
+                    out var parsedUserId)
+                    ? parsedUserId
+                    : Guid.NewGuid();
+
             var identity = new ClaimsIdentity(
                 [
-                    new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString("D")),
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString("D")),
                     new Claim(ClaimTypes.Name, "billwatch-web-test")
                 ],
                 Scheme.Name);
