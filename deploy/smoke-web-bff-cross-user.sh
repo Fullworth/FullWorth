@@ -241,4 +241,4 @@ BILLWATCH_WEB_SMOKE_FOREIGN_STATEMENT_UPLOAD_ID="$foreign_statement_upload_id" \
     sh "$smoke_script" "$web_base_url"
 
 printf '%s\n' 'PASS primary Web/BFF identity received 404 for foreign bill-stream and statement-upload resources'
-printf '%s\n' 'BillWatch cross-user Web/BFF ownership smoke harness passed.'
+printf '%s\n' 'FullWorth cross-user Web/BFF ownership smoke harness passed.'

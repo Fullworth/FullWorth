@@ -62,24 +62,24 @@ alerting_enabled="$(read_optional_value BILLWATCH_OPERATIONS_ALERTING_ENABLED)"
 [ -n "$alerting_enabled" ] || alerting_enabled=false
 
 if [ "$alerting_enabled" != true ]; then
-    fail "BillWatch operations alerting is not enabled." 78
+    fail "FullWorth operations alerting is not enabled." 78
 fi
 
 webhook_url="$(read_optional_value BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL)"
 
 case "$webhook_url" in
     https://*) ;;
-    *) fail "BillWatch operations alert webhook must be an HTTPS URL." 78 ;;
+    *) fail "FullWorth operations alert webhook must be an HTTPS URL." 78 ;;
 esac
 
 case "$webhook_url" in
     *[[:space:]]*|*\"*|*\'*|*\`*|*\\*)
-        fail "BillWatch operations alert webhook contains unsupported characters." 78
+        fail "FullWorth operations alert webhook contains unsupported characters." 78
         ;;
 esac
 
 command -v curl >/dev/null 2>&1 ||
-    fail "curl is required to deliver BillWatch operations alerts." 69
+    fail "curl is required to deliver FullWorth operations alerts." 69
 
 sanitize_metadata()
 {
@@ -100,7 +100,7 @@ generic_payload="{\"source\":\"billwatch-production\",\"event\":\"$event_safe\",
 
 case "$webhook_url" in
     https://hooks.slack.com/services/*)
-        payload="{\"text\":\"BillWatch production alert\\nSource: billwatch-production\\nEvent: $event_safe\\nUnit: $unit_safe\\nHost: $host_safe\\nOccurred at UTC: $timestamp\"}"
+        payload="{\"text\":\"FullWorth production alert\\nSource: billwatch-production\\nEvent: $event_safe\\nUnit: $unit_safe\\nHost: $host_safe\\nOccurred at UTC: $timestamp\"}"
         ;;
     *)
         payload="$generic_payload"
@@ -120,7 +120,7 @@ if ! curl \
     --header 'Content-Type: application/json' \
     --data "$payload"
 then
-    fail "BillWatch operations alert delivery failed." 69
+    fail "FullWorth operations alert delivery failed." 69
 fi
 
-echo "BillWatch operations alert delivered for $event_safe."
+echo "FullWorth operations alert delivered for $event_safe."

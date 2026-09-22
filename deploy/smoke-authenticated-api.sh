@@ -51,7 +51,7 @@ if [ -z "$email" ]; then
         fail "BILLWATCH_SMOKE_EMAIL is required for non-interactive smoke tests." 64
     fi
 
-    printf 'BillWatch account email: ' >&2
+    printf 'FullWorth account email: ' >&2
     IFS= read -r email
 fi
 
@@ -72,7 +72,7 @@ else
     chmod 600 "$password_file"
     temporary_password_file=true
 
-    printf 'BillWatch password: ' >&2
+    printf 'FullWorth password: ' >&2
     stty -echo
     trap 'stty echo 2>/dev/null || true; rm -f "${password_file:-}"' EXIT HUP INT TERM
     IFS= read -r password
@@ -203,4 +203,4 @@ probe "/api/bank-transactions" "200"
 probe "/api/bill-streams" "200"
 probe "/api/alerts" "200"
 
-printf '%s\n' "BillWatch authenticated API smoke test passed."
+printf '%s\n' "FullWorth authenticated API smoke test passed."

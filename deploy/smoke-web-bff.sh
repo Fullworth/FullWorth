@@ -96,7 +96,7 @@ if [ -z "$email" ]; then
         fail "BILLWATCH_WEB_SMOKE_EMAIL is required for non-interactive smoke tests." 64
     fi
 
-    printf 'BillWatch Web smoke-test account email: ' >&2
+    printf 'FullWorth Web smoke-test account email: ' >&2
     IFS= read -r email
 fi
 
@@ -113,7 +113,7 @@ else
     chmod 600 "$password_file"
     temporary_password_file=true
 
-    printf 'BillWatch password: ' >&2
+    printf 'FullWorth password: ' >&2
     stty -echo
     trap 'stty echo 2>/dev/null || true; rm -f "${password_file:-}"' EXIT HUP INT TERM
     IFS= read -r password
@@ -301,7 +301,7 @@ case "$location" in
             /app|/app/*)
                 ;;
             /login\?twoFactor=true\&error=*)
-                fail "Web two-factor login was rejected by BillWatch. Verify the current authenticator or recovery code and the account's sign-in state before retrying." 69
+                fail "Web two-factor login was rejected by FullWorth. Verify the current authenticator or recovery code and the account's sign-in state before retrying." 69
                 ;;
             /login\?error=*)
                 fail "Web two-factor login returned to the sign-in screen with an account error. Verify the account state before retrying." 69
@@ -312,7 +312,7 @@ case "$location" in
         esac
         ;;
     /login\?error=*)
-        fail "Web password sign-in was rejected by BillWatch. Verify the account credentials and lockout state before retrying." 69
+        fail "Web password sign-in was rejected by FullWorth. Verify the account credentials and lockout state before retrying." 69
         ;;
     *)
         fail "Web login did not redirect to /app or the two-factor step." 69
@@ -461,4 +461,4 @@ case "$post_logout_code" in
 esac
 printf '%s\n' 'PASS antiforgery-protected logout invalidated the Web session'
 
-printf '%s\n' 'BillWatch authenticated Web/BFF smoke harness passed.'
+printf '%s\n' 'FullWorth authenticated Web/BFF smoke harness passed.'

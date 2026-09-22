@@ -81,7 +81,7 @@ EOF
 chmod +x "$fake_bin/curl"
 
 password_file="$temp_dir/password"
-printf '%s\n' 'BillWatch!SubscriptionSmoke123' > "$password_file"
+printf '%s\n' 'FullWorth!SubscriptionSmoke123' > "$password_file"
 chmod 600 "$password_file"
 
 run_smoke()
@@ -108,7 +108,7 @@ if grep -Eq '/api/subscription/(checkout|billing-portal|sync)$' "$curl_log"; the
     fail "read-only defaults invoked a mutation-bearing subscription endpoint"
 fi
 
-if grep -q 'BillWatch!SubscriptionSmoke123' "$curl_log"; then
+if grep -q 'FullWorth!SubscriptionSmoke123' "$curl_log"; then
     fail "password leaked into curl URL/arguments"
 fi
 

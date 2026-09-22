@@ -46,7 +46,7 @@ printf '%s|%s|%s\n' \
     "$BILLWATCH_WEB_SMOKE_FOREIGN_BILL_STREAM_ID" \
     "$BILLWATCH_WEB_SMOKE_FOREIGN_STATEMENT_UPLOAD_ID" \
     "$1" > "$FAKE_DELEGATED_LOG"
-printf '%s\n' 'BillWatch authenticated Web/BFF smoke harness passed.'
+printf '%s\n' 'FullWorth authenticated Web/BFF smoke harness passed.'
 EOF
 chmod 700 "$fixture_root/deploy/smoke-web-bff.sh"
 
@@ -149,7 +149,7 @@ grep -Fq 'PASS foreign account authenticated and supplied an objectively owned s
     fail "foreign ownership fixture was not proven."
 grep -Fq 'PASS primary Web/BFF identity received 404 for foreign bill-stream and statement-upload resources' "$temp_dir/happy.out" ||
     fail "primary isolation proof did not complete."
-grep -Fq 'BillWatch cross-user Web/BFF ownership smoke harness passed.' "$temp_dir/happy.out" ||
+grep -Fq 'FullWorth cross-user Web/BFF ownership smoke harness passed.' "$temp_dir/happy.out" ||
     fail "happy ownership path did not complete."
 [ "$(cat "$delegated_log")" = "$foreign_stream_id|$foreign_upload_id|https://web.example.test" ] ||
     fail "ownership IDs were not delegated exactly to the primary Web/BFF smoke."
@@ -181,7 +181,7 @@ run_ownership \
     FAKE_REQUIRE_2FA=true \
     BILLWATCH_WEB_OWNERSHIP_FOREIGN_TWO_FACTOR_CODE_FILE="$foreign_two_factor" \
     > "$temp_dir/two-factor.out"
-grep -Fq 'BillWatch cross-user Web/BFF ownership smoke harness passed.' "$temp_dir/two-factor.out" ||
+grep -Fq 'FullWorth cross-user Web/BFF ownership smoke harness passed.' "$temp_dir/two-factor.out" ||
     fail "foreign two-factor ownership path did not complete."
 if grep -Fq '123456' "$curl_log"; then
     fail "foreign authenticator code appeared in curl process arguments."

@@ -37,7 +37,7 @@ read_required_env_value()
 
 env_file=$(cd "$(dirname "$env_file")" && pwd -P)/$(basename "$env_file")
 case "$env_file" in
-    "$root_dir"|"$root_dir"/*) fail "the delete-capable maintenance environment file must live outside the BillWatch checkout." 77 ;;
+    "$root_dir"|"$root_dir"/*) fail "the delete-capable maintenance environment file must live outside the FullWorth checkout." 77 ;;
 esac
 
 mode=$(stat -c '%a' "$env_file") || fail "maintenance environment permissions cannot be read."
@@ -78,7 +78,7 @@ command -v docker >/dev/null 2>&1 || fail "Docker is required on the trusted mai
 
 head_sha=$(git -C "$root_dir" rev-parse HEAD)
 [ "$head_sha" = "$release_id" ] || fail "BILLWATCH_RELEASE_ID must match the maintenance checkout exactly." 65
-[ -z "$(git -C "$root_dir" status --porcelain --untracked-files=normal)" ] || fail "backup maintenance requires a clean BillWatch checkout." 65
+[ -z "$(git -C "$root_dir" status --porcelain --untracked-files=normal)" ] || fail "backup maintenance requires a clean FullWorth checkout." 65
 
 image="billwatch-backup-maintenance:$release_id"
 docker build \
@@ -98,4 +98,4 @@ docker run \
     "$image" \
     retention
 
-printf 'Trusted-host BillWatch retention maintenance passed for release %s.\n' "$release_id"
+printf 'Trusted-host FullWorth retention maintenance passed for release %s.\n' "$release_id"

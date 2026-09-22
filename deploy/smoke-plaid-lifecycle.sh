@@ -272,4 +272,4 @@ if [ "$allow_disconnect" = "true" ]; then
     printf '%s\n' 'PASS explicit Plaid disconnect and post-disconnect update-mode rejection (204/409)'
 fi
 
-printf '%s\n' 'BillWatch guarded Plaid lifecycle smoke harness passed.'
+printf '%s\n' 'FullWorth guarded Plaid lifecycle smoke harness passed.'

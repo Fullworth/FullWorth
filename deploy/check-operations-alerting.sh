@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/.env.production" ]; then
-    fail "A BillWatch deployment directory with .env.production is required." 64
+    fail "A FullWorth deployment directory with .env.production is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -49,12 +49,12 @@ alerting_enabled="$(read_optional_value BILLWATCH_OPERATIONS_ALERTING_ENABLED)"
 webhook_url="$(read_optional_value BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL)"
 
 if [ "$alerting_enabled" != true ]; then
-    fail "BillWatch operations alerting is not enabled." 69
+    fail "FullWorth operations alerting is not enabled." 69
 fi
 
 case "$webhook_url" in
     https://*) ;;
-    *) fail "BillWatch operations alert webhook must be configured as HTTPS." 69 ;;
+    *) fail "FullWorth operations alert webhook must be configured as HTTPS." 69 ;;
 esac
 
 require_failure_route billwatch-backup.service
@@ -65,8 +65,8 @@ if ! systemctl cat 'billwatch-operations-alert@.service' >/dev/null 2>&1; then
 fi
 
 if [ ! -x "$deployment_directory/deploy/send-operations-alert.sh" ]; then
-    fail "The BillWatch operations alert sender is missing or not executable." 69
+    fail "The FullWorth operations alert sender is missing or not executable." 69
 fi
 
-echo "BillWatch backup and runtime failure alerting are configured."
+echo "FullWorth backup and runtime failure alerting are configured."
 echo "Run deploy/send-operations-alert.sh manually with event 'readiness-test' to prove external delivery before beta invitations."

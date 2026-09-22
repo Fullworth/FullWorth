@@ -12,7 +12,7 @@ fail()
 }
 
 [ -n "$deployment_directory" ] ||
-    fail "a BillWatch deployment directory is required." 64
+    fail "a FullWorth deployment directory is required." 64
 
 [ -d "$deployment_directory" ] ||
     fail "the deployment directory does not exist." 66
@@ -30,7 +30,7 @@ environment_file=$(cd "$(dirname -- "$environment_file")" && pwd -P)/$(basename 
 release_file="$deployment_directory/.billwatch-release"
 
 [ -f "$release_file" ] ||
-    fail ".billwatch-release is missing while BillWatch is already running." 78
+    fail ".billwatch-release is missing while FullWorth is already running." 78
 
 [ ! -L "$release_file" ] ||
     fail ".billwatch-release must not be a symbolic link." 77
@@ -95,4 +95,4 @@ do
         fail "the running $service container does not match the last verified release marker." 78
 done
 
-printf '%s\n' "Running BillWatch release matches the last verified release $recorded_release."
+printf '%s\n' "Running FullWorth release matches the last verified release $recorded_release."

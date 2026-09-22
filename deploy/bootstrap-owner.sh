@@ -16,11 +16,11 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required."
+    fail "A FullWorth deployment directory is required."
 fi
 
 if [ -z "$expected_email" ]; then
-    fail "The expected email address for the sole BillWatch account is required."
+    fail "The expected email address for the sole FullWorth account is required."
 fi
 
 deployment_directory="$(
@@ -78,7 +78,7 @@ user_count="$(
 )"
 
 if [ "$user_count" != "1" ]; then
-    fail "Owner bootstrap requires exactly one BillWatch user. Found: $user_count." 77
+    fail "Owner bootstrap requires exactly one FullWorth user. Found: $user_count." 77
 fi
 
 sole_email="$(
@@ -92,7 +92,7 @@ sole_email="$(
 )"
 
 if [ "$sole_email" != "$expected_email" ]; then
-    fail "The supplied email does not match the sole BillWatch account." 77
+    fail "The supplied email does not match the sole FullWorth account." 77
 fi
 
 owner_role_count="$(
@@ -106,7 +106,7 @@ owner_role_count="$(
 )"
 
 if [ "$owner_role_count" != "1" ]; then
-    fail "BillWatch must contain exactly one Owner role before bootstrap." 77
+    fail "FullWorth must contain exactly one Owner role before bootstrap." 77
 fi
 
 existing_owner_count="$(
@@ -204,4 +204,4 @@ if [ "$verified_owner_count" != "1" ]; then
     fail "Owner bootstrap did not produce exactly one Owner." 70
 fi
 
-echo "BillWatch Owner bootstrap completed successfully."
+echo "FullWorth Owner bootstrap completed successfully."

@@ -6,7 +6,7 @@ deployment_directory="${1:-}"
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    echo "A BillWatch deployment directory is required." >&2
+    echo "A FullWorth deployment directory is required." >&2
     exit 64
 fi
 
