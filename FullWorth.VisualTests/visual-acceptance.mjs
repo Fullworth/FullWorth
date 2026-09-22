@@ -325,6 +325,29 @@ try {
   await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
 
+  await context.clearCookies();
+
+  await page.evaluate(() => {
+    void import("/js/bff.js")
+      .then(module => module.getBillStreams())
+      .catch(() => {
+        // A 401 is expected after the authenticated BFF cookie is removed.
+        // The module must redirect the browser to /login before rejecting.
+      });
+  });
+
+  await page.waitForURL(
+    url => url.pathname === "/login",
+    { timeout: 10000 }
+  );
+  await settle(".auth-card");
+
+  if (await page.locator(".app-shell").count() !== 0) {
+    throw new Error(
+      "Authenticated app shell remained visible after the BFF session was invalidated."
+    );
+  }
+
   await context.close();
 } finally {
   await browser.close();
