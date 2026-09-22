@@ -1,12 +1,12 @@
 # Private-beta alert observation proof
 
-BillWatch treats webhook acceptance and human observation as different facts. A successful HTTP request to an alert destination is not enough to claim that an operator actually saw the notification.
+FullWorth treats webhook acceptance and human observation as different facts. A successful HTTP request to an alert destination is not enough to claim that an operator actually saw the notification.
 
 This proof therefore has two explicit phases tied to one verified release.
 
 ## 1. Send two independent proof alerts
 
-Use a protected evidence directory outside the BillWatch checkout. The production operations webhook remains in `.env.production`; the external readiness webhook must be supplied separately and must be a different HTTPS destination.
+Use a protected evidence directory outside the FullWorth checkout. The production operations webhook remains in `.env.production`; the external readiness webhook must be supplied separately and must be a different HTTPS destination.
 
 ```sh
 export BILLWATCH_ALERT_PROOF_ALLOW_SEND=true
