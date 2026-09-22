@@ -1,10 +1,10 @@
-# BillWatch first Owner bootstrap
+# FullWorth first Owner bootstrap
 
 The first production Owner is established out-of-band exactly once.
 
 Use `deploy/bootstrap-owner.sh` only when all of the following are true:
 
-- the deployment has exactly one BillWatch user;
+- the deployment has exactly one FullWorth user;
 - the database contains exactly one `Owner` role;
 - no user currently holds the `Owner` role;
 - the operator knows the email address of the sole account.
