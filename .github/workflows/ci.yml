@@ -82,7 +82,7 @@ jobs:
 
       - name: Cache backend NuGet packages
         if: steps.backend_changes.outputs.required == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-backend-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
@@ -200,7 +200,7 @@ jobs:
 
       - name: Cache MAUI NuGet packages
         if: steps.maui_changes.outputs.required == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-maui-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
