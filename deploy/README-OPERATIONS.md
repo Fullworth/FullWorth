@@ -202,7 +202,7 @@ Do not remove a backup lock unless you have first confirmed no backup process is
 
 ## Deployment
 
-Use only the guarded deployment script:
+Use only the guarded deployment script. A direct server-side deployment remains supported:
 
 ```sh
 cd /opt/billwatch
@@ -210,6 +210,26 @@ RELEASE_ID="$(git rev-parse HEAD)"
 sed -i "s/^BILLWATCH_RELEASE_ID=.*/BILLWATCH_RELEASE_ID=$RELEASE_ID/" .env.production
 sh deploy/deploy-production.sh .env.production
 ```
+
+### GitHub manual deployment
+
+`.github/workflows/production-deploy.yml` provides a manual GitHub-only entry point without moving FullWorth application secrets into GitHub. The workflow still executes the existing server-side `validate-production-env.sh`, `deploy-production.sh`, `verify-production.sh`, and `verify-beta-readiness.sh` gates against the protected `/opt/billwatch/.env.production` file.
+
+Before first use, create a protected GitHub Environment named `production`. Configure required reviewers for that environment where the repository plan supports environment approvals, and store only the SSH transport material needed to reach the existing deployment account:
+
+- `FULLWORTH_PRODUCTION_SSH_HOST`
+- `FULLWORTH_PRODUCTION_SSH_USER`
+- `FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY`
+- `FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS`
+- `FULLWORTH_PRODUCTION_SSH_PORT` — optional; defaults to port 22
+
+Use a dedicated non-root deployment key for the same account that owns `/opt/billwatch/.env.production` and can run the existing Docker deployment. `FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS` must contain a host-key entry obtained through a trusted administrative channel; the workflow deliberately does not discover or trust a host key at runtime.
+
+Do **not** copy `.env.production`, Plaid credentials, Stripe secrets, database passwords, Restic credentials, identity-email credentials, or other FullWorth application secrets into GitHub for this workflow. They remain on the production host behind the existing file ownership and mode checks.
+
+To deploy, open **Actions → FullWorth Production Deploy → Run workflow**, select `master`, enter the exact 40-character current `master` SHA, and explicitly enable the guarded-deploy confirmation. The workflow refuses non-`master` refs, malformed or stale SHAs, dirty local/remote checkouts, non-fast-forward production updates, unpinned SSH hosts, or a release that no longer matches `origin/master`.
+
+After the server-side guarded deploy passes, GitHub independently probes `https://api.fullworth.org` and `https://fullworth.org`. A successful workflow proves only the guarded deployment/readiness gates for that release. Installed-device acceptance, Plaid provider observation, provider-enforced backup immutability, and qualified legal review remain separate gates.
 
 Do not use `docker compose down --volumes` in production.
 
