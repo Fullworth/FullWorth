@@ -1,4 +1,4 @@
-# BillWatch production operations
+# FullWorth production operations
 
 Run production commands as the deployment account that owns `/opt/billwatch/.env.production`.
 
@@ -103,7 +103,7 @@ Production `.env.production` must contain:
 BILLWATCH_BACKUP_CLIENT_MODE=append-only
 ```
 
-Routine backup capture is deliberately non-destructive at the BillWatch application boundary. The `backup` command refuses maintenance mode and **never** invokes `restic forget` or `restic prune`, even when retention is enabled. The production storage credential should independently be restricted by the provider so it cannot delete/overwrite protected backup data where that backend supports separate permissions.
+Routine backup capture is deliberately non-destructive at the FullWorth application boundary. The `backup` command refuses maintenance mode and **never** invokes `restic forget` or `restic prune`, even when retention is enabled. The production storage credential should independently be restricted by the provider so it cannot delete/overwrite protected backup data where that backend supports separate permissions.
 
 Retention deletion is a separate trusted-host operation. Do **not** place delete-capable maintenance credentials or a maintenance environment on the production VPS. See `deploy/README-BACKUP-TRUST.md`.
 
@@ -182,7 +182,7 @@ BILLWATCH_OPERATIONS_ALERTING_ENABLED=true
 BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=https://your-private-alert-endpoint.example/path
 ```
 
-`billwatch-backup.service` and `billwatch-runtime-readiness.service` use systemd `OnFailure` to invoke the dedicated alert unit. The payload contains only a fixed BillWatch source identifier, event name, systemd unit name, hostname, and UTC timestamp. It does not attach service logs, financial data, request bodies, credentials, or tokens.
+`billwatch-backup.service` and `billwatch-runtime-readiness.service` use systemd `OnFailure` to invoke the dedicated alert unit. The payload contains only the fixed legacy `billwatch-production` source identifier, event name, systemd unit name, hostname, and UTC timestamp. It does not attach service logs, financial data, request bodies, credentials, or tokens.
 
 Verify local wiring without sending an alert:
 

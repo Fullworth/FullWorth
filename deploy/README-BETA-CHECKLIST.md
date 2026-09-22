@@ -1,4 +1,4 @@
-# BillWatch private-beta operator checklist
+# FullWorth private-beta operator checklist
 
 Do not enable subscription enforcement merely because this checklist exists. Enforcement remains a separate deliberate rollout decision.
 
@@ -44,7 +44,7 @@ Remove all temporary password/second-factor files immediately after the gate. Th
 
 ## Guarded Plaid lifecycle smoke gate
 
-Use `deploy/smoke-plaid-lifecycle.sh` with a controlled account that already owns a disposable or explicitly approved Plaid connection. The default path is non-destructive: it authenticates, proves that the configured connection belongs to the account, creates an update-mode Hosted Link session, validates that only a BillWatch session ID and an HTTPS `plaid.com` Hosted Link URL are returned, and rejects responses containing provider credentials or internal storage fields.
+Use `deploy/smoke-plaid-lifecycle.sh` with a controlled account that already owns a disposable or explicitly approved Plaid connection. The default path is non-destructive: it authenticates, proves that the configured connection belongs to the account, creates an update-mode Hosted Link session, validates that only a FullWorth session ID and an HTTPS `plaid.com` Hosted Link URL are returned, and rejects responses containing provider credentials or internal storage fields.
 
 Create a mode-`600` password file outside the repository and run:
 
@@ -60,7 +60,7 @@ When a known connection owned by another controlled account is available, set `B
 
 Disconnect is **disabled by default**. To prove the provider-revocation/local-disconnect path, use only a disposable controlled connection and explicitly set both `BILLWATCH_PLAID_SMOKE_ALLOW_DISCONNECT=true` and `BILLWATCH_PLAID_SMOKE_DISCONNECT_CONNECTION_ID`. The harness first confirms that the disconnect target belongs to the authenticated account, requires DELETE to return 204, then proves the same disconnected connection is rejected from update mode with 409. Do not point this mutation at a tester's live financial connection.
 
-This harness proves BillWatch's real API/provider update-mode and disconnect boundary; it does not pretend to complete the human Plaid Hosted Link institution flow. A person must still open the returned Hosted Link through the product, finish the provider flow, and verify account/transaction synchronization and any `RequiresAttention` repair path with controlled provider data.
+This harness proves FullWorth's real API/provider update-mode and disconnect boundary; it does not pretend to complete the human Plaid Hosted Link institution flow. A person must still open the returned Hosted Link through the product, finish the provider flow, and verify account/transaction synchronization and any `RequiresAttention` repair path with controlled provider data.
 
 Remove the password file immediately after the smoke gate. Never save the one-time Hosted Link URL or any Plaid credential in tickets, logs, shell history, or the repository.
 
@@ -166,7 +166,7 @@ This gate verifies lifecycle, ownership, response secrecy, and stored-byte integ
 - [ ] Provider-side immutable/Object-Lock/WORM or equivalent protection is configured and recovery from that protected storage has been tested.
 - [ ] Backup/runtime failure alerting is configured and a manual `readiness-test` event is observed in the external alert destination.
 - [ ] Independent external readiness monitor is configured and a forced-failure notification is proven.
-- [ ] Controlled VPS reboot returns Docker, BillWatch, the backup timer, and the runtime-readiness watchdog to healthy automatically.
+- [ ] Controlled VPS reboot returns Docker, FullWorth, the backup timer, and the runtime-readiness watchdog to healthy automatically.
 - [ ] After the controlled reboot, `sh deploy/verify-beta-readiness.sh /opt/billwatch` passes without modifying the verified release marker.
 
 ## Beta entry

@@ -1,6 +1,6 @@
 # Trusted private-beta launch evidence
 
-BillWatch deliberately separates machine-verifiable acceptance evidence from external decisions that code cannot honestly prove by itself.
+FullWorth deliberately separates machine-verifiable acceptance evidence from external decisions that code cannot honestly prove by itself.
 
 A trusted private-beta launch requires all three evidence groups for the exact deployed release:
 
@@ -8,7 +8,7 @@ A trusted private-beta launch requires all three evidence groups for the exact d
 2. A provider-protection attestation recorded only after provider-enforced immutable/Object-Lock/WORM (or equivalent) backup protection is configured **and recovery from that protected storage path has actually succeeded**.
 3. A qualified legal-review attestation recorded only after the deployed Terms and Privacy documents have been reviewed and approved for trusted private beta.
 
-The two external records are human attestations. BillWatch validates that an explicit attestation was made, pins it to the deployed release, protects the evidence file, and for legal review pins it to `BillWatchLegalDocuments.CurrentVersion`. It does not claim to independently prove the provider configuration or the quality/sufficiency of legal review.
+The two external records are human attestations. FullWorth validates that an explicit attestation was made, pins it to the deployed release, protects the evidence file, and for legal review pins it to `FullWorthLegalDocuments.CurrentVersion`. It does not claim to independently prove the provider configuration or the quality/sufficiency of legal review.
 
 ## Record backup-provider approval
 
@@ -32,7 +32,7 @@ BILLWATCH_LEGAL_REVIEW_ATTESTATION='I attest that a qualified review of the depl
 sh deploy/record-private-beta-external-approval.sh legal /opt/billwatch
 ```
 
-Changing `BillWatchLegalDocuments.CurrentVersion` automatically makes an older legal approval unusable for the launch gate.
+Changing `FullWorthLegalDocuments.CurrentVersion` automatically makes an older legal approval unusable for the launch gate.
 
 ## Verify the trusted-beta launch gate
 
