@@ -229,7 +229,7 @@ grep -Fq 'PASS authenticated BFF antiforgery token issuance' "$temp_dir/safe.out
     fail "BFF antiforgery verification did not run."
 grep -Fq 'PASS antiforgery-protected logout invalidated the Web session' "$temp_dir/safe.out" ||
     fail "logout invalidation proof did not run."
-grep -Fq 'BillWatch authenticated Web/BFF smoke harness passed.' "$temp_dir/safe.out" ||
+grep -Fq 'FullWorth authenticated Web/BFF smoke harness passed.' "$temp_dir/safe.out" ||
     fail "safe Web/BFF smoke path did not complete."
 
 for secret in \
@@ -247,7 +247,7 @@ run_smoke \
     FAKE_REQUIRE_2FA=true \
     BILLWATCH_WEB_SMOKE_TWO_FACTOR_CODE_FILE="$two_factor_file" \
     > "$temp_dir/two-factor.out"
-grep -Fq 'BillWatch authenticated Web/BFF smoke harness passed.' "$temp_dir/two-factor.out" ||
+grep -Fq 'FullWorth authenticated Web/BFF smoke harness passed.' "$temp_dir/two-factor.out" ||
     fail "two-factor Web/BFF smoke path did not complete."
 if grep -Fq '123456' "$curl_log"; then
     fail "authenticator code appeared in curl process arguments."
@@ -267,7 +267,7 @@ if run_smoke \
 fi
 
 grep -Fq \
-    "Web two-factor login was rejected by BillWatch. Verify the current authenticator or recovery code and the account's sign-in state before retrying." \
+    "Web two-factor login was rejected by FullWorth. Verify the current authenticator or recovery code and the account's sign-in state before retrying." \
     "$temp_dir/two-factor-rejected.err" ||
     fail "rejected second-factor diagnostics were not specific enough."
 
@@ -279,7 +279,7 @@ if run_smoke \
 fi
 
 grep -Fq \
-    'Web password sign-in was rejected by BillWatch. Verify the account credentials and lockout state before retrying.' \
+    'Web password sign-in was rejected by FullWorth. Verify the account credentials and lockout state before retrying.' \
     "$temp_dir/password-rejected.err" ||
     fail "rejected password diagnostics were not specific enough."
 
