@@ -126,6 +126,30 @@ try {
     await capture(name, route, selector);
   }
 
+  for (const route of ["/app/subscription", "/app/profile"]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await settle(".mobile-bottom-nav");
+
+    const menuState = page.locator(".mobile-more-menu");
+    const primaryActiveCount = await page.locator(
+      ".mobile-bottom-nav > .mobile-bottom-link.active"
+    ).count();
+
+    if (!(await menuState.evaluate(element => element.classList.contains("is-current")))) {
+      throw new Error(`Expected Menu to represent secondary route ${route}.`);
+    }
+
+    if (primaryActiveCount !== 0) {
+      throw new Error(
+        `Expected no primary mobile route to be active on ${route}; found ${primaryActiveCount}.`
+      );
+    }
+
+    if ((await page.locator(".mobile-menu-trigger").getAttribute("aria-current")) !== "page") {
+      throw new Error(`Expected Menu to expose aria-current on ${route}.`);
+    }
+  }
+
   await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".mobile-bottom-nav");
 
