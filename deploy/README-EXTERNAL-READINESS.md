@@ -27,7 +27,7 @@ It does not attach application logs, statement data, account data, credentials, 
 
 ## Normal monitoring
 
-`.github/workflows/production-monitor.yml` checks both of these public readiness origins every 15 minutes:
+`.github/workflows/production-monitor.yml` checks both of these public readiness origins when manually dispatched:
 
 - `https://api.billbeacon.net/health/ready`
 - `https://billbeacon.net/health/ready`
