@@ -10,12 +10,16 @@ const password = "BillWatch!Visual123";
 
 await mkdir(outputDir, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  args: ["--ignore-certificate-errors"]
+});
 
 try {
   const context = await browser.newContext({
     baseURL: baseUrl,
     ignoreHTTPSErrors: true,
+    serviceWorkers: "allow",
     viewport: { width: 1440, height: 1100 }
   });
 
