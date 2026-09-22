@@ -130,6 +130,7 @@
                 <NavLink href="/app"
                          Match="NavLinkMatch.All"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -141,6 +142,7 @@
 
                 <NavLink href="/app/bills"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -152,6 +154,7 @@
 
                 <NavLink href="/app/activity"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -163,6 +166,7 @@
 
                 <NavLink href="/app/account"
                          class="mobile-bottom-link"
+                         ActiveClass="@GetMobileNavActiveClass()"
                          @onclick="CloseMobileMenu">
                     <span class="nav-icon" aria-hidden="true">
                         <svg class="bw-sprite">
@@ -473,6 +477,13 @@
         return _mobileMenuOpen
             ? "mobile-more-menu is-open"
             : "mobile-more-menu";
+    }
+
+    private string GetMobileNavActiveClass()
+    {
+        return _mobileMenuOpen
+            ? "mobile-route-active-suppressed"
+            : "active";
     }
 
     private static string GetInitial(
