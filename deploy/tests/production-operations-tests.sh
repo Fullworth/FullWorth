@@ -23,7 +23,7 @@ write_valid_env()
         -e 's/^BILLWATCH_HOST=.*/BILLWATCH_HOST=api.fullworth.test/' \
         -e 's/^BILLWATCH_WEB_HOST=.*/BILLWATCH_WEB_HOST=app.fullworth.test/' \
         -e 's/replace-with-the-deployed-git-commit/0123456789abcdef0123456789abcdef01234567/' \
-        -e 's/owner@example\.com/ops@billwatch.test/' \
+        -e 's/owner@example\.com/ops@fullworth.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
@@ -80,14 +80,14 @@ alert_env="$temp_dir/alert.env"
 write_valid_env "$alert_env"
 sed -i \
     -e 's/^BILLWATCH_OPERATIONS_ALERTING_ENABLED=false/BILLWATCH_OPERATIONS_ALERTING_ENABLED=true/' \
-    -e 's#^BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=.*#BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=https://alerts.billwatch.test/hooks/private-token#' \
+    -e 's#^BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=.*#BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=https://alerts.fullworth.test/hooks/private-token#' \
     "$alert_env"
 "$root_dir/deploy/validate-production-env.sh" "$alert_env" >/dev/null
 
 unsafe_alert_env="$temp_dir/unsafe-alert.env"
 cp "$alert_env" "$unsafe_alert_env"
 sed -i \
-    's#https://alerts.billwatch.test#http://alerts.billwatch.test#' \
+    's#https://alerts.fullworth.test#http://alerts.fullworth.test#' \
     "$unsafe_alert_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$unsafe_alert_env"
 
