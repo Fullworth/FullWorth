@@ -335,6 +335,7 @@ jobs:
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
+          sh deploy/tests/legacy-brand-compatibility-tests.sh
           sh deploy/tests/production-operations-tests.sh
           sh deploy/tests/operations-alert-sender-tests.sh
           sh deploy/tests/backup-trust-boundary-tests.sh
