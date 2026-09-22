@@ -81,7 +81,7 @@ EOF
 chmod +x "$fake_bin/curl"
 
 password_file="$temp_dir/password"
-printf '%s\n' 'BillWatch!SemanticReview123' > "$password_file"
+printf '%s\n' 'FullWorth!SemanticReview123' > "$password_file"
 chmod 600 "$password_file"
 
 run_review()
@@ -90,7 +90,7 @@ run_review()
     BILLWATCH_TEST_CURL_LOG="$curl_log" \
     BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
     BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-    BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+    BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
     BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
     BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Example Electric" \
     BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -108,7 +108,7 @@ run_review()
     BILLWATCH_SEMANTIC_REVIEW_EXPECT_CHANGE_DIFFERENCE="15.45" \
     BILLWATCH_SEMANTIC_REVIEW_EXPECT_CHANGE_DESCRIPTION_CONTAINS="Usage charge increased" \
     BILLWATCH_SEMANTIC_REVIEW_FOREIGN_BILL_STREAM_ID="foreign-stream" \
-    sh "$script" https://billwatch.test
+    sh "$script" https://fullworth.test
 }
 
 : > "$curl_log"
@@ -117,7 +117,7 @@ grep -q '/api/auth/login$' "$curl_log" || fail "semantic review did not authenti
 grep -q '/api/bill-streams/controlled-stream$' "$curl_log" || fail "semantic review did not read the controlled Bill Stream"
 grep -q '/api/bill-streams/foreign-stream$' "$curl_log" || fail "semantic review did not execute the cross-user isolation probe"
 
-if grep -q 'BillWatch!SemanticReview123' "$curl_log"; then
+if grep -q 'FullWorth!SemanticReview123' "$curl_log"; then
     fail "password leaked into curl URL/arguments"
 fi
 
@@ -131,7 +131,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_WRONG_TOTAL=true \
    BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
    BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
    BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Example Electric" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -139,7 +139,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PERIOD_END="2026-07-31" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_TOTAL_AMOUNT="125.45" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CURRENCY="USD" \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "semantic review accepted an incorrect persisted amount"
 fi
 
@@ -148,7 +148,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_LEAK_RAW_TEXT=true \
    BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
    BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
    BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Example Electric" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -156,7 +156,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PERIOD_END="2026-07-31" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_TOTAL_AMOUNT="125.45" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CURRENCY="USD" \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "semantic review accepted a response leaking raw statement text"
 fi
 
@@ -164,7 +164,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
    BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
    BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
    BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Wrong Provider" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -172,7 +172,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PERIOD_END="2026-07-31" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_TOTAL_AMOUNT="125.45" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CURRENCY="USD" \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "semantic review accepted an incorrect provider expectation"
 fi
 
@@ -180,7 +180,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
    BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
    BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
    BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Example Electric" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -197,7 +197,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
    BILLWATCH_SEMANTIC_REVIEW_BILL_STREAM_ID="controlled-stream" \
    BILLWATCH_SEMANTIC_REVIEW_STATEMENT_ID="statement-1" \
-   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@billwatch.local" \
+   BILLWATCH_SEMANTIC_REVIEW_EMAIL="semantic-review@fullworth.local" \
    BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE="$password_file" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PROVIDER="Example Electric" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CATEGORY="Utility" \
@@ -205,7 +205,7 @@ if PATH="$fake_bin:$PATH" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_PERIOD_END="2026-07-31" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_TOTAL_AMOUNT="125.45" \
    BILLWATCH_SEMANTIC_REVIEW_EXPECT_CURRENCY="USD" \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "semantic review accepted weak password-file permissions"
 fi
 chmod 600 "$password_file"

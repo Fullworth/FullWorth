@@ -20,7 +20,7 @@ public static class TestUserAuthentication
         CancellationToken cancellationToken = default)
     {
         email ??=
-            $"security-{Guid.NewGuid():N}@billwatch.local";
+            $"security-{Guid.NewGuid():N}@fullworth.local";
 
         await RegisterAsync(
             client,
@@ -43,7 +43,7 @@ public static class TestUserAuthentication
         ArgumentNullException.ThrowIfNull(factory);
 
         email ??=
-            $"security-{Guid.NewGuid():N}@billwatch.local";
+            $"security-{Guid.NewGuid():N}@fullworth.local";
 
         await RegisterAsync(
             client,

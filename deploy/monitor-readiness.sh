@@ -4,7 +4,7 @@ set -eu
 
 fail()
 {
-    printf '%s\n' "BillWatch readiness monitor failed: $1" >&2
+    printf '%s\n' "FullWorth readiness monitor failed: $1" >&2
     exit 1
 }
 
@@ -84,7 +84,7 @@ do
     then
         normalized=$(tr -d '[:space:]' < "$response_file")
         [ "$normalized" = '{"status":"ready"}' ] || fail "the readiness response was not the expected bounded contract."
-        printf '%s\n' "BillWatch readiness monitor passed for $origin."
+        printf '%s\n' "FullWorth readiness monitor passed for $origin."
         exit 0
     fi
 

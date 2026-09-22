@@ -51,7 +51,7 @@ EOF
 }
 
 generic_payload="$temp_dir/generic-payload.json"
-write_env 'https://alerts.billwatch.test/hooks/private-token'
+write_env 'https://alerts.fullworth.test/hooks/private-token'
 PATH="$fake_bin:$PATH" \
 BILLWATCH_TEST_PAYLOAD_FILE="$generic_payload" \
     sh "$root_dir/deploy/send-operations-alert.sh" "$deployment" readiness-test manual >/dev/null

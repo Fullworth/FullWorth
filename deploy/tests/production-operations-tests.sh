@@ -20,14 +20,14 @@ write_valid_env()
     file=$1
 
     sed \
-        -e 's/^BILLWATCH_HOST=.*/BILLWATCH_HOST=api.billwatch.test/' \
-        -e 's/^BILLWATCH_WEB_HOST=.*/BILLWATCH_WEB_HOST=app.billwatch.test/' \
+        -e 's/^BILLWATCH_HOST=.*/BILLWATCH_HOST=api.fullworth.test/' \
+        -e 's/^BILLWATCH_WEB_HOST=.*/BILLWATCH_WEB_HOST=app.fullworth.test/' \
         -e 's/replace-with-the-deployed-git-commit/0123456789abcdef0123456789abcdef01234567/' \
         -e 's/owner@example\.com/ops@billwatch.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
-        -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.billwatch.test/production#' \
+        -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.fullworth.test/production#' \
         -e 's/replace-with-a-separate-long-random-backup-password/restic-password-with-more-than-24-characters/' \
         -e 's/replace-with-backup-only-access-key/test-backup-access-key/' \
         -e 's/replace-with-backup-only-secret-key/test-backup-secret-key/' \
@@ -103,7 +103,7 @@ expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"
-sed -i 's/app\.billwatch\.test/api.billwatch.test/' "$same_host_env"
+sed -i 's/app\.billwatch\.test/api.fullworth.test/' "$same_host_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$same_host_env"
 
 invalid_plaid_env="$temp_dir/invalid-plaid.env"
@@ -113,10 +113,10 @@ expect_failure "$root_dir/deploy/validate-production-env.sh" "$invalid_plaid_env
 
 local_backup_env="$temp_dir/local-backup.env"
 write_valid_env "$local_backup_env"
-sed -i 's#s3:https://objects.billwatch.test/production#/srv/backups#' "$local_backup_env"
+sed -i 's#s3:https://objects.fullworth.test/production#/srv/backups#' "$local_backup_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$local_backup_env"
 
-expect_failure "$root_dir/deploy/monitor-readiness.sh" 'http://api.billwatch.test'
+expect_failure "$root_dir/deploy/monitor-readiness.sh" 'http://api.fullworth.test'
 expect_failure "$root_dir/deploy/monitor-readiness.sh" 'https://localhost'
 expect_failure "$root_dir/deploy/monitor-readiness.sh" 'https://127.0.0.1'
 
@@ -155,8 +155,8 @@ SCRIPT
 
 chmod 755 "$fake_bin/getent" "$fake_bin/curl" "$fake_bin/sleep"
 
-PATH="$fake_bin:$PATH" "$root_dir/deploy/monitor-readiness.sh" 'https://api.billwatch.test' >/dev/null
-PATH="$fake_bin:$PATH" "$root_dir/deploy/monitor-readiness.sh" 'https://app.billwatch.test' >/dev/null
+PATH="$fake_bin:$PATH" "$root_dir/deploy/monitor-readiness.sh" 'https://api.fullworth.test' >/dev/null
+PATH="$fake_bin:$PATH" "$root_dir/deploy/monitor-readiness.sh" 'https://app.fullworth.test' >/dev/null
 
 curl_count_file="$temp_dir/readiness-curl-count"
 sleep_log="$temp_dir/readiness-sleeps.log"
@@ -164,7 +164,7 @@ PATH="$fake_bin:$PATH" \
     BILLWATCH_TEST_CURL_COUNT_FILE="$curl_count_file" \
     BILLWATCH_TEST_CURL_SUCCEED_ON=4 \
     BILLWATCH_TEST_SLEEP_LOG="$sleep_log" \
-    "$root_dir/deploy/monitor-readiness.sh" 'https://api.billwatch.test' >/dev/null 2>&1
+    "$root_dir/deploy/monitor-readiness.sh" 'https://api.fullworth.test' >/dev/null 2>&1
 
 [ "$(cat "$curl_count_file")" = 4 ] || fail "readiness monitor did not retry until the endpoint recovered."
 [ "$(wc -l < "$sleep_log" | tr -d ' ')" = 3 ] || fail "readiness monitor did not back off between failed attempts."
@@ -265,9 +265,9 @@ grep -q 'config --quiet' "$command_log" || fail "deployment did not validate Com
 grep -q -- '--profile operations build api web backup' "$command_log" || fail "deployment did not build API, web, and backup release images."
 grep -q 'image inspect' "$command_log" || fail "deployment did not verify built image release revisions."
 grep -q 'up --detach --wait --wait-timeout 240 --no-build database api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
-grep -qx 'https://api.billwatch.test' "$readiness_log" || fail "deployment did not verify API readiness."
-grep -qx 'https://app.billwatch.test' "$readiness_log" || fail "deployment did not verify web readiness."
-grep -qx 'https://api.billwatch.test|https://app.billwatch.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
+grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
+grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
+grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
 
 printf '%s\n' "$old_release" > "$deployment_root/.billwatch-release"
 chmod 600 "$deployment_root/.billwatch-release"

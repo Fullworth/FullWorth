@@ -5,8 +5,8 @@ import path from "node:path";
 const baseUrl = process.env.FULLWORTH_VISUAL_BASE_URL ?? "https://web.localhost";
 const runId = process.env.GITHUB_RUN_ID ?? String(Date.now());
 const outputDir = path.resolve("FullWorth.VisualTests", "artifacts");
-const email = `ci-visual-${runId}@billwatch.local`;
-const password = "BillWatch!Visual123";
+const email = `ci-visual-${runId}@fullworth.local`;
+const password = "FullWorth!Visual123";
 
 await mkdir(outputDir, { recursive: true });
 

@@ -435,8 +435,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          email="ci-recovery-${GITHUB_RUN_ID}@billwatch.local"
-          password='BillWatch!CiRecovery123'
+          email="ci-recovery-${GITHUB_RUN_ID}@fullworth.local"
+          password='FullWorth!CiRecovery123'
           curl --fail --silent --show-error --insecure \
             --request POST https://localhost/api/auth/register \
             --header 'Content-Type: application/json' \

@@ -25,7 +25,7 @@ public sealed class IdentityRoleAuthorizationTests
             factory.CreateHttpsClient();
 
         var email =
-            $"owner-role-{Guid.NewGuid():N}@billwatch.local";
+            $"owner-role-{Guid.NewGuid():N}@fullworth.local";
 
         await RegisterAsync(
             client,
@@ -64,7 +64,7 @@ public sealed class IdentityRoleAuthorizationTests
             factory.CreateHttpsClient();
 
         var email =
-            $"owner-refresh-{Guid.NewGuid():N}@billwatch.local";
+            $"owner-refresh-{Guid.NewGuid():N}@fullworth.local";
 
         await RegisterAsync(
             client,

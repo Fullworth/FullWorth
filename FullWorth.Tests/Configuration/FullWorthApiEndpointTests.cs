@@ -9,11 +9,11 @@ public sealed class FullWorthApiEndpointTests
     {
         var result =
             FullWorthApiEndpoint.Parse(
-                "https://api.billwatch.example",
+                "https://api.fullworth.example",
                 allowLocalDevelopmentEndpoint: false);
 
         Assert.Equal(
-            new Uri("https://api.billwatch.example/"),
+            new Uri("https://api.fullworth.example/"),
             result);
     }
 
@@ -62,10 +62,10 @@ public sealed class FullWorthApiEndpointTests
     }
 
     [Theory]
-    [InlineData("https://user:password@api.billwatch.example/")]
-    [InlineData("https://api.billwatch.example/api/")]
-    [InlineData("https://api.billwatch.example/?key=value")]
-    [InlineData("https://api.billwatch.example/#fragment")]
+    [InlineData("https://user:password@api.fullworth.example/")]
+    [InlineData("https://api.fullworth.example/api/")]
+    [InlineData("https://api.fullworth.example/?key=value")]
+    [InlineData("https://api.fullworth.example/#fragment")]
     public void Parse_RejectsAnythingBeyondOrigin(
         string configuredValue)
     {
