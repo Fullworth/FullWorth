@@ -136,7 +136,7 @@ run_smoke \
     BILLWATCH_SMOKE_FOREIGN_STATEMENT_UPLOAD_ID='22222222-2222-2222-2222-222222222222' \
     > "$temp_dir/safe.out"
 
-grep -Fq 'BillWatch private-beta smoke harness passed.' "$temp_dir/safe.out" ||
+grep -Fq 'FullWorth private-beta smoke harness passed.' "$temp_dir/safe.out" ||
     fail "safe smoke path did not complete."
 grep -Fq 'PASS authentication and access-token refresh' "$temp_dir/safe.out" ||
     fail "refresh-token verification did not run."
