@@ -39,6 +39,21 @@ try {
   }
 
   await capture("public-home-desktop", "/", ".landing-page");
+
+  const missingPublicAnchors = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('.desktop-nav a[href*="#"]'))
+      .map(link => link.getAttribute("href"))
+      .filter(Boolean)
+      .map(href => new URL(href, window.location.origin).hash)
+      .filter(hash => hash && !document.querySelector(hash));
+  });
+
+  if (missingPublicAnchors.length > 0) {
+    throw new Error(
+      `Public navigation targets are missing: ${missingPublicAnchors.join(", ")}`
+    );
+  }
+
   await capture("login-desktop", "/login", ".auth-card");
   await capture("register-desktop", "/register", ".auth-card");
 
@@ -99,7 +114,11 @@ try {
     ["bills-mobile-dark", "/app/bills"],
     ["activity-mobile-dark", "/app/activity"],
     ["account-mobile-dark", "/app/account"],
-    ["settings-mobile-dark", "/app/account/settings"]
+    ["transactions-mobile-dark", "/app/account/transactions"],
+    ["settings-mobile-dark", "/app/account/settings"],
+    ["privacy-mobile-dark", "/app/account/privacy"],
+    ["subscription-mobile-dark", "/app/subscription"],
+    ["profile-mobile-dark", "/app/profile"]
   ];
 
   for (const [name, route] of mobileRoutes) {
