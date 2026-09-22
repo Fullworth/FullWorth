@@ -1,5 +1,5 @@
 [Unit]
-Description=Periodically verify the BillWatch production runtime
+Description=Periodically verify the FullWorth production runtime
 
 [Timer]
 OnBootSec=2min

@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -45,4 +45,4 @@ if ! git -C "$deployment_directory" check-ignore -q .env.production; then
     fail ".env.production must be covered by Git ignore rules." 77
 fi
 
-echo "BillWatch production permission verification passed."
+echo "FullWorth production permission verification passed."

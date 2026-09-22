@@ -236,9 +236,9 @@ if [ -n "$evidence_file" ]; then
 fi
 
 if [ "$result" = "complete" ]; then
-    printf 'BillWatch Internal Beta 0 automated acceptance passed for release %s.\n' "$release_sha"
+    printf 'FullWorth Internal Beta 0 automated acceptance passed for release %s.\n' "$release_sha"
     printf '%s\n' 'This proves the automated gates, including release-matched disposable account deletion, Owner/Admin authorization with non-staff denial, controlled statement semantics, and configured subscription lifecycle assertions, only; human Plaid authorization/provider behavior, external alert observation, recovery drills, provider-side backup protection, and legal review remain separate evidence.'
 else
-    printf 'BillWatch Internal Beta 0 partial acceptance passed for release %s.\n' "$release_sha"
+    printf 'FullWorth Internal Beta 0 partial acceptance passed for release %s.\n' "$release_sha"
     printf '%s\n' 'Partial evidence must not be recorded as a completed Internal Beta 0.'
 fi

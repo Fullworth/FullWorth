@@ -30,5 +30,5 @@ sh "$deployment_directory/deploy/check-backup-policy.sh" \
 sh "$deployment_directory/deploy/check-operations-alerting.sh" \
     "$deployment_directory"
 
-echo "BillWatch automated private-beta host prerequisites passed."
+echo "FullWorth automated private-beta host prerequisites passed."
 echo "Browser, Plaid, statement, clean-host restore, actual reboot observation, storage-provider immutability, external monitoring, and external alert-delivery proof remain operator-verification gates."

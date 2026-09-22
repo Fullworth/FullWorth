@@ -33,7 +33,7 @@ cleanup()
 
         compose stop api web edge >/dev/null 2>&1 ||
             printf '%s\n' \
-                "WARNING: BillWatch could not confirm that all unverified public application services stopped. Operator intervention is required immediately." >&2
+                "WARNING: FullWorth could not confirm that all unverified public application services stopped. Operator intervention is required immediately." >&2
     fi
 
     rmdir "$lock_dir" 2>/dev/null || true
@@ -173,7 +173,7 @@ done
 
 if [ "$running_public_count" -eq 3 ]; then
     printf '%s\n' \
-        "Creating a verified encrypted recovery point before replacing the running BillWatch release."
+        "Creating a verified encrypted recovery point before replacing the running FullWorth release."
 
     "$root_dir/deploy/run-backup.sh" \
         "$root_dir"

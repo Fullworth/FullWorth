@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -39,7 +39,7 @@ snapshot_output="$(
 
 if ! printf '%s\n' "$snapshot_output" |
    grep -q 'billwatch-complete'; then
-    fail "No completed BillWatch backup snapshot was found." 69
+    fail "No completed FullWorth backup snapshot was found." 69
 fi
 
 printf '%s\n' "$snapshot_output"

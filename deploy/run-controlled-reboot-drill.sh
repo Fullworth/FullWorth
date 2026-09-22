@@ -101,7 +101,7 @@ verify_host_prerequisites()
         fail "Docker is not active." 69
 
     sh "$deployment_directory/deploy/verify-beta-readiness.sh" "$deployment_directory" ||
-        fail "BillWatch private-beta readiness verification failed." 1
+        fail "FullWorth private-beta readiness verification failed." 1
 }
 
 state_value()
@@ -148,7 +148,7 @@ if [ "$phase" = "preflight" ]; then
     mv "$temporary_state" "$state_file"
     trap - EXIT HUP INT TERM
 
-    printf '%s\n' "BillWatch reboot-drill preflight passed for release $release."
+    printf '%s\n' "FullWorth reboot-drill preflight passed for release $release."
     printf '%s\n' "Perform the controlled host reboot manually. Do not deploy, modify the release marker, or replace the checkout between phases."
     printf '%s\n' "After the host returns, run the postflight phase against the same deployment directory."
     exit 0
@@ -181,5 +181,5 @@ verify_pinned_release "$recorded_release"
 verify_host_prerequisites
 
 rm -f "$state_file"
-printf '%s\n' "BillWatch controlled reboot recovery passed for unchanged release $recorded_release."
+printf '%s\n' "FullWorth controlled reboot recovery passed for unchanged release $recorded_release."
 printf '%s\n' "Docker returned automatically and the complete private-beta host prerequisite gate passed after a distinct host boot."

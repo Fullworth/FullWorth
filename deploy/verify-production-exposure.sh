@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -52,7 +52,7 @@ done
 edge_container_id="$(compose ps -q edge)"
 
 if [ -z "$edge_container_id" ]; then
-    fail "BillWatch edge container is not running." 69
+    fail "FullWorth edge container is not running." 69
 fi
 
 edge_ports="$(
@@ -73,4 +73,4 @@ if ! printf '%s\n' "$edge_ports" | grep -Eq ':(443)->443/udp$'; then
     fail "Caddy is not publishing UDP port 443." 69
 fi
 
-echo "BillWatch production exposure verification passed."
+echo "FullWorth production exposure verification passed."

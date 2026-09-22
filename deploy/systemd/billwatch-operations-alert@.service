@@ -1,5 +1,5 @@
 [Unit]
-Description=Send a BillWatch operations alert for %i
+Description=Send a FullWorth operations alert for %i
 Wants=network-online.target
 After=network-online.target
 ConditionPathExists=/opt/billwatch/.env.production

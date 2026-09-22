@@ -130,7 +130,7 @@ validate_retention_policy()
            [ "$retention_keep_weekly" -lt 8 ] ||
            [ "$retention_keep_monthly" -lt 12 ] ||
            [ "$retention_keep_yearly" -lt 3 ]; then
-            echo "BillWatch backup retention cannot be configured below 14 daily, 8 weekly, 12 monthly, and 3 yearly completed snapshots." >&2
+            echo "FullWorth backup retention cannot be configured below 14 daily, 8 weekly, 12 monthly, and 3 yearly completed snapshots." >&2
             exit 64
         fi
     fi
@@ -157,7 +157,7 @@ apply_retention_policy()
     require_repository
 
     if [ "$retention_enabled" != true ]; then
-        echo "BillWatch backup retention is disabled."
+        echo "FullWorth backup retention is disabled."
         return 0
     fi
 
@@ -172,7 +172,7 @@ apply_retention_policy()
 
     restic check
 
-    echo "BillWatch trusted-host backup retention applied: daily=$retention_keep_daily weekly=$retention_keep_weekly monthly=$retention_keep_monthly yearly=$retention_keep_yearly."
+    echo "FullWorth trusted-host backup retention applied: daily=$retention_keep_daily weekly=$retention_keep_weekly monthly=$retention_keep_monthly yearly=$retention_keep_yearly."
 }
 
 print_retention_policy()
@@ -181,11 +181,11 @@ print_retention_policy()
     validate_client_mode
 
     if [ "$retention_enabled" != true ]; then
-        echo "BillWatch backup retention is disabled." >&2
+        echo "FullWorth backup retention is disabled." >&2
         exit 69
     fi
 
-    echo "BillWatch backup retention is enabled: daily=$retention_keep_daily weekly=$retention_keep_weekly monthly=$retention_keep_monthly yearly=$retention_keep_yearly; production client mode=$client_mode; destructive maintenance is a separate trusted-host operation."
+    echo "FullWorth backup retention is enabled: daily=$retention_keep_daily weekly=$retention_keep_weekly monthly=$retention_keep_monthly yearly=$retention_keep_yearly; production client mode=$client_mode; destructive maintenance is a separate trusted-host operation."
 }
 
 create_backup()
@@ -320,7 +320,7 @@ verify_restore()
     snapshot_id="$(restic snapshots --json --host "$backup_host" --tag "$complete_tag" --latest 1 | jq -r '.[0].id // empty')"
 
     if [ -z "$snapshot_id" ]; then
-        echo "No completed BillWatch backup snapshot exists." >&2
+        echo "No completed FullWorth backup snapshot exists." >&2
         exit 1
     fi
 

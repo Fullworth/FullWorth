@@ -20,4 +20,4 @@ sh "$deployment_directory/deploy/verify-owner-count.sh" \
 sh "$deployment_directory/deploy/verify-subscription-safety.sh" \
     "$deployment_directory"
 
-echo "BillWatch beta admin prerequisites passed."
+echo "FullWorth beta admin prerequisites passed."

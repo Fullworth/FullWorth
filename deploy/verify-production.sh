@@ -34,4 +34,4 @@ sh "$deployment_directory/deploy/monitor-readiness.sh" \
 sh "$deployment_directory/deploy/monitor-readiness.sh" \
     "https://$BILLWATCH_WEB_HOST"
 
-echo "BillWatch production verification passed."
+echo "FullWorth production verification passed."

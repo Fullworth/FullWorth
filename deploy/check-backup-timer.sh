@@ -20,9 +20,9 @@ next_run="$(
 )"
 
 if [ -z "$next_run" ]; then
-    echo "Could not resolve the next BillWatch backup timer run." >&2
+    echo "Could not resolve the next FullWorth backup timer run." >&2
     exit 69
 fi
 
-echo "BillWatch backup timer is enabled and active."
+echo "FullWorth backup timer is enabled and active."
 echo "Next run: $next_run"
