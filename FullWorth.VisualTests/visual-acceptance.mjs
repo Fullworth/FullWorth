@@ -231,6 +231,49 @@ try {
     );
   }
 
+  await page.goto("/app/account/settings", { waitUntil: "domcontentloaded" });
+  await settle(".settings-page");
+
+  await page.getByRole("button", { name: "Change password", exact: true }).click();
+
+  const passwordDialog = page.locator("dialog.settings-dialog");
+  await passwordDialog.waitFor({ state: "visible", timeout: 10000 });
+
+  if ((await passwordDialog.getAttribute("open")) === null) {
+    throw new Error("Expected Change password security dialog to be open.");
+  }
+
+  if ((await passwordDialog.locator("#settings-dialog-title").textContent())?.trim() !== "Change password") {
+    throw new Error("Expected Change password dialog title.");
+  }
+
+  const labelledBy = await passwordDialog.getAttribute("aria-labelledby");
+  const describedBy = await passwordDialog.getAttribute("aria-describedby");
+
+  if (
+    labelledBy !== "settings-dialog-title" ||
+    describedBy !== "settings-dialog-description" ||
+    await passwordDialog.locator("#settings-dialog-title").count() !== 1 ||
+    await passwordDialog.locator("#settings-dialog-description").count() !== 1
+  ) {
+    throw new Error("Security dialog accessibility references are incomplete.");
+  }
+
+  await passwordDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await passwordDialog.waitFor({ state: "detached", timeout: 10000 });
+
+  await page.getByRole("button", { name: "Change email", exact: true }).click();
+
+  const emailDialog = page.locator("dialog.settings-dialog");
+  await emailDialog.waitFor({ state: "visible", timeout: 10000 });
+
+  if ((await emailDialog.locator("#settings-dialog-title").textContent())?.trim() !== "Change email address") {
+    throw new Error("Expected Change email dialog title.");
+  }
+
+  await page.keyboard.press("Escape");
+  await emailDialog.waitFor({ state: "detached", timeout: 10000 });
+
   await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
 
