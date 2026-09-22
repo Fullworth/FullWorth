@@ -4,7 +4,7 @@ FullWorth deliberately separates machine-verifiable acceptance evidence from ext
 
 A trusted private-beta launch requires all three evidence groups for the exact deployed release:
 
-1. Complete same-release private-beta acceptance evidence from `deploy/verify-private-beta-acceptance-evidence.sh`.
+1. Complete same-release private-beta acceptance evidence from `deploy/verify-private-beta-acceptance-evidence.sh`, including required Android installed-device evidence and iOS installed-device evidence when available.
 2. A provider-protection attestation recorded only after provider-enforced immutable/Object-Lock/WORM (or equivalent) backup protection is configured **and recovery from that protected storage path has actually succeeded**.
 3. A qualified legal-review attestation recorded only after the deployed Terms and Privacy documents have been reviewed and approved for trusted private beta.
 
@@ -36,7 +36,7 @@ Changing `FullWorthLegalDocuments.CurrentVersion` automatically makes an older l
 
 ## Verify the trusted-beta launch gate
 
-After the machine acceptance evidence and both external approvals exist:
+After the machine/human acceptance bundle (including installed-device evidence) and both external approvals exist:
 
 ```sh
 BILLWATCH_ACCEPTANCE_EVIDENCE_FILE='/secure/billwatch-evidence/private-beta-acceptance.env' \

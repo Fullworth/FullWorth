@@ -7,6 +7,8 @@ deployment_directory=${1:-}
 technical=${BILLWATCH_TECHNICAL_EVIDENCE_FILE:-}
 alerts=${BILLWATCH_ALERT_PROOF_EVIDENCE_FILE:-}
 plaid=${BILLWATCH_PLAID_OBSERVATION_EVIDENCE_FILE:-}
+android_device=${BILLWATCH_ANDROID_DEVICE_EVIDENCE_FILE:-}
+ios_device=${BILLWATCH_IOS_DEVICE_EVIDENCE_FILE:-}
 output=${BILLWATCH_ACCEPTANCE_EVIDENCE_FILE:-}
 
 fail(){ printf '%s\n' "Private-beta acceptance evidence failed: $1" >&2; exit "${2:-64}"; }
@@ -32,9 +34,23 @@ verify(){
     [ "$(read_value "$file" RELEASE_SHA)" = "$release_sha" ] || fail "$label evidence belongs to another release." 65
     [ "$(read_value "$file" PASSED_PHASES)" = "$phases" ] || fail "$label evidence does not prove the required phases." 65
 }
+verify_device(){
+    file=$1; platform=$2; label=$3
+    phases='installed-pwa-launch,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs'
+    verify "$file" "$phases" "$label"
+    [ "$(read_value "$file" PLATFORM)" = "$platform" ] || fail "$label evidence is for the wrong platform." 65
+}
+
 verify "$technical" 'internal-beta0,clean-host-recovery,controlled-reboot-recovery' 'technical'
 verify "$alerts" 'operations-alert-observed,external-readiness-alert-observed' 'alert observation'
 verify "$plaid" 'plaid-hosted-link-observed,plaid-update-completed,plaid-post-update-sync-active' 'Plaid observation'
+verify_device "$android_device" android 'Android installed-device'
+
+combined_phases='machine-technical,alert-observation,plaid-observation,android-installed-device'
+if [ -n "$ios_device" ]; then
+    verify_device "$ios_device" ios 'iOS installed-device'
+    combined_phases="$combined_phases,ios-installed-device"
+fi
 
 if [ -n "$output" ]; then
     case "$output" in /*) ;; *) fail "acceptance evidence output must be absolute." ;; esac
@@ -46,12 +62,16 @@ if [ -n "$output" ]; then
     {
         printf 'VERSION=1\nRESULT=complete\nRELEASE_SHA=%s\n' "$release_sha"
         printf 'COMPLETED_AT_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-        printf 'PASSED_PHASES=machine-technical,alert-observation,plaid-observation\n'
+        printf 'PASSED_PHASES=%s\n' "$combined_phases"
     } > "$temporary"
     chmod 600 "$temporary"
     ln "$temporary" "$output" || fail "could not publish acceptance evidence without overwrite." 73
     rm -f "$temporary"
     trap - EXIT HUP INT TERM
 fi
+
 printf 'Same-release private-beta acceptance evidence verified for %s.\n' "$release_sha"
+if [ -z "$ios_device" ]; then
+    printf '%s\n' 'iOS installed-device evidence was not supplied; iOS remains a separate where-available acceptance item.'
+fi
 printf '%s\n' 'Provider-enforced immutable backup protection and qualified Terms/Privacy review remain separate launch gates and are not claimed by this evidence.'
