@@ -128,8 +128,30 @@ try {
 
   await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".mobile-bottom-nav");
+
+  const activeRouteBeforeMenu = await page.locator(
+    ".mobile-bottom-nav > .mobile-bottom-link.active"
+  ).count();
+
+  if (activeRouteBeforeMenu !== 1) {
+    throw new Error(
+      `Expected exactly one active mobile route before opening Menu; found ${activeRouteBeforeMenu}.`
+    );
+  }
+
   await page.locator(".mobile-menu-trigger").click();
   await page.locator("#billwatch-mobile-menu").waitFor({ state: "visible", timeout: 10000 });
+
+  const activeRouteWhileMenuOpen = await page.locator(
+    ".mobile-bottom-nav > .mobile-bottom-link.active"
+  ).count();
+
+  if (activeRouteWhileMenuOpen !== 0) {
+    throw new Error(
+      `Expected route highlight to be suppressed while Menu is open; found ${activeRouteWhileMenuOpen} active route item(s).`
+    );
+  }
+
   await page.waitForTimeout(250);
   await page.screenshot({
     path: path.join(outputDir, "mobile-menu-dark.png"),
