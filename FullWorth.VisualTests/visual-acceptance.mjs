@@ -195,11 +195,25 @@ try {
       };
     }
 
-    const registration = await Promise.race([
+    let registration =
+      await navigator.serviceWorker.getRegistration("/");
+
+    if (!registration) {
+      registration =
+        await navigator.serviceWorker.register(
+          "/service-worker.js",
+          {
+            scope: "/",
+            updateViaCache: "none"
+          }
+        );
+    }
+
+    await Promise.race([
       navigator.serviceWorker.ready,
       new Promise((_, reject) =>
         setTimeout(
-          () => reject(new Error("Timed out waiting for service worker readiness.")),
+          () => reject(new Error("Service worker did not become ready after registration.")),
           10000
         )
       )
