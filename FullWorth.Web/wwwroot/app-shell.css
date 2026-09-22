@@ -314,7 +314,8 @@
     }
 
     .mobile-bottom-link.active,
-    .mobile-more-menu.is-open > .mobile-menu-trigger {
+    .mobile-more-menu.is-open > .mobile-menu-trigger,
+    .mobile-more-menu.is-current > .mobile-menu-trigger {
         border-color: rgba(98, 119, 255, 0.28);
         background: linear-gradient(145deg, rgba(62, 86, 225, 0.28), rgba(75, 96, 221, 0.14));
         color: var(--bw-text);
