@@ -225,7 +225,7 @@ public sealed class SensitiveRateLimitTests
             new
             {
                 email =
-                    $"missing-{attempt}@billwatch.local",
+                    $"missing-{attempt}@fullworth.local",
 
                 password =
                     "FullWorth!Invalid123"
