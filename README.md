@@ -88,7 +88,7 @@ The deployment command re-runs the fail-closed configuration preflight, rejects 
 9. Build the MAUI release with the exact deployed origin:
 
 ```powershell
-dotnet build .\FullWorth.csproj --configuration Release -p:FullWorthApiBaseUrl=https://api.billbeacon.net/
+dotnet build .\FullWorth.csproj --configuration Release -p:FullWorthApiBaseUrl=https://api.fullworth.org/
 ```
 
 The API applies EF Core migrations during startup in this single-instance deployment. Do not scale the API above one instance while startup migration is enabled; a multi-instance platform should run migrations as a separate one-time release job.
@@ -168,19 +168,22 @@ Production credentials, `.env.production`, raw statements, extracted statement t
 
 ## External readiness monitoring
 
-The `FullWorth Production Readiness` GitHub Actions workflow is manual-only while FullWorth is pre-revenue, so it does not create recurring runner or production probe cost. Dispatch it deliberately for a beta/release readiness check after setting the repository variable `BILLWATCH_PRODUCTION_URL` to the hostname-only HTTPS origin, for example `https://api.billbeacon.net`.
+The `FullWorth Production Readiness` GitHub Actions workflow is manual-only while FullWorth is pre-revenue. Its target matrix probes both canonical origins: `https://api.fullworth.org` and `https://fullworth.org`. The workflow supplies `BILLWATCH_PRODUCTION_URL` separately for each target; it does not read a repository Actions variable of that name. Select a verified workflow ref containing these canonical targets when dispatching it.
 
 The probe rejects credentials, ports, paths, redirects, local/internal hostnames, and DNS results in private, loopback, or link-local address ranges. It performs three bounded HTTPS attempts and accepts only FullWorth's exact readiness response. No application credential or API key is sent.
 
-After the hostname is configured:
+For a deliberate readiness and alert-delivery check:
 
-1. Set the repository Actions variable `BILLWATCH_PRODUCTION_URL`.
-2. Run `FullWorth Production Readiness` manually and confirm it passes.
-3. Temporarily stop the API or make readiness fail, run the workflow again, and confirm GitHub records a failed run and the operations account receives its configured Actions notification.
-4. Restore the API and confirm the next manual probe passes.
+1. Configure the protected repository secret `BILLWATCH_READINESS_ALERT_WEBHOOK_URL` for the intended alert destination.
+2. Run `FullWorth Production Readiness` manually with `force_failure=false` and confirm both API and Web probes pass.
+3. For an approved alert-delivery drill, run it with `force_failure=true`. After successful probes, the API job intentionally fails and invokes the independent alert sender without stopping production services. Confirm the intended destination actually receives the alert; a failed job alone is not delivery evidence.
+4. Run it again with `force_failure=false` and confirm both probes pass.
 
-The same probe can be run from any separate monitoring host:
+The same probe can be run from any separate monitoring host, once per origin:
 
 ```sh
-BILLWATCH_PRODUCTION_URL=https://api.billbeacon.net sh deploy/monitor-readiness.sh
+BILLWATCH_PRODUCTION_URL=https://api.fullworth.org sh deploy/monitor-readiness.sh
+BILLWATCH_PRODUCTION_URL=https://fullworth.org sh deploy/monitor-readiness.sh
 ```
+
+These canonical URL examples follow the committed FullWorth defaults; they do not establish which release is deployed. Preserve legacy environment-variable names, `/opt/billwatch`, systemd units, protected storage identifiers, and legacy domain aliases until their separate compatibility migrations are verified.

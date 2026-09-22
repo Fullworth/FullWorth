@@ -79,7 +79,7 @@ if [ -z "$email" ]; then
     if [ ! -t 0 ]; then
         fail "BILLWATCH_SEMANTIC_REVIEW_EMAIL is required for non-interactive execution." 64
     fi
-    printf 'BillWatch semantic-review account email: ' >&2
+    printf 'FullWorth semantic-review account email: ' >&2
     IFS= read -r email
 fi
 [ -n "$email" ] || fail "An account email is required." 64
@@ -94,7 +94,7 @@ else
     if [ ! -t 0 ]; then
         fail "BILLWATCH_SEMANTIC_REVIEW_PASSWORD_FILE is required for non-interactive execution." 64
     fi
-    printf 'BillWatch password: ' >&2
+    printf 'FullWorth password: ' >&2
     stty -echo
     trap 'stty echo 2>/dev/null || true' EXIT HUP INT TERM
     IFS= read -r password
@@ -219,4 +219,4 @@ if [ -n "$foreign_bill_stream_id" ]; then
 fi
 
 rm -f "$detail_response"
-printf '%s\n' 'BillWatch controlled statement semantic review passed.'
+printf '%s\n' 'FullWorth controlled statement semantic review passed.'

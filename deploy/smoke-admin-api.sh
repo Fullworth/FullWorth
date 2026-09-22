@@ -111,4 +111,4 @@ nonstaff_code="$(curl --silent --show-error --output /dev/null --write-out '%{ht
     --config "$nonstaff_auth_config" "$api_base_url/api/admin/access-keys?skip=0&take=1")"
 [ "$nonstaff_code" = "403" ] || fail "Non-staff authorization probe failed: expected HTTP 403, received $nonstaff_code." 69
 
-printf '%s\n' 'BillWatch Owner/Admin authorization and non-staff denial smoke test passed.'
+printf '%s\n' 'FullWorth Owner/Admin authorization and non-staff denial smoke test passed.'

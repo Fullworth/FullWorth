@@ -1,6 +1,6 @@
 # Subscription enforcement rollout gate
 
-BillWatch private beta keeps `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED=false` by default. The preflight in this directory is intentionally non-mutating: it proves configuration prerequisites while enforcement is still off. It does not enable billing enforcement, restart services, change Stripe objects, or claim that webhook delivery has been observed in production.
+FullWorth private beta keeps `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED=false` by default. The preflight in this directory is intentionally non-mutating: it proves configuration prerequisites while enforcement is still off. It does not enable billing enforcement, restart services, change Stripe objects, or claim that webhook delivery has been observed in production.
 
 Run it only against the protected production deployment after Stripe products/prices, Customer Portal, webhook delivery, and the intended rollout cohort have been verified:
 
@@ -22,10 +22,10 @@ BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL='unpaid-beta@example.com' \
 BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE='/root/billwatch-subscription-smoke.password' \
 BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_ACTIVE=false \
 BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PAID=false \
-  sh deploy/smoke-subscription-lifecycle.sh https://api.billwatch.example
+  sh deploy/smoke-subscription-lifecycle.sh https://api.fullworth.org
 ```
 
-Run the same read-only proof against a controlled paid tester with `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_ACTIVE=true` and `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PAID=true`. When a known provider state is part of the acceptance case, `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PROVIDER_STATUS` can require the exact state returned by BillWatch.
+Run the same read-only proof against a controlled paid tester with `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_ACTIVE=true` and `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PAID=true`. When a known provider state is part of the acceptance case, `BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PROVIDER_STATUS` can require the exact state returned by FullWorth.
 
 Stripe mutation-bearing probes remain independently disabled. Enable only the exact controlled action being proved:
 
@@ -35,7 +35,7 @@ BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_PORTAL=true
 BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_SYNC=true
 ```
 
-Checkout-session creation requires a redirect on `https://checkout.stripe.com/`; Customer Portal creation requires `https://billing.stripe.com/`. The harness does not follow those redirects. Enabling checkout creates a Stripe Checkout Session but does not complete payment; an operator must complete the controlled purchase in Stripe's hosted UI. Provider sync can then be enabled to verify BillWatch's local entitlement state after the webhook/provider state exists.
+Checkout-session creation requires a redirect on `https://checkout.stripe.com/`; Customer Portal creation requires `https://billing.stripe.com/`. The harness does not follow those redirects. Enabling checkout creates a Stripe Checkout Session but does not complete payment; an operator must complete the controlled purchase in Stripe's hosted UI. Provider sync can then be enabled to verify FullWorth's local entitlement state after the webhook/provider state exists.
 
 For cancellation/expiration proof, perform the controlled change in Stripe, allow the signed webhook to arrive, then rerun the read-only status expectation. Do not treat session creation by itself as proof of payment, webhook delivery, cancellation, expiration, or entitlement enforcement.
 

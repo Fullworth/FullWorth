@@ -11,7 +11,7 @@ fail()
 }
 
 if [ -z "$deployment_directory" ]; then
-    fail "a BillWatch deployment directory is required." 64
+    fail "a FullWorth deployment directory is required." 64
 fi
 
 [ -d "$deployment_directory" ] ||
@@ -108,4 +108,4 @@ if ! git -C "$deployment_directory" check-ignore -q .billwatch-release; then
     fail ".billwatch-release must be covered by Git ignore rules." 77
 fi
 
-printf '%s\n' "BillWatch production release integrity verification passed for $current_release."
+printf '%s\n' "FullWorth production release integrity verification passed for $current_release."

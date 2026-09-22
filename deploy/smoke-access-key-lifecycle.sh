@@ -156,4 +156,4 @@ rm -f "$redeem_payload" "$post_revoke_response" "$create_response"
 [ "$post_revoke_code" = "400" ] || fail "Revoked access key was not rejected; received HTTP $post_revoke_code." 70
 printf '%s\n' 'PASS revoked access key rejected'
 
-printf '%s\n' 'BillWatch access-key lifecycle smoke passed.'
+printf '%s\n' 'FullWorth access-key lifecycle smoke passed.'

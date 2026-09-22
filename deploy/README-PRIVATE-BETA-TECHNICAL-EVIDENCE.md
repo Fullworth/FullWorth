@@ -1,6 +1,6 @@
 # Private-beta technical evidence
 
-BillWatch keeps the highest-impact private-beta proofs separate so one harness cannot silently weaken another. This package adds release-pinned metadata-only proof records for the clean-host recovery and controlled reboot drills, then verifies those records alongside a complete Internal Beta 0 result.
+FullWorth keeps the highest-impact private-beta proofs separate so one harness cannot silently weaken another. This package adds release-pinned metadata-only proof records for the clean-host recovery and controlled reboot drills, then verifies those records alongside a complete Internal Beta 0 result.
 
 ## Recovery proof
 

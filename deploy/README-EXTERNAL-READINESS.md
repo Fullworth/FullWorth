@@ -1,6 +1,6 @@
-# BillWatch external readiness alerting
+# FullWorth external readiness alerting
 
-BillWatch's GitHub-hosted production readiness workflow probes the public API and Web origins from outside the production host. A failed probe must be able to alert through an explicit BillWatch-controlled delivery path rather than relying only on generic GitHub Actions notifications.
+FullWorth's GitHub-hosted production readiness workflow probes the public API and Web origins from outside the production host. A failed probe must be able to alert through an explicit FullWorth-controlled delivery path rather than relying only on generic GitHub Actions notifications.
 
 ## Configure the protected webhook
 
@@ -10,7 +10,7 @@ Requirements:
 
 - The value must be an `https://` URL.
 - Do not commit the URL to the repository, workflow YAML, tickets, screenshots, or logs.
-- Prefer an alert destination that remains reachable when the BillWatch production host is unavailable.
+- Prefer an alert destination that remains reachable when the FullWorth production host is unavailable.
 - The receiving endpoint should accept a small JSON POST body.
 
 The sender emits metadata only:

@@ -26,7 +26,7 @@ public sealed class RegistrationLegalAcceptanceTests
                 new
                 {
                     email =
-                        $"legal-missing-{Guid.NewGuid():N}@billwatch.local",
+                        $"legal-missing-{Guid.NewGuid():N}@fullworth.local",
                     password = Password
                 });
 
@@ -48,7 +48,7 @@ public sealed class RegistrationLegalAcceptanceTests
                 new
                 {
                     email =
-                        $"legal-false-{Guid.NewGuid():N}@billwatch.local",
+                        $"legal-false-{Guid.NewGuid():N}@fullworth.local",
                     password = Password,
                     acceptedTermsAndPrivacy = false,
                     legalTermsVersion =
@@ -73,7 +73,7 @@ public sealed class RegistrationLegalAcceptanceTests
                 new
                 {
                     email =
-                        $"legal-stale-{Guid.NewGuid():N}@billwatch.local",
+                        $"legal-stale-{Guid.NewGuid():N}@fullworth.local",
                     password = Password,
                     acceptedTermsAndPrivacy = true,
                     legalTermsVersion =
@@ -93,7 +93,7 @@ public sealed class RegistrationLegalAcceptanceTests
             factory.CreateHttpsClient();
 
         var email =
-            $"legal-current-{Guid.NewGuid():N}@billwatch.local";
+            $"legal-current-{Guid.NewGuid():N}@fullworth.local";
 
         using var registerResponse =
             await client.PostAsJsonAsync(

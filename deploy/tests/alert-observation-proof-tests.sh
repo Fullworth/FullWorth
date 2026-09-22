@@ -24,7 +24,7 @@ mkdir -p "$deployment/deploy" "$evidence_dir" "$fake_bin"
 printf '%s\n' "$release" > "$deployment/.billwatch-release"
 cat > "$deployment/.env.production" <<'EOF'
 BILLWATCH_OPERATIONS_ALERTING_ENABLED=true
-BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=https://operations.billwatch.test/proof
+BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL=https://operations.fullworth.test/proof
 EOF
 chmod 600 "$deployment/.env.production"
 cp "$script" "$deployment/deploy/run-alert-observation-proof.sh"
@@ -66,7 +66,7 @@ run_proof()
         BILLWATCH_TEST_SEND_LOG="$send_log" \
         BILLWATCH_ALERT_PROOF_PENDING_FILE="$pending" \
         BILLWATCH_ALERT_PROOF_EVIDENCE_FILE="$evidence" \
-        BILLWATCH_READINESS_ALERT_WEBHOOK_URL=https://readiness.billwatch.test/proof \
+        BILLWATCH_READINESS_ALERT_WEBHOOK_URL=https://readiness.fullworth.test/proof \
         "$@" \
         sh "$deployment/deploy/run-alert-observation-proof.sh" "$phase" "$deployment"
 }
@@ -94,7 +94,7 @@ if grep -Eiq 'webhook|challenge|url|token|secret|password' "$evidence"; then fai
 
 rm "$evidence"
 : > "$send_log"
-BILLWATCH_ALERT_PROOF_ALLOW_SEND=true BILLWATCH_READINESS_ALERT_WEBHOOK_URL=https://operations.billwatch.test/proof \
+BILLWATCH_ALERT_PROOF_ALLOW_SEND=true BILLWATCH_READINESS_ALERT_WEBHOOK_URL=https://operations.fullworth.test/proof \
     PATH="$fake_bin:$PATH" BILLWATCH_TEST_HEAD="$release" BILLWATCH_TEST_SEND_LOG="$send_log" \
     BILLWATCH_ALERT_PROOF_PENDING_FILE="$pending" BILLWATCH_ALERT_PROOF_EVIDENCE_FILE="$evidence" \
     sh "$deployment/deploy/run-alert-observation-proof.sh" send "$deployment" >/dev/null 2>&1 && fail "send phase accepted one shared webhook destination."

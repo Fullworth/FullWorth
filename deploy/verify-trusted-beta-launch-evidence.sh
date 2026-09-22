@@ -59,8 +59,14 @@ verify_common()
 }
 
 verify_common "$acceptance" 'private-beta acceptance'
-[ "$(read_value "$acceptance" PASSED_PHASES)" = 'machine-technical,alert-observation,plaid-observation' ] ||
-    fail "private-beta acceptance evidence has unexpected phases."
+acceptance_phases=$(read_value "$acceptance" PASSED_PHASES)
+case "$acceptance_phases" in
+    'machine-technical,alert-observation,plaid-observation,android-installed-device'|'machine-technical,alert-observation,plaid-observation,android-installed-device,ios-installed-device')
+        ;;
+    *)
+        fail "private-beta acceptance evidence has unexpected phases."
+        ;;
+esac
 
 verify_common "$backup" 'backup approval'
 [ "$(read_value "$backup" APPROVAL_TYPE)" = backup ] || fail "backup approval evidence has the wrong approval type."

@@ -62,7 +62,7 @@ done
 [ -n "$body" ] || exit 2
 
 case "$url:$method" in
-    https://api.billwatch.test/api/account/export:GET)
+    https://api.fullworth.test/api/account/export:GET)
         cat > "$headers" <<EOF_HEADERS
 HTTP/2 401
 Strict-Transport-Security: max-age=31536000
@@ -76,7 +76,7 @@ EOF_HEADERS
         : > "$body"
         printf '401'
         ;;
-    https://app.billwatch.test/register:GET)
+    https://app.fullworth.test/register:GET)
         cat > "$headers" <<EOF_HEADERS
 HTTP/2 200
 Strict-Transport-Security: max-age=31536000
@@ -90,7 +90,7 @@ EOF_HEADERS
         [ -z "$cookie_jar" ] || printf '%s\n' '# test cookie jar' > "$cookie_jar"
         printf '200'
         ;;
-    https://app.billwatch.test/auth/logout:POST)
+    https://app.fullworth.test/auth/logout:POST)
         cat > "$headers" <<EOF_HEADERS
 HTTP/2 302
 Cache-Control: no-store, no-cache, max-age=0, must-revalidate
@@ -111,26 +111,26 @@ chmod 755 "$fake_bin/curl"
 
 PATH="$fake_bin:$PATH" \
     sh "$root_dir/deploy/check-http-security-boundaries.sh" \
-    'https://api.billwatch.test' \
-    'https://app.billwatch.test' >/dev/null
+    'https://api.fullworth.test' \
+    'https://app.fullworth.test' >/dev/null
 
 expect_failure env \
     PATH="$fake_bin:$PATH" \
     BILLWATCH_TEST_EXPOSE_SERVER=true \
     sh "$root_dir/deploy/check-http-security-boundaries.sh" \
-    'https://api.billwatch.test' \
-    'https://app.billwatch.test'
+    'https://api.fullworth.test' \
+    'https://app.fullworth.test'
 
 expect_failure sh \
     "$root_dir/deploy/check-http-security-boundaries.sh" \
-    'http://api.billwatch.test' \
-    'https://app.billwatch.test'
+    'http://api.fullworth.test' \
+    'https://app.fullworth.test'
 
 expect_failure env \
     BILLWATCH_HTTP_SECURITY_ALLOW_INSECURE=maybe \
     sh "$root_dir/deploy/check-http-security-boundaries.sh" \
-    'https://api.billwatch.test' \
-    'https://app.billwatch.test'
+    'https://api.fullworth.test' \
+    'https://app.fullworth.test'
 
 grep -F 'check-http-security-boundaries.sh' "$root_dir/deploy/deploy-production.sh" >/dev/null ||
     fail "production deployment does not invoke the HTTP security boundary verifier."

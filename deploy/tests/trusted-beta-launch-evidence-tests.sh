@@ -68,9 +68,21 @@ VERSION=1
 RESULT=complete
 RELEASE_SHA=$release
 COMPLETED_AT_UTC=2026-09-05T00:00:00Z
-PASSED_PHASES=machine-technical,alert-observation,plaid-observation
+PASSED_PHASES=machine-technical,alert-observation,plaid-observation,android-installed-device
 EOF
 chmod 600 "$acceptance"
+
+old_acceptance="$evidence/old-acceptance.env"
+cp "$acceptance" "$old_acceptance"
+sed -i 's/,android-installed-device$//' "$old_acceptance"
+chmod 600 "$old_acceptance"
+if BILLWATCH_ACCEPTANCE_EVIDENCE_FILE="$old_acceptance" \
+    BILLWATCH_BACKUP_APPROVAL_EVIDENCE_FILE="$backup" \
+    BILLWATCH_LEGAL_APPROVAL_EVIDENCE_FILE="$legal" \
+    sh "$verify_script" "$deployment" >/dev/null 2>&1; then
+    printf '%s\n' 'launch verifier accepted pre-device acceptance evidence' >&2
+    exit 1
+fi
 
 BILLWATCH_ACCEPTANCE_EVIDENCE_FILE="$acceptance" \
 BILLWATCH_BACKUP_APPROVAL_EVIDENCE_FILE="$backup" \

@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -40,7 +40,7 @@ owner_count="$(
 )"
 
 if [ "$owner_count" != "1" ]; then
-    fail "Expected exactly one BillWatch Owner, found $owner_count." 77
+    fail "Expected exactly one FullWorth Owner, found $owner_count." 77
 fi
 
-echo "BillWatch Owner verification passed."
+echo "FullWorth Owner verification passed."

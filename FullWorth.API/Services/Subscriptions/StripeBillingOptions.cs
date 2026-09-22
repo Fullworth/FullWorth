@@ -14,7 +14,7 @@ public sealed class StripeBillingOptions
 
     public string YearlyPriceId { get; init; } = string.Empty;
 
-    public string PublicWebBaseUrl { get; init; } = "https://billbeacon.net";
+    public string PublicWebBaseUrl { get; init; } = "https://fullworth.org";
 
     public bool IsConfigured =>
         Enabled &&
@@ -38,7 +38,7 @@ public sealed class StripeBillingOptions
             WebhookSecret = section[nameof(WebhookSecret)]?.Trim() ?? string.Empty,
             MonthlyPriceId = section[nameof(MonthlyPriceId)]?.Trim() ?? string.Empty,
             YearlyPriceId = section[nameof(YearlyPriceId)]?.Trim() ?? string.Empty,
-            PublicWebBaseUrl = (section[nameof(PublicWebBaseUrl)] ?? "https://billbeacon.net").TrimEnd('/')
+            PublicWebBaseUrl = (section[nameof(PublicWebBaseUrl)] ?? "https://fullworth.org").TrimEnd('/')
         };
     }
 }

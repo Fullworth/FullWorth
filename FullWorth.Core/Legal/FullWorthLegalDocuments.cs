@@ -12,8 +12,8 @@ public static class FullWorthLegalDocuments
         "/privacy";
 
     public const string PublicTermsUrl =
-        "https://billbeacon.net/terms";
+        "https://fullworth.org/terms";
 
     public const string PublicPrivacyUrl =
-        "https://billbeacon.net/privacy";
+        "https://fullworth.org/privacy";
 }

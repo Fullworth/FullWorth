@@ -157,7 +157,7 @@ public sealed class BillAlertOwnershipTests
                     "N");
 
         var email =
-            $"{prefix}-{unique}@billwatch.test";
+            $"{prefix}-{unique}@fullworth.test";
 
         var password =
             "FullWorth!Test12345";

@@ -1,5 +1,5 @@
 [Unit]
-Description=Verify the BillWatch production runtime matches the last verified release
+Description=Verify the FullWorth production runtime matches the last verified release
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target

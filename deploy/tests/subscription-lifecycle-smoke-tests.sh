@@ -81,18 +81,18 @@ EOF
 chmod +x "$fake_bin/curl"
 
 password_file="$temp_dir/password"
-printf '%s\n' 'BillWatch!SubscriptionSmoke123' > "$password_file"
+printf '%s\n' 'FullWorth!SubscriptionSmoke123' > "$password_file"
 chmod 600 "$password_file"
 
 run_smoke()
 {
     PATH="$fake_bin:$PATH" \
     BILLWATCH_TEST_CURL_LOG="$curl_log" \
-    BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+    BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
     BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
     BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_ACTIVE=false \
     BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PAID=false \
-    sh "$script" https://billwatch.test
+    sh "$script" https://fullworth.test
 }
 
 : > "$curl_log"
@@ -108,21 +108,21 @@ if grep -Eq '/api/subscription/(checkout|billing-portal|sync)$' "$curl_log"; the
     fail "read-only defaults invoked a mutation-bearing subscription endpoint"
 fi
 
-if grep -q 'BillWatch!SubscriptionSmoke123' "$curl_log"; then
+if grep -q 'FullWorth!SubscriptionSmoke123' "$curl_log"; then
     fail "password leaked into curl URL/arguments"
 fi
 
 : > "$curl_log"
 PATH="$fake_bin:$PATH" \
 BILLWATCH_TEST_CURL_LOG="$curl_log" \
-BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
 BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
 BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_ACTIVE=false \
 BILLWATCH_SUBSCRIPTION_SMOKE_EXPECT_PAID=false \
 BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_CHECKOUT=true \
 BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_PORTAL=true \
 BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_SYNC=true \
-sh "$script" https://billwatch.test >/dev/null ||
+sh "$script" https://fullworth.test >/dev/null ||
     fail "explicitly enabled controlled lifecycle probes failed"
 
 for path in checkout billing-portal sync
@@ -135,25 +135,25 @@ done
 if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
    BILLWATCH_TEST_CHECKOUT_URL="https://evil.example.test/session" \
-   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
    BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
    BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_CHECKOUT=true \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "checkout probe accepted a non-Stripe redirect host"
 fi
 
 if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
-   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
    BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
    BILLWATCH_SUBSCRIPTION_SMOKE_ALLOW_CHECKOUT=yes \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "smoke accepted an invalid checkout opt-in value"
 fi
 
 if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
-   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
    BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
    sh "$script" http://billwatch.test >/dev/null 2>&1; then
     fail "smoke accepted a non-HTTPS API URL"
@@ -162,9 +162,9 @@ fi
 chmod 644 "$password_file"
 if PATH="$fake_bin:$PATH" \
    BILLWATCH_TEST_CURL_LOG="$curl_log" \
-   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@billwatch.local" \
+   BILLWATCH_SUBSCRIPTION_SMOKE_EMAIL="subscription-smoke@fullworth.local" \
    BILLWATCH_SUBSCRIPTION_SMOKE_PASSWORD_FILE="$password_file" \
-   sh "$script" https://billwatch.test >/dev/null 2>&1; then
+   sh "$script" https://fullworth.test >/dev/null 2>&1; then
     fail "smoke accepted weak password-file permissions"
 fi
 chmod 600 "$password_file"

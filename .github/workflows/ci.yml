@@ -335,6 +335,7 @@ jobs:
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
+          sh deploy/tests/legacy-brand-compatibility-tests.sh
           sh deploy/tests/production-operations-tests.sh
           sh deploy/tests/operations-alert-sender-tests.sh
           sh deploy/tests/backup-trust-boundary-tests.sh
@@ -435,8 +436,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          email="ci-recovery-${GITHUB_RUN_ID}@billwatch.local"
-          password='BillWatch!CiRecovery123'
+          email="ci-recovery-${GITHUB_RUN_ID}@fullworth.local"
+          password='FullWorth!CiRecovery123'
           curl --fail --silent --show-error --insecure \
             --request POST https://localhost/api/auth/register \
             --header 'Content-Type: application/json' \

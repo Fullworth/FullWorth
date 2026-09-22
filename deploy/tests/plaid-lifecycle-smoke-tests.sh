@@ -156,7 +156,7 @@ grep -Fq 'PASS Plaid update-mode Hosted Link session boundary' "$temp_dir/safe.o
     fail "update-mode Hosted Link proof did not run."
 grep -Fq 'PASS Plaid update-mode cross-user isolation (404)' "$temp_dir/safe.out" ||
     fail "cross-user update-mode proof did not run."
-grep -Fq 'BillWatch guarded Plaid lifecycle smoke harness passed.' "$temp_dir/safe.out" ||
+grep -Fq 'FullWorth guarded Plaid lifecycle smoke harness passed.' "$temp_dir/safe.out" ||
     fail "safe Plaid lifecycle smoke path did not complete."
 
 if grep -Fq -- '--request DELETE' "$curl_log"; then

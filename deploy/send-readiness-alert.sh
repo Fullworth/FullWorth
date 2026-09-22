@@ -27,17 +27,17 @@ trap cleanup EXIT HUP INT TERM
 
 case "$webhook_url" in
     https://*) ;;
-    *) fail "BillWatch external readiness alert webhook must be an HTTPS URL." 78 ;;
+    *) fail "FullWorth external readiness alert webhook must be an HTTPS URL." 78 ;;
 esac
 
 case "$webhook_url" in
     *[[:space:]]*|*\"*|*\'*|*\`*|*\\*)
-        fail "BillWatch external readiness alert webhook contains unsupported characters." 78
+        fail "FullWorth external readiness alert webhook contains unsupported characters." 78
         ;;
 esac
 
 command -v curl >/dev/null 2>&1 ||
-    fail "curl is required to deliver BillWatch external readiness alerts." 69
+    fail "curl is required to deliver FullWorth external readiness alerts." 69
 
 sanitize_metadata()
 {
@@ -73,7 +73,7 @@ if ! curl \
     --header 'Content-Type: application/json' \
     --data "$payload"
 then
-    fail "BillWatch external readiness alert delivery failed." 69
+    fail "FullWorth external readiness alert delivery failed." 69
 fi
 
-printf '%s\n' "BillWatch external readiness alert delivered for $event_safe/$target_safe."
+printf '%s\n' "FullWorth external readiness alert delivered for $event_safe/$target_safe."

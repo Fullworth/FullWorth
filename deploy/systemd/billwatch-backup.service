@@ -1,5 +1,5 @@
 [Unit]
-Description=Create a consistent encrypted BillWatch production backup
+Description=Create a consistent encrypted FullWorth production backup
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target

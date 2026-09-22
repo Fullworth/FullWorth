@@ -27,9 +27,9 @@ jobs:
       matrix:
         target:
           - name: API
-            url: https://api.billbeacon.net
+            url: https://api.fullworth.org
           - name: Web
-            url: https://billbeacon.net
+            url: https://fullworth.org
 
     steps:
       - name: Check out repository

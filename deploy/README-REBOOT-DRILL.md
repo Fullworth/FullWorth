@@ -1,6 +1,6 @@
-# BillWatch controlled reboot recovery drill
+# FullWorth controlled reboot recovery drill
 
-This drill proves that a production BillWatch host can survive a real VPS reboot without silently changing the deployed release or losing the services required for private-beta operation.
+This drill proves that a production FullWorth host can survive a real VPS reboot without silently changing the deployed release or losing the services required for private-beta operation.
 
 The harness deliberately **does not reboot the host itself**. Rebooting production is an operator-controlled infrastructure action and must never be triggered by CI, a scheduled development run, or an unattended verification script.
 

@@ -27,8 +27,8 @@ is_placeholder()
 [ "${BILLWATCH_SUBSCRIPTION_ROLLOUT_PREFLIGHT:-}" = "true" ] ||
     fail "Set BILLWATCH_SUBSCRIPTION_ROLLOUT_PREFLIGHT=true to run the subscription rollout preflight." 77
 
-[ -n "$deployment_directory" ] || fail "A BillWatch production deployment directory is required." 64
-[ -d "$deployment_directory" ] || fail "The BillWatch production deployment directory does not exist." 64
+[ -n "$deployment_directory" ] || fail "A FullWorth production deployment directory is required." 64
+[ -d "$deployment_directory" ] || fail "The FullWorth production deployment directory does not exist." 64
 
 environment_file="$deployment_directory/.env.production"
 [ -f "$environment_file" ] || fail "The production environment file is missing." 64

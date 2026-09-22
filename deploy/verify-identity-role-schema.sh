@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -51,4 +51,4 @@ do
     fi
 done
 
-echo "BillWatch Identity role schema verification passed."
+echo "FullWorth Identity role schema verification passed."

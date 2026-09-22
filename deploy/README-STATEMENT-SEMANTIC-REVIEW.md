@@ -1,6 +1,6 @@
 # Controlled Statement Semantic Review
 
-Use `deploy/review-statement-semantics.sh` after a controlled statement fixture has already been uploaded and processed. This gate is intentionally read-only: it does not upload, modify, acknowledge, delete, synchronize, or otherwise mutate BillWatch data.
+Use `deploy/review-statement-semantics.sh` after a controlled statement fixture has already been uploaded and processed. This gate is intentionally read-only: it does not upload, modify, acknowledge, delete, synchronize, or otherwise mutate FullWorth data.
 
 Its purpose is to close the gap between “the statement processed” and “the persisted financial facts are actually correct.” The operator supplies expected facts from a known controlled fixture, and the gate verifies the authenticated Bill Stream detail response against those expectations.
 

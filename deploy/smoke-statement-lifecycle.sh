@@ -68,7 +68,7 @@ if [ -z "$email" ]; then
     if [ ! -t 0 ]; then
         fail "BILLWATCH_STATEMENT_SMOKE_EMAIL is required for non-interactive execution." 64
     fi
-    printf 'BillWatch statement-smoke account email: ' >&2
+    printf 'FullWorth statement-smoke account email: ' >&2
     IFS= read -r email
 fi
 [ -n "$email" ] || fail "An account email is required." 64
@@ -83,7 +83,7 @@ else
     if [ ! -t 0 ]; then
         fail "BILLWATCH_STATEMENT_SMOKE_PASSWORD_FILE is required for non-interactive execution." 64
     fi
-    printf 'BillWatch password: ' >&2
+    printf 'FullWorth password: ' >&2
     stty -echo
     trap 'stty echo 2>/dev/null || true' EXIT HUP INT TERM
     IFS= read -r password
@@ -197,4 +197,4 @@ if [ -n "$foreign_bill_stream_id" ] || [ -n "$foreign_upload_id" ]; then
     printf '%s\n' 'PASS cross-user statement status/file isolation (404/404)'
 fi
 
-printf 'BillWatch guarded statement lifecycle smoke harness passed with terminal status %s.\n' "$terminal_status"
+printf 'FullWorth guarded statement lifecycle smoke harness passed with terminal status %s.\n' "$terminal_status"

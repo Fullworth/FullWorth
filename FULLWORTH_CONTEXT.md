@@ -1,6 +1,21 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
+
+## Current migration checkpoint — 2026-09-22
+
+This checkpoint supersedes the older branch/domain summaries below; historical production evidence remains historical.
+
+- Repository: `RealizmModz/FullWorth`; integration branch: `development`.
+- The current functional development baseline is `92346faae2cddbe096ca3286d91a434c323141cf` after PR #219 merged the release-pinned installed-device acceptance evidence harness. PR #219 exact head `fe81a2274c9e2ea7b1ca185e18a0ae7ea3958087` passed FullWorth CI #765: backend build/tests (including the new shell evidence regressions) and Linux production/security/backup/recovery passed; MAUI Android was correctly skipped as unrelated. A later context-only merge may advance the `development` branch SHA without changing runtime behavior.
+- PR #218 merged the refreshed migration checkpoint as `b7ae2d975ece59959f4c239bdb93d33bfd9dc43c` after exact-head CI #763. PR #217 merged the legacy-compatibility guard as `af3501202d8d7f2946bf7469c5887ae4b8b4a24b` after CI #756. PR #216/#215/#214 completed the private-corpus, test/readiness, and operator-visible migration layers after CI #750/#745/#735.
+- The BillWatch → FullWorth cosmetic/operator migration is complete up to the explicit compatibility boundary. CI fails closed if a future change accidentally renames frozen secure-storage, claim/cookie/Data Protection, browser preference, Stripe metadata, external-auth, telemetry, alert/backup, legacy sender/domain, proof-confirmation, deployment-path, private-corpus, or context-pointer identifiers without an explicit compatibility migration.
+- Installed-device acceptance now has a release-pinned metadata-only human-attestation path. Android evidence is required by the same-release private-beta acceptance bundle; iOS evidence is verified and included when supplied. The fixed phase set covers installed PWA launch, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile security dialogs. Plaid Hosted Link return remains independently proven by the existing Plaid observation evidence.
+- The evidence harness does **not** complete the real device gate by itself. Actual installed-device checks still need to be performed on the exact release candidate before their evidence can be recorded. Do not infer Android/iOS acceptance from browser/CI results.
+- PR #210 remains open from `development` to `master` and tracks the moving `development` head. Promotion to `master` requires exact-head CI on the final PR head; installed-device acceptance is a post-promotion, post-guarded-deployment gate because the repository has no separate staging deployment path and the recorder requires the exact deployed release. Do not claim or broaden production/private-beta acceptance until the required Android installed-device evidence exists for that deployed master release. Any CI or evidence tied to an earlier head/release is stale release evidence.
+- Remaining BillWatch names are compatibility boundaries or internal implementation identifiers, not unfinished cosmetic branding. Do not rename `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, systemd unit filenames, Data Protection application/purpose strings, persisted secure-storage/browser keys, claims/cookies, Stripe metadata, alert source IDs, backup tags, proof confirmation phrases, database/configuration identifiers, or the verified legacy email sender without a dedicated compatibility migration.
+- Preserve `security@billbeacon.net` and legacy domain aliases until their separate external-provider/retirement checks are complete. Committed canonical FullWorth URLs and successful CI are not evidence of a production domain cutover or deployment.
+- Production was not accessed during this checkpoint. The last deployment evidence recorded below remains `cbcf261e13636f0330cb9d7be2ce413871e413aa`; newer runtime state must be verified separately.
 
 ## FullWorth brand transition
 
@@ -170,7 +185,7 @@ Important verified slices include:
 - account deletion reauthentication/2FA/staff-role protections, Plaid revoke-first behavior, crash-safe statement quarantine/reconciliation, owned-data erasure, and deployed-release disposable-account deletion proof support;
 - server-side BFF access-token refresh with rotated-token persistence and fail-closed sign-out on refresh failure;
 - objective cross-user Web/BFF ownership smoke using a second controlled identity and real foreign-owned resources;
-- external sign-in support and BillWatch 2FA/recovery-code flows;
+- external sign-in support and FullWorth 2FA/recovery-code flows;
 - Plaid `RequiresAttention` classification/persistence and ownership isolation;
 - PDF/JPG/JPEG/PNG statement signature validation, upload/status/download ownership, terminal-state semantics, OCR coverage, and storage-path secrecy;
 - guarded direct API, authenticated Web/BFF, Owner/Admin, access-key, Plaid, statement lifecycle, statement semantic-review, subscription lifecycle, and account-deletion smoke/proof harnesses;
@@ -251,7 +266,7 @@ Before trusted external beta invitations:
 6. Do **not** repeat the browser screenshot, Chromium offline-boundary, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants it.
 7. The next UI acceptance work is real installed-device / interaction validation: installed Android PWA, iOS home-screen PWA where available, keyboard resize, Android/iOS hardware-back behavior, real-device install/update behavior, Plaid Hosted Link return, and statement file picker. PR #196 provides the controlled waiting-worker Refresh-to-update path and passed full CI, but that is not a substitute for installed-device update acceptance. Browser security-dialog behavior is covered by PR #193; installed-device dialog behavior remains part of the device gate.
 8. If that real-device acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require exact-head CI before merge.
-9. Do not promote the latest `development` state to `master` merely from GitHub browser evidence; complete the remaining real-device gates that materially require installed/browser interaction first.
+9. Promote `development` to `master` only after the exact final promotion head passes the complete CI gate. Real installed-device checks happen only after that verified master release is deployed through the guarded production path, because the evidence recorder pins to `.billwatch-release`; do not treat the Git promotion or deployment itself as installed-device acceptance.
 10. The Web/BFF smoke newline-handling loose end is closed in repository authority by PR #197. The old VPS-only `f9000be` commit is not needed as implementation authority and must not be treated as deployed evidence.
 11. The remaining real-environment private-beta gates in this document still apply; do not manufacture acceptance evidence.
 12. Preserve every security invariant above and every user-owned data ownership boundary.

@@ -34,13 +34,13 @@ printf '%s' "$code"
 EOF
 chmod 700 "$bin/git" "$bin/curl"
 pending="$evidence_dir/plaid.pending"; evidence="$evidence_dir/plaid.state"
-run(){ env PATH="$bin:$PATH" TEST_RELEASE="$release" TEST_CONNECTION="$connection" TEST_SESSION="$session" BILLWATCH_PLAID_OBSERVATION_EMAIL=tester@billwatch.test BILLWATCH_PLAID_OBSERVATION_PASSWORD_FILE="$password" BILLWATCH_PLAID_OBSERVATION_CONNECTION_ID="$connection" BILLWATCH_PLAID_OBSERVATION_PENDING_FILE="$pending" BILLWATCH_PLAID_OBSERVATION_EVIDENCE_FILE="$evidence" "$@" sh "$script" prepare "$deployment" https://api.billwatch.test; }
+run(){ env PATH="$bin:$PATH" TEST_RELEASE="$release" TEST_CONNECTION="$connection" TEST_SESSION="$session" BILLWATCH_PLAID_OBSERVATION_EMAIL=tester@fullworth.test BILLWATCH_PLAID_OBSERVATION_PASSWORD_FILE="$password" BILLWATCH_PLAID_OBSERVATION_CONNECTION_ID="$connection" BILLWATCH_PLAID_OBSERVATION_PENDING_FILE="$pending" BILLWATCH_PLAID_OBSERVATION_EVIDENCE_FILE="$evidence" "$@" sh "$script" prepare "$deployment" https://api.fullworth.test; }
 if run >/dev/null 2>&1; then fail "prepare succeeded without explicit opt-in"; fi
 chmod 644 "$password"; if run BILLWATCH_PLAID_OBSERVATION_ALLOW_PREPARE=true >/dev/null 2>&1; then fail "weak password permissions were accepted"; fi; chmod 600 "$password"
 if run BILLWATCH_PLAID_OBSERVATION_ALLOW_PREPARE=true TEST_HOSTED_URL=https://evil.example/link >/dev/null 2>&1; then fail "non-Plaid Hosted Link URL was accepted"; fi
 run BILLWATCH_PLAID_OBSERVATION_ALLOW_PREPARE=true >/dev/null || fail "valid prepare failed"
 [ "$(stat -c '%a' "$pending")" = 600 ] || fail "pending evidence is not mode 600"
-confirm(){ env PATH="$bin:$PATH" TEST_RELEASE="$release" TEST_CONNECTION="$connection" TEST_SESSION="$session" BILLWATCH_PLAID_OBSERVATION_EMAIL=tester@billwatch.test BILLWATCH_PLAID_OBSERVATION_PASSWORD_FILE="$password" BILLWATCH_PLAID_OBSERVATION_CONNECTION_ID="$connection" BILLWATCH_PLAID_OBSERVATION_PENDING_FILE="$pending" BILLWATCH_PLAID_OBSERVATION_EVIDENCE_FILE="$evidence" "$@" sh "$script" confirm "$deployment" https://api.billwatch.test; }
+confirm(){ env PATH="$bin:$PATH" TEST_RELEASE="$release" TEST_CONNECTION="$connection" TEST_SESSION="$session" BILLWATCH_PLAID_OBSERVATION_EMAIL=tester@fullworth.test BILLWATCH_PLAID_OBSERVATION_PASSWORD_FILE="$password" BILLWATCH_PLAID_OBSERVATION_CONNECTION_ID="$connection" BILLWATCH_PLAID_OBSERVATION_PENDING_FILE="$pending" BILLWATCH_PLAID_OBSERVATION_EVIDENCE_FILE="$evidence" "$@" sh "$script" confirm "$deployment" https://api.fullworth.test; }
 if confirm >/dev/null 2>&1; then fail "confirm succeeded without human confirmation phrase"; fi
 confirm BILLWATCH_PLAID_OBSERVATION_CONFIRMATION='I completed the BillWatch Plaid update flow in Plaid Hosted Link' >/dev/null || fail "valid confirmation failed"
 [ "$(stat -c '%a' "$evidence")" = 600 ] || fail "completed evidence is not mode 600"

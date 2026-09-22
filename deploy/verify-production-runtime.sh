@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/compose.production.yml" ]; then
-    fail "A BillWatch deployment directory is required." 64
+    fail "A FullWorth deployment directory is required." 64
 fi
 
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
@@ -83,7 +83,7 @@ verify_running_revision()
     )"
 
     [ -n "$image_revision" ] ||
-        fail "Production container is missing its BillWatch release revision label: $service" 77
+        fail "Production container is missing its FullWorth release revision label: $service" 77
 
     [ "$image_revision" = "$release_id" ] ||
         fail "Production container revision does not match the deployed release: $service" 77
@@ -100,9 +100,9 @@ backup_revision="$(
 )"
 
 [ -n "$backup_revision" ] ||
-    fail "Production backup image is missing or has no BillWatch release revision label." 77
+    fail "Production backup image is missing or has no FullWorth release revision label." 77
 
 [ "$backup_revision" = "$release_id" ] ||
     fail "Production backup image revision does not match the deployed release." 77
 
-echo "BillWatch production runtime verification passed for $release_id."
+echo "FullWorth production runtime verification passed for $release_id."

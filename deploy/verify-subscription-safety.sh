@@ -12,7 +12,7 @@ fail()
 
 if [ -z "$deployment_directory" ] ||
    [ ! -f "$deployment_directory/.env.production" ]; then
-    fail "A BillWatch production deployment directory is required." 64
+    fail "A FullWorth production deployment directory is required." 64
 fi
 
 environment_file="$deployment_directory/.env.production"
@@ -26,7 +26,7 @@ value="$(
 
 case "$value" in
     ""|false)
-        echo "BillWatch subscription enforcement is safely disabled."
+        echo "FullWorth subscription enforcement is safely disabled."
         ;;
     true)
         fail "Subscription enforcement is enabled. Beta-readiness verification requires it to remain disabled." 77
