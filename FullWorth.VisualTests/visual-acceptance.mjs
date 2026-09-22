@@ -182,6 +182,86 @@ try {
     fullPage: true
   });
 
+  await page.goto("/app", { waitUntil: "domcontentloaded" });
+  await settle(".app-shell");
+
+  const serviceWorkerState = await page.evaluate(async () => {
+    if (!("serviceWorker" in navigator)) {
+      return {
+        supported: false,
+        controlled: false,
+        scriptUrl: null,
+        updateViaCache: null
+      };
+    }
+
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timed out waiting for service worker readiness.")),
+          10000
+        )
+      )
+    ]);
+
+    return {
+      supported: true,
+      controlled: navigator.serviceWorker.controller !== null,
+      scriptUrl: registration.active?.scriptURL ?? null,
+      updateViaCache: registration.updateViaCache ?? null
+    };
+  });
+
+  if (!serviceWorkerState.supported) {
+    throw new Error("Expected Chromium to support service workers.");
+  }
+
+  if (!serviceWorkerState.controlled) {
+    await page.waitForFunction(
+      () => navigator.serviceWorker?.controller !== null,
+      null,
+      { timeout: 10000 }
+    );
+  }
+
+  if (!serviceWorkerState.scriptUrl?.endsWith("/service-worker.js")) {
+    throw new Error(
+      `Expected FullWorth service worker to be active; got ${serviceWorkerState.scriptUrl ?? "none"}.`
+    );
+  }
+
+  if (serviceWorkerState.updateViaCache !== "none") {
+    throw new Error(
+      `Expected service worker updates to bypass the HTTP cache; got ${serviceWorkerState.updateViaCache ?? "unknown"}.`
+    );
+  }
+
+  await context.setOffline(true);
+
+  try {
+    await page.reload({ waitUntil: "domcontentloaded" });
+
+    const offlineHeading = await page.locator("h1").textContent();
+
+    if (offlineHeading?.trim() !== "You're offline") {
+      throw new Error(
+        `Expected generic offline fallback while disconnected; got heading ${JSON.stringify(offlineHeading)}.`
+      );
+    }
+
+    if (await page.locator(".app-shell").count() !== 0) {
+      throw new Error(
+        "Authenticated app shell rendered while offline; financial pages must remain network-first."
+      );
+    }
+  } finally {
+    await context.setOffline(false);
+  }
+
+  await page.goto("/app", { waitUntil: "domcontentloaded" });
+  await settle(".app-shell");
+
   await context.close();
 } finally {
   await browser.close();
