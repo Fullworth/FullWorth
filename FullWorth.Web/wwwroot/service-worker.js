@@ -20,8 +20,6 @@ self.addEventListener(
                             {
                                 cache: "reload"
                             }))));
-
-        self.skipWaiting();
     });
 
 self.addEventListener(
