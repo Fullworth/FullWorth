@@ -4,6 +4,7 @@ set -eu
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 workflow="$root_dir/.github/workflows/android-internal-apk.yml"
+smoke_script="$root_dir/deploy/tests/android-apk-emulator-smoke.sh"
 
 fail()
 {
@@ -12,6 +13,7 @@ fail()
 }
 
 [ -f "$workflow" ] || fail "workflow is missing."
+[ -f "$smoke_script" ] || fail "Android emulator smoke script is missing."
 
 grep -Fq 'name: FullWorth Android Internal APK' "$workflow" ||
     fail "workflow name changed unexpectedly."
@@ -70,5 +72,22 @@ grep -Fq 'Remove ephemeral signing material' "$workflow" ||
 if grep -Eiq '(AndroidSigning(Store|Key)Pass=)[^"]*[A-Za-z0-9]{16,}' "$workflow"; then
     fail "workflow appears to contain a hard-coded signing password."
 fi
+
+grep -Fq 'sdkmanager "platform-tools" "emulator" "$system_image"' "$smoke_script" ||
+    fail "emulator smoke does not install the required Android SDK packages."
+
+sdk_install_line=$(grep -Fn 'sdkmanager "platform-tools" "emulator" "$system_image"' "$smoke_script" | head -n 1 | cut -d: -f1)
+emulator_check_line=$(grep -Fn 'for command_name in adb emulator' "$smoke_script" | head -n 1 | cut -d: -f1)
+
+[ -n "$sdk_install_line" ] ||
+    fail "could not locate Android SDK installation in emulator smoke script."
+[ -n "$emulator_check_line" ] ||
+    fail "could not locate post-install adb/emulator availability check."
+
+[ "$sdk_install_line" -lt "$emulator_check_line" ] ||
+    fail "emulator availability is checked before the Android SDK emulator package is installed."
+
+sh -n "$smoke_script" ||
+    fail "Android emulator smoke script has invalid shell syntax."
 
 printf '%s\n' "Android internal APK workflow regression passed."
