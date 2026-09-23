@@ -7,11 +7,6 @@ package_name=${2:-com.companyname.billwatch}
 avd_name=fullworth-internal-ci
 system_image="system-images;android-35;google_apis;x86_64"
 
-if [ -n "${ANDROID_HOME:-}" ]; then
-    PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
-    export PATH
-fi
-
 fail()
 {
     printf '%s\n' "Android APK emulator smoke failed: $1" >&2
@@ -20,6 +15,11 @@ fail()
 
 [ -n "$artifact_dir" ] || fail "usage: $0 <artifact-directory> [package-name]" 64
 [ -d "$artifact_dir" ] || fail "artifact directory does not exist: $artifact_dir" 66
+[ -n "${ANDROID_HOME:-}" ] || fail "ANDROID_HOME is required on the Android smoke runner." 69
+[ -d "$ANDROID_HOME" ] || fail "ANDROID_HOME does not exist: $ANDROID_HOME" 69
+
+PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+export PATH
 
 case "$package_name" in
     *[!A-Za-z0-9._]*) fail "package name contains unsupported characters." 64 ;;
@@ -39,7 +39,7 @@ digest_path=$(find "$artifact_dir" -maxdepth 1 -type f -name '*.apk.sha256' -pri
     sha256sum -c "$(basename "$digest_path")"
 ) || fail "APK SHA-256 verification failed." 65
 
-for command_name in adb emulator sdkmanager avdmanager
+for command_name in sdkmanager avdmanager
 do
     command -v "$command_name" >/dev/null 2>&1 ||
         fail "$command_name is required on the Android smoke runner." 69
@@ -52,12 +52,30 @@ fi
 yes | sdkmanager --licenses >/dev/null 2>&1 || true
 sdkmanager "platform-tools" "emulator" "$system_image" >/dev/null
 
+for command_name in adb emulator
+do
+    command -v "$command_name" >/dev/null 2>&1 ||
+        fail "$command_name was not available after Android SDK installation." 69
+done
+
 printf '%s\n' no |
-    avdmanager create avd         --force         --name "$avd_name"         --package "$system_image"         --device pixel_6 >/dev/null
+    avdmanager create avd \
+        --force \
+        --name "$avd_name" \
+        --package "$system_image" \
+        --device pixel_6 >/dev/null
 
 emulator_log="${RUNNER_TEMP:-/tmp}/fullworth-android-emulator.log"
 
-emulator     -avd "$avd_name"     -no-window     -no-audio     -no-boot-anim     -no-snapshot     -wipe-data     -gpu swiftshader_indirect     >"$emulator_log" 2>&1 &
+emulator \
+    -avd "$avd_name" \
+    -no-window \
+    -no-audio \
+    -no-boot-anim \
+    -no-snapshot \
+    -wipe-data \
+    -gpu swiftshader_indirect \
+    >"$emulator_log" 2>&1 &
 emulator_pid=$!
 
 cleanup()
@@ -116,7 +134,10 @@ case "$installed_path" in
 esac
 
 adb logcat -c
-adb shell monkey     -p "$package_name"     -c android.intent.category.LAUNCHER     1 >/dev/null ||
+adb shell monkey \
+    -p "$package_name" \
+    -c android.intent.category.LAUNCHER \
+    1 >/dev/null ||
     fail "launcher intent could not start the FullWorth package." 70
 
 sleep 8
@@ -138,4 +159,7 @@ then
     fail "AndroidRuntime reported a fatal FullWorth exception after launch." 70
 fi
 
-printf '%s\n'     "FullWorth Android APK installed and launched successfully in the emulator."     "Package: $package_name"     "Process: $app_pid"
+printf '%s\n' \
+    "FullWorth Android APK installed and launched successfully in the emulator." \
+    "Package: $package_name" \
+    "Process: $app_pid"
