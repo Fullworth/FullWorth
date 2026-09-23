@@ -95,6 +95,13 @@ The API applies EF Core migrations during startup in this single-instance deploy
 
 The API and recovery images are tagged with `BILLWATCH_RELEASE_ID`, and every encrypted backup records that same release. Keep that image and source revision available until the next backup and recovery verification pass so rollback does not depend on rebuilding a floating tag.
 
+## External sign-in provider setup
+
+Google and Apple provider credentials are optional and remain server-side. See
+`EXTERNAL_AUTH_SETUP.md` for the exact FullWorth callback URLs, protected
+environment variables, Apple client-secret rotation requirement, and controlled
+verification sequence.
+
 ## Required production configuration
 
 The application fails closed outside Development unless these settings are present:
