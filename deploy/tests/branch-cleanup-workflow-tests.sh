@@ -32,8 +32,12 @@ grep -Fq 'if [[ "$protected" == "true" ]]' "$workflow" ||
     fail "protected branches are not preserved."
 grep -Fq 'state=open' "$workflow" ||
     fail "open pull requests are not checked."
-grep -Fq 'merged_at != null and .head.sha == $sha' "$workflow" ||
+grep -Fq 'merged_at != null and .head.sha ==' "$workflow" ||
     fail "branch head is not required to match a merged PR head exactly."
+
+if grep -Fq -- '--arg' "$workflow"; then
+    fail "workflow uses jq flags that gh api does not support."
+fi
 grep -Fq 'git/refs/heads/$branch' "$workflow" ||
     fail "workflow does not delete branch refs."
 
