@@ -88,6 +88,7 @@ jobs:
           SSH_PORT: ${{ secrets.FULLWORTH_PRODUCTION_SSH_PORT }}
         run: |
           set -euo pipefail
+          umask 077
 
           if [[ -z "$SSH_HOST" || ! "$SSH_HOST" =~ ^[A-Za-z0-9.-]+$ ]]; then
             echo "FULLWORTH_PRODUCTION_SSH_HOST is missing or invalid." >&2
