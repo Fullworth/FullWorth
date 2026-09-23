@@ -1,0 +1,95 @@
+name: FullWorth Branch Cleanup
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    name: Delete merged source branches
+    if: >-
+      github.event.issue.number == 245 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/cleanup-merged-branches' &&
+      github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Delete only proven merged source branches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          deleted=0
+          skipped=0
+
+          while IFS=$'\t' read -r branch sha protected; do
+            case "$branch" in
+              master|development)
+                continue
+                ;;
+            esac
+
+            if [[ "$protected" == "true" ]]; then
+              echo "Skipping protected branch: $branch"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            open_count="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=open \
+                -f head="$REPOSITORY_OWNER:$branch" \
+                -f per_page=100 \
+                --jq 'length'
+            )"
+
+            if [[ "$open_count" != "0" ]]; then
+              echo "Skipping branch with open PR: $branch"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            merged_match="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=closed \
+                -f head="$REPOSITORY_OWNER:$branch" \
+                -f per_page=100 \
+                --jq --arg sha "$sha" \
+                  '[.[] | select(.merged_at != null and .head.sha == $sha)] | length'
+            )"
+
+            if [[ "$merged_match" == "0" ]]; then
+              echo "Keeping unproven branch: $branch"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            gh api -X DELETE \
+              "repos/$REPOSITORY/git/refs/heads/$branch"
+
+            echo "Deleted merged source branch: $branch"
+            deleted=$((deleted + 1))
+          done < <(
+            gh api --paginate \
+              "repos/$REPOSITORY/branches?per_page=100" \
+              --jq '.[] | [.name, .commit.sha, .protected] | @tsv'
+          )
+
+          {
+            echo "## FullWorth branch cleanup"
+            echo
+            echo "- Deleted merged source branches: $deleted"
+            echo "- Preserved branches not proven safe to delete: $skipped"
+            echo "- Always preserved: master, development, protected branches, and branches with open pull requests"
+          } >> "$GITHUB_STEP_SUMMARY"
