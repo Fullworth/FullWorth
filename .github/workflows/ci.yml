@@ -268,6 +268,7 @@ jobs:
 
           $relevantExactFiles = @(
             ".github/workflows/ci.yml",
+            ".github/workflows/android-internal-apk.yml",
             ".github/workflows/production-deploy.yml",
             ".github/workflows/branch-cleanup.yml",
             ".dockerignore",
@@ -338,6 +339,7 @@ jobs:
         if: steps.container_changes.outputs.required == 'true'
         run: |
           sh deploy/tests/legacy-brand-compatibility-tests.sh
+          sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
           sh deploy/tests/production-deploy-workflow-tests.sh
           sh deploy/tests/production-operations-tests.sh
