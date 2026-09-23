@@ -76,6 +76,9 @@ builder.Services.Configure<RequestLocalizationOptions>(
         options.RequestCultureProviders.Clear();
 
         options.RequestCultureProviders.Add(
+            new CookieRequestCultureProvider());
+
+        options.RequestCultureProviders.Add(
             new CustomRequestCultureProvider(
                 context =>
                 {
