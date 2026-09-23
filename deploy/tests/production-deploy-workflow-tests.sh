@@ -45,6 +45,8 @@ grep -Fq 'FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY' "$workflow" ||
     fail "workflow is missing the protected SSH private-key input."
 grep -Fq 'FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS' "$workflow" ||
     fail "workflow is missing pinned SSH host-key material."
+grep -Fq 'umask 077' "$workflow" ||
+    fail "workflow does not create SSH material under a private umask."
 grep -Fq 'StrictHostKeyChecking yes' "$workflow" ||
     fail "SSH host-key verification is not fail-closed."
 grep -Fq 'PasswordAuthentication no' "$workflow" ||
