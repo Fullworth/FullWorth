@@ -15,8 +15,12 @@
     <header class="settings-header">
         <div>
             <span class="page-kicker">@L["Personal setup"]</span>
-            <h1>@L["Set up FullWorth for you"]</h1>
-            <p>@L["Choose how FullWorth should look, read, and prioritize your financial information. You can change these preferences later."]</p>
+            <h1>@(IsSettingsEdit
+                ? L["Personalize FullWorth"]
+                : L["Set up FullWorth for you"])</h1>
+            <p>@(IsSettingsEdit
+                ? L["Update how FullWorth looks, reads, and prioritizes your financial information."]
+                : L["Choose how FullWorth should look, read, and prioritize your financial information. You can change these preferences later."])</p>
         </div>
     </header>
 
@@ -209,6 +213,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnTo")]
+    public string? ReturnTo { get; set; }
+
     private static readonly FocusOption[] FocusOptions =
     [
         new(
@@ -238,6 +245,13 @@
     ];
 
     private IJSObjectReference? _preferencesModule;
+
+    private bool IsSettingsEdit =>
+        string.Equals(
+            ReturnTo,
+            "settings",
+            StringComparison.OrdinalIgnoreCase);
+
     private int _step = 1;
     private bool _isLoading = true;
     private bool _isSaving;
@@ -400,7 +414,12 @@
                 });
 
             Navigation.NavigateTo(
-                "/app",
+                string.Equals(
+                    ReturnTo,
+                    "settings",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "/app/account/settings"
+                    : "/app",
                 forceLoad: true);
         }
         catch (JSException)
