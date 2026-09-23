@@ -76,7 +76,7 @@ run_record android "$android" \
 [ "$(stat -c '%a' "$android")" = 600 ] || fail "Android evidence is not mode 600."
 grep -Fxq "RELEASE_SHA=$release" "$android" || fail "Android evidence omitted release SHA."
 grep -Fxq 'PLATFORM=android' "$android" || fail "Android evidence omitted platform."
-grep -Fxq 'PASSED_PHASES=installed-pwa-launch,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs' "$android" ||
+grep -Fxq 'PASSED_PHASES=installed-pwa-launch,first-run-setup,display-accessibility-preferences,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs' "$android" ||
     fail "Android evidence omitted required phases."
 if grep -Eiq 'confirmation|password|token|secret|account|screenshot|device[_-]?id' "$android"; then
     fail "Android evidence contains disallowed sensitive/attestation metadata."

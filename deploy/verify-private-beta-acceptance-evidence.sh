@@ -36,7 +36,7 @@ verify(){
 }
 verify_device(){
     file=$1; platform=$2; label=$3
-    phases='installed-pwa-launch,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs'
+    phases='installed-pwa-launch,first-run-setup,display-accessibility-preferences,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs'
     verify "$file" "$phases" "$label"
     [ "$(read_value "$file" PLATFORM)" = "$platform" ] || fail "$label evidence is for the wrong platform." 65
 }

@@ -30,6 +30,8 @@ Installed-device acceptance is a human interaction gate, not a browser-emulation
 For each platform, verify all of the following before recording evidence:
 
 - installed PWA launch;
+- first-run setup: language, theme, text size, contrast, motion, and focus choices save successfully;
+- saved display/accessibility preferences visibly apply in the installed app and remain editable from Settings;
 - keyboard resize behavior on editable fields;
 - Back/navigation behavior;
 - the controlled waiting-worker PWA update flow;
