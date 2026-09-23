@@ -61,6 +61,38 @@ public sealed class ExperienceFocusOrderingTests
     }
 
     [Fact]
+    public void FocusOrdering_NeverRemovesQuickLinks()
+    {
+        var result =
+            ExperienceFocusOrdering.OrderQuickLinks(
+                [
+                    "BillChanges",
+                    "Spending",
+                    "RecurringCosts",
+                    "AccountOverview",
+                    "Statements"
+                ]);
+
+        Assert.Equal(
+            3,
+            result.Distinct(
+                StringComparer.Ordinal)
+                .Count());
+
+        Assert.Contains(
+            "transactions",
+            result);
+
+        Assert.Contains(
+            "accounts",
+            result);
+
+        Assert.Contains(
+            "activity",
+            result);
+    }
+
+    [Fact]
     public void MultipleSelectedAreas_StayDeterministic()
     {
         var result =
