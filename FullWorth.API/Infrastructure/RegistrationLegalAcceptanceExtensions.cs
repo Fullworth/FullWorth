@@ -99,9 +99,12 @@ public static class RegistrationLegalAcceptanceExtensions
         HttpContext context)
     {
         return HttpMethods.IsPost(context.Request.Method) &&
-               context.Request.Path.Equals(
-                   "/api/auth/register",
-                   StringComparison.OrdinalIgnoreCase);
+               (context.Request.Path.Equals(
+                    "/api/auth/register",
+                    StringComparison.OrdinalIgnoreCase) ||
+                context.Request.Path.Equals(
+                    "/api/auth/external/register",
+                    StringComparison.OrdinalIgnoreCase));
     }
 
     private static RegistrationAcceptanceResult ReadAcceptance(

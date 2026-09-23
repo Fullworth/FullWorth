@@ -84,6 +84,68 @@ public sealed class RegistrationLegalAcceptanceTests
     }
 
     [Fact]
+    public async Task ExternalRegistrationWithoutAcceptance_IsRejectedBeforeProviderValidation()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/register",
+                new
+                {
+                    provider =
+                        "google",
+
+                    idToken =
+                        "not-a-real-provider-token",
+
+                    password =
+                        Password
+                });
+
+        await AssertLegalRejectionAsync(
+            response);
+    }
+
+    [Fact]
+    public async Task ExternalRegistrationWithStaleVersion_IsRejectedBeforeProviderValidation()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/register",
+                new
+                {
+                    provider =
+                        "google",
+
+                    idToken =
+                        "not-a-real-provider-token",
+
+                    password =
+                        Password,
+
+                    acceptedTermsAndPrivacy =
+                        true,
+
+                    legalTermsVersion =
+                        "2026-01-01-obsolete"
+                });
+
+        await AssertLegalRejectionAsync(
+            response);
+    }
+
+    [Fact]
     public async Task RegistrationWithCurrentAcceptance_SucceedsAndCanLogin()
     {
         using var factory =
@@ -152,6 +214,36 @@ public sealed class RegistrationLegalAcceptanceTests
             response.StatusCode);
 
         AssertNoStore(response);
+    }
+
+    [Fact]
+    public async Task OversizedExternalRegistrationBody_IsRejectedBeforeProviderValidation()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var oversizedJson =
+            "{\"padding\":\"" +
+            new string('x', 17 * 1024) +
+            "\"}";
+
+        using var response =
+            await client.PostAsync(
+                "/api/auth/external/register",
+                new StringContent(
+                    oversizedJson,
+                    Encoding.UTF8,
+                    "application/json"));
+
+        Assert.Equal(
+            HttpStatusCode.RequestEntityTooLarge,
+            response.StatusCode);
+
+        AssertNoStore(
+            response);
     }
 
     private static async Task AssertLegalRejectionAsync(
