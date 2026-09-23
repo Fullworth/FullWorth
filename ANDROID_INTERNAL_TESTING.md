@@ -27,7 +27,9 @@ Because every internal workflow run has a different signing identity, Android ca
 
 ## Build triggers
 
-The workflow runs automatically when Android/MAUI-relevant source reaches `master`. It can also be launched manually from GitHub Actions after the workflow exists on the default branch.
+The workflow runs automatically for Android/MAUI-relevant pull requests so each candidate can produce an installable artifact before merge. It also runs when relevant source reaches `master`, and it can be launched manually from GitHub Actions after the workflow exists on the default branch.
+
+Pull-request artifacts are test candidates only. A successful PR artifact does not authorize merge, production deployment, store distribution, or real-device acceptance; the normal exact-head FullWorth CI gate still applies.
 
 ## Install test
 
