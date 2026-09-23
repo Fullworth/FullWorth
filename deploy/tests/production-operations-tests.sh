@@ -54,6 +54,26 @@ backup_service="$root_dir/deploy/systemd/billwatch-backup.service"
 [ -f "$backup_service" ] ||
     fail "production backup systemd service is missing."
 
+grep -Fq \
+    'ExternalIdentity__Google__Audience: ${FULLWORTH_GOOGLE_CLIENT_ID:-}' \
+    "$root_dir/compose.production.yml" ||
+    fail "production API is not wired to the Google external identity audience."
+
+grep -Fq \
+    'ExternalIdentity__Apple__Audience: ${FULLWORTH_APPLE_CLIENT_ID:-}' \
+    "$root_dir/compose.production.yml" ||
+    fail "production API is not wired to the Apple external identity audience."
+
+grep -Fq \
+    'ExternalIdentity__Google__ClientSecret: ${FULLWORTH_GOOGLE_CLIENT_SECRET:-}' \
+    "$root_dir/compose.production.yml" ||
+    fail "production Web is not wired to the Google external identity secret."
+
+grep -Fq \
+    'ExternalIdentity__Apple__ClientSecret: ${FULLWORTH_APPLE_CLIENT_SECRET:-}' \
+    "$root_dir/compose.production.yml" ||
+    fail "production Web is not wired to the Apple external identity secret."
+
 grep -qx \
     'User=deploy' \
     "$backup_service" ||
@@ -110,6 +130,36 @@ invalid_plaid_env="$temp_dir/invalid-plaid.env"
 write_valid_env "$invalid_plaid_env"
 sed -i 's/PLAID_ENVIRONMENT=sandbox/PLAID_ENVIRONMENT=development/' "$invalid_plaid_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$invalid_plaid_env"
+
+google_auth_env="$temp_dir/google-auth.env"
+write_valid_env "$google_auth_env"
+sed -i \
+    -e 's/^FULLWORTH_GOOGLE_CLIENT_ID=$/FULLWORTH_GOOGLE_CLIENT_ID=fullworth-google-client/' \
+    -e 's/^FULLWORTH_GOOGLE_CLIENT_SECRET=$/FULLWORTH_GOOGLE_CLIENT_SECRET=google-secret-value/' \
+    "$google_auth_env"
+"$root_dir/deploy/validate-production-env.sh" "$google_auth_env" >/dev/null
+
+partial_google_auth_env="$temp_dir/partial-google-auth.env"
+cp "$google_auth_env" "$partial_google_auth_env"
+sed -i \
+    's/^FULLWORTH_GOOGLE_CLIENT_SECRET=.*/FULLWORTH_GOOGLE_CLIENT_SECRET=/' \
+    "$partial_google_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$partial_google_auth_env"
+
+apple_auth_env="$temp_dir/apple-auth.env"
+write_valid_env "$apple_auth_env"
+sed -i \
+    -e 's/^FULLWORTH_APPLE_CLIENT_ID=$/FULLWORTH_APPLE_CLIENT_ID=org.fullworth.web/' \
+    -e 's/^FULLWORTH_APPLE_CLIENT_SECRET=$/FULLWORTH_APPLE_CLIENT_SECRET=header.payload.signature/' \
+    "$apple_auth_env"
+"$root_dir/deploy/validate-production-env.sh" "$apple_auth_env" >/dev/null
+
+partial_apple_auth_env="$temp_dir/partial-apple-auth.env"
+cp "$apple_auth_env" "$partial_apple_auth_env"
+sed -i \
+    's/^FULLWORTH_APPLE_CLIENT_ID=.*/FULLWORTH_APPLE_CLIENT_ID=/' \
+    "$partial_apple_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$partial_apple_auth_env"
 
 local_backup_env="$temp_dir/local-backup.env"
 write_valid_env "$local_backup_env"
