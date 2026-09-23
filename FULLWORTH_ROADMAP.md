@@ -205,7 +205,7 @@ This section is a point-in-time snapshot and should be updated periodically.
 As of 2026-09-22:
 
 - `master` baseline: `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
-- `development`: `e6dd9e063d33d3699bc5663d4e44a675548b0020`
+- `development`: `b7cfab3e7b2e5937d50010fd3825c79763c747f7`
 - Production is operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
 - Development includes the adaptive device-execution work, canonical FullWorth URL cleanup, Google/Apple production-auth configuration plumbing, public-site readability improvements, and the persistent first-run experience-preference foundation.
 - ~~The first-run setup wizard passed exact-head CI #787 and merged through PR #229. New email/password registrations now enter the persisted personalization flow before the main app.~~
@@ -247,6 +247,10 @@ Purpose:
 
 ~~Exact-head CI passed and PR #155 merged without removing the transitional MAUI project.~~
 
+### External provider production acceptance
+
+Google/Apple account creation code is merged, but provider acceptance remains open until real provider credentials are configured outside GitHub and each provider completes the controlled production verification sequence in `EXTERNAL_AUTH_SETUP.md`. Do not strike provider acceptance until live callback, registration, sign-in, linking, and account-isolation behavior are proven.
+
 ## 4.3 Recently completed development work
 
 Recent merged development work includes:
@@ -256,6 +260,9 @@ Recent merged development work includes:
 - ~~mobile logout restoration;~~
 - ~~public-site readability/contrast improvements;~~
 - ~~Google and Apple production external-auth configuration plumbing;~~
+- ~~secure Google/Apple provider-backed account registration API and Web flow;~~
+- ~~external registration legal/body-limit hardening;~~
+- ~~non-secret Google/Apple provider setup and verification guide;~~
 - ~~persistent first-run experience preference storage/API foundation;~~
 - ~~first-run personalization wizard with language, theme, readability, motion, and financial-focus choices;~~
 - recurring merchant-normalization improvements;
