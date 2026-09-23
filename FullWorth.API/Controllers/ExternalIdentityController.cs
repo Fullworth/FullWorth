@@ -164,6 +164,13 @@ public sealed class ExternalIdentityController : ControllerBase
                 "Accept the current FullWorth Terms and Privacy Notice to create an account.");
         }
 
+        if (string.IsNullOrWhiteSpace(
+                request.Password))
+        {
+            return ValidationProblem(
+                "Create a password.");
+        }
+
         var externalIdentity =
             await ValidateIdentityAsync(
                 request.Provider,
@@ -207,7 +214,10 @@ public sealed class ExternalIdentityController : ControllerBase
                     email,
 
                 EmailConfirmed =
-                    true
+                    true,
+
+                LastLoginAtUtc =
+                    DateTimeOffset.UtcNow
             };
 
         var createResult =
@@ -247,25 +257,6 @@ public sealed class ExternalIdentityController : ControllerBase
 
             return IdentityValidationProblem(
                 addLoginResult);
-        }
-
-        user.LastLoginAtUtc =
-            DateTimeOffset.UtcNow;
-
-        var updateResult =
-            await _userManager.UpdateAsync(
-                user);
-
-        if (!updateResult.Succeeded)
-        {
-            await _userManager.DeleteAsync(
-                user);
-
-            return Problem(
-                statusCode:
-                    StatusCodes.Status503ServiceUnavailable,
-                title:
-                    "FullWorth could not safely finish external account creation.");
         }
 
         _signInManager.AuthenticationScheme =
