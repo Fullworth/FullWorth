@@ -1,5 +1,6 @@
 using FullWorth.API.Authorization;
 using FullWorth.API.Data.Entities;
+using FullWorth.Core.Legal;
 using FullWorth.API.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -29,13 +30,11 @@ public sealed class ExternalIdentityController : ControllerBase
     public ExternalIdentityController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IExternalIdentityTokenValidator tokenValidator)
     {
         ArgumentNullException.ThrowIfNull(userManager);
         ArgumentNullException.ThrowIfNull(signInManager);
-        ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(httpClientFactory);
+        ArgumentNullException.ThrowIfNull(tokenValidator);
 
         _userManager =
             userManager;
@@ -44,9 +43,7 @@ public sealed class ExternalIdentityController : ControllerBase
             signInManager;
 
         _tokenValidator =
-            new ExternalIdentityTokenValidator(
-                configuration,
-                httpClientFactory);
+            tokenValidator;
 
         _secondFactorVerifier =
             new ExternalIdentitySecondFactorVerifier(
@@ -140,6 +137,137 @@ public sealed class ExternalIdentityController : ControllerBase
          * the same access/refresh-token response format used by the normal
          * Identity API login endpoint.
          */
+        _signInManager.AuthenticationScheme =
+            IdentityConstants.BearerScheme;
+
+        await _signInManager.SignInAsync(
+            user,
+            isPersistent:
+                false);
+
+        return new EmptyResult();
+    }
+
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Register(
+        [FromBody] ExternalIdentityRegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.AcceptedTermsAndPrivacy ||
+            !string.Equals(
+                request.LegalTermsVersion,
+                FullWorthLegalDocuments.CurrentVersion,
+                StringComparison.Ordinal))
+        {
+            return ValidationProblem(
+                "Accept the current FullWorth Terms and Privacy Notice to create an account.");
+        }
+
+        var externalIdentity =
+            await ValidateIdentityAsync(
+                request.Provider,
+                request.IdToken,
+                cancellationToken);
+
+        if (externalIdentity is null ||
+            !externalIdentity.EmailVerified ||
+            string.IsNullOrWhiteSpace(
+                externalIdentity.Email))
+        {
+            return Unauthorized();
+        }
+
+        var email =
+            externalIdentity.Email.Trim();
+
+        var existingLogin =
+            await _userManager.FindByLoginAsync(
+                externalIdentity.Provider,
+                externalIdentity.Subject);
+
+        var existingEmailOwner =
+            await _userManager.FindByEmailAsync(
+                email);
+
+        if (existingLogin is not null ||
+            existingEmailOwner is not null)
+        {
+            return ValidationProblem(
+                "A FullWorth account already exists for this identity. Sign in and link the provider from Settings.");
+        }
+
+        var user =
+            new ApplicationUser
+            {
+                UserName =
+                    email,
+
+                Email =
+                    email,
+
+                EmailConfirmed =
+                    true
+            };
+
+        var createResult =
+            await _userManager.CreateAsync(
+                user,
+                request.Password);
+
+        if (!createResult.Succeeded)
+        {
+            return IdentityValidationProblem(
+                createResult);
+        }
+
+        var addLoginResult =
+            await _userManager.AddLoginAsync(
+                user,
+                new UserLoginInfo(
+                    externalIdentity.Provider,
+                    externalIdentity.Subject,
+                    GetProviderDisplayName(
+                        externalIdentity.Provider)));
+
+        if (!addLoginResult.Succeeded)
+        {
+            var rollbackResult =
+                await _userManager.DeleteAsync(
+                    user);
+
+            if (!rollbackResult.Succeeded)
+            {
+                return Problem(
+                    statusCode:
+                        StatusCodes.Status503ServiceUnavailable,
+                    title:
+                        "FullWorth could not safely finish external account creation.");
+            }
+
+            return IdentityValidationProblem(
+                addLoginResult);
+        }
+
+        user.LastLoginAtUtc =
+            DateTimeOffset.UtcNow;
+
+        var updateResult =
+            await _userManager.UpdateAsync(
+                user);
+
+        if (!updateResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(
+                user);
+
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not safely finish external account creation.");
+        }
+
         _signInManager.AuthenticationScheme =
             IdentityConstants.BearerScheme;
 
@@ -440,6 +568,32 @@ public sealed class ExternalIdentityController : ControllerBase
         };
     }
 
+    private ObjectResult IdentityValidationProblem(
+        IdentityResult result)
+    {
+        var errors =
+            result.Errors
+                .GroupBy(
+                    error => error.Code,
+                    StringComparer.Ordinal)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .Select(
+                            error =>
+                                error.Description)
+                        .ToArray(),
+                    StringComparer.Ordinal);
+
+        return new ObjectResult(
+            new ValidationProblemDetails(
+                errors))
+        {
+            StatusCode =
+                StatusCodes.Status400BadRequest
+        };
+    }
+
     private static string GetProviderDisplayName(
         string provider)
     {
@@ -465,6 +619,13 @@ public sealed record ExternalIdentityLoginRequest(
     string IdToken,
     string? TwoFactorCode,
     string? TwoFactorRecoveryCode);
+
+public sealed record ExternalIdentityRegisterRequest(
+    string Provider,
+    string IdToken,
+    string Password,
+    bool AcceptedTermsAndPrivacy,
+    string LegalTermsVersion);
 
 public sealed record ExternalIdentityLinkRequest(
     string Provider,
