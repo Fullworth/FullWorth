@@ -13,6 +13,7 @@ on:
       - "*.cs"
       - ".github/workflows/android-internal-apk.yml"
       - "deploy/tests/android-internal-apk-workflow-tests.sh"
+      - "deploy/tests/android-apk-emulator-smoke.sh"
       - "ANDROID_INTERNAL_TESTING.md"
   push:
     branches:
@@ -26,6 +27,9 @@ on:
       - "*.xaml.cs"
       - "*.cs"
       - ".github/workflows/android-internal-apk.yml"
+      - "deploy/tests/android-internal-apk-workflow-tests.sh"
+      - "deploy/tests/android-apk-emulator-smoke.sh"
+      - "ANDROID_INTERNAL_TESTING.md"
 
 concurrency:
   group: fullworth-android-internal-${{ github.ref }}
@@ -35,8 +39,23 @@ permissions:
   contents: read
 
 jobs:
+  contract:
+    name: Validate Android packaging contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate packaging workflow contract
+        run: |
+          sh deploy/tests/android-internal-apk-workflow-tests.sh
+          sh -n deploy/tests/android-apk-emulator-smoke.sh
+
   build:
     name: Build installable internal APK
+    needs: contract
     runs-on: windows-latest
     timeout-minutes: 30
 
@@ -131,3 +150,33 @@ jobs:
           if ($env:FULLWORTH_INTERNAL_KEYSTORE -and (Test-Path -LiteralPath $env:FULLWORTH_INTERNAL_KEYSTORE)) {
             Remove-Item -Force -LiteralPath $env:FULLWORTH_INTERNAL_KEYSTORE
           }
+
+  smoke:
+    name: Install and launch APK in Android emulator
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Download signed internal-test APK
+        uses: actions/download-artifact@v5
+        with:
+          name: fullworth-android-internal-${{ github.sha }}
+          path: ${{ runner.temp }}/fullworth-android-internal
+
+      - name: Verify Android runner prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          test -d "$ANDROID_HOME"
+
+      - name: Install and launch FullWorth
+        shell: bash
+        run: >-
+          sh deploy/tests/android-apk-emulator-smoke.sh
+          "${{ runner.temp }}/fullworth-android-internal"
+          com.companyname.billwatch
