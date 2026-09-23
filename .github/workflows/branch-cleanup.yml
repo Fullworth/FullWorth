@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   cleanup:
-    name: Delete merged source branches
+    name: Delete proven stale branches
     if: >-
       github.event.issue.number == 245 &&
       github.event.issue.pull_request == null &&
@@ -21,12 +21,12 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Delete only proven merged source branches
+      - name: Delete only proven stale branches
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GH_TOKEN: \${{ github.token }}
+          REPOSITORY: \${{ github.repository }}
+          REPOSITORY_OWNER: \${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
@@ -91,14 +91,7 @@ jobs:
           # superseded/stale rather than exact heads of merged PRs. Every
           # deletion is pinned to the reviewed SHA and still fails closed if
           # an open PR exists or the branch moved after review.
-          while IFS=            echo
-            echo "- Deleted merged source branches: $deleted"
-            echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
-            echo "- Preserved merged-branch candidates: $skipped"
-            echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
-            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
-          } >> "$GITHUB_STEP_SUMMARY"
-\t' read -r branch expected_sha; do
+          while IFS=$'\t' read -r branch expected_sha; do
             current_row="$(
               gh api --paginate \
                 "repos/$REPOSITORY/branches?per_page=100" \
@@ -111,12 +104,7 @@ jobs:
               continue
             fi
 
-            IFS=            echo
-            echo "- Deleted merged source branches: $deleted"
-            echo "- Preserved branches not proven safe to delete: $skipped"
-            echo "- Always preserved: master, development, protected branches, and branches with open pull requests"
-          } >> "$GITHUB_STEP_SUMMARY"
-\t' read -r current_sha protected <<< "$current_row"
+            IFS=$'\t' read -r current_sha protected <<< "$current_row"
 
             if [[ "$current_sha" != "$expected_sha" ]]; then
               echo "Keeping reviewed stale branch that moved after review: $branch"
@@ -166,6 +154,8 @@ jobs:
             echo "## FullWorth branch cleanup"
             echo
             echo "- Deleted merged source branches: $deleted"
-            echo "- Preserved branches not proven safe to delete: $skipped"
-            echo "- Always preserved: master, development, protected branches, and branches with open pull requests"
+            echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
+            echo "- Preserved merged-branch candidates: $skipped"
+            echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
+            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
           } >> "$GITHUB_STEP_SUMMARY"
