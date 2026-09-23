@@ -1,0 +1,121 @@
+name: FullWorth Android Internal APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "FullWorth.csproj"
+      - "FullWorth.Core/**"
+      - "Platforms/Android/**"
+      - "Resources/**"
+      - "*.xaml"
+      - "*.xaml.cs"
+      - "*.cs"
+      - ".github/workflows/android-internal-apk.yml"
+
+concurrency:
+  group: fullworth-android-internal-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build installable internal APK
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-android-internal-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-android-internal-
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android --skip-manifest-update
+
+      - name: Restore Android dependencies
+        run: dotnet restore FullWorth.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+
+      - name: Create ephemeral internal-test signing identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $password = [Guid]::NewGuid().ToString("N") + [Guid]::NewGuid().ToString("N")
+          Write-Output "::add-mask::$password"
+          $keystore = Join-Path $env:RUNNER_TEMP "fullworth-internal.keystore"
+          keytool -genkeypair -noprompt -keystore $keystore -storepass $password -keypass $password -alias fullworth-internal -keyalg RSA -keysize 2048 -validity 30 -dname "CN=FullWorth Internal Test, OU=Engineering, O=FullWorth, L=Internal, ST=Internal, C=US"
+          "FULLWORTH_INTERNAL_KEYSTORE=$keystore" >> $env:GITHUB_ENV
+          "FULLWORTH_INTERNAL_SIGNING_PASSWORD=$password" >> $env:GITHUB_ENV
+
+      - name: Publish signed internal APK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          dotnet publish FullWorth.csproj --framework net10.0-android --configuration Release --no-restore -p:FullWorthApiBaseUrl=https://api.fullworth.org/ -p:AndroidPackageFormats=apk -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$env:FULLWORTH_INTERNAL_KEYSTORE" -p:AndroidSigningKeyAlias=fullworth-internal -p:AndroidSigningKeyPass="env:FULLWORTH_INTERNAL_SIGNING_PASSWORD" -p:AndroidSigningStorePass="env:FULLWORTH_INTERNAL_SIGNING_PASSWORD"
+
+      - name: Collect installable APK
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE "bin\Release\net10.0-android\publish"
+          $signed = @(Get-ChildItem -Path $publishDir -Filter "*-Signed.apk" -File -ErrorAction SilentlyContinue)
+          if ($signed.Count -ne 1) {
+            Write-Error "Expected exactly one signed APK in $publishDir but found $($signed.Count)."
+          }
+          $artifactDir = Join-Path $env:RUNNER_TEMP "fullworth-android-internal"
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+          $artifactName = "FullWorth-Android-Internal-${{ github.sha }}.apk"
+          $artifactPath = Join-Path $artifactDir $artifactName
+          Copy-Item -LiteralPath $signed[0].FullName -Destination $artifactPath
+          $sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifactPath).Hash.ToLowerInvariant()
+          "$sha256  $artifactName" | Set-Content -Encoding ascii (Join-Path $artifactDir "$artifactName.sha256")
+          "artifact_dir=$artifactDir" >> $env:GITHUB_OUTPUT
+          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          "sha256=$sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Upload internal-test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fullworth-android-internal-${{ github.sha }}
+          path: ${{ steps.package.outputs.artifact_dir }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Record build summary
+        shell: pwsh
+        run: |
+          "## FullWorth Android internal-test build" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+          "- Commit: ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
+          "- API: https://api.fullworth.org/" >> $env:GITHUB_STEP_SUMMARY
+          "- Package: ${{ steps.package.outputs.artifact_name }}" >> $env:GITHUB_STEP_SUMMARY
+          "- SHA-256: ${{ steps.package.outputs.sha256 }}" >> $env:GITHUB_STEP_SUMMARY
+          "- Signing: ephemeral internal-test certificate generated for this workflow run" >> $env:GITHUB_STEP_SUMMARY
+          "- Retention: 14 days" >> $env:GITHUB_STEP_SUMMARY
+          "" >> $env:GITHUB_STEP_SUMMARY
+          "This APK is for sideload testing only. It is not production/Play-Store signed. Because each workflow run uses a new signing identity, uninstall an older internal-test APK before installing a newer one if Android reports a signature mismatch." >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Remove ephemeral signing material
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:FULLWORTH_INTERNAL_KEYSTORE -and (Test-Path -LiteralPath $env:FULLWORTH_INTERNAL_KEYSTORE)) {
+            Remove-Item -Force -LiteralPath $env:FULLWORTH_INTERNAL_KEYSTORE
+          }
