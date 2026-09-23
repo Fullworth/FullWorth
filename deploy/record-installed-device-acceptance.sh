@@ -64,7 +64,7 @@ head_sha=$(git -C "$deployment_directory" rev-parse HEAD)
 [ -z "$(git -C "$deployment_directory" status --porcelain --untracked-files=no)" ] ||
     fail "deployment checkout has tracked modifications." 65
 
-phases='installed-pwa-launch,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs'
+phases='installed-pwa-launch,first-run-setup,display-accessibility-preferences,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs'
 
 temporary=$(mktemp "${evidence_file}.tmp.XXXXXX")
 trap 'rm -f "${temporary:-}"' EXIT HUP INT TERM
