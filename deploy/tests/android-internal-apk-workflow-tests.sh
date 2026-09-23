@@ -17,6 +17,10 @@ grep -Fq 'name: FullWorth Android Internal APK' "$workflow" ||
     fail "workflow name changed unexpectedly."
 grep -Fq 'workflow_dispatch:' "$workflow" ||
     fail "manual internal-test build entry point is missing."
+grep -Fq 'pull_request:' "$workflow" ||
+    fail "pull-request internal-test build trigger is missing."
+grep -Fq 'deploy/tests/android-internal-apk-workflow-tests.sh' "$workflow" ||
+    fail "workflow changes are not self-covered by the pull-request path filter."
 grep -Fq 'branches:' "$workflow" ||
     fail "master push trigger is missing."
 grep -Fq -- '- master' "$workflow" ||

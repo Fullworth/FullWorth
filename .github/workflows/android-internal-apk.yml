@@ -2,6 +2,18 @@ name: FullWorth Android Internal APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "FullWorth.csproj"
+      - "FullWorth.Core/**"
+      - "Platforms/Android/**"
+      - "Resources/**"
+      - "*.xaml"
+      - "*.xaml.cs"
+      - "*.cs"
+      - ".github/workflows/android-internal-apk.yml"
+      - "deploy/tests/android-internal-apk-workflow-tests.sh"
+      - "ANDROID_INTERNAL_TESTING.md"
   push:
     branches:
       - master
