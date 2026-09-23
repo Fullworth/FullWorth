@@ -1,8 +1,10 @@
 # FullWorth Product & Engineering Roadmap
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 Status: Active planning document
+
+Completion notation: `~~strikethrough~~` means the roadmap item is completed to the level of evidence the item requires. Unstruck items remain open, partial, or awaiting real-environment acceptance.
 
 Repository: `RealizmModz/FullWorth`
 
@@ -200,25 +202,19 @@ This section is a point-in-time snapshot and should be updated periodically.
 
 ## 4.1 Branch position
 
-As of 2026-09-21:
+As of 2026-09-22:
 
-- `master` baseline: `af27223d0e0742b03f9eb450c240d22b857c86b6`
-- `development`: `a40274c06e7fd9bfa479f90a1a64d40f5ca73753`
-- `development` is 10 commits ahead of `master` and 0 behind.
-- The development delta includes recent recurring-bill normalization, API read-path improvements, PWA/navigation performance cleanup, Blazor render/JS-interoperability reductions, and repository cleanup.
+- `master` baseline: `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
+- `development`: `76a50775ad7f784ac2b3e0e3cf21359d570fc0ce`
+- Production is operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
+- Development includes the adaptive device-execution work, canonical FullWorth URL cleanup, Google/Apple production-auth configuration plumbing, public-site readability improvements, and the persistent first-run experience-preference foundation.
+- The first-run setup wizard remains open work and is intentionally not marked complete until its exact-head CI and merge are finished.
 
 ## 4.2 Active work
 
-### Adaptive device performance profile
+### ~~Adaptive device performance profile~~
 
-Branch:
-
-`feature/experience-performance-profile`
-
-Current relationship to `development`:
-
-- 5 commits ahead;
-- 0 behind.
+Completed through the adaptive performance/device-execution merge path, including PR #203 and promotion through PR #204.
 
 Intended user choices:
 
@@ -240,7 +236,7 @@ Examples of legitimate behavior changes:
 
 Financial functionality and security behavior must remain identical across performance levels.
 
-### Cleanup PR #155
+### ~~Cleanup PR #155~~
 
 `cleanup/remove-stale-slnlaunch`
 
@@ -249,12 +245,18 @@ Purpose:
 - remove the unreferenced Visual Studio `FullWorth.slnLaunch` profile;
 - keep the transitional MAUI project itself intact.
 
-At the time this roadmap was written, exact-head CI was still in progress.
+~~Exact-head CI passed and PR #155 merged without removing the transitional MAUI project.~~
 
 ## 4.3 Recently completed development work
 
 Recent merged development work includes:
 
+- ~~adaptive device-side execution and bounded transaction filtering;~~
+- ~~canonical FullWorth production URL migration and monitoring cleanup;~~
+- ~~mobile logout restoration;~~
+- ~~public-site readability/contrast improvements;~~
+- ~~Google and Apple production external-auth configuration plumbing;~~
+- ~~persistent first-run experience preference storage/API foundation;~~
 - recurring merchant-normalization improvements;
 - database-side Bill Stream aggregation;
 - reduced authenticated Web navigation flicker;
@@ -346,31 +348,31 @@ Goal: Create a clean, known-good `development` baseline before another large fea
 
 Required:
 
-- ensure branch is still based on current `development`;
-- require exact-head CI;
-- fix any localization/resource omissions;
-- verify settings persistence is device-local by design;
-- verify Auto does not break when browser hardware/network APIs are missing;
-- verify lower modes do not remove financial functionality;
-- verify reduced-motion preference takes precedence where appropriate;
-- verify transaction-window changes do not alter transaction ordering or security;
-- verify startup applies the selected/effective profile early enough to avoid visual mode flicker.
+- ~~ensure branch is still based on current `development`;~~
+- ~~require exact-head CI;~~
+- ~~fix any localization/resource omissions;~~
+- ~~verify settings persistence is device-local by design;~~
+- ~~verify Auto does not break when browser hardware/network APIs are missing;~~
+- ~~verify lower modes do not remove financial functionality;~~
+- ~~verify reduced-motion preference takes precedence where appropriate;~~
+- ~~verify transaction-window changes do not alter transaction ordering or security;~~
+- ~~verify startup applies the selected/effective profile early enough to avoid visual mode flicker.~~
 
 Exit criteria:
 
-- exact final head green;
-- no security regression;
-- no browser console errors;
-- clear Settings explanation;
-- merge to `development`.
+- ~~exact final head green;~~
+- ~~no security regression;~~
+- ~~no browser console errors;~~
+- ~~clear Settings explanation;~~
+- ~~merge to `development`.~~
 
 ### Cleanup PR #155
 
 Required:
 
-- wait for exact-head CI;
-- merge only if green;
-- do not remove MAUI itself as part of this cleanup.
+- ~~wait for exact-head CI;~~
+- ~~merge only if green;~~
+- ~~do not remove MAUI itself as part of this cleanup.~~
 
 ## 6.2 Branch hygiene
 
@@ -407,9 +409,9 @@ Keep:
 
 Remove or update:
 
-- stale TODO files;
-- obsolete launch profiles;
-- unused assets;
+- ~~stale TODO files;~~
+- ~~obsolete launch profiles;~~
+- ~~unused assets;~~
 - old instructions that point to nonexistent branches or completed milestones.
 
 ### Exit gate for Milestone 0
@@ -481,10 +483,10 @@ Large list pages should have explicit bounded windows.
 
 Transactions:
 
-- Efficiency: small window;
-- Balanced: medium window;
-- High: full current supported window;
-- Auto: selected based on available device/network hints.
+- ~~Efficiency: small window;~~
+- ~~Balanced: medium window;~~
+- ~~High: full current supported window;~~
+- ~~Auto: selected based on available device/network hints.~~
 
 Long-term improvement:
 
@@ -508,8 +510,8 @@ Do not introduce invasive analytics solely for internal performance measurement 
 - installed PWA launch is subjectively and measurably responsive on a mid-range Android device;
 - no visible route-level CSS flash on primary authenticated navigation;
 - no known repeated render/interop hot path on Overview, Bills, Bill Detail, Activity, Account, Transactions, Settings;
-- lower performance mode materially reduces presentation/list workload;
-- no financial cache boundary weakened.
+- ~~lower performance mode materially reduces presentation/list workload;~~
+- ~~no financial cache boundary weakened.~~
 
 ---
 
@@ -638,11 +640,11 @@ The installed PWA must verify all of the following before MAUI removal.
 
 Requirements:
 
-- safe service-worker update;
-- no stale authenticated document cache;
-- current deployment picked up predictably;
-- generic offline page remains truthful;
-- user is not trapped in an obsolete app shell.
+- ~~safe service-worker update;~~
+- ~~no stale authenticated document cache;~~
+- current deployment picked up predictably on the real installed-device acceptance pass;
+- ~~generic offline page remains truthful;~~
+- ~~user is not trapped in an obsolete app shell.~~
 
 ## 8.3 MAUI cutover decision
 
@@ -1133,16 +1135,16 @@ Avoid giant permanent credential forms.
 
 Sensitive inputs appear only during the action that needs them.
 
-## 13.2 Performance preference
+## 13.2 ~~Performance preference~~
 
 Document clearly:
 
-- Auto is recommended;
-- Efficiency is for older devices/slower networks;
-- Balanced is moderate;
-- High enables the richest presentation and larger initial data windows.
+- ~~Auto is recommended;~~
+- ~~Efficiency is for older devices/slower networks;~~
+- ~~Balanced is moderate;~~
+- ~~High enables the richest presentation and larger initial data windows.~~
 
-Preference is per device unless product requirements deliberately change.
+~~Preference is per device unless product requirements deliberately change.~~
 
 ## 13.3 Privacy center
 
@@ -1401,11 +1403,11 @@ Do not build excessive pricing complexity before demand exists.
 
 Verify:
 
-- Product;
-- monthly Price;
-- annual Price;
-- webhook;
-- Customer Portal;
+- ~~Product;~~
+- ~~monthly Price;~~
+- ~~annual Price;~~
+- ~~webhook;~~
+- ~~Customer Portal;~~
 - cancellation;
 - payment-method management;
 - tax configuration;
@@ -1415,8 +1417,8 @@ Verify:
 
 Controlled live/test-mode flow as appropriate:
 
-- checkout created;
-- payment succeeds;
+- ~~checkout created;~~
+- ~~payment succeeds in the configured sandbox flow;~~
 - correct configured Price grants entitlement;
 - unrelated Price does not;
 - portal loads;
@@ -2005,7 +2007,7 @@ Known categories:
 - legacy secure-storage keys;
 - legacy Stripe metadata keys;
 - legacy cookie/purpose identifiers;
-- public billbeacon domains;
+- legacy BillBeacon compatibility domains/aliases;
 - MAUI transitional code;
 - startup EF migrations;
 - historical branding in operational test domains/fixtures;
@@ -2052,16 +2054,18 @@ Persistent identifiers require explicit migration.
 
 The current release is already deployed and healthy. The next sequence is acceptance-first rather than feature-first.
 
-## Step 1
+## ~~Step 1~~
 
-Review and safely upstream the local-only Web-smoke newline fix reported as `f9000be`.
+~~Review and safely upstream the local-only Web-smoke newline fix reported as `f9000be`.~~
 
 Requirements:
 
-- obtain the exact diff from the VPS or reproduce the change deliberately in a repository branch;
-- do not treat the local commit as authoritative until reviewed;
-- merge through `development` only after the full exact-head CI gate;
-- do not redeploy merely for a smoke-harness-only fix unless production runtime behavior actually depends on it.
+- ~~obtain the exact diff from the VPS or reproduce the change deliberately in a repository branch;~~
+- ~~do not treat the local commit as authoritative until reviewed;~~
+- ~~merge through `development` only after the full exact-head CI gate;~~
+- ~~do not redeploy merely for a smoke-harness-only fix unless production runtime behavior actually depends on it.~~
+
+Completed through the reviewed repository implementation in PR #197; the old VPS-only commit remains historical and non-authoritative.
 
 ## Step 2
 
