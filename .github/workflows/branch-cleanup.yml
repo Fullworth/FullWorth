@@ -24,9 +24,9 @@ jobs:
       - name: Delete only proven stale branches
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          REPOSITORY: \${{ github.repository }}
-          REPOSITORY_OWNER: \${{ github.repository_owner }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
