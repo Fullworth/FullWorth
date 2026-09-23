@@ -69,10 +69,17 @@ try {
   await page.locator('input[name="acceptedTermsAndPrivacy"]').check();
 
   await Promise.all([
-    page.waitForURL(url => url.pathname === "/app", { timeout: 20000 }),
+    page.waitForURL(url => url.pathname === "/app/setup", { timeout: 20000 }),
     page.locator('button[type="submit"]').click()
   ]);
 
+  await settle(".app-shell");
+  await page.screenshot({
+    path: path.join(outputDir, "setup-desktop-dark.png"),
+    fullPage: true
+  });
+
+  await page.goto("/app", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
 
   await page.evaluate(() => {
