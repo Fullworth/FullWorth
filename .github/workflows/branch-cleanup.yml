@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   cleanup:
-    name: Delete merged source branches
+    name: Delete proven stale branches
     if: >-
       github.event.issue.number == 245 &&
       github.event.issue.pull_request == null &&
@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Delete only proven merged source branches
+      - name: Delete only proven stale branches
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,6 +32,8 @@ jobs:
 
           deleted=0
           skipped=0
+          reviewed_deleted=0
+          reviewed_skipped=0
 
           while IFS=$'\t' read -r branch sha protected; do
             case "$branch" in
@@ -85,10 +87,75 @@ jobs:
               --jq '.[] | [.name, .commit.sha, .protected] | @tsv'
           )
 
+          # These refs were reviewed separately because they are intentionally
+          # superseded/stale rather than exact heads of merged PRs. Every
+          # deletion is pinned to the reviewed SHA and still fails closed if
+          # an open PR exists or the branch moved after review.
+          while IFS=$'\t' read -r branch expected_sha; do
+            current_row="$(
+              gh api --paginate \
+                "repos/$REPOSITORY/branches?per_page=100" \
+                --jq ".[] | select(.name == \"$branch\") | [.commit.sha, .protected] | @tsv" |
+                head -n 1
+            )"
+
+            if [[ -z "$current_row" ]]; then
+              echo "Reviewed stale branch is already absent: $branch"
+              continue
+            fi
+
+            IFS=$'\t' read -r current_sha protected <<< "$current_row"
+
+            if [[ "$current_sha" != "$expected_sha" ]]; then
+              echo "Keeping reviewed stale branch that moved after review: $branch"
+              reviewed_skipped=$((reviewed_skipped + 1))
+              continue
+            fi
+
+            if [[ "$protected" == "true" ]]; then
+              echo "Keeping protected reviewed stale branch: $branch"
+              reviewed_skipped=$((reviewed_skipped + 1))
+              continue
+            fi
+
+            open_count="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=open \
+                -f head="$REPOSITORY_OWNER:$branch" \
+                -f per_page=100 \
+                --jq 'length'
+            )"
+
+            if [[ "$open_count" != "0" ]]; then
+              echo "Keeping reviewed stale branch with an open PR: $branch"
+              reviewed_skipped=$((reviewed_skipped + 1))
+              continue
+            fi
+
+            gh api -X DELETE \
+              "repos/$REPOSITORY/git/refs/heads/$branch"
+
+            echo "Deleted reviewed stale branch: $branch"
+            reviewed_deleted=$((reviewed_deleted + 1))
+          done <<'REVIEWED_STALE_BRANCHES'
+          auth/external-registration-web	9e89e782da77de4c4a03dfa9ec2e6570d54afe89
+          docs/refresh-context-after-session-acceptance	3370730ec37bad127072dfb5548ca36e69adcfdf
+          docs/refresh-fullworth-context-after-mobile-back	9a5c31dc9e065b80106ad6451ebbcb403fb8f398
+          docs/rename-fullworth-context	3bbd66475521adda3f41324ef6c6369c314f55bf
+          feature/apply-experience-focus	b3b8d1b2c26c49b4842671bb51fdb6bc6ff90e49
+          fix/web-smoke-secret-newline	0aecd721f4dedc7ec29a7ad143d28ebfca4e1e1b
+          ops/github-guarded-production-deploy	ddedbdb41ffc6cee5551199f3ed986b050cec63b
+          perf/pwa-layout-startup	c097643b2a84bb6a14d5f1de0d3ca10046f6fa46
+          perf/statement-batch-query	ac155821f246da96adc53a7b4c43b6a4d6f9caee
+          ui/fullworth-premium-landing	e68de46f1ea7b0fdb7b3165922728f5ca3b6761f
+          REVIEWED_STALE_BRANCHES
+
           {
             echo "## FullWorth branch cleanup"
             echo
             echo "- Deleted merged source branches: $deleted"
-            echo "- Preserved branches not proven safe to delete: $skipped"
-            echo "- Always preserved: master, development, protected branches, and branches with open pull requests"
+            echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
+            echo "- Preserved merged-branch candidates: $skipped"
+            echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
+            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
           } >> "$GITHUB_STEP_SUMMARY"

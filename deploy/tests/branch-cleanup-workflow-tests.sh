@@ -41,6 +41,13 @@ fi
 grep -Fq 'git/refs/heads/$branch' "$workflow" ||
     fail "workflow does not delete branch refs."
 
+grep -Fq 'current_sha" != "$expected_sha' "$workflow" ||
+    fail "reviewed stale branches are not pinned to their reviewed SHA."
+grep -Fq 'Keeping reviewed stale branch with an open PR' "$workflow" ||
+    fail "reviewed stale cleanup does not preserve newly active branches."
+grep -Fq 'feat/ui-foundation-primitives' "$workflow" &&
+    fail "unmerged reusable UI foundation work must remain preserved."
+
 if grep -Fq 'git push' "$workflow"; then
     fail "workflow should use the GitHub API instead of a repository push."
 fi
