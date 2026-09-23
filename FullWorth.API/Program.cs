@@ -193,6 +193,15 @@ builder.Services.AddTransient<
         serviceProvider.GetRequiredService<
             ResendIdentityEmailSender>());
 
+builder.Services.AddSingleton<
+    IExternalIdentityTokenValidator>(
+    serviceProvider =>
+        new ExternalIdentityTokenValidator(
+            serviceProvider.GetRequiredService<
+                IConfiguration>(),
+            serviceProvider.GetRequiredService<
+                IHttpClientFactory>()));
+
 builder.Services.AddAuthorization(
     options =>
     {

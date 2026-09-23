@@ -520,6 +520,11 @@ async function waitForPlaidCompletion(
         "error");
 }
 
+export async function getExperiencePreferences() {
+    return await getJson(
+        "/bff/account/preferences");
+}
+
 export async function getBillStreams() {
     return await getJson(
         "/bff/bill-streams");

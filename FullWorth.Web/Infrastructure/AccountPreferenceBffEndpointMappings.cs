@@ -41,9 +41,35 @@ public static class AccountPreferenceBffEndpointMappings
                     context.RequestAborted);
             });
 
+        bff.MapPut(
+            "/experience",
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                ExperiencePreferenceUpdateRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(context);
+
+                return await writeProxyService.ForwardJsonAsync(
+                    context,
+                    HttpMethod.Put,
+                    "/api/account/preferences/experience",
+                    request,
+                    context.RequestAborted);
+            });
+
         return endpoints;
     }
 }
 
 public sealed record AccountPreferenceUpdateRequest(
     string TimestampDisplayMode);
+
+public sealed record ExperiencePreferenceUpdateRequest(
+    string PreferredUiLanguage,
+    string ThemePreference,
+    string TextSizePreference,
+    bool HighContrastEnabled,
+    bool ReduceMotionEnabled,
+    string[] ExperienceFocus);

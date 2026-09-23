@@ -13,7 +13,7 @@ case "$*" in *'rev-parse HEAD'*) printf '%s\n' "$TEST_RELEASE";; *'status --porc
 EOF
 chmod 700 "$bin/git"
 write(){ file=$1; phases=$2; rel=${3:-$release}; printf 'VERSION=1\nRESULT=complete\nRELEASE_SHA=%s\nPASSED_PHASES=%s\n' "$rel" "$phases" > "$file"; chmod 600 "$file"; }
-write_device(){ file=$1; platform=$2; rel=${3:-$release}; printf 'VERSION=1\nRESULT=complete\nRELEASE_SHA=%s\nPLATFORM=%s\nPASSED_PHASES=installed-pwa-launch,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs\n' "$rel" "$platform" > "$file"; chmod 600 "$file"; }
+write_device(){ file=$1; platform=$2; rel=${3:-$release}; printf 'VERSION=1\nRESULT=complete\nRELEASE_SHA=%s\nPLATFORM=%s\nPASSED_PHASES=installed-pwa-launch,first-run-setup,display-accessibility-preferences,keyboard-resize,back-navigation,pwa-update,statement-file-picker,security-dialogs\n' "$rel" "$platform" > "$file"; chmod 600 "$file"; }
 
 technical="$evidence/technical"; alerts="$evidence/alerts"; plaid="$evidence/plaid"; android="$evidence/android"; ios="$evidence/ios"; output="$evidence/acceptance"
 write "$technical" 'internal-beta0,clean-host-recovery,controlled-reboot-recovery'

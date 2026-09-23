@@ -12,10 +12,10 @@ This checkpoint supersedes the older branch/domain summaries below; historical p
 - The BillWatch → FullWorth cosmetic/operator migration is complete up to the explicit compatibility boundary. CI fails closed if a future change accidentally renames frozen secure-storage, claim/cookie/Data Protection, browser preference, Stripe metadata, external-auth, telemetry, alert/backup, legacy sender/domain, proof-confirmation, deployment-path, private-corpus, or context-pointer identifiers without an explicit compatibility migration.
 - Installed-device acceptance now has a release-pinned metadata-only human-attestation path. Android evidence is required by the same-release private-beta acceptance bundle; iOS evidence is verified and included when supplied. The fixed phase set covers installed PWA launch, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile security dialogs. Plaid Hosted Link return remains independently proven by the existing Plaid observation evidence.
 - The evidence harness does **not** complete the real device gate by itself. Actual installed-device checks still need to be performed on the exact release candidate before their evidence can be recorded. Do not infer Android/iOS acceptance from browser/CI results.
-- PR #210 remains open from `development` to `master` and tracks the moving `development` head. Promotion to `master` requires exact-head CI on the final PR head; installed-device acceptance is a post-promotion, post-guarded-deployment gate because the repository has no separate staging deployment path and the recorder requires the exact deployed release. Do not claim or broaden production/private-beta acceptance until the required Android installed-device evidence exists for that deployed master release. Any CI or evidence tied to an earlier head/release is stale release evidence.
+- PR #210 promoted the verified `development` release to `master` as merge commit `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` after exact-head FullWorth CI #774 passed backend/tests, Linux production/security/recovery, and MAUI Android on promotion head `61490751b22648e5d7f37b0c5956a27670a6518f`. The operator subsequently reported that exact master release live in production after the requested guarded deployment flow. Real installed-device acceptance must now be recorded against this deployed release.
 - Remaining BillWatch names are compatibility boundaries or internal implementation identifiers, not unfinished cosmetic branding. Do not rename `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, systemd unit filenames, Data Protection application/purpose strings, persisted secure-storage/browser keys, claims/cookies, Stripe metadata, alert source IDs, backup tags, proof confirmation phrases, database/configuration identifiers, or the verified legacy email sender without a dedicated compatibility migration.
-- Preserve `security@billbeacon.net` and legacy domain aliases until their separate external-provider/retirement checks are complete. Committed canonical FullWorth URLs and successful CI are not evidence of a production domain cutover or deployment.
-- Production was not accessed during this checkpoint. The last deployment evidence recorded below remains `cbcf261e13636f0330cb9d7be2ce413871e413aa`; newer runtime state must be verified separately.
+- Preserve `security@billbeacon.net` and the legacy BillBeacon domain aliases until their separate external-provider/retirement checks are complete. FullWorth is now the canonical production Web/API domain, while the legacy aliases remain compatibility surfaces.
+- Production release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` was operator-reported live on 2026-09-22. The detailed deployment transcript is not stored in this context, so do not infer additional per-step production evidence beyond what was explicitly observed or previously verified.
 
 ## FullWorth brand transition
 
@@ -120,7 +120,7 @@ Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `19f83716a475c9ab5060a6681e06eb86dad62394`
+- `master`: `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
 - Latest code-bearing `development` merge: `d86c7ac09650a6605f9262ede22a339a3f25d757` (PR #197 Web/BFF protected-secret newline normalization; exact head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770`, full CI #700). Later handoff-only commits may advance the branch without changing product/runtime behavior.
 - PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
 - `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
@@ -133,8 +133,9 @@ Active integration branch: `development`
 
 Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, encrypted HttpOnly Web/BFF auth, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
 
-Public Web: `https://billbeacon.net`
-Public API: `https://api.billbeacon.net`
+Public Web: `https://fullworth.org`
+Public API: `https://api.fullworth.org`
+Legacy compatibility aliases: `https://billbeacon.net` and `https://api.billbeacon.net`
 Production path: `/opt/billwatch`
 
 ## Security invariants
@@ -151,13 +152,13 @@ Production path: `/opt/billwatch`
 - Never log raw statements, full account numbers, auth/Plaid/provider tokens, passwords, recovery codes, provider/database/Restic secrets, or private operations webhooks.
 - AI-derived persistence remains disabled; deterministic extraction remains production persistence.
 
-## Current verified production state
+## Current production state
 
-The current explicitly verified guarded production deployment is:
+The current operator-reported live production release is:
 
-`cbcf261e13636f0330cb9d7be2ce413871e413aa`
+`81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
 
-On 2026-09-21, the production host was updated to that exact verified `master` release and deployed only through `deploy/deploy-production.sh .env.production`.
+On 2026-09-22, the operator reported that this exact `master` release was live after the requested guarded deployment flow. The detailed deployment transcript for this release is not stored in this context. The stronger per-step guarded-deployment evidence listed below remains historical evidence from the earlier verified deployment and must not be silently attributed to `81a74f...`.
 
 - The guarded deployment completed successfully.
 - The deployment created and verified encrypted Restic recovery snapshot `7449ac243947...` before replacing services. The full snapshot identifier remains an operator-side production artifact; do not infer or invent the omitted suffix in repository documentation.
@@ -243,7 +244,7 @@ In particular:
 
 Before trusted external beta invitations:
 
-1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against release `cbcf261e...`.
+1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against deployed release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
 2. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
 3. Exercise the controlled Plaid connect/update lifecycle with a suitable account and complete the Hosted Link human-interaction observation.
 4. With explicit approval, upload controlled representative PDF/scanned-PDF/JPG/PNG fixtures and review extraction/OCR fields plus bill-change explanations against operator-known facts.
@@ -258,18 +259,15 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. The latest code-bearing `development` merge is `024b95cdd9d2da7deb66cd835fa5099679d9f976` (PR #205; full CI #715). It contains the completed consumer v2 work, PRs #182–#186 for GitHub-rendered visual acceptance/navigation fixes, dependency maintenance from PRs #176/#177, PR #188's Chromium PWA/offline proof, PR #189's responsive-browser Back navigation proof, PR #191's BFF session-expiry fix/acceptance, PR #193's browser security-dialog acceptance, PR #195's cost-aware validation cadence, PR #196's controlled user-visible PWA update flow, PR #197's protected Web/BFF smoke secret-file newline normalization, and PR #205's recurring-bill merchant normalization, broader supported recurring categories, and aggregate discovery diagnostics.
-2. Current GitHub `master` is `101eecbef215b912705a6926fd8234f4f42ec908` from PR #204. Production is still explicitly verified at `cbcf261e13636f0330cb9d7be2ce413871e413aa`; do not infer that the newer master or development state is deployed.
-3. Desktop and responsive-mobile browser rendering has been visually reviewed through the CI screenshot artifacts. The broken public anchors, duplicate Menu/route highlight, and missing Menu current-state on secondary mobile routes were fixed through focused PRs with exact-head CI.
-4. Chromium now also proves the service-worker/offline security boundary in the production-like CI stack: the worker registers, bypasses HTTP cache for updates, and an offline authenticated `/app` reload renders only the generic offline fallback. This exact-head Linux gate passed three times total on PR #188 (initial successful attempt plus two same-commit reruns).
-5. Chromium also proves responsive-browser Back navigation and fail-closed session-expiry behavior. PR #191's final exact head passed full CI plus one extra same-head Linux production/PWA/recovery rerun.
-6. Do **not** repeat the browser screenshot, Chromium offline-boundary, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants it.
-7. The next UI acceptance work is real installed-device / interaction validation: installed Android PWA, iOS home-screen PWA where available, keyboard resize, Android/iOS hardware-back behavior, real-device install/update behavior, Plaid Hosted Link return, and statement file picker. PR #196 provides the controlled waiting-worker Refresh-to-update path and passed full CI, but that is not a substitute for installed-device update acceptance. Browser security-dialog behavior is covered by PR #193; installed-device dialog behavior remains part of the device gate.
-8. If that real-device acceptance exposes a concrete defect, stop promotion, create a focused branch from current `development`, fix it, and require exact-head CI before merge.
-9. Promote `development` to `master` only after the exact final promotion head passes the complete CI gate. Real installed-device checks happen only after that verified master release is deployed through the guarded production path, because the evidence recorder pins to `.billwatch-release`; do not treat the Git promotion or deployment itself as installed-device acceptance.
-10. The Web/BFF smoke newline-handling loose end is closed in repository authority by PR #197. The old VPS-only `f9000be` commit is not needed as implementation authority and must not be treated as deployed evidence.
-11. The remaining real-environment private-beta gates in this document still apply; do not manufacture acceptance evidence.
-12. Preserve every security invariant above and every user-owned data ownership boundary.
-13. PR #205 is merged into `development` as `024b95c`. Its exact CI #715 passed Backend build/tests, MAUI Android build, and Linux production container. The merged code is deployment-ready for the guarded release path; after deployment, run one account refresh and inspect `RecurringCandidatesDetected`, `RecurringCandidatesRejected`, and `BillsDiscovered` before promoting further.
-14. PR #204 promoted current `development` to `master` as `101eecb` with all three promotion checks passed. The subsequent exact-head master workflow #718 also passed. This is a release candidate, not production evidence. Use the guarded production deployment script only after explicit operator approval, then capture post-deploy refresh diagnostics and the required non-destructive smoke evidence.
-15. The local stale `feat/ui-foundation-primitives` ref was removed after confirming its UI-foundation and recognition work remains preserved on the remote branch; no open PRs remain. Do not delete remote branches without confirming ownership and merge intent.
+1. Current GitHub `master` is `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` from PR #210. Its exact promotion head `61490751b22648e5d7f37b0c5956a27670a6518f` passed FullWorth CI #774 across backend build/tests, MAUI Android, and Linux production/security/backup/recovery before merge.
+2. The operator reported `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` live in production on 2026-09-22. This is sufficient to target release-pinned acceptance at that release, but the detailed deployment transcript is not stored here.
+3. The current functional `development` baseline remains PR #219 merge `92346faae2cddbe096ca3286d91a434c323141cf`, which added release-pinned installed-device acceptance evidence. Later context-only commits may advance the branch without changing runtime behavior.
+4. The BillWatch → FullWorth cosmetic/operator migration is complete up to the guarded compatibility boundary. Do not rename frozen `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, Data Protection/purpose strings, persisted keys, claims/cookies, Stripe metadata, legacy sender/domain, alert/backup IDs, proof phrases, or related compatibility identifiers without a dedicated migration.
+5. The next release checkpoint is real installed-device acceptance against deployed release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`; do not create a new release merely to generate acceptance evidence.
+6. Perform the real installed-device checks against that deployed release: Android installed PWA is required; iOS home-screen PWA is where-available. Verify installed launch, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile Change password / Change email dialogs.
+7. Plaid Hosted Link return remains a separate human/provider observation proof. Do not merge it into the installed-device attestation or manufacture either evidence path.
+8. If real-device acceptance exposes a defect, stop launch progression, fix it on a focused branch from current `development`, require exact-head CI, merge back to `development`, promote a new verified master candidate, redeploy through the guarded path, and repeat release-pinned acceptance for the new release.
+9. The same-release private-beta acceptance bundle requires machine technical evidence, alert-observation evidence, Plaid observation evidence, and Android installed-device evidence. iOS evidence is included when supplied.
+10. Provider-enforced immutable/Object-Lock/WORM backup protection and qualified Terms/Privacy review remain separate trusted-beta launch gates and are not implied by CI, deployment, or the private-beta acceptance bundle.
+11. Preserve every authentication, BFF, antiforgery, HTTPS, ownership, token-protection, statement, backup, migration, and financial-data security invariant while completing the release gate.
+12. Do not repeat browser screenshot, Chromium offline, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants them.

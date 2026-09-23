@@ -526,6 +526,48 @@ public sealed class WebPwaBoundaryTests
             body,
             StringComparison.OrdinalIgnoreCase);
     }
+    [Fact]
+    public async Task AuthenticatedVisualSystem_DoesNotUseTinyTextSizes()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/fullworth-v2.css");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.DoesNotContain(
+            "font-size: 0.5",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "font-size: 0.6",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "--fw-faint: #778397;",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "--fw-faint: #93a0b5;",
+            body,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory =

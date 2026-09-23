@@ -43,6 +43,74 @@ public sealed class WebExternalAuthenticationTests
     }
 
     [Fact]
+    public async Task Register_HidesUnconfiguredExternalProviders()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/register");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.DoesNotContain(
+            "/auth/external/google/register",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "/auth/external/apple/register",
+            body,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Register_ExternalRegistrationErrorUsesFixedCopyInsteadOfEchoingQuery()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        const string spoofedMessage =
+            "attacker-controlled-registration-message";
+
+        using var response =
+            await client.GetAsync(
+                "/register?externalRegistrationError=true&error=" +
+                spoofedMessage);
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            response.StatusCode);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.Contains(
+            "FullWorth could not create that account through your sign-in provider.",
+            body,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            spoofedMessage,
+            body,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Login_ExternalErrorUsesFixedCopyInsteadOfEchoingErrorQuery()
     {
         using var factory =
@@ -393,6 +461,31 @@ public sealed class WebExternalAuthenticationTests
     }
 
     [Fact]
+    public async Task UnconfiguredKnownProvider_RegisterFailsClosedBackToRegister()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/auth/external/google/register");
+
+        Assert.Equal(
+            HttpStatusCode.Redirect,
+            response.StatusCode);
+
+        Assert.NotNull(
+            response.Headers.Location);
+
+        Assert.Equal(
+            "/register?externalRegistrationError=true",
+            response.Headers.Location!.OriginalString);
+    }
+
+    [Fact]
     public async Task UnconfiguredKnownProvider_LinkFailsClosedBackToSettings()
     {
         using var factory =
@@ -429,6 +522,24 @@ public sealed class WebExternalAuthenticationTests
         using var response =
             await client.GetAsync(
                 "/auth/external/not-a-provider");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnknownProvider_RegisterReturnsNotFound()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.GetAsync(
+                "/auth/external/not-a-provider/register");
 
         Assert.Equal(
             HttpStatusCode.NotFound,

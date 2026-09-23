@@ -97,7 +97,27 @@ html {
 
     html:not([data-theme="light"]) body .hero-description,
     html[data-theme="dark"] body .hero-description {
-        color: #929db2;
+        color: #a8b3c7;
+    }
+
+    html:not([data-theme="light"]) body .hero-copy > p,
+    html[data-theme="dark"] body .hero-copy > p {
+        color: #a8b3c7;
+    }
+
+    html:not([data-theme="light"]) body .trust-row,
+    html[data-theme="dark"] body .trust-row {
+        color: #96a3b8;
+    }
+
+    html:not([data-theme="light"]) body .section-copy > p,
+    html[data-theme="dark"] body .section-copy > p {
+        color: #9eabbe;
+    }
+
+    html:not([data-theme="light"]) body .principles small,
+    html[data-theme="dark"] body .principles small {
+        color: #93a0b4;
     }
 
     html:not([data-theme="light"]) body .eyebrow,

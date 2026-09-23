@@ -1,6 +1,7 @@
 ﻿@page "/app"
 
 @using FullWorth.Web.Components.Shared
+@using FullWorth.Web.Services
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
@@ -652,44 +653,56 @@
         </section>
 
         <section class="fw-destination-row" aria-label="@L["Quick links"]">
-            <a href="/app/account/transactions" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">
-                    <svg class="bw-sprite">
-                        <use href="/assets/billwatch-sprites.svg#transactions"></use>
-                    </svg>
-                </span>
-                <span>
-                    <strong>@L["Transactions"]</strong>
-                    <small>@L["Review recent account activity"]</small>
-                </span>
-                <span aria-hidden="true">→</span>
-            </a>
+            @foreach (var destination in _quickLinkOrder)
+            {
+                @switch (destination)
+                {
+                    case "transactions":
+                        <a href="/app/account/transactions" class="fw-destination">
+                            <span class="fw-destination-icon" aria-hidden="true">
+                                <svg class="bw-sprite">
+                                    <use href="/assets/billwatch-sprites.svg#transactions"></use>
+                                </svg>
+                            </span>
+                            <span>
+                                <strong>@L["Transactions"]</strong>
+                                <small>@L["Review recent account activity"]</small>
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                        break;
 
-            <a href="/app/account" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">
-                    <svg class="bw-sprite">
-                        <use href="/assets/billwatch-sprites.svg#bank"></use>
-                    </svg>
-                </span>
-                <span>
-                    <strong>@L["Accounts"]</strong>
-                    <small>@L["Manage bank connections"]</small>
-                </span>
-                <span aria-hidden="true">→</span>
-            </a>
+                    case "accounts":
+                        <a href="/app/account" class="fw-destination">
+                            <span class="fw-destination-icon" aria-hidden="true">
+                                <svg class="bw-sprite">
+                                    <use href="/assets/billwatch-sprites.svg#bank"></use>
+                                </svg>
+                            </span>
+                            <span>
+                                <strong>@L["Accounts"]</strong>
+                                <small>@L["Manage bank connections"]</small>
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                        break;
 
-            <a href="/app/activity" class="fw-destination">
-                <span class="fw-destination-icon" aria-hidden="true">
-                    <svg class="bw-sprite">
-                        <use href="/assets/billwatch-sprites.svg#activity"></use>
-                    </svg>
-                </span>
-                <span>
-                    <strong>@L["Activity"]</strong>
-                    <small>@L["See alerts and important changes"]</small>
-                </span>
-                <span aria-hidden="true">→</span>
-            </a>
+                    case "activity":
+                        <a href="/app/activity" class="fw-destination">
+                            <span class="fw-destination-icon" aria-hidden="true">
+                                <svg class="bw-sprite">
+                                    <use href="/assets/billwatch-sprites.svg#activity"></use>
+                                </svg>
+                            </span>
+                            <span>
+                                <strong>@L["Activity"]</strong>
+                                <small>@L["See alerts and important changes"]</small>
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                        break;
+                }
+            }
         </section>
     }
 </div>
@@ -703,6 +716,10 @@
 
     private List<BankConnectionViewModel>
         _connections = [];
+
+    private IReadOnlyList<string> _quickLinkOrder =
+        ExperienceFocusOrdering.OrderQuickLinks(
+            []);
 
     private bool _isLoading =
         true;
@@ -830,9 +847,17 @@
                     "getBillStreams")
                 .AsTask();
 
+        var preferenceTask =
+            module
+                .InvokeAsync<
+                    ExperiencePreferenceViewModel>(
+                    "getExperiencePreferences")
+                .AsTask();
+
         await Task.WhenAll(
             connectionTask,
-            billStreamTask);
+            billStreamTask,
+            preferenceTask);
 
         _connections =
             connectionTask.Result?
@@ -846,6 +871,11 @@
                         bill.IsActive)
                 .ToList()
             ?? [];
+
+        _quickLinkOrder =
+            ExperienceFocusOrdering.OrderQuickLinks(
+                preferenceTask.Result?
+                    .ExperienceFocus);
 
         UpdateOverviewSummaries();
     }
@@ -1023,6 +1053,15 @@
         catch (JSDisconnectedException)
         {
         }
+    }
+
+    public sealed class ExperiencePreferenceViewModel
+    {
+        public string[] ExperienceFocus
+        {
+            get;
+            set;
+        } = [];
     }
 
     public sealed class BillStreamViewModel

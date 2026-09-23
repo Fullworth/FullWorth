@@ -1,5 +1,6 @@
 ﻿using FullWorth.API;
 using FullWorth.API.Data;
+using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Statements;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -16,6 +17,8 @@ public sealed class FullWorthApiFactory
 {
     private readonly bool _subscriptionEnforcementEnabled;
     private readonly bool _stripeBillingConfigured;
+    private readonly IExternalIdentityTokenValidator?
+        _externalIdentityTokenValidator;
 
     public FullWorthApiFactory()
     {
@@ -23,13 +26,18 @@ public sealed class FullWorthApiFactory
 
     private FullWorthApiFactory(
         bool subscriptionEnforcementEnabled,
-        bool stripeBillingConfigured)
+        bool stripeBillingConfigured,
+        IExternalIdentityTokenValidator?
+            externalIdentityTokenValidator = null)
     {
         _subscriptionEnforcementEnabled =
             subscriptionEnforcementEnabled;
 
         _stripeBillingConfigured =
             stripeBillingConfigured;
+
+        _externalIdentityTokenValidator =
+            externalIdentityTokenValidator;
     }
 
     public static FullWorthApiFactory WithSubscriptionEnforcement()
@@ -44,6 +52,19 @@ public sealed class FullWorthApiFactory
         return new FullWorthApiFactory(
             subscriptionEnforcementEnabled: false,
             stripeBillingConfigured: true);
+    }
+
+    public static FullWorthApiFactory WithExternalIdentityValidator(
+        IExternalIdentityTokenValidator validator)
+    {
+        ArgumentNullException.ThrowIfNull(
+            validator);
+
+        return new FullWorthApiFactory(
+            subscriptionEnforcementEnabled: false,
+            stripeBillingConfigured: false,
+            externalIdentityTokenValidator:
+                validator);
     }
 
     private readonly string _databaseName =
@@ -182,6 +203,15 @@ public sealed class FullWorthApiFactory
                 services.AddSingleton<
                     IBillStatementOcrEngine,
                     TestBillStatementOcrEngine>();
+
+                if (_externalIdentityTokenValidator is not null)
+                {
+                    services.RemoveAll<
+                        IExternalIdentityTokenValidator>();
+
+                    services.AddSingleton(
+                        _externalIdentityTokenValidator);
+                }
             });
     }
 

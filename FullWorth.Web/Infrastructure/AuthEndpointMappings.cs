@@ -232,7 +232,7 @@ public static class AuthEndpointMappings
                 }
 
                 return Results.Redirect(
-                    "/app");
+                    "/app/setup");
             });
 
         endpoints.MapPost(

@@ -120,6 +120,30 @@ validate_positive_integer()
     [ "$value" -ge 1 ] || fail "$key must be at least 1."
 }
 
+validate_optional_credential_pair()
+{
+    client_id_key=$1
+    client_secret_key=$2
+
+    client_id_value=$(read_optional_value "$client_id_key")
+    client_secret_value=$(read_optional_value "$client_secret_key")
+
+    if [ -z "$client_id_value" ] && [ -z "$client_secret_value" ]; then
+        return
+    fi
+
+    [ -n "$client_id_value" ] ||
+        fail "$client_id_key is required when $client_secret_key is set."
+
+    [ -n "$client_secret_value" ] ||
+        fail "$client_secret_key is required when $client_id_key is set."
+
+    reject_placeholder "$client_id_key" "$client_id_value"
+    reject_placeholder "$client_secret_key" "$client_secret_value"
+    reject_unsafe_env_value "$client_id_key" "$client_id_value"
+    reject_unsafe_env_value "$client_secret_key" "$client_secret_value"
+}
+
 host=$(read_value BILLWATCH_HOST)
 web_host=$(read_value BILLWATCH_WEB_HOST)
 legacy_host=$(read_optional_value BILLWATCH_LEGACY_HOST)
@@ -205,6 +229,14 @@ case "$plaid_environment" in
     sandbox|production) ;;
     *) fail "PLAID_ENVIRONMENT must be sandbox or production." ;;
 esac
+
+validate_optional_credential_pair \
+    FULLWORTH_GOOGLE_CLIENT_ID \
+    FULLWORTH_GOOGLE_CLIENT_SECRET
+
+validate_optional_credential_pair \
+    FULLWORTH_APPLE_CLIENT_ID \
+    FULLWORTH_APPLE_CLIENT_SECRET
 
 identity_email_enabled=$(read_optional_value BILLWATCH_IDENTITY_EMAIL_ENABLED)
 [ -n "$identity_email_enabled" ] || identity_email_enabled=false

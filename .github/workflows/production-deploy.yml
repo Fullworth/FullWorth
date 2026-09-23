@@ -1,0 +1,248 @@
+name: FullWorth Production Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Exact 40-character master commit SHA to deploy"
+        required: true
+        type: string
+      confirm_guarded_deploy:
+        description: "I approve deploying this exact master release through the guarded production script"
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: billwatch-production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Guarded production deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+
+    steps:
+      - name: Check out requested release
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact master release approval
+        id: release
+        shell: bash
+        env:
+          REQUESTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          DEPLOY_CONFIRMED: ${{ inputs.confirm_guarded_deploy }}
+        run: |
+          set -euo pipefail
+
+          release="$REQUESTED_RELEASE_SHA"
+
+          if [[ "$DEPLOY_CONFIRMED" != "true" ]]; then
+            echo "Guarded production deployment requires explicit confirmation." >&2
+            exit 77
+          fi
+
+          if [[ ! "$release" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "release_sha must be one lowercase 40-character Git commit." >&2
+            exit 64
+          fi
+
+          if [[ "$GITHUB_REF" != "refs/heads/master" ]]; then
+            echo "Production deployment may only be dispatched from master." >&2
+            exit 65
+          fi
+
+          if [[ "$GITHUB_SHA" != "$release" ]]; then
+            echo "The requested release does not match the checked-out workflow commit." >&2
+            exit 65
+          fi
+
+          git fetch --no-tags origin master
+
+          if [[ "$(git rev-parse origin/master)" != "$release" ]]; then
+            echo "master advanced after this deployment was dispatched; refusing stale release." >&2
+            exit 65
+          fi
+
+          if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+            echo "GitHub runner checkout is not clean." >&2
+            exit 65
+          fi
+
+          echo "release_sha=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Configure pinned production SSH transport
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.FULLWORTH_PRODUCTION_SSH_HOST }}
+          SSH_USER: ${{ secrets.FULLWORTH_PRODUCTION_SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS }}
+          SSH_PORT: ${{ secrets.FULLWORTH_PRODUCTION_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          if [[ -z "$SSH_HOST" || ! "$SSH_HOST" =~ ^[A-Za-z0-9.-]+$ ]]; then
+            echo "FULLWORTH_PRODUCTION_SSH_HOST is missing or invalid." >&2
+            exit 64
+          fi
+
+          if [[ -z "$SSH_USER" || ! "$SSH_USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "FULLWORTH_PRODUCTION_SSH_USER is missing or invalid." >&2
+            exit 64
+          fi
+
+          port="${SSH_PORT:-22}"
+          if [[ ! "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
+            echo "FULLWORTH_PRODUCTION_SSH_PORT must be a valid TCP port when supplied." >&2
+            exit 64
+          fi
+
+          if [[ -z "$SSH_PRIVATE_KEY" ]]; then
+            echo "FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY is required." >&2
+            exit 64
+          fi
+
+          if [[ -z "$SSH_KNOWN_HOSTS" ]]; then
+            echo "FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS is required for pinned host verification." >&2
+            exit 64
+          fi
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/fullworth-production"
+          chmod 600 "$HOME/.ssh/fullworth-production"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          cat > "$HOME/.ssh/config" <<EOF
+          Host fullworth-production
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $port
+            IdentityFile $HOME/.ssh/fullworth-production
+            IdentitiesOnly yes
+            BatchMode yes
+            PasswordAuthentication no
+            KbdInteractiveAuthentication no
+            StrictHostKeyChecking yes
+            UserKnownHostsFile $HOME/.ssh/known_hosts
+            ForwardAgent no
+          EOF
+          chmod 600 "$HOME/.ssh/config"
+
+      - name: Deploy exact master release on production host
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          ssh fullworth-production sh -s -- "$RELEASE_SHA" <<'REMOTE'
+          set -eu
+
+          release=$1
+          root=/opt/billwatch
+
+          case "$release" in
+              *[!0-9a-f]*|'')
+                  printf '%s\n' "Remote deployment refused: invalid release SHA." >&2
+                  exit 64
+                  ;;
+          esac
+
+          [ "${#release}" -eq 40 ] || {
+              printf '%s\n' "Remote deployment refused: invalid release SHA length." >&2
+              exit 64
+          }
+
+          [ -d "$root/.git" ] || {
+              printf '%s\n' "Remote deployment refused: /opt/billwatch is not a Git checkout." >&2
+              exit 66
+          }
+
+          cd "$root"
+
+          [ "$(git branch --show-current)" = master ] || {
+              printf '%s\n' "Remote deployment refused: production checkout is not on master." >&2
+              exit 65
+          }
+
+          [ -z "$(git status --porcelain --untracked-files=normal)" ] || {
+              printf '%s\n' "Remote deployment refused: production checkout is not clean." >&2
+              exit 65
+          }
+
+          git fetch --no-tags origin master
+
+          [ "$(git rev-parse origin/master)" = "$release" ] || {
+              printf '%s\n' "Remote deployment refused: origin/master does not match the approved release." >&2
+              exit 65
+          }
+
+          git merge --ff-only "$release"
+
+          [ "$(git rev-parse HEAD)" = "$release" ] || {
+              printf '%s\n' "Remote deployment refused: checkout did not reach the approved release." >&2
+              exit 65
+          }
+
+          [ -f .env.production ] && [ ! -L .env.production ] || {
+              printf '%s\n' "Remote deployment refused: protected .env.production is missing or unsafe." >&2
+              exit 66
+          }
+
+          sed -i "s/^BILLWATCH_RELEASE_ID=.*/BILLWATCH_RELEASE_ID=$release/" .env.production
+
+          sh deploy/validate-production-env.sh .env.production
+          sh deploy/deploy-production.sh .env.production
+          sh deploy/verify-production.sh /opt/billwatch
+          sh deploy/verify-beta-readiness.sh /opt/billwatch
+
+          [ -f .billwatch-release ] && [ ! -L .billwatch-release ] || {
+              printf '%s\n' "Remote deployment failed: verified release marker is missing or unsafe." >&2
+              exit 66
+          }
+
+          [ "$(cat .billwatch-release)" = "$release" ] || {
+              printf '%s\n' "Remote deployment failed: verified release marker does not match the approved release." >&2
+              exit 65
+          }
+
+          printf '%s\n' "Guarded FullWorth production deployment verified for $release."
+          REMOTE
+
+      - name: Verify public readiness from GitHub runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh deploy/monitor-readiness.sh https://api.fullworth.org
+          sh deploy/monitor-readiness.sh https://fullworth.org
+
+      - name: Record metadata-only deployment summary
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          {
+            echo "## FullWorth guarded production deployment"
+            echo
+            echo "- Release: \`$RELEASE_SHA\`"
+            echo "- API readiness: verified from GitHub runner"
+            echo "- Web readiness: verified from GitHub runner"
+            echo "- Server-side production and beta-readiness verifiers: passed"
+            echo
+            echo "Installed-device, Plaid provider observation, backup immutability, and qualified legal-review gates remain separate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove ephemeral SSH material
+        if: always()
+        shell: bash
+        run: rm -rf "$HOME/.ssh"

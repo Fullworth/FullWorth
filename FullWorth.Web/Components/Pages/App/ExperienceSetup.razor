@@ -1,0 +1,528 @@
+@page "/app/setup"
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@layout AppLayout
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
+
+<PageTitle>@L["Set up FullWorth"]</PageTitle>
+<link rel="stylesheet" href="/account-settings.css" />
+
+<div class="app-page settings-page">
+    <header class="settings-header">
+        <div>
+            <span class="page-kicker">@L["Personal setup"]</span>
+            <h1>@(IsSettingsEdit
+                ? L["Personalize FullWorth"]
+                : L["Set up FullWorth for you"])</h1>
+            <p>@(IsSettingsEdit
+                ? L["Update how FullWorth looks, reads, and prioritizes your financial information."]
+                : L["Choose how FullWorth should look, read, and prioritize your financial information. You can change these preferences later."])</p>
+        </div>
+    </header>
+
+    @if (_isLoading)
+    {
+        <section class="onboarding-card" aria-busy="true">
+            <div class="onboarding-copy">
+                <span class="page-kicker">@L["Getting things ready"]</span>
+                <h2>@L["Loading your preferences…"]</h2>
+                <p>@L["FullWorth is preparing your one-time setup."]</p>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="onboarding-card">
+            <div class="onboarding-copy">
+                <span class="page-kicker">@GetStepKicker()</span>
+                <h2>@GetStepTitle()</h2>
+                <p>@GetStepDescription()</p>
+
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="settings-toast settings-toast-error" role="alert">
+                        <div class="settings-toast-icon" aria-hidden="true">!</div>
+                        <div class="settings-toast-copy">
+                            <strong>@L["Something needs your attention"]</strong>
+                            <span>@_error</span>
+                        </div>
+                    </div>
+                }
+
+                @if (_step == 1)
+                {
+                    <div class="settings-card-grid">
+                        <section class="settings-card">
+                            <div class="settings-copy">
+                                <h2>@L["Language"]</h2>
+                                <p>@L["Choose the language FullWorth should use for interface text."]</p>
+                            </div>
+
+                            <label class="settings-field">
+                                <span>@L["Interface language"]</span>
+                                <select @bind="_language">
+                                    <option value="en-US">English</option>
+                                    <option value="es">Español</option>
+                                </select>
+                            </label>
+                        </section>
+
+                        <section class="settings-card">
+                            <div class="settings-copy">
+                                <h2>@L["Appearance"]</h2>
+                                <p>@L["Choose the starting theme for this device."]</p>
+                            </div>
+
+                            <label class="settings-field">
+                                <span>@L["Theme"]</span>
+                                <select @bind="_theme">
+                                    <option value="System">@L["System"]</option>
+                                    <option value="Light">@L["Light"]</option>
+                                    <option value="Dark">@L["Dark"]</option>
+                                </select>
+                            </label>
+                        </section>
+                    </div>
+                }
+                else if (_step == 2)
+                {
+                    <div class="settings-card-grid">
+                        <section class="settings-card settings-card-wide">
+                            <div class="settings-copy">
+                                <h2>@L["Readability"]</h2>
+                                <p>@L["Pick the text size that is most comfortable for you. FullWorth will scale the interface without changing your financial data."]</p>
+                            </div>
+
+                            <label class="settings-field">
+                                <span>@L["Text size"]</span>
+                                <select @bind="_textSize">
+                                    <option value="Standard">@L["Standard"]</option>
+                                    <option value="Large">@L["Large"]</option>
+                                    <option value="ExtraLarge">@L["Extra large"]</option>
+                                </select>
+                            </label>
+
+                            <label class="remember-option">
+                                <input type="checkbox" @bind="_highContrast" />
+                                <span>@L["Use stronger text and border contrast"]</span>
+                            </label>
+
+                            <label class="remember-option">
+                                <input type="checkbox" @bind="_reduceMotion" />
+                                <span>@L["Reduce animations and motion"]</span>
+                            </label>
+                        </section>
+                    </div>
+                }
+                else
+                {
+                    <div class="settings-card-grid">
+                        <section class="settings-card settings-card-wide">
+                            <div class="settings-copy">
+                                <h2>@L["What should FullWorth emphasize?"]</h2>
+                                <p>@L["Choose everything that matters to you. These choices guide emphasis and ordering; they do not remove features."]</p>
+                            </div>
+
+                            <div class="settings-grid two-column">
+                                @foreach (var option in FocusOptions)
+                                {
+                                    <label class="remember-option">
+                                        <input type="checkbox"
+                                               checked="@_focus.Contains(option.Value)"
+                                               @onchange="args => SetFocus(option.Value, args)" />
+                                        <span>
+                                            <strong>@L[option.Title]</strong><br />
+                                            <small>@L[option.Description]</small>
+                                        </span>
+                                    </label>
+                                }
+                            </div>
+                        </section>
+                    </div>
+                }
+
+                <div class="settings-actions">
+                    @if (_step > 1)
+                    {
+                        <button type="button"
+                                class="secondary-action"
+                                disabled="@_isSaving"
+                                @onclick="PreviousStep">
+                            @L["Back"]
+                        </button>
+                    }
+
+                    @if (_step < 3)
+                    {
+                        <button type="button"
+                                class="primary-action"
+                                disabled="@_isSaving"
+                                @onclick="NextStep">
+                            @L["Continue"]
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="primary-action"
+                                disabled="@_isSaving"
+                                @onclick="FinishAsync">
+                            @(_isSaving
+                                ? L["Saving your setup…"]
+                                : L["Finish setup"])
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="onboarding-steps" aria-label="@L["Setup progress"]">
+                <div class="onboarding-step @(_step >= 1 ? "active" : string.Empty)">
+                    <span>1</span>
+                    <div>
+                        <strong>@L["Language & theme"]</strong>
+                        <small>@L["How FullWorth looks and speaks"]</small>
+                    </div>
+                </div>
+
+                <div class="onboarding-line"></div>
+
+                <div class="onboarding-step @(_step >= 2 ? "active" : string.Empty)">
+                    <span>2</span>
+                    <div>
+                        <strong>@L["Readability"]</strong>
+                        <small>@L["Text size, contrast, and motion"]</small>
+                    </div>
+                </div>
+
+                <div class="onboarding-line"></div>
+
+                <div class="onboarding-step @(_step >= 3 ? "active" : string.Empty)">
+                    <span>3</span>
+                    <div>
+                        <strong>@L["Your priorities"]</strong>
+                        <small>@L["What FullWorth should emphasize"]</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnTo")]
+    public string? ReturnTo { get; set; }
+
+    private static readonly FocusOption[] FocusOptions =
+    [
+        new(
+            "BillChanges",
+            "Bill changes",
+            "Surface meaningful increases and annualized impact."),
+
+        new(
+            "Spending",
+            "Spending",
+            "Make recent transaction activity easier to scan."),
+
+        new(
+            "RecurringCosts",
+            "Recurring costs",
+            "Emphasize subscriptions and repeating charges."),
+
+        new(
+            "AccountOverview",
+            "Whole financial picture",
+            "Keep connected accounts and overall position prominent."),
+
+        new(
+            "Statements",
+            "Statement explanations",
+            "Prioritize evidence explaining why a bill changed.")
+    ];
+
+    private IJSObjectReference? _preferencesModule;
+
+    private bool IsSettingsEdit =>
+        string.Equals(
+            ReturnTo,
+            "settings",
+            StringComparison.OrdinalIgnoreCase);
+
+    private int _step = 1;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _error;
+    private string _language = "en-US";
+    private string _theme = "System";
+    private string _textSize = "Standard";
+    private bool _highContrast;
+    private bool _reduceMotion;
+
+    private readonly HashSet<string> _focus =
+        new(
+            [
+                "BillChanges",
+                "AccountOverview"
+            ],
+            StringComparer.Ordinal);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _preferencesModule =
+                await JS.InvokeAsync<IJSObjectReference>(
+                    "import",
+                    "./js/local-time.js");
+
+            var preferences =
+                await _preferencesModule.InvokeAsync<ExperiencePreferenceViewModel>(
+                    "getExperiencePreferences");
+
+            _language =
+                NormalizeLanguage(
+                    preferences.PreferredUiLanguage);
+
+            _theme =
+                NormalizeTheme(
+                    preferences.ThemePreference);
+
+            _textSize =
+                NormalizeTextSize(
+                    preferences.TextSizePreference);
+
+            _highContrast =
+                preferences.HighContrastEnabled;
+
+            _reduceMotion =
+                preferences.ReduceMotionEnabled;
+
+            if (preferences.ExperienceFocus is { Length: > 0 })
+            {
+                _focus.Clear();
+
+                foreach (var focus in preferences.ExperienceFocus)
+                {
+                    if (FocusOptions.Any(
+                            option =>
+                                string.Equals(
+                                    option.Value,
+                                    focus,
+                                    StringComparison.Ordinal)))
+                    {
+                        _focus.Add(focus);
+                    }
+                }
+            }
+        }
+        catch (JSException)
+        {
+            _error =
+                L["FullWorth could not load your saved setup. You can still choose your preferences below."];
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NextStep()
+    {
+        _error = null;
+        _step = Math.Min(3, _step + 1);
+    }
+
+    private void PreviousStep()
+    {
+        _error = null;
+        _step = Math.Max(1, _step - 1);
+    }
+
+    private void SetFocus(
+        string value,
+        ChangeEventArgs args)
+    {
+        var enabled =
+            args.Value is bool boolValue
+                ? boolValue
+                : bool.TryParse(
+                    args.Value?.ToString(),
+                    out var parsed) &&
+                  parsed;
+
+        if (enabled)
+        {
+            _focus.Add(value);
+        }
+        else
+        {
+            _focus.Remove(value);
+        }
+    }
+
+    private async Task FinishAsync()
+    {
+        if (_isSaving ||
+            _preferencesModule is null)
+        {
+            return;
+        }
+
+        if (_focus.Count == 0)
+        {
+            _error =
+                L["Choose at least one area for FullWorth to emphasize."];
+            return;
+        }
+
+        _isSaving = true;
+        _error = null;
+
+        try
+        {
+            await _preferencesModule.InvokeAsync<ExperiencePreferenceViewModel>(
+                "saveExperiencePreferences",
+                new
+                {
+                    preferredUiLanguage =
+                        _language,
+
+                    themePreference =
+                        _theme,
+
+                    textSizePreference =
+                        _textSize,
+
+                    highContrastEnabled =
+                        _highContrast,
+
+                    reduceMotionEnabled =
+                        _reduceMotion,
+
+                    experienceFocus =
+                        _focus.ToArray()
+                });
+
+            Navigation.NavigateTo(
+                string.Equals(
+                    ReturnTo,
+                    "settings",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "/app/account/settings"
+                    : "/app",
+                forceLoad: true);
+        }
+        catch (JSException)
+        {
+            _error =
+                L["FullWorth could not save your setup. Please try again."];
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetStepKicker() =>
+        _step switch
+        {
+            1 => L["Step 1 of 3"],
+            2 => L["Step 2 of 3"],
+            _ => L["Step 3 of 3"]
+        };
+
+    private string GetStepTitle() =>
+        _step switch
+        {
+            1 => L["Start with the way you prefer to use FullWorth."],
+            2 => L["Make FullWorth comfortable to read."],
+            _ => L["Tell FullWorth what matters most."]
+        };
+
+    private string GetStepDescription() =>
+        _step switch
+        {
+            1 => L["Choose your language and appearance. These are starting preferences, not permanent restrictions."],
+            2 => L["Accessibility choices should make the app easier to use without hiding information or changing calculations."],
+            _ => L["FullWorth will use these choices to emphasize the right information while keeping every feature available."]
+        };
+
+    private static string NormalizeLanguage(
+        string? value) =>
+        value?.StartsWith(
+            "es",
+            StringComparison.OrdinalIgnoreCase) == true
+            ? "es"
+            : "en-US";
+
+    private static string NormalizeTheme(
+        string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "light" => "Light",
+            "dark" => "Dark",
+            _ => "System"
+        };
+
+    private static string NormalizeTextSize(
+        string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "large" => "Large",
+            "extralarge" or "extra-large" => "ExtraLarge",
+            _ => "Standard"
+        };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_preferencesModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _preferencesModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private sealed record FocusOption(
+        string Value,
+        string Title,
+        string Description);
+
+    private sealed class ExperiencePreferenceViewModel
+    {
+        public bool ExperienceSetupComplete { get; set; }
+
+        public string PreferredUiLanguage { get; set; } =
+            "en-US";
+
+        public string ThemePreference { get; set; } =
+            "System";
+
+        public string TextSizePreference { get; set; } =
+            "Standard";
+
+        public bool HighContrastEnabled { get; set; }
+
+        public bool ReduceMotionEnabled { get; set; }
+
+        public string[] ExperienceFocus { get; set; } =
+            [];
+    }
+}
