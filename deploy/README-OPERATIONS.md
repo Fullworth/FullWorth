@@ -202,7 +202,7 @@ Do not remove a backup lock unless you have first confirmed no backup process is
 
 ## Deployment
 
-Use only the guarded deployment script:
+Use only the guarded deployment script. A direct server-side deployment remains supported:
 
 ```sh
 cd /opt/billwatch
@@ -210,6 +210,26 @@ RELEASE_ID="$(git rev-parse HEAD)"
 sed -i "s/^BILLWATCH_RELEASE_ID=.*/BILLWATCH_RELEASE_ID=$RELEASE_ID/" .env.production
 sh deploy/deploy-production.sh .env.production
 ```
+
+### GitHub manual deployment
+
+`.github/workflows/production-deploy.yml` provides a manual GitHub-only entry point without moving FullWorth application secrets into GitHub. It still runs the existing server-side preflight, guarded deployment, production verification, and beta-readiness checks against the protected production environment file on the host.
+
+Before first use, create a protected GitHub Environment named `production`. Store only SSH transport material for the dedicated non-root deployment account:
+
+- `FULLWORTH_PRODUCTION_SSH_HOST`
+- `FULLWORTH_PRODUCTION_SSH_USER`
+- `FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY`
+- `FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS`
+- `FULLWORTH_PRODUCTION_SSH_PORT` — optional; defaults to 22
+
+The known-hosts value must come from a trusted administrative source. The workflow deliberately does not discover or trust a host key at runtime.
+
+Do not move `.env.production`, Plaid credentials, Stripe secrets, database passwords, Restic credentials, identity-email credentials, or other FullWorth application secrets into GitHub.
+
+To deploy, open **Actions → FullWorth Production Deploy → Run workflow**, select `master`, enter the exact current 40-character `master` SHA, and explicitly approve the guarded deploy. The workflow refuses non-`master` refs, malformed or stale SHAs, dirty checkouts, unpinned SSH hosts, or production source that cannot fast-forward to the approved release.
+
+A successful workflow proves the guarded deployment/readiness checks for that release only. Installed-device acceptance, Plaid provider observation, provider-enforced backup immutability, and qualified legal review remain separate gates.
 
 Do not use `docker compose down --volumes` in production.
 
