@@ -54,6 +54,12 @@ grep -Fq 'Get-FileHash -Algorithm SHA256' "$workflow" ||
     fail "workflow does not publish an APK integrity hash."
 grep -Fq 'actions/upload-artifact@v4' "$workflow" ||
     fail "workflow does not publish the test package as a GitHub artifact."
+grep -Fq 'actions/download-artifact@v5' "$workflow" ||
+    fail "workflow does not retrieve the signed APK for emulator smoke testing."
+grep -Fq 'android-apk-emulator-smoke.sh' "$workflow" ||
+    fail "workflow does not install and launch the produced APK in an Android emulator."
+grep -Fq 'com.companyname.billwatch' "$workflow" ||
+    fail "workflow does not verify the compatibility Android application ID."
 grep -Fq 'retention-days: 14' "$workflow" ||
     fail "internal APK retention is not bounded."
 grep -Fq 'not production/Play-Store signed' "$workflow" ||
