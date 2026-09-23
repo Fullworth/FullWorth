@@ -29,6 +29,9 @@ public static class ExternalAuthenticationEndpointMappings
     private const string LinkPurpose =
         "link";
 
+    private const string RegisterPurpose =
+        "register";
+
     private static readonly ExternalProviderDefinition[] Providers =
     [
         new(
@@ -150,6 +153,16 @@ public static class ExternalAuthenticationEndpointMappings
             .AllowAnonymous();
 
         endpoints.MapGet(
+                "/auth/external/{provider}/register",
+                BeginExternalRegistrationAsync)
+            .AllowAnonymous();
+
+        endpoints.MapPost(
+                "/auth/external/register/complete",
+                CompleteExternalRegistrationAsync)
+            .AllowAnonymous();
+
+        endpoints.MapGet(
                 "/auth/external/{provider}/link",
                 BeginExternalLinkAsync)
             .RequireAuthorization();
@@ -176,6 +189,24 @@ public static class ExternalAuthenticationEndpointMappings
             redirectUriBuilder:
                 normalizedProvider =>
                     "/auth/external/complete?provider=" +
+                    Uri.EscapeDataString(
+                        normalizedProvider));
+    }
+
+    private static Task<IResult>
+        BeginExternalRegistrationAsync(
+            string provider,
+            IAuthenticationSchemeProvider schemeProvider)
+    {
+        return BeginExternalChallengeAsync(
+            provider,
+            RegisterPurpose,
+            schemeProvider,
+            unavailableRedirectBuilder:
+                BuildRegistrationErrorRedirect,
+            redirectUriBuilder:
+                normalizedProvider =>
+                    "/register?externalRegistration=true&provider=" +
                     Uri.EscapeDataString(
                         normalizedProvider));
     }
@@ -420,6 +451,121 @@ public static class ExternalAuthenticationEndpointMappings
 
         return Results.Redirect(
             "/app");
+    }
+
+    private static async Task<IResult>
+        CompleteExternalRegistrationAsync(
+            HttpContext context,
+            IAntiforgery antiforgery,
+            IHttpClientFactory httpClientFactory)
+    {
+        await antiforgery.ValidateRequestAsync(
+            context);
+
+        var form =
+            await context.Request.ReadFormAsync(
+                context.RequestAborted);
+
+        var providerDefinition =
+            FindProvider(
+                form["provider"].ToString());
+
+        if (providerDefinition is null)
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildRegistrationErrorRedirect(
+                    "External account creation could not be completed."));
+        }
+
+        var password =
+            form["password"].ToString();
+
+        var confirmPassword =
+            form["confirmPassword"].ToString();
+
+        var acceptedTermsAndPrivacy =
+            string.Equals(
+                form["acceptedTermsAndPrivacy"],
+                "on",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                form["acceptedTermsAndPrivacy"],
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+
+        var legalTermsVersion =
+            form["legalTermsVersion"]
+                .ToString()
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(password) ||
+            !string.Equals(
+                password,
+                confirmPassword,
+                StringComparison.Ordinal) ||
+            !acceptedTermsAndPrivacy ||
+            string.IsNullOrWhiteSpace(
+                legalTermsVersion))
+        {
+            return Results.Redirect(
+                BuildExternalRegistrationFormErrorRedirect(
+                    providerDefinition.Provider));
+        }
+
+        var externalResult =
+            await context.AuthenticateAsync(
+                ExternalCookieScheme);
+
+        if (!TryGetExternalIdentity(
+                externalResult,
+                providerDefinition.Provider,
+                RegisterPurpose,
+                out var idToken,
+                out var subject,
+                out var email))
+        {
+            await ClearExternalSessionAsync(
+                context);
+
+            return Results.Redirect(
+                BuildRegistrationErrorRedirect(
+                    "External account creation could not be completed."));
+        }
+
+        /*
+         * Provider proof is single-use during registration. Clear the
+         * temporary cookie before asking the API to create durable account
+         * state so a failed registration cannot replay the same assertion.
+         */
+        await ClearExternalSessionAsync(
+            context);
+
+        var result =
+            await ExternalWebSignInFlow.RegisterAsync(
+                context,
+                httpClientFactory,
+                providerDefinition.Provider,
+                idToken!,
+                subject!,
+                email,
+                password,
+                acceptedTermsAndPrivacy,
+                legalTermsVersion,
+                context.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            return Results.Redirect(
+                BuildRegistrationErrorRedirect(
+                    result.ErrorMessage ??
+                    "External account creation could not be completed."));
+        }
+
+        return Results.Redirect(
+            "/app/setup");
     }
 
     private static async Task<IResult>
@@ -764,6 +910,20 @@ public static class ExternalAuthenticationEndpointMappings
         string _)
     {
         return "/login?externalError=true";
+    }
+
+    private static string BuildRegistrationErrorRedirect(
+        string _)
+    {
+        return "/register?externalRegistrationError=true";
+    }
+
+    private static string BuildExternalRegistrationFormErrorRedirect(
+        string provider)
+    {
+        return "/register?externalRegistration=true&externalRegistrationFormError=true&provider=" +
+            Uri.EscapeDataString(
+                provider);
     }
 
     private static string BuildExternalTwoFactorRedirect(
