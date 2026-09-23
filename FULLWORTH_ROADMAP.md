@@ -204,9 +204,9 @@ This section is a point-in-time snapshot and should be updated periodically.
 
 As of 2026-09-22:
 
-- `master` baseline: `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
-- `development`: `d4ab89de5a7a0ff1407c1188defd199c1a0e3d04`
-- Production is operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
+- `master`: `a5c45ee91aefc30897418919f9ba24b9844afb2a` (promotion PR #241 merge)
+- `development` product-code baseline promoted by PR #241: `d4ab89de5a7a0ff1407c1188defd199c1a0e3d04`
+- Production remains operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` until a guarded deployment of the new master release is completed.
 - Development includes the adaptive device-execution work, canonical FullWorth URL cleanup, Google/Apple sign-in/account-creation implementation, first-run personalization, authenticated readability improvements, the guarded GitHub-only production-deploy workflow, and the expanded installed-device acceptance contract.
 - ~~The first-run setup wizard passed exact-head CI #787 and merged through PR #229. New email/password registrations now enter the persisted personalization flow before the main app.~~
 
@@ -282,6 +282,7 @@ Recent merged development work includes:
 - ~~authenticated-app readability baseline and contrast improvements;~~
 - ~~guarded GitHub-only production deployment workflow with exact-release/SSH fail-closed checks;~~
 - ~~installed-device acceptance contract expanded for personalization/accessibility behavior;~~
+- ~~personalization/readability/external-auth release candidate promoted to `master` through PR #241 after exact-head CI #806;~~
 - recurring merchant-normalization improvements;
 - database-side Bill Stream aggregation;
 - reduced authenticated Web navigation flicker;
