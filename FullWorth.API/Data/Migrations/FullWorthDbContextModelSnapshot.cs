@@ -86,6 +86,15 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("ExperienceFocus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ExperienceSetupCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("HighContrastEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -115,8 +124,22 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("PreferredUiLanguage")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("ReduceMotionEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
+
+                    b.Property<int>("TextSizePreference")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThemePreference")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TimestampDisplayMode")
                         .HasColumnType("integer");
