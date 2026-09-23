@@ -205,10 +205,10 @@ This section is a point-in-time snapshot and should be updated periodically.
 As of 2026-09-22:
 
 - `master` baseline: `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
-- `development`: `76a50775ad7f784ac2b3e0e3cf21359d570fc0ce`
+- `development`: `e6dd9e063d33d3699bc5663d4e44a675548b0020`
 - Production is operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
 - Development includes the adaptive device-execution work, canonical FullWorth URL cleanup, Google/Apple production-auth configuration plumbing, public-site readability improvements, and the persistent first-run experience-preference foundation.
-- The first-run setup wizard remains open work and is intentionally not marked complete until its exact-head CI and merge are finished.
+- ~~The first-run setup wizard passed exact-head CI #787 and merged through PR #229. New email/password registrations now enter the persisted personalization flow before the main app.~~
 
 ## 4.2 Active work
 
@@ -257,6 +257,7 @@ Recent merged development work includes:
 - ~~public-site readability/contrast improvements;~~
 - ~~Google and Apple production external-auth configuration plumbing;~~
 - ~~persistent first-run experience preference storage/API foundation;~~
+- ~~first-run personalization wizard with language, theme, readability, motion, and financial-focus choices;~~
 - recurring merchant-normalization improvements;
 - database-side Bill Stream aggregation;
 - reduced authenticated Web navigation flicker;
@@ -269,9 +270,13 @@ Recent merged development work includes:
 - removal of stale `BILLWATCH_TODO.md`;
 - removal of an unused Web FullWorth logo asset.
 
-## 4.4 Verified production state
+## 4.4 Production state
 
-The current explicitly verified guarded production deployment is:
+The current operator-reported live production release is:
+
+`81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
+
+The detailed guarded-deployment transcript for that release is not stored in this roadmap. The strongest preserved per-step deployment evidence remains the earlier guarded deployment of:
 
 `cbcf261e13636f0330cb9d7be2ce413871e413aa`
 
