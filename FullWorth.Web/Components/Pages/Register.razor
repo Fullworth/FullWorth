@@ -1,6 +1,7 @@
 ﻿@page "/register"
 @using FullWorth.Core.Legal
 
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject Microsoft.Extensions.Localization.IStringLocalizer<FullWorth.Web.Components.App> L
 
 <PageTitle>@L["Create account — FullWorth"]</PageTitle>
@@ -31,15 +32,35 @@
                 </span>
 
                 <h1>
-                    @L["Create your account"]
+                    @(IsExternalRegistrationStep
+                        ? $"{L["Finish creating your account with"].Value} {GetExternalProviderDisplayName()}"
+                        : L["Create your account"])
                 </h1>
 
                 <p>
-                    @L["One account for your FullWorth financial history."]
+                    @(IsExternalRegistrationStep
+                        ? L["Your provider verified your identity. Create a FullWorth password for sensitive account changes and recovery, then accept the current Terms and Privacy Notice."]
+                        : L["One account for your FullWorth financial history."])
                 </p>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(
+            @if (ExternalRegistrationError)
+            {
+                <div class="auth-error"
+                     role="alert">
+                    <span>!</span>
+                    @L["FullWorth could not create that account through your sign-in provider. Try the provider again or create your account with email."]
+                </div>
+            }
+            else if (ExternalRegistrationFormError)
+            {
+                <div class="auth-error"
+                     role="alert">
+                    <span>!</span>
+                    @L["Check the password confirmation and accept the current Terms and Privacy Notice."]
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(
                 Error))
             {
                 <div class="auth-error"
@@ -49,93 +70,218 @@
                 </div>
             }
 
-            <form method="post"
-                  action="/auth/register"
-                  class="auth-form">
+            @if (IsExternalRegistrationStep)
+            {
+                <form method="post"
+                      action="/auth/external/register/complete"
+                      class="auth-form">
 
-                <AntiforgeryToken />
+                    <AntiforgeryToken />
 
-                <input type="hidden"
-                       name="legalTermsVersion"
-                       value="@FullWorthLegalDocuments.CurrentVersion" />
+                    <input type="hidden"
+                           name="provider"
+                           value="@ConfiguredExternalRegistrationProvider" />
 
-                <label class="field">
-                    <span>@L["Email address"]</span>
+                    <input type="hidden"
+                           name="legalTermsVersion"
+                           value="@FullWorthLegalDocuments.CurrentVersion" />
 
-                    <input type="email"
-                           name="email"
-                           autocomplete="email"
-                           inputmode="email"
-                           placeholder="you@example.com"
-                           required />
-                </label>
+                    <label class="field">
+                        <span>@L["FullWorth password"]</span>
 
-                <label class="field">
-                    <span>@L["Password"]</span>
+                        <input type="password"
+                               name="password"
+                               autocomplete="new-password"
+                               placeholder="@L["Create a strong password"]"
+                               minlength="12"
+                               required />
+                    </label>
 
-                    <input type="password"
-                           name="password"
-                           autocomplete="new-password"
-                           placeholder="@L["Create a strong password"]"
-                           minlength="12"
-                           required />
-                </label>
+                    <label class="field">
+                        <span>@L["Confirm password"]</span>
 
-                <label class="field">
-                    <span>@L["Confirm password"]</span>
+                        <input type="password"
+                               name="confirmPassword"
+                               autocomplete="new-password"
+                               placeholder="@L["Enter it again"]"
+                               minlength="12"
+                               required />
+                    </label>
 
-                    <input type="password"
-                           name="confirmPassword"
-                           autocomplete="new-password"
-                           placeholder="@L["Enter it again"]"
-                           minlength="12"
-                           required />
-                </label>
+                    <div class="password-rules">
+                        <strong>
+                            @L["Password requirements"]
+                        </strong>
 
-                <div class="password-rules">
-                    <strong>
-                        @L["Password requirements"]
-                    </strong>
+                        <span>
+                            @L["At least 12 characters"]
+                        </span>
 
-                    <span>
-                        @L["At least 12 characters"]
-                    </span>
+                        <span>
+                            @L["Uppercase and lowercase letter"]
+                        </span>
 
-                    <span>
-                        @L["Uppercase and lowercase letter"]
-                    </span>
+                        <span>
+                            @L["Number and special character"]
+                        </span>
+                    </div>
 
-                    <span>
-                        @L["Number and special character"]
-                    </span>
-                </div>
+                    <label class="legal-consent">
+                        <input type="checkbox"
+                               name="acceptedTermsAndPrivacy"
+                               required />
 
-                <label class="legal-consent">
-                    <input type="checkbox"
-                           name="acceptedTermsAndPrivacy"
-                           required />
+                        <span>
+                            @L["I agree to the"]
+                            <a href="@FullWorthLegalDocuments.TermsPath"
+                               target="_blank"
+                               rel="noopener noreferrer">@L["Terms"]</a>
+                            @L["and acknowledge the"]
+                            <a href="@FullWorthLegalDocuments.PrivacyPath"
+                               target="_blank"
+                               rel="noopener noreferrer">@L["Privacy Notice"]</a>.
+                        </span>
+                    </label>
 
-                    <span>
-                        @L["I agree to the"]
-                        <a href="@FullWorthLegalDocuments.TermsPath"
-                           target="_blank"
-                           rel="noopener noreferrer">@L["Terms"]</a>
-                        @L["and acknowledge the"]
-                        <a href="@FullWorthLegalDocuments.PrivacyPath"
-                           target="_blank"
-                           rel="noopener noreferrer">@L["Privacy Notice"]</a>.
-                    </span>
-                </label>
+                    <button class="auth-submit"
+                            type="submit">
+                        @L["Create FullWorth account"]
 
-                <button class="auth-submit"
-                        type="submit">
-                    @L["Create account"]
+                        <span aria-hidden="true">
+                            →
+                        </span>
+                    </button>
+                </form>
 
-                    <span aria-hidden="true">
-                        →
-                    </span>
-                </button>
-            </form>
+                <p class="auth-switch">
+                    <a href="/register">
+                        @L["Use a different sign-up method"]
+                    </a>
+                </p>
+            }
+            else
+            {
+                @if (HasExternalRegistration)
+                {
+                    <div class="external-signin-list"
+                         aria-label="@L["External account creation options"]">
+
+                        @if (GoogleRegistrationConfigured)
+                        {
+                            <a class="external-signin-button"
+                               href="/auth/external/google/register">
+                                <span class="external-provider-mark provider-google"
+                                      aria-hidden="true">G</span>
+
+                                <span>@L["Continue with Google"]</span>
+                            </a>
+                        }
+
+                        @if (AppleRegistrationConfigured)
+                        {
+                            <a class="external-signin-button"
+                               href="/auth/external/apple/register">
+                                <span class="external-provider-mark provider-apple"
+                                      aria-hidden="true">A</span>
+
+                                <span>@L["Continue with Apple"]</span>
+                            </a>
+                        }
+                    </div>
+
+                    <div class="auth-choice-separator auth-provider-separator">
+                        <span>@L["or create an account with email"]</span>
+                    </div>
+                }
+
+                <form method="post"
+                      action="/auth/register"
+                      class="auth-form">
+
+                    <AntiforgeryToken />
+
+                    <input type="hidden"
+                           name="legalTermsVersion"
+                           value="@FullWorthLegalDocuments.CurrentVersion" />
+
+                    <label class="field">
+                        <span>@L["Email address"]</span>
+
+                        <input type="email"
+                               name="email"
+                               autocomplete="email"
+                               inputmode="email"
+                               placeholder="you@example.com"
+                               required />
+                    </label>
+
+                    <label class="field">
+                        <span>@L["Password"]</span>
+
+                        <input type="password"
+                               name="password"
+                               autocomplete="new-password"
+                               placeholder="@L["Create a strong password"]"
+                               minlength="12"
+                               required />
+                    </label>
+
+                    <label class="field">
+                        <span>@L["Confirm password"]</span>
+
+                        <input type="password"
+                               name="confirmPassword"
+                               autocomplete="new-password"
+                               placeholder="@L["Enter it again"]"
+                               minlength="12"
+                               required />
+                    </label>
+
+                    <div class="password-rules">
+                        <strong>
+                            @L["Password requirements"]
+                        </strong>
+
+                        <span>
+                            @L["At least 12 characters"]
+                        </span>
+
+                        <span>
+                            @L["Uppercase and lowercase letter"]
+                        </span>
+
+                        <span>
+                            @L["Number and special character"]
+                        </span>
+                    </div>
+
+                    <label class="legal-consent">
+                        <input type="checkbox"
+                               name="acceptedTermsAndPrivacy"
+                               required />
+
+                        <span>
+                            @L["I agree to the"]
+                            <a href="@FullWorthLegalDocuments.TermsPath"
+                               target="_blank"
+                               rel="noopener noreferrer">@L["Terms"]</a>
+                            @L["and acknowledge the"]
+                            <a href="@FullWorthLegalDocuments.PrivacyPath"
+                               target="_blank"
+                               rel="noopener noreferrer">@L["Privacy Notice"]</a>.
+                        </span>
+                    </label>
+
+                    <button class="auth-submit"
+                            type="submit">
+                        @L["Create account"]
+
+                        <span aria-hidden="true">
+                            →
+                        </span>
+                    </button>
+                </form>
+            }
 
             <p class="privacy-note">
                 @L["FullWorth accounts are used to keep financial records isolated to their owner."]
@@ -165,4 +311,81 @@
     [SupplyParameterFromQuery(
         Name = "error")]
     public string? Error { get; set; }
+
+    [SupplyParameterFromQuery(
+        Name = "externalRegistration")]
+    public bool ExternalRegistration { get; set; }
+
+    [SupplyParameterFromQuery(
+        Name = "externalRegistrationError")]
+    public bool ExternalRegistrationError { get; set; }
+
+    [SupplyParameterFromQuery(
+        Name = "externalRegistrationFormError")]
+    public bool ExternalRegistrationFormError { get; set; }
+
+    [SupplyParameterFromQuery(
+        Name = "provider")]
+    public string? Provider { get; set; }
+
+    private bool GoogleRegistrationConfigured =>
+        IsExternalProviderConfigured(
+            "Google");
+
+    private bool AppleRegistrationConfigured =>
+        IsExternalProviderConfigured(
+            "Apple");
+
+    private bool HasExternalRegistration =>
+        GoogleRegistrationConfigured ||
+        AppleRegistrationConfigured;
+
+    private string? ConfiguredExternalRegistrationProvider =>
+        Provider?.Trim().ToLowerInvariant() switch
+        {
+            "google" when GoogleRegistrationConfigured =>
+                "google",
+
+            "apple" when AppleRegistrationConfigured =>
+                "apple",
+
+            _ =>
+                null
+        };
+
+    private bool IsExternalRegistrationStep =>
+        ExternalRegistration &&
+        ConfiguredExternalRegistrationProvider is not null;
+
+    private string GetExternalProviderDisplayName()
+    {
+        return ConfiguredExternalRegistrationProvider switch
+        {
+            "google" =>
+                "Google",
+
+            "apple" =>
+                "Apple",
+
+            _ =>
+                L["your sign-in provider"].Value
+        };
+    }
+
+    private bool IsExternalProviderConfigured(
+        string provider)
+    {
+        var clientId =
+            Configuration[
+                $"ExternalIdentity:{provider}:ClientId"];
+
+        var clientSecret =
+            Configuration[
+                $"ExternalIdentity:{provider}:ClientSecret"];
+
+        return !string.IsNullOrWhiteSpace(
+                   clientId) &&
+               !string.IsNullOrWhiteSpace(
+                   clientSecret);
+    }
 }
