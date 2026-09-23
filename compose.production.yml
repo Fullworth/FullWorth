@@ -43,6 +43,8 @@ services:
       Plaid__ClientId: ${PLAID_CLIENT_ID:?Set PLAID_CLIENT_ID}
       Plaid__Secret: ${PLAID_SECRET:?Set PLAID_SECRET}
       Plaid__Environment: ${PLAID_ENVIRONMENT:?Set PLAID_ENVIRONMENT}
+      ExternalIdentity__Google__Audience: ${FULLWORTH_GOOGLE_CLIENT_ID:-}
+      ExternalIdentity__Apple__Audience: ${FULLWORTH_APPLE_CLIENT_ID:-}
       IdentityEmail__Enabled: ${BILLWATCH_IDENTITY_EMAIL_ENABLED:-false}
       IdentityEmail__ApiKey: ${RESEND_API_KEY:-}
       IdentityEmail__FromAddress: ${BILLWATCH_IDENTITY_EMAIL_FROM_ADDRESS:-security@billbeacon.net}
@@ -82,6 +84,10 @@ services:
       AllowedHosts: ${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
       FullWorthApi__BaseUrl: http://api:8080
       FullWorthApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
+      ExternalIdentity__Google__ClientId: ${FULLWORTH_GOOGLE_CLIENT_ID:-}
+      ExternalIdentity__Google__ClientSecret: ${FULLWORTH_GOOGLE_CLIENT_SECRET:-}
+      ExternalIdentity__Apple__ClientId: ${FULLWORTH_APPLE_CLIENT_ID:-}
+      ExternalIdentity__Apple__ClientSecret: ${FULLWORTH_APPLE_CLIENT_SECRET:-}
       DataProtection__KeysPath: /var/lib/billwatch-web/keys
       ReverseProxy__KnownProxies__0: 172.28.0.10
     volumes:
