@@ -7,6 +7,11 @@ package_name=${2:-com.companyname.billwatch}
 avd_name=fullworth-internal-ci
 system_image="system-images;android-35;google_apis;x86_64"
 
+if [ -n "${ANDROID_HOME:-}" ]; then
+    PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+    export PATH
+fi
+
 fail()
 {
     printf '%s\n' "Android APK emulator smoke failed: $1" >&2
@@ -45,7 +50,7 @@ if [ -e /dev/kvm ]; then
 fi
 
 yes | sdkmanager --licenses >/dev/null 2>&1 || true
-sdkmanager "$system_image" >/dev/null
+sdkmanager "platform-tools" "emulator" "$system_image" >/dev/null
 
 printf '%s\n' no |
     avdmanager create avd         --force         --name "$avd_name"         --package "$system_image"         --device pixel_6 >/dev/null
