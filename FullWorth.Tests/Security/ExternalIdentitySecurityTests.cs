@@ -119,6 +119,48 @@ public sealed class ExternalIdentitySecurityTests
     }
 
     [Fact]
+    public async Task ExternalRegister_RejectsBlankPassword()
+    {
+        using var factory =
+            FullWorthApiFactory.WithExternalIdentityValidator(
+                new FixedExternalIdentityTokenValidator(
+                    new ExternalIdentity(
+                        ExternalIdentityProviders.Google,
+                        "google-subject-no-password",
+                        "external-no-password@fullworth.local",
+                        EmailVerified:
+                            true)));
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/register",
+                new
+                {
+                    provider =
+                        ExternalIdentityProviders.Google,
+
+                    idToken =
+                        "valid-test-token",
+
+                    password =
+                        string.Empty,
+
+                    acceptedTermsAndPrivacy =
+                        true,
+
+                    legalTermsVersion =
+                        FullWorthLegalDocuments.CurrentVersion
+                });
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task ExternalRegister_RequiresProviderVerifiedEmail()
     {
         using var factory =
