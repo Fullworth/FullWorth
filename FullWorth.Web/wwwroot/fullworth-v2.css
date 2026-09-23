@@ -1139,7 +1139,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     margin-top: auto;
     padding-top: 18px;
     color: var(--fw-faint);
-    font-size: 0.52rem;
+    font-size: 0.70rem;
     line-height: 1.45;
 }
 
@@ -1265,7 +1265,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     border-radius: 999px;
     background: transparent;
     color: var(--fw-muted);
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-bills-filters .bill-filter.active {
@@ -1355,7 +1355,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     align-items: center;
     gap: 7px;
     color: var(--fw-muted);
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-bills-evidence .history-dot {
@@ -1404,7 +1404,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-activity-eyebrow {
     color: #98a4c6;
-    font-size: 0.57rem;
+    font-size: 0.72rem;
     font-weight: 820;
     letter-spacing: 0.11em;
     text-transform: uppercase;
@@ -1461,7 +1461,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-activity-pulse-stats span {
     color: var(--fw-muted);
-    font-size: 0.57rem;
+    font-size: 0.72rem;
     font-weight: 680;
 }
 
@@ -1477,7 +1477,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-activity-pulse-stats small {
     margin-top: 5px;
     color: var(--fw-faint);
-    font-size: 0.52rem;
+    font-size: 0.70rem;
 }
 
 .app-shell .fw-activity-feed {
@@ -1582,7 +1582,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-activity-feed .alert-type {
     color: var(--fw-faint);
-    font-size: 0.52rem;
+    font-size: 0.70rem;
 }
 
 .app-shell .fw-activity-feed .alert-card-content > p {
@@ -1880,7 +1880,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     align-items: center;
     gap: 8px;
     color: #aab5d2;
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-account-session .security-dot {
@@ -1936,7 +1936,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-account-stats span {
     color: var(--fw-muted);
-    font-size: 0.57rem;
+    font-size: 0.72rem;
     font-weight: 690;
 }
 
@@ -1952,7 +1952,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-account-stats small {
     margin-top: 7px;
     color: var(--fw-faint);
-    font-size: 0.52rem;
+    font-size: 0.70rem;
     line-height: 1.4;
 }
 
@@ -2322,7 +2322,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     align-items: center;
     gap: 10px;
     color: #95a1bd;
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-detail-provider-meta .watching-state {
@@ -2357,7 +2357,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-detail-current > small {
     margin-top: 12px;
     color: #9aa6c4;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-detail-current .detail-amount-difference.increase {
@@ -2639,7 +2639,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-transactions-total > span {
     color: #9ba6c6;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     font-weight: 690;
 }
 
@@ -2655,7 +2655,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-transactions-total > small {
     margin-top: 17px;
     color: #919dbc;
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-transactions-stats {
@@ -2693,7 +2693,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-transactions-stats small {
     margin-top: 6px;
     color: var(--fw-faint);
-    font-size: 0.51rem;
+    font-size: 0.70rem;
     line-height: 1.4;
 }
 
@@ -2759,7 +2759,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-transactions-toolbar .transaction-account-filter {
     padding: 0 10px;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-transactions-ledger .transaction-result-line {
@@ -2767,7 +2767,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     padding: 9px 22px;
     border-bottom: 1px solid var(--fw-line);
     color: var(--fw-muted);
-    font-size: 0.57rem;
+    font-size: 0.72rem;
 }
 
 .app-shell .fw-transactions-ledger .transaction-history-load-button {
@@ -2820,12 +2820,12 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-transactions-ledger .transaction-date strong {
     color: var(--fw-ink-soft);
-    font-size: 0.63rem;
+    font-size: 0.75rem;
 }
 
 .app-shell .fw-transactions-ledger .transaction-date span {
     color: var(--fw-faint);
-    font-size: 0.51rem;
+    font-size: 0.70rem;
 }
 
 .app-shell .fw-transactions-ledger .transaction-amount {
