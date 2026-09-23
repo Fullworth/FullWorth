@@ -40,6 +40,7 @@ jobs:
 
           $backendSafeExactFiles = @(
             "AI_SHADOW_CORPUS.md",
+            "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
             "README.md",
@@ -338,6 +339,7 @@ jobs:
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
+          sh deploy/tests/project-boundary-tests.sh
           sh deploy/tests/legacy-brand-compatibility-tests.sh
           sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
