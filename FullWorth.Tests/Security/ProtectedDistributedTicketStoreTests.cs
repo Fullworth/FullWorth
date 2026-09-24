@@ -80,6 +80,113 @@ public sealed class ProtectedDistributedTicketStoreTests
     }
 
     [Fact]
+    public async Task SessionAccessor_ResolvesOpaqueCookieReferenceToLatestStoredTicket()
+    {
+        const string accessToken =
+            "server-only-access-token";
+
+        const string refreshToken =
+            "server-only-refresh-token";
+
+        var dataProtection =
+            new EphemeralDataProtectionProvider();
+
+        var store =
+            new ProtectedDistributedTicketStore(
+                CreateCache(),
+                dataProtection,
+                TimeProvider.System);
+
+        var storedTicket =
+            CreateTicket(
+                accessToken,
+                refreshToken,
+                DateTimeOffset.UtcNow.AddHours(1));
+
+        var sessionKey =
+            await store.StoreAsync(
+                storedTicket);
+
+        var cookieOptions =
+            new CookieAuthenticationOptions
+            {
+                Cookie =
+                {
+                    Name =
+                        "__Host-BillWatch.Web.Auth"
+                },
+
+                CookieManager =
+                    new ChunkingCookieManager(),
+
+                TicketDataFormat =
+                    new TicketDataFormat(
+                        dataProtection.CreateProtector(
+                            "FullWorth.Tests.CookieReference"))
+            };
+
+        var referencePrincipal =
+            new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [
+                        new Claim(
+                            "Microsoft.AspNetCore.Authentication.Cookies-SessionId",
+                            sessionKey)
+                    ],
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme));
+
+        var referenceTicket =
+            new AuthenticationTicket(
+                referencePrincipal,
+                new AuthenticationProperties(),
+                CookieAuthenticationDefaults
+                    .AuthenticationScheme);
+
+        var protectedCookie =
+            cookieOptions.TicketDataFormat.Protect(
+                referenceTicket);
+
+        var context =
+            new DefaultHttpContext();
+
+        context.Request.Headers.Cookie =
+            $"{cookieOptions.Cookie.Name}={protectedCookie}";
+
+        var accessor =
+            new WebSessionTicketAccessor(
+                new StaticOptionsMonitor<
+                    CookieAuthenticationOptions>(
+                    cookieOptions),
+                store);
+
+        var snapshot =
+            await accessor.ReadLatestAsync(
+                context);
+
+        Assert.NotNull(
+            snapshot);
+
+        Assert.Equal(
+            accessToken,
+            snapshot!.AccessToken);
+
+        Assert.Equal(
+            refreshToken,
+            snapshot.RefreshToken);
+
+        Assert.DoesNotContain(
+            accessToken,
+            protectedCookie,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            refreshToken,
+            protectedCookie,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RemovedTicket_CannotBeRetrieved()
     {
         var store =
@@ -214,5 +321,24 @@ public sealed class ProtectedDistributedTicketStoreTests
             properties,
             CookieAuthenticationDefaults
                 .AuthenticationScheme);
+    }
+    private sealed class StaticOptionsMonitor<T>(
+        T value)
+        : IOptionsMonitor<T>
+    {
+        public T CurrentValue =>
+            value;
+
+        public T Get(
+            string? name)
+        {
+            return value;
+        }
+
+        public IDisposable? OnChange(
+            Action<T, string?> listener)
+        {
+            return null;
+        }
     }
 }
