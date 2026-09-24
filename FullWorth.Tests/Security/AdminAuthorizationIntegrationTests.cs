@@ -154,6 +154,26 @@ public sealed class AdminAuthorizationIntegrationTests
             HttpStatusCode.NoContent,
             promoteResponse.StatusCode);
 
+        targetClient.DefaultRequestHeaders.Authorization =
+            null;
+
+        using var staleRefreshResponse =
+            await targetClient.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        target.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            staleRefreshResponse.StatusCode);
+
+        TestUserAuthentication.Authorize(
+            targetClient,
+            target);
+
         using var staleTokenResponse =
             await targetClient.GetAsync(
                 "/api/admin/users");
@@ -178,6 +198,34 @@ public sealed class AdminAuthorizationIntegrationTests
         Assert.Equal(
             HttpStatusCode.OK,
             freshTokenResponse.StatusCode);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var demoteResponse =
+            await ownerClient.DeleteAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Admin");
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            demoteResponse.StatusCode);
+
+        targetClient.DefaultRequestHeaders.Authorization =
+            null;
+
+        using var staleAdminRefreshResponse =
+            await targetClient.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        refreshedTarget.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            staleAdminRefreshResponse.StatusCode);
 
         TestUserAuthentication.Authorize(
             adminClient,
