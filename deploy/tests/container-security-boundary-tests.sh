@@ -117,11 +117,52 @@ for name in ("api", "web"):
     if "size=256m" not in tmp_entry and "size=268435456" not in tmp_entry:
         fail(f"{name} /tmp must be capped at 256 MiB: {tmp_entry!r}")
 
+edge = services["edge"]
+
+if edge.get("read_only") is not True:
+    fail("edge root filesystem must be read-only.")
+
+if edge.get("pids_limit") != 128:
+    fail("edge must enforce a 128 PID ceiling.")
+
+if "ALL" not in edge.get("cap_drop", []):
+    fail("edge must drop all Linux capabilities before adding the bind capability.")
+
+if set(edge.get("cap_add", [])) != {"NET_BIND_SERVICE"}:
+    fail("edge may add only NET_BIND_SERVICE.")
+
+if "no-new-privileges:true" not in edge.get("security_opt", []):
+    fail("edge must disable privilege escalation.")
+
+edge_tmpfs = edge.get("tmpfs", [])
+edge_tmp_entry = next(
+    (
+        entry
+        for entry in edge_tmpfs
+        if entry == "/tmp"
+        or entry.startswith("/tmp:")
+    ),
+    None,
+)
+
+if edge_tmp_entry is None:
+    fail("edge must provide bounded writable /tmp storage.")
+
+for option in ("noexec", "nosuid", "nodev"):
+    if option not in edge_tmp_entry:
+        fail(
+            f"edge /tmp is missing required option {option!r}: "
+            f"{edge_tmp_entry!r}"
+        )
+
+if "size=64m" not in edge_tmp_entry and "size=67108864" not in edge_tmp_entry:
+    fail(f"edge /tmp must be capped at 64 MiB: {edge_tmp_entry!r}")
+
 for service_name in ("api", "web", "database"):
     if services[service_name].get("ports"):
         fail(f"{service_name} must not publish host ports.")
 
-edge_ports = services["edge"].get("ports", [])
+edge_ports = edge.get("ports", [])
 if len(edge_ports) != 3:
     fail("edge must be the only service publishing the three public bindings.")
 
