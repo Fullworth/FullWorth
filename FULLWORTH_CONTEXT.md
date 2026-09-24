@@ -2,6 +2,40 @@
 
 Last updated: 2026-09-24
 
+## Architecture modularization checkpoint — 2026-09-24
+
+FullWorth is being evolved as a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
+
+Completed checkpoints:
+- #261 project dependency airlocks and CI-enforced project graph.
+- #262 bounded Android emulator packaging/install/launch smoke. This is repository packaging proof only; it does not satisfy physical installed-PWA acceptance #251.
+- #263 direct sibling service-module coupling ratchet.
+- #264 provider-neutral bank synchronization airlock.
+- #265 persistence ownership ratchet for finance service modules.
+- #266–#274 incremental Plaid/Bills/Statements ownership extractions.
+- #275 controller data-ownership ratchet.
+- #276 Statements-owned Bill detail history read airlock.
+- #277 Subscriptions-owned admin read airlock.
+- #278 owner-specific account deletion airlocks. Controller data-ownership baseline is now zero exceptions.
+
+Active:
+- #279 extracts account export reads behind owner projections and expands service data-ownership enforcement to Accounts at a zero-exception baseline.
+- #280 removes unnecessary MAUI Android builds for architecture-only documentation.
+- #260 remains the architecture roadmap issue.
+
+Architecture rules:
+- Modules depend on contracts, not sibling implementations.
+- Controllers must not read another module's private persistence directly.
+- Accounts, Bills, Plaid, and Statements are moving toward zero direct cross-owner finance DbSet access.
+- Shared scoped DbContext transactions are an explicit modular-monolith coordination mechanism; moving a boundary across a network later requires an outbox/coordinator or equivalent rather than silently losing atomicity.
+- Sensitive provider credentials, statement storage identifiers, and cross-user financial evidence must not leak through contracts, logs, export payloads, or exceptions.
+
+Remaining schema-level coupling under review:
+- `BillAlerts.BillChangeId` still has a database foreign key into Statements-owned `BillChanges`; the intended next step is to keep the ID as an opaque correlation identifier while removing the cross-domain FK/navigation.
+- `BankTransactions.BillStreamId` still points from Plaid-owned persistence into Bills-owned `BillStreams`; a Bills-owned association model remains a later migration candidate.
+
+Production remains unchanged by this architecture work unless a separate guarded production deployment is explicitly approved.
+
 ## Current migration checkpoint — 2026-09-24
 
 This checkpoint supersedes the older branch/domain summaries below; current GitHub source and exact-head CI remain authoritative.
