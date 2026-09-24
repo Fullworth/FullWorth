@@ -93,6 +93,13 @@ case "$*" in
             printf '%s\n' 'true 256'
         fi
         ;;
+    *".HostConfig.ReadonlyRootfs"*edge-id)
+        if [ "${BILLWATCH_TEST_WRITABLE_EDGE:-false}" = true ]; then
+            printf '%s\n' 'false 128'
+        else
+            printf '%s\n' 'true 128'
+        fi
+        ;;
     *)
         printf '%s\n' "Unexpected fake docker invocation: $*" >&2
         exit 3
@@ -107,5 +114,11 @@ PATH="$fake_bin:$PATH"     "$deployment/deploy/verify-production-exposure.sh"   
 expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_BAD_API_NETWORKS=true     "$deployment/deploy/verify-production-exposure.sh"     "$deployment"
 
 expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_WRITABLE_WEB=true     "$deployment/deploy/verify-production-exposure.sh"     "$deployment"
+
+expect_failure env \
+    PATH="$fake_bin:$PATH" \
+    BILLWATCH_TEST_WRITABLE_EDGE=true \
+    "$deployment/deploy/verify-production-exposure.sh" \
+    "$deployment"
 
 printf '%s\n' 'Production exposure boundary tests passed.'
