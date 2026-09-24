@@ -127,7 +127,7 @@ public sealed class WebOidcSecurityConfigurationTests
         string scheme,
         string displayName,
         string _,
-        bool __)
+        bool expectsProfileScope)
     {
         using var services =
             BuildServices();
@@ -139,6 +139,11 @@ public sealed class WebOidcSecurityConfigurationTests
                         OpenIdConnectOptions>>()
                 .Get(
                     scheme);
+
+        Assert.Equal(
+            expectsProfileScope,
+            options.Scope.Contains(
+                OpenIdConnectScope.Profile));
 
         AssertRemoteCookie(
             options.CorrelationCookie,
