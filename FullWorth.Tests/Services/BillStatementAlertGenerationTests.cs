@@ -63,6 +63,9 @@ public sealed class BillStatementAlertGenerationTests
             new BillStatementChangeDetectionService(
                 dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         await service.ReconcileAsync(
@@ -188,6 +191,9 @@ public sealed class BillStatementAlertGenerationTests
             new BillStatementChangeDetectionService(
                 dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         await service.ReconcileAsync(
@@ -276,6 +282,9 @@ public sealed class BillStatementAlertGenerationTests
             new BillStatementChangeDetectionService(
                 dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         await service.ReconcileAsync(
