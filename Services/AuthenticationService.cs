@@ -112,12 +112,24 @@ public sealed class AuthenticationService
         string password,
         CancellationToken cancellationToken = default)
     {
-        var result = await _apiClient.LoginAsync(
-            email,
-            password,
-            cancellationToken);
+        var initialResult =
+            await _apiClient.LoginAsync(
+                email,
+                password,
+                cancellationToken);
 
-        await SaveTokenResultAsync(result);
+        /*
+         * Immediately rotate the framework-issued login refresh token so the
+         * session is enrolled in FullWorth's bounded refresh-family state
+         * before any bearer material is persisted to the device.
+         */
+        var enrolledResult =
+            await _apiClient.RefreshAccessTokenAsync(
+                initialResult.RefreshToken,
+                cancellationToken);
+
+        await SaveTokenResultAsync(
+            enrolledResult);
     }
 
     public async Task RegisterAndLoginAsync(
@@ -278,9 +290,39 @@ public sealed class AuthenticationService
             "FullWorth could not permanently delete your account right now. Your account remains available; try again.");
     }
 
-    public void Logout()
+    public async Task LogoutAsync(
+        CancellationToken cancellationToken = default)
     {
-        ExpireSession();
+        var refreshToken =
+            await _authSession.GetRefreshTokenAsync();
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(
+                    refreshToken))
+            {
+                using var response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/auth/logout",
+                        new
+                        {
+                            refreshToken
+                        },
+                        cancellationToken);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            /*
+             * Local logout must never depend on network availability.
+             * Remote revocation is attempted first; local secrets are always
+             * cleared in the finally block.
+             */
+        }
+        finally
+        {
+            ExpireSession();
+        }
     }
 
     private async Task<string> RefreshAccessTokenAsync(
