@@ -40,6 +40,14 @@ Forbidden examples:
 
 CI enforces this graph through `deploy/tests/project-boundary-tests.sh`.
 
+## Service-module coupling ratchet
+
+CI also scans the named API service domains through `deploy/tests/service-module-boundary-tests.sh`.
+
+The current known direct sibling-service dependency is Bills to Plaid in `BillMonitoringRefreshService.cs`. That edge is temporarily allowlisted so the guard can land without a large rewrite. The allowance is a ceiling, not permission to add similar dependencies elsewhere.
+
+New sibling-service references fail CI and should use an explicit contract instead. If the existing allowlisted edge is removed, the test also fails until the stale allowance is deleted in the same change.
+
 ## Domain modules inside the API
 
 The API currently contains domains such as Accounts, Bills, Identity, Plaid, Statements, and Subscriptions. Folder boundaries alone are not considered isolation.
