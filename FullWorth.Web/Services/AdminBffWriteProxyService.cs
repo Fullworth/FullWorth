@@ -316,9 +316,20 @@ public sealed class AdminBffWriteProxyService(
                 return concurrentlyRotatedSession;
             }
 
-            await httpContext.SignOutAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme);
+            if (sessionTicketAccessor is null ||
+                !session.Properties.Items.ContainsKey(
+                    WebSessionTicketAccessor.SessionKeyItem))
+            {
+                await httpContext.SignOutAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme);
+            }
 
+            /*
+             * A distributed winner may still be between receiving its rotated
+             * API pair and renewing Redis. Do not delete the shared session
+             * here; returning unauthorized is fail-closed and allows a later
+             * request to observe the winner's renewed ticket.
+             */
             return null;
         }
 
