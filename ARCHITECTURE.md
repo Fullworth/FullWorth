@@ -86,6 +86,8 @@ Statements no longer reads or mutates Bills-owned `BillStreams` or `BillAlerts` 
 
 Bills no longer reads Statements-owned statement/change tables directly from its controller. Bill-detail history crosses `IBillStatementHistoryReadGateway`; Statements owns the user-scoped statement/change queries and returns immutable read projections.
 
+Admin controllers no longer read Subscriptions-owned access-key, entitlement, or program-membership tables directly. Administrative subscription metadata crosses `IAdminSubscriptionReadGateway`; Subscriptions owns active-status filtering and access-key status calculation.
+
 Bills no longer reads Plaid-owned bank tables directly:
 
 - connection-health and refresh-scheduling queries cross `IBankConnectionReadGateway`;
