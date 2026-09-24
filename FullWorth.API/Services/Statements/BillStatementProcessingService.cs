@@ -319,8 +319,8 @@ public sealed class BillStatementProcessingBackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var dbContext =
-            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
+        var userExistenceGateway =
+            scope.ServiceProvider.GetRequiredService<IIdentityUserExistenceGateway>();
 
         var statementStorage =
             scope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
@@ -331,7 +331,7 @@ public sealed class BillStatementProcessingBackgroundService
                 .CreateLogger<AccountDeletionStatementQuarantineRecovery>();
 
         var recovery = new AccountDeletionStatementQuarantineRecovery(
-            dbContext,
+            userExistenceGateway,
             statementStorage,
             recoveryLogger);
 

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Subscriptions;
@@ -13,6 +14,7 @@ public sealed class StripeBillingService(
     HttpClient httpClient,
     StripeBillingOptions options,
     FullWorthDbContext dbContext,
+    IIdentityUserExistenceGateway userExistenceGateway,
     TimeProvider timeProvider)
 {
     private const string StripeApiBaseUrl = "https://api.stripe.com/v1/";
@@ -316,10 +318,9 @@ public sealed class StripeBillingService(
         StripeSubscriptionState? state,
         CancellationToken cancellationToken)
     {
-        var userExists = await dbContext.Users
-            .AsNoTracking()
-            .AnyAsync(
-                user => user.Id == userId,
+        var userExists =
+            await userExistenceGateway.ExistsAsync(
+                userId,
                 cancellationToken);
 
         if (!userExists)
