@@ -41,6 +41,7 @@ public sealed class WebAntiforgeryBoundaryTests
         yield return ["PUT", "/bff/account/preferences"];
         yield return ["POST", "/bff/account/security/profile"];
         yield return ["POST", "/bff/account/security/password"];
+        yield return ["POST", "/bff/account/security/sessions/revoke-all"];
         yield return ["POST", "/bff/account/security/email"];
         yield return ["POST", "/bff/account/security/two-factor/setup"];
         yield return ["POST", "/bff/account/security/two-factor/enable"];
