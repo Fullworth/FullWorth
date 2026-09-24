@@ -1,10 +1,9 @@
-using FullWorth.API.Data;
-using Microsoft.EntityFrameworkCore;
+using FullWorth.API.Services.Contracts;
 
 namespace FullWorth.API.Services.Statements;
 
 public sealed class AccountDeletionStatementQuarantineRecovery(
-    FullWorthDbContext dbContext,
+    IIdentityUserExistenceGateway userExistenceGateway,
     SecureBillStatementStorageService statementStorage,
     ILogger<AccountDeletionStatementQuarantineRecovery> logger)
 {
@@ -28,17 +27,9 @@ public sealed class AccountDeletionStatementQuarantineRecovery(
                 .ToArray();
 
         var existingUserIds =
-            await dbContext.Users
-                .AsNoTracking()
-                .Where(
-                    user =>
-                        quarantinedUserIds.Contains(
-                            user.Id))
-                .Select(
-                    user =>
-                        user.Id)
-                .ToHashSetAsync(
-                    cancellationToken);
+            await userExistenceGateway.GetExistingUserIdsAsync(
+                quarantinedUserIds,
+                cancellationToken);
 
         var reconciled = 0;
 
