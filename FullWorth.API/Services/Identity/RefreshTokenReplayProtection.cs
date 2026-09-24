@@ -1,4 +1,4 @@
-using System.Data;
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -54,8 +54,8 @@ public sealed class RefreshTokenRotationService(
             timeProvider.GetUtcNow();
 
         if (refreshTicket?.Properties?.ExpiresUtc is not
-                { } refreshExpiresAtUtc ||
-            nowUtc >= refreshExpiresAtUtc)
+                { } presentedExpiresAtUtc ||
+            nowUtc >= presentedExpiresAtUtc)
         {
             return null;
         }
@@ -64,101 +64,8 @@ public sealed class RefreshTokenRotationService(
             await signInManager.ValidateSecurityStampAsync(
                 refreshTicket.Principal);
 
-        if (user is null)
-        {
-            return null;
-        }
-
-        if (!dbContext.Database.IsRelational())
-        {
-            return await RotateCoreAsync(
-                user,
-                refreshTicket,
-                refreshToken,
-                options,
-                nowUtc,
-                cancellationToken);
-        }
-
-        await using var transaction =
-            await dbContext.Database.BeginTransactionAsync(
-                IsolationLevel.ReadCommitted,
-                cancellationToken);
-
-        /*
-         * Serialize refresh-family mutations per Identity user.
-         *
-         * PostgreSQL row locks also serialize against ordinary Identity user
-         * updates that rotate SecurityStamp. That gives a deterministic
-         * ordering between token rotation and password/role/2FA/provider
-         * security changes instead of allowing both to commit as if they
-         * happened first.
-         */
-        var lockedUser =
-            await dbContext.Users
-                .FromSqlInterpolated(
-                    $"""
-                    SELECT *
-                    FROM "AspNetUsers"
-                    WHERE "Id" = {user.Id}
-                    FOR UPDATE
-                    """)
-                .SingleOrDefaultAsync(
-                    cancellationToken);
-
-        if (lockedUser is null)
-        {
-            return null;
-        }
-
-        /*
-         * The UserManager lookup above may already have this user tracked.
-         * Reload after the row lock so security-stamp validation below sees
-         * the database state that is serialized by that lock.
-         */
-        await dbContext.Entry(
-                user)
-            .ReloadAsync(
-                cancellationToken);
-
-        user =
-            await signInManager.ValidateSecurityStampAsync(
-                refreshTicket.Principal);
-
-        if (user is null)
-        {
-            return null;
-        }
-
-        var response =
-            await RotateCoreAsync(
-                user,
-                refreshTicket,
-                refreshToken,
-                options,
-                nowUtc,
-                cancellationToken);
-
-        /*
-         * RotateCore may prune expired or security-invalid family rows even
-         * when the presented token itself is rejected. Commit that safe
-         * cleanup while the per-user lock is still held.
-         */
-        await transaction.CommitAsync(
-            cancellationToken);
-
-        return response;
-    }
-
-    private async Task<AccessTokenResponse?> RotateCoreAsync(
-        ApplicationUser user,
-        AuthenticationTicket refreshTicket,
-        string refreshToken,
-        BearerTokenOptions options,
-        DateTimeOffset nowUtc,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(
+        if (user is null ||
+            string.IsNullOrWhiteSpace(
                 user.SecurityStamp))
         {
             return null;
@@ -175,16 +82,16 @@ public sealed class RefreshTokenRotationService(
         refreshTicket.Properties.Items
             .TryGetValue(
                 FamilyProperty,
-                out var existingFamilyId);
+                out var suppliedFamilyId);
 
         var isFirstFamilyRefresh =
             string.IsNullOrWhiteSpace(
-                existingFamilyId);
+                suppliedFamilyId);
 
         var familyId =
             isFirstFamilyRefresh
                 ? presentedHash
-                : existingFamilyId!;
+                : suppliedFamilyId!;
 
         if (!IsValidHash(
                 familyId))
@@ -192,24 +99,161 @@ public sealed class RefreshTokenRotationService(
             return null;
         }
 
+        var presentedState =
+            FormatState(
+                presentedHash,
+                presentedExpiresAtUtc,
+                securityStampHash);
+
+        /*
+         * Rebuild the principal from current Identity state instead of
+         * carrying forward claims from the old refresh ticket. Role and
+         * other Identity claim changes therefore flow into every rotated
+         * access token.
+         */
+        var principal =
+            await signInManager.CreateUserPrincipalAsync(
+                user);
+
+        var rotated =
+            CreateRotatedTokens(
+                options,
+                principal,
+                familyId,
+                nowUtc);
+
+        var rotatedHash =
+            HashValue(
+                rotated.Response.RefreshToken);
+
+        var nextState =
+            FormatState(
+                rotatedHash,
+                rotated.RefreshExpiresAtUtc,
+                securityStampHash);
+
+        var advanced =
+            await PersistRotationAsync(
+                user.Id,
+                familyId,
+                isFirstFamilyRefresh,
+                presentedState,
+                nextState,
+                securityStampHash,
+                nowUtc,
+                cancellationToken);
+
+        return advanced
+            ? rotated.Response
+            : null;
+    }
+
+    private async Task<bool> PersistRotationAsync(
+        Guid userId,
+        string familyId,
+        bool isFirstFamilyRefresh,
+        string presentedState,
+        string nextState,
+        string securityStampHash,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (!dbContext.Database.IsRelational())
+        {
+            return isFirstFamilyRefresh
+                ? await TryCreateFamilyAsync(
+                    userId,
+                    familyId,
+                    nextState,
+                    securityStampHash,
+                    nowUtc,
+                    cancellationToken)
+                : await TryAdvanceFamilyAsync(
+                    userId,
+                    familyId,
+                    presentedState,
+                    nextState,
+                    cancellationToken);
+        }
+
+        await using var transaction =
+            await dbContext.Database
+                .BeginTransactionAsync(
+                    cancellationToken);
+
+        /*
+         * Serialize refresh-family mutations per user across API instances.
+         * The database remains the source of truth; this is not an in-memory
+         * lock that disappears when FullWorth scales horizontally.
+         */
+        var lockKey =
+            CreateAdvisoryLockKey(
+                userId);
+
+        await dbContext.Database
+            .ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({lockKey});",
+                cancellationToken);
+
+        var accepted =
+            isFirstFamilyRefresh
+                ? await TryCreateFamilyAsync(
+                    userId,
+                    familyId,
+                    nextState,
+                    securityStampHash,
+                    nowUtc,
+                    cancellationToken)
+                : await TryAdvanceFamilyAsync(
+                    userId,
+                    familyId,
+                    presentedState,
+                    nextState,
+                    cancellationToken);
+
+        await transaction.CommitAsync(
+            cancellationToken);
+
+        return accepted;
+    }
+
+    private async Task<bool> TryCreateFamilyAsync(
+        Guid userId,
+        string familyId,
+        string nextState,
+        string currentSecurityStampHash,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var existingFamily =
+            await dbContext.UserTokens
+                .AsNoTracking()
+                .AnyAsync(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider &&
+                        token.Name ==
+                            familyId,
+                    cancellationToken);
+
+        if (existingFamily)
+        {
+            return false;
+        }
+
         var familyRows =
             await dbContext.UserTokens
                 .Where(
                     token =>
-                        token.UserId == user.Id &&
+                        token.UserId == userId &&
                         token.LoginProvider ==
                             TokenProvider)
                 .ToListAsync(
                     cancellationToken);
 
-        var activeFamilies =
-            new Dictionary<
-                string,
-                IdentityUserToken<Guid>>(
-                StringComparer.Ordinal);
-
-        var pruned =
-            false;
+        var activeFamilyCount =
+            0;
 
         foreach (var familyRow in familyRows)
         {
@@ -222,180 +266,195 @@ public sealed class RefreshTokenRotationService(
                     nowUtc ||
                 !FixedTimeHashEquals(
                     familySecurityStampHash,
-                    securityStampHash))
+                    currentSecurityStampHash))
             {
+                /*
+                 * Expired, malformed, and pre-security-change families no
+                 * longer protect a valid refresh token. Remove them before
+                 * enforcing the active-session ceiling.
+                 */
                 dbContext.UserTokens.Remove(
                     familyRow);
-
-                pruned =
-                    true;
 
                 continue;
             }
 
-            activeFamilies[
-                familyRow.Name] =
-                    familyRow;
+            activeFamilyCount++;
         }
 
-        if (isFirstFamilyRefresh)
+        if (activeFamilyCount >=
+            MaxActiveFamiliesPerUser)
         {
-            if (activeFamilies.ContainsKey(
-                    familyId))
-            {
-                await SavePrunedRowsAsync(
-                    pruned,
-                    cancellationToken);
-
-                return null;
-            }
-
             /*
-             * Never evict an active replay marker just to admit another
-             * session. The original login-issued refresh token can remain
-             * valid for its full lifetime, so removing its marker would make
-             * that old token look like a new family again.
+             * Never evict active replay state to admit another family. The
+             * original framework-issued token for an evicted family might
+             * still be valid and could otherwise establish itself again.
              */
-            if (activeFamilies.Count >=
-                MaxActiveFamiliesPerUser)
+            if (dbContext.ChangeTracker.HasChanges())
             {
-                await SavePrunedRowsAsync(
-                    pruned,
+                await dbContext.SaveChangesAsync(
                     cancellationToken);
-
-                return null;
             }
+
+            return false;
         }
-        else
-        {
-            if (!activeFamilies.TryGetValue(
+
+        dbContext.UserTokens.Add(
+            new IdentityUserToken<Guid>
+            {
+                UserId =
+                    userId,
+
+                LoginProvider =
+                    TokenProvider,
+
+                Name =
                     familyId,
-                    out var family) ||
-                !TryParseState(
-                    family.Value,
-                    out var persistedCurrentHash,
-                    out _,
-                    out var persistedSecurityStampHash) ||
-                !FixedTimeHashEquals(
-                    persistedCurrentHash,
-                    presentedHash) ||
-                !FixedTimeHashEquals(
-                    persistedSecurityStampHash,
-                    securityStampHash))
-            {
-                await SavePrunedRowsAsync(
-                    pruned,
-                    cancellationToken);
 
-                return null;
-            }
+                Value =
+                    nextState
+            });
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    private async Task<bool> TryAdvanceFamilyAsync(
+        Guid userId,
+        string familyId,
+        string expectedState,
+        string nextState,
+        CancellationToken cancellationToken)
+    {
+        if (dbContext.Database.IsRelational())
+        {
+            /*
+             * Exact-state compare-and-swap is a second replay barrier beneath
+             * the per-user PostgreSQL advisory lock. A stale generation can
+             * never advance a family.
+             */
+            var rowsUpdated =
+                await dbContext.UserTokens
+                    .Where(
+                        token =>
+                            token.UserId == userId &&
+                            token.LoginProvider ==
+                                TokenProvider &&
+                            token.Name ==
+                                familyId &&
+                            token.Value ==
+                                expectedState)
+                    .ExecuteUpdateAsync(
+                        setters =>
+                            setters.SetProperty(
+                                token =>
+                                    token.Value,
+                                nextState),
+                        cancellationToken);
+
+            return rowsUpdated == 1;
         }
 
-        var principal =
-            await signInManager.CreateUserPrincipalAsync(
-                user);
+        /*
+         * The EF in-memory provider used by security integration tests does
+         * not implement ExecuteUpdate. Sequential replay semantics are still
+         * enforced by exact-state comparison here; production concurrency is
+         * proven against PostgreSQL in the container gate.
+         */
+        var family =
+            await dbContext.UserTokens
+                .SingleOrDefaultAsync(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider &&
+                        token.Name ==
+                            familyId,
+                    cancellationToken);
+
+        if (family is null ||
+            !string.Equals(
+                family.Value,
+                expectedState,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        family.Value =
+            nextState;
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    private static RotatedTokens CreateRotatedTokens(
+        BearerTokenOptions options,
+        System.Security.Claims.ClaimsPrincipal principal,
+        string familyId,
+        DateTimeOffset nowUtc)
+    {
+        var accessExpiresAtUtc =
+            nowUtc +
+            options.BearerTokenExpiration;
+
+        var accessProperties =
+            new AuthenticationProperties
+            {
+                ExpiresUtc =
+                    accessExpiresAtUtc
+            };
+
+        var accessTicket =
+            new AuthenticationTicket(
+                principal,
+                accessProperties,
+                $"{IdentityConstants.BearerScheme}:AccessToken");
 
         var refreshExpiresAtUtc =
             nowUtc +
             options.RefreshTokenExpiration;
 
-        var accessTicket =
-            new AuthenticationTicket(
-                principal,
-                new AuthenticationProperties
-                {
-                    ExpiresUtc =
-                        nowUtc +
-                        options.BearerTokenExpiration
-                },
-                $"{IdentityConstants.BearerScheme}:AccessToken");
-
-        var rotatedRefreshProperties =
+        var refreshProperties =
             new AuthenticationProperties
             {
                 ExpiresUtc =
                     refreshExpiresAtUtc
             };
 
-        rotatedRefreshProperties.Items[
+        refreshProperties.Items[
             FamilyProperty] =
                 familyId;
 
-        var rotatedRefreshTicket =
+        var refreshTicket =
             new AuthenticationTicket(
                 principal,
-                rotatedRefreshProperties,
+                refreshProperties,
                 $"{IdentityConstants.BearerScheme}:RefreshToken");
 
-        var rotatedRefreshToken =
-            options.RefreshTokenProtector
-                .Protect(
-                    rotatedRefreshTicket);
+        return new RotatedTokens(
+            new AccessTokenResponse
+            {
+                AccessToken =
+                    options.BearerTokenProtector
+                        .Protect(
+                            accessTicket),
 
-        var nextStateValue =
-            FormatState(
-                HashValue(
-                    rotatedRefreshToken),
-                refreshExpiresAtUtc,
-                securityStampHash);
+                ExpiresIn =
+                    (long)options
+                        .BearerTokenExpiration
+                        .TotalSeconds,
 
-        if (isFirstFamilyRefresh)
-        {
-            dbContext.UserTokens.Add(
-                new IdentityUserToken<Guid>
-                {
-                    UserId =
-                        user.Id,
-
-                    LoginProvider =
-                        TokenProvider,
-
-                    Name =
-                        familyId,
-
-                    Value =
-                        nextStateValue
-                });
-        }
-        else
-        {
-            activeFamilies[
-                    familyId]
-                .Value =
-                    nextStateValue;
-        }
-
-        await dbContext.SaveChangesAsync(
-            cancellationToken);
-
-        return new AccessTokenResponse
-        {
-            AccessToken =
-                options.BearerTokenProtector
-                    .Protect(
-                        accessTicket),
-
-            ExpiresIn =
-                (long)options
-                    .BearerTokenExpiration
-                    .TotalSeconds,
-
-            RefreshToken =
-                rotatedRefreshToken
-        };
-    }
-
-    private async Task SavePrunedRowsAsync(
-        bool pruned,
-        CancellationToken cancellationToken)
-    {
-        if (!pruned)
-        {
-            return;
-        }
-
-        await dbContext.SaveChangesAsync(
-            cancellationToken);
+                RefreshToken =
+                    options.RefreshTokenProtector
+                        .Protect(
+                            refreshTicket)
+            },
+            refreshExpiresAtUtc);
     }
 
     private static string FormatState(
@@ -435,8 +494,7 @@ public sealed class RefreshTokenRotationService(
                 4,
                 StringSplitOptions.None);
 
-        if (parts.Length !=
-                4 ||
+        if (parts.Length != 4 ||
             !string.Equals(
                 parts[0],
                 StateVersion,
@@ -454,6 +512,12 @@ public sealed class RefreshTokenRotationService(
             return false;
         }
 
+        currentTokenHash =
+            parts[2];
+
+        securityStampHash =
+            parts[3];
+
         try
         {
             expiresAtUtc =
@@ -464,12 +528,6 @@ public sealed class RefreshTokenRotationService(
         {
             return false;
         }
-
-        currentTokenHash =
-            parts[2];
-
-        securityStampHash =
-            parts[3];
 
         return true;
     }
@@ -513,9 +571,27 @@ public sealed class RefreshTokenRotationService(
                        character is >= '0' and <= '9' ||
                        character is >= 'a' and <= 'f');
     }
+
+    private static long CreateAdvisoryLockKey(
+        Guid userId)
+    {
+        Span<byte> digest =
+            stackalloc byte[32];
+
+        SHA256.HashData(
+            userId.ToByteArray(),
+            digest);
+
+        return BinaryPrimitives.ReadInt64BigEndian(
+            digest[..8]);
+    }
+
+    private sealed record RotatedTokens(
+        AccessTokenResponse Response,
+        DateTimeOffset RefreshExpiresAtUtc);
 }
 
-public sealed class RefreshTokenRotationEndpointFilter(
+public sealed class RefreshTokenReplayEndpointFilter(
     RefreshTokenRotationService rotationService)
     : IEndpointFilter
 {
