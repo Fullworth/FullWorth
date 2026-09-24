@@ -7,6 +7,7 @@ using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Plaid;
@@ -536,6 +537,13 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     PlaidTransactionSyncService>();
+
+builder.Services.AddScoped<
+    PlaidConnectionSyncCoordinator>();
+
+builder.Services.AddScoped<
+    IBankDataSyncGateway,
+    PlaidBankDataSyncGateway>();
 
 builder.Services.AddScoped<
     PlaidConnectionDisconnectService>();
