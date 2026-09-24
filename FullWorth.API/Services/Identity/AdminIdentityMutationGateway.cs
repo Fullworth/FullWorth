@@ -77,6 +77,14 @@ public sealed class AdminIdentityMutationGateway(
             string roleName,
             CancellationToken cancellationToken = default)
     {
+        if (targetUserId == Guid.Empty)
+        {
+            return new AdminIdentityRoleMutationResult(
+                Found: false,
+                Changed: false,
+                RoleId: null);
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
 
         var normalizedRoleName =
@@ -133,6 +141,14 @@ public sealed class AdminIdentityMutationGateway(
             string roleName,
             CancellationToken cancellationToken = default)
     {
+        if (targetUserId == Guid.Empty)
+        {
+            return new AdminIdentityRoleMutationResult(
+                Found: false,
+                Changed: false,
+                RoleId: null);
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
 
         var normalizedRoleName =
