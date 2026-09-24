@@ -74,10 +74,10 @@ public sealed class RefreshTokenReplayGuard(
             HashToken(
                 refreshToken);
 
-        var suppliedFamilyKey =
-            refreshTicket.Properties.Items
-                .GetValueOrDefault(
-                    FamilyItemKey);
+        refreshTicket.Properties.Items
+            .TryGetValue(
+                FamilyItemKey,
+                out var suppliedFamilyKey);
 
         var isFirstFamilyRefresh =
             string.IsNullOrWhiteSpace(
@@ -320,10 +320,10 @@ public sealed class RefreshTokenReplayGuard(
 
             if (!TryParseState(
                     currentStateValue,
-                    out var persistedHash,
+                    out var relationalPersistedHash,
                     out _) ||
                 !FixedTimeHashEquals(
-                    persistedHash,
+                    relationalPersistedHash,
                     expectedCurrentHash))
             {
                 return false;
@@ -371,10 +371,10 @@ public sealed class RefreshTokenReplayGuard(
         if (family is null ||
             !TryParseState(
                 family.Value,
-                out var persistedHash,
+                out var inMemoryPersistedHash,
                 out _) ||
             !FixedTimeHashEquals(
-                persistedHash,
+                inMemoryPersistedHash,
                 expectedCurrentHash))
         {
             return false;
