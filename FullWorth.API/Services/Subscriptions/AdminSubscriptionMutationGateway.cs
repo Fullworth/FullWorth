@@ -17,6 +17,20 @@ public sealed class AdminSubscriptionMutationGateway(
         Guid actorUserId,
         DateTimeOffset nowUtc)
     {
+        if (targetUserId == Guid.Empty ||
+            actorUserId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "User IDs are required.");
+        }
+
+        if (grantsLifetimeAccess == durationDays.HasValue ||
+            durationDays is <= 0 or > 3650)
+        {
+            throw new ArgumentException(
+                "Specify a valid lifetime or bounded-duration grant.");
+        }
+
         if (!Enum.TryParse<FullWorthSubscriptionTier>(
                 tier,
                 ignoreCase: true,
@@ -56,6 +70,15 @@ public sealed class AdminSubscriptionMutationGateway(
             DateTimeOffset nowUtc,
             CancellationToken cancellationToken = default)
     {
+        if (targetUserId == Guid.Empty ||
+            entitlementId == Guid.Empty)
+        {
+            return new AdminSubscriptionMutationResult(
+                Found: false,
+                Changed: false,
+                ResourceId: null);
+        }
+
         var entitlement =
             await dbContext.SubscriptionEntitlements
                 .SingleOrDefaultAsync(
@@ -99,6 +122,20 @@ public sealed class AdminSubscriptionMutationGateway(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken = default)
     {
+        if (targetUserId == Guid.Empty ||
+            actorUserId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "User IDs are required.");
+        }
+
+        if (endsAtUtc <= nowUtc)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(endsAtUtc),
+                "Program membership expiration must be in the future.");
+        }
+
         if (!Enum.TryParse<UserProgramType>(
                 program,
                 ignoreCase: true,
