@@ -4,58 +4,59 @@ Last updated: 2026-09-24
 
 ## Architecture modularization checkpoint — 2026-09-24
 
-FullWorth is being evolved as a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
+FullWorth is a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
 
-Completed checkpoints:
-- #261 project dependency airlocks and CI-enforced project graph.
-- #262 bounded Android emulator packaging/install/launch smoke. This is repository packaging proof only; it does not satisfy physical installed-PWA acceptance #251.
-- #263 direct sibling service-module coupling ratchet.
-- #264 provider-neutral bank synchronization airlock.
-- #265 persistence ownership ratchet for finance service modules.
-- #266–#274 incremental Plaid/Bills/Statements ownership extractions.
-- #275 controller data-ownership ratchet.
-- #276 Statements-owned Bill detail history read airlock.
-- #277 Subscriptions-owned admin read airlock.
-- #278 owner-specific account deletion airlocks. Controller data-ownership baseline is now zero exceptions.
+Completed architecture checkpoints:
+- #261 established project dependency airlocks and CI-enforced project graph rules.
+- #263 established direct sibling service-module coupling enforcement.
+- #264 introduced the provider-neutral bank synchronization airlock.
+- #265–#279 incrementally moved Accounts, Bills, Plaid, and Statements cross-owner reads/writes behind owner contracts and drove the controller/service ownership ratchets to zero exceptions for the enforced domains.
+- #281 removed the cross-domain database foreign key/navigation from Bills-owned alerts to Statements-owned bill changes while retaining opaque correlation metadata.
+- #286 introduced the Bills-owned bank-transaction association bridge/backfill.
+- #287 moved recurring-discovery/runtime behavior to the Bills-owned transaction association.
+- #288 removed the legacy Plaid-owned `BankTransactions.BillStreamId` column/indexes/foreign key after the bridge and runtime cutover were proven.
+- #289 extended service ownership enforcement to Subscriptions and routed Statements quarantine user-existence reads through Identity.
+- #290 routed Admin user/role/subscription mutations through Identity/Subscriptions owner contracts and added Admin to the zero-exception service ownership ratchet.
 
-Active:
-- #279 extracts account export reads behind owner projections and expands service data-ownership enforcement to Accounts at a zero-exception baseline.
-- #280 removes unnecessary MAUI Android builds for architecture-only documentation.
-- #260 remains the architecture roadmap issue.
+Active architecture state:
+- Issue #260 remains the modular-architecture tracker.
+- The previously documented `BillAlerts -> BillChanges` and `BankTransactions.BillStreamId -> BillStreams` schema couplings are resolved by #281 and #286–#288; do not reopen them unless new evidence shows a regression.
+- Continue ownership enforcement only module-by-module after inspecting the current source. Do not introduce broad allowances or perform a big-bang rewrite.
 
 Architecture rules:
 - Modules depend on contracts, not sibling implementations.
-- Controllers must not read another module's private persistence directly.
-- Accounts, Bills, Plaid, and Statements are moving toward zero direct cross-owner finance DbSet access.
-- Shared scoped DbContext transactions are an explicit modular-monolith coordination mechanism; moving a boundary across a network later requires an outbox/coordinator or equivalent rather than silently losing atomicity.
-- Sensitive provider credentials, statement storage identifiers, and cross-user financial evidence must not leak through contracts, logs, export payloads, or exceptions.
+- Controllers and services must not access another module's private persistence directly where an owner contract exists.
+- Shared scoped DbContext transactions are an explicit modular-monolith coordination mechanism. A future network split requires an outbox/coordinator or equivalent rather than silently losing atomicity.
+- Sensitive provider credentials, statement storage identifiers, authentication material, and cross-user financial evidence must not leak through contracts, logs, export payloads, or exceptions.
 
-Remaining schema-level coupling under review:
-- `BillAlerts.BillChangeId` still has a database foreign key into Statements-owned `BillChanges`; the intended next step is to keep the ID as an opaque correlation identifier while removing the cross-domain FK/navigation.
-- `BankTransactions.BillStreamId` still points from Plaid-owned persistence into Bills-owned `BillStreams`; a Bills-owned association model remains a later migration candidate.
+Production remains unchanged by architecture/security merges unless a separate guarded production deployment is explicitly approved.
 
-Production remains unchanged by this architecture work unless a separate guarded production deployment is explicitly approved.
+## Current migration/security checkpoint — 2026-09-24
 
-## Current migration checkpoint — 2026-09-24
+This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
-This checkpoint supersedes the older branch/domain summaries below; current GitHub source and exact-head CI remain authoritative.
-
-- Repository: `RealizmModz/FullWorth`; release branch: `master`; integration branch: `development`.
-- The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No architecture merge listed below is being claimed as deployed.
+- Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
+- Current `development`: `2cb7a585323ca7be76360fcf1c5e7e0e80012c35` after PR #302 merged the password-change Web-session invalidation checkpoint.
+- Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
+- The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
-- PR #261 established project dependency airlocks. PR #263 added direct sibling service-module coupling enforcement with zero exceptions. PR #264 introduced the provider-neutral bank synchronization airlock.
-- PR #265 established finance data-ownership enforcement. PR #266 moved Bills connection reads behind a Plaid-owned contract. PR #267 moved recurring-bill transaction discovery/link updates behind a Plaid-owned contract.
-- PR #270 and PR #273 removed Statements direct reads of Bills-owned Bill Streams. PR #274 moved statement-driven Bill Alert persistence behind a Bills-owned reconciliation gateway; the Bills/Plaid/Statements service ownership baseline reached zero exceptions.
-- PR #275 added controller/application data-ownership enforcement and routed statement-upload Bill Stream ownership through the Bills gateway.
-- PR #276 moved Bill-detail statement/change history behind a Statements-owned read gateway.
-- PR #277 moved admin access-key/subscription/program reads behind a Subscriptions-owned read gateway.
-- PR #278 merged to `development` as `e0a6a59cf5ab6010fd2f03dd13c9a2f239f830dd` after exact-head CI #857 passed backend/tests, MAUI Android, and Linux production-container/security/backup/recovery. Account deletion now coordinates Plaid/Bills/Statements/Subscriptions owner contracts, and the controller data-ownership ratchet has zero exceptions.
-- PR #279 is the active Accounts-service checkpoint. It moves account export reads behind Plaid/Bills/Statements export gateways and expands service ownership enforcement to Accounts at a zero-exception target. Initial stacked CI exposed and fixed a missing Accounts namespace import; final integration-base CI must still pass before merge.
-- PR #280 is stacked behind #279 and adds `ARCHITECTURE.md` to the MAUI-safe documentation list. It exists only to avoid unrelated Android builds for future architecture-doc-only changes; it still requires its own final exact-head CI because it changes `ci.yml`.
-- Issue #260 is the modular-architecture tracker. After #279/#280, the next persistence boundary is schema coupling: first evaluate/remove the `BillAlerts -> BillChanges` FK while preserving `BillChangeId` as an opaque correlation ID, then handle `BankTransactions.BillStreamId` with a proper Bills-owned association rather than merely dropping referential integrity.
-- Android physical installed-PWA acceptance remains open under issue #251. CI, browser tests, and emulator proof do not satisfy that gate. A real Android tester may become available; use the release-pinned checklist against the exact deployed release.
+
+Security program:
+- Issue #291 is the active ASVS-based defense-in-depth tracker. It is a hardening/verification program, not a claim of ASVS certification.
+- PR #292 hardened the Web antiforgery cookie and added a commit-pinned pull-request dependency-review gate. GitHub CodeQL default setup is already enabled, and NuGet vulnerability warnings NU1901–NU1904 remain build-blocking.
+- PR #297 split production networking into least-connectivity edge/API/Web/data/egress networks, made the data path internal-only, and proved read-only API/Web roots, bounded noexec/nosuid/nodev temporary storage, PID ceilings, HTTPS, statement handling, encrypted backup, isolated restore, and recovery.
+- PR #298 confined the Caddy edge with a read-only root, `no-new-privileges`, all Linux capabilities dropped except `NET_BIND_SERVICE`, a 128-PID ceiling, and bounded noexec/nosuid/nodev temporary storage.
+- PR #299 moved Web authentication tickets into a Data-Protection-protected distributed server-side store backed in production by an isolated, password-protected, non-persistent Redis service. The browser auth cookie now carries an opaque protected session reference rather than API access/refresh tokens.
+- PR #300 explicitly set Identity bearer access-token lifetime to 15 minutes and refresh-token lifetime to 14 days, and added regression coverage for password security-stamp rotation.
+- PR #302 ends the current server-side Web session immediately after a successful password change, preserves the session on rejected password changes, and returns the browser to sign-in.
+- Remaining token/session work includes refresh replay/concurrency behavior, cross-device/session-wide revocation semantics, and deliberate logout/security-change behavior across clients.
+- External OIDC currently uses authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, non-persistence of provider access/refresh tokens, and hardened nonce/correlation cookies. These existing invariants should receive regression coverage before protocol behavior is changed.
+- Database runtime/migration privilege separation, stronger production secret injection, Data Protection key-at-rest/rotation design, parser-worker isolation, host/SSH/firewall hardening, security-event detection, SBOM/provenance, and immutable/off-host recovery proof remain open security work.
+
+Platform/acceptance:
+- Android physical installed-PWA acceptance remains open under issue #251. CI, Chromium, and emulator evidence do not satisfy that gate.
 - iOS Add to Home Screen failure remains tracked separately in issue #258.
-- No real-device, Plaid/provider, backup-immutability, legal-review, production, or human acceptance evidence may be fabricated or inferred from CI.
+- No real-device, provider, backup-immutability, legal-review, production, or human acceptance evidence may be fabricated or inferred from CI.
 
 ## FullWorth brand transition
 
@@ -153,15 +154,15 @@ Existing browser and offline proofs should not be rerun without relevant source 
 
 ## Repository / stack
 
-Repository: `RealizmModz/FullWorth`
+Repository: `Fullworth/FullWorth`
 
 Default/release branch: `master`
 Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `5c8a75af702031d14652325939e3b3c03c5df639` (PR #247 maintenance promotion; exact promotion head `142eac4b0b380c81964da0f065c325bea951d994` passed FullWorth CI #818).
-- `development`: `142eac4b0b380c81964da0f065c325bea951d994` after PR #249 merged the guarded reviewed-stale cleanup extension; exact PR head `2dbb8b5ec43a96bf7719fc7e136c340e52b5e300` passed FullWorth CI #817.
+- `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1` (current GitHub release-branch head; this is not by itself production-deployment evidence).
+- `development`: `2cb7a585323ca7be76360fcf1c5e7e0e80012c35` after PR #302 completed the password-change Web-session invalidation checkpoint with exact-head CI green.
 - Latest code-bearing `development` merge before the later maintenance/handoff work: `d86c7ac09650a6605f9262ede22a339a3f25d757` (PR #197 Web/BFF protected-secret newline normalization; exact head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770`, full CI #700). Later handoff-only commits may advance the branch without changing product/runtime behavior.
 - PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
 - `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
@@ -172,7 +173,7 @@ Active integration branch: `development`
 - PR #100 promoted that focused registration hotfix to `master` as `7824cc5f6ddb0231c986a793f15654d0314a8ad5`. Its exact PR head `847e17a...` passed backend build/tests, MAUI Android build, and Linux production container/recovery checks.
 - No post-merge CI run is being claimed for merge commit `7824cc5...`; the verified automated gate is the exact PR #100 head.
 
-Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, encrypted HttpOnly Web/BFF auth, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
+Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, opaque HttpOnly Web session references with Data-Protection-protected server-side Redis auth tickets, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
 
 Public Web: `https://fullworth.org`
 Public API: `https://api.fullworth.org`
@@ -182,7 +183,7 @@ Production path: `/opt/billwatch`
 ## Security invariants
 
 - Plaid access tokens remain server-side/protected at rest.
-- Web bearer/refresh tokens remain inside encrypted HttpOnly BFF state and are not intentionally exposed to browser JavaScript.
+- Web bearer/refresh tokens remain server-side inside Data-Protection-protected distributed authentication tickets. The browser receives only an opaque protected HttpOnly session reference; bearer/refresh material is not intentionally exposed to browser JavaScript.
 - External provider ID tokens/proofs must not be exposed to browser JavaScript.
 - User financial resources and statements remain ownership-scoped; cross-user IDs normally return 404 where appropriate.
 - Staff roles do not grant access to another user's financial evidence.
@@ -300,14 +301,11 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Read current GitHub `development`, open PRs, issue #260, and this checkpoint before making changes.
-2. PR #278 is merged into `development` as `e0a6a59cf5ab6010fd2f03dd13c9a2f239f830dd`; controller cross-owner DbSet exceptions are zero.
-3. Finish PR #279 first: keep it based on current `development`, require exact-head backend/tests + MAUI gate + Linux production-container/security/backup/recovery green, then merge only if the final head remains unchanged.
-4. After #279 merges, retarget PR #280 to the resulting `development`, require fresh exact-head CI, then merge the MAUI detector efficiency fix.
-5. Update issue #260 as each checkpoint merges. Do not mark schema decoupling complete until the database relationships themselves are removed or replaced.
-6. Next schema checkpoint: remove the Bills-owned `BillAlerts` foreign-key/navigation dependency on Statements-owned `BillChanges` while preserving nullable/indexed `BillChangeId` as correlation metadata and preserving the public alert API.
-7. The harder remaining schema boundary is `BankTransaction.BillStreamId`; prefer a Bills-owned transaction-to-bill association model rather than simply dropping the FK.
-8. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
-9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
-10. Preserve authentication, BFF, antiforgery, HTTPS, ownership, provider-token, statement-storage, backup/recovery, migration, and financial-data boundaries. Never weaken them to make modularization pass.
-
+1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
+2. PR #302 is merged into `development` as `2cb7a585323ca7be76360fcf1c5e7e0e80012c35`. The current browser session is terminated immediately after a successful password change; rejected password changes keep the session intact.
+3. Continue security issue #291 in small reviewable slices. The next low-risk/high-value checkpoint is regression coverage for the already-configured external OIDC invariants: authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, and hardened nonce/correlation cookies.
+4. After the OIDC regression slice, review refresh-token replay/concurrency and cross-device/session-wide revocation semantics. Do not invent a custom token format when ASP.NET Core Identity primitives can be used safely.
+5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
+6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
+7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
+8. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, container confinement, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build or architecture check pass.
