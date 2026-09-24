@@ -6,6 +6,7 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Infrastructure;
+using FullWorth.API.Services.Accounts;
 using FullWorth.API.Services.Bills;
 using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
