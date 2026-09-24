@@ -139,6 +139,55 @@ public sealed class AccountSecurityController(
         return NoContent();
     }
 
+    [HttpPost("sessions/revoke-all")]
+    public async Task<IActionResult> RevokeAllSessions(
+        SensitiveCredentialRequest request)
+    {
+        var user =
+            await GetCurrentUserAsync();
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                user,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
+        }
+
+        /*
+         * Rotating SecurityStamp invalidates every previously issued refresh
+         * token for this Identity user. Existing bearer access tokens are
+         * self-contained and remain valid only for their already-bounded
+         * lifetime (currently 15 minutes); FullWorth does not claim that
+         * remote access tokens disappear instantly.
+         *
+         * Stale refresh-family rows are harmless after the stamp rotation and
+         * are pruned by the next legitimate family enrollment.
+         */
+        var revokeResult =
+            await userManager.UpdateSecurityStampAsync(
+                user);
+
+        if (!revokeResult.Succeeded)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not revoke account sessions safely.");
+        }
+
+        return NoContent();
+    }
+
     [HttpPost("email")]
     public async Task<IActionResult> ChangeEmail(
         ChangeEmailRequest request)
