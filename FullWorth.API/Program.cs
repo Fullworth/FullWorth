@@ -961,6 +961,7 @@ var authenticationGroup =
 authenticationGroup
     .MapIdentityApi<ApplicationUser>()
     .AddEndpointFilter<
+        IEndpointConventionBuilder,
         RefreshTokenReplayEndpointFilter>();
 
 app.Run();
