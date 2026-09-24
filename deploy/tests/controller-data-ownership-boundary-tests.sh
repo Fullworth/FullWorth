@@ -48,9 +48,6 @@ allowed_cross_owner_access = {
     ("Accounts", "SubscriptionEntitlements", "FullWorth.API/Controllers/AccountController.cs"),
     ("Accounts", "UserProgramMemberships", "FullWorth.API/Controllers/AccountController.cs"),
     ("Accounts", "SubscriptionAccessKeyRedemptions", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Admin", "SubscriptionAccessKeys", "FullWorth.API/Controllers/AdminSecurityController.cs"),
-    ("Admin", "SubscriptionEntitlements", "FullWorth.API/Controllers/AdminUsersController.cs"),
-    ("Admin", "UserProgramMemberships", "FullWorth.API/Controllers/AdminUsersController.cs"),
 }
 
 def controller_module(filename):

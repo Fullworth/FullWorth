@@ -1,5 +1,6 @@
 using FullWorth.API.Authorization;
 using FullWorth.API.Data;
+using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ namespace FullWorth.API.Controllers;
 [Authorize(Policy = FullWorthPolicies.AdminOrOwner)]
 public sealed class AdminSecurityController(
     FullWorthDbContext dbContext,
-    TimeProvider timeProvider)
+    IAdminSubscriptionReadGateway subscriptionReadGateway)
     : ControllerBase
 {
     [HttpGet("access-keys")]
@@ -23,62 +24,38 @@ public sealed class AdminSecurityController(
         skip = Math.Max(0, skip);
         take = Math.Clamp(take, 1, 100);
 
-        var query = dbContext.SubscriptionAccessKeys
-            .AsNoTracking();
+        var snapshot =
+            await subscriptionReadGateway
+                .GetAccessKeysAsync(
+                    skip,
+                    take,
+                    cancellationToken);
 
-        var totalCount = await query.CountAsync(cancellationToken);
-        var rows = await query
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .ThenByDescending(item => item.Id)
-            .Skip(skip)
-            .Take(take)
-            .Select(item => new
-            {
-                item.Id,
-                item.DisplayPrefix,
-                item.Label,
-                item.Purpose,
-                item.Tier,
-                item.DurationDays,
-                item.GrantsLifetimeAccess,
-                item.MaxRedemptions,
-                item.RedemptionCount,
-                item.ExpiresAtUtc,
-                item.IsRevoked,
-                item.RevokedAtUtc,
-                item.CreatedByUserId,
-                item.CreatedAtUtc
-            })
-            .ToListAsync(cancellationToken);
-
-        var nowUtc = timeProvider.GetUtcNow();
-        var items = rows
-            .Select(item => new AdminAccessKeySummary(
-                item.Id,
-                item.DisplayPrefix,
-                item.Label,
-                item.Purpose.ToString(),
-                item.Tier.ToString(),
-                item.DurationDays,
-                item.GrantsLifetimeAccess,
-                item.MaxRedemptions,
-                item.RedemptionCount,
-                item.ExpiresAtUtc,
-                GetAccessKeyStatus(
-                    item.IsRevoked,
-                    item.ExpiresAtUtc,
-                    item.RedemptionCount,
-                    item.MaxRedemptions,
-                    nowUtc),
-                item.RevokedAtUtc,
-                item.CreatedByUserId,
-                item.CreatedAtUtc))
-            .ToArray();
+        var items =
+            snapshot.Items
+                .Select(
+                    item =>
+                        new AdminAccessKeySummary(
+                            item.Id,
+                            item.DisplayPrefix,
+                            item.Label,
+                            item.Purpose,
+                            item.Tier,
+                            item.DurationDays,
+                            item.GrantsLifetimeAccess,
+                            item.MaxRedemptions,
+                            item.RedemptionCount,
+                            item.ExpiresAtUtc,
+                            item.Status,
+                            item.RevokedAtUtc,
+                            item.CreatedByUserId,
+                            item.CreatedAtUtc))
+                .ToArray();
 
         return new AdminPage<AdminAccessKeySummary>(
-            skip,
-            take,
-            totalCount,
+            snapshot.Skip,
+            snapshot.Take,
+            snapshot.TotalCount,
             items);
     }
 
@@ -125,30 +102,6 @@ public sealed class AdminSecurityController(
             items);
     }
 
-    private static string GetAccessKeyStatus(
-        bool isRevoked,
-        DateTimeOffset? expiresAtUtc,
-        int redemptionCount,
-        int maxRedemptions,
-        DateTimeOffset nowUtc)
-    {
-        if (isRevoked)
-        {
-            return "Revoked";
-        }
-
-        if (expiresAtUtc.HasValue && expiresAtUtc.Value <= nowUtc)
-        {
-            return "Expired";
-        }
-
-        if (redemptionCount >= maxRedemptions)
-        {
-            return "Exhausted";
-        }
-
-        return "Active";
-    }
 }
 
 public sealed record AdminPage<T>(

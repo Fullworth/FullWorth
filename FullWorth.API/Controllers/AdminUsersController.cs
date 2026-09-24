@@ -2,7 +2,7 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
-using FullWorth.API.Services.Subscriptions;
+using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +17,7 @@ public sealed class AdminUsersController(
     FullWorthDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     AdminUserManagementService managementService,
-    TimeProvider timeProvider)
+    IAdminSubscriptionReadGateway subscriptionReadGateway)
     : ControllerBase
 {
     [HttpGet]
@@ -53,26 +53,18 @@ public sealed class AdminUsersController(
             select new { userRole.UserId, role.Name })
             .ToListAsync(cancellationToken);
 
-        var nowUtc = timeProvider.GetUtcNow();
-        var entitlements = await dbContext.SubscriptionEntitlements
-            .AsNoTracking()
-            .Where(item => userIds.Contains(item.UserId) &&
-                !item.IsRevoked &&
-                item.StartsAtUtc <= nowUtc &&
-                (item.EndsAtUtc == null || item.EndsAtUtc > nowUtc))
-            .ToListAsync(cancellationToken);
-        var memberships = await dbContext.UserProgramMemberships
-            .AsNoTracking()
-            .Where(item => userIds.Contains(item.UserId) &&
-                item.IsActive &&
-                (item.EndsAtUtc == null || item.EndsAtUtc > nowUtc))
-            .ToListAsync(cancellationToken);
+        var subscriptions =
+            await subscriptionReadGateway
+                .GetUserSubscriptionsAsync(
+                    userIds,
+                    cancellationToken);
 
         return Ok(users.Select(user =>
         {
-            var effective = SubscriptionEntitlementRules.SelectEffectiveEntitlement(
-                entitlements.Where(item => item.UserId == user.Id),
-                nowUtc);
+            subscriptions.TryGetValue(
+                user.Id,
+                out var subscription);
+
             return new AdminUserSummary(
                 user.Id,
                 user.Email,
@@ -82,12 +74,10 @@ public sealed class AdminUsersController(
                     .Select(item => item.Name!)
                     .OrderByDescending(FullWorthRoleHierarchy.GetRank)
                     .ToArray(),
-                memberships.Where(item => item.UserId == user.Id)
-                    .Select(item => item.Program.ToString())
-                    .OrderBy(name => name)
-                    .ToArray(),
-                effective?.Tier.ToString(),
-                effective?.EndsAtUtc);
+                subscription?.Programs ??
+                    [],
+                subscription?.SubscriptionTier,
+                subscription?.SubscriptionEndsAtUtc);
         }).ToList());
     }
 

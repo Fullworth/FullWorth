@@ -253,6 +253,10 @@ builder.Services.AddScoped<
     AdminSubscriptionAccessKeyService>();
 
 builder.Services.AddScoped<
+    IAdminSubscriptionReadGateway,
+    AdminSubscriptionReadGateway>();
+
+builder.Services.AddScoped<
     AdminUserManagementService>();
 
 /*
