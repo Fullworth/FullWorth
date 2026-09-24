@@ -224,7 +224,7 @@ public sealed class AccountDataExportTests
                 {
                     UserId = exportingUserId,
                     BankAccountId = account.Id,
-                    PlaidTransactionId = PlaidTransactionId,
+PlaidTransactionId = PlaidTransactionId,
                     Name = "Exported Payment",
                     MerchantName = "Exported Internet Provider",
                     Amount = 89.99m,
@@ -241,6 +241,7 @@ public sealed class AccountDataExportTests
                 new BillStatementEntity
                 {
                     UserId = exportingUserId,
+                    BillStreamId = stream.Id,
                     PeriodStart = new DateOnly(2026, 7, 1),
                     PeriodEnd = new DateOnly(2026, 7, 31),
                     StatementDate = new DateOnly(2026, 8, 1),
@@ -270,6 +271,7 @@ public sealed class AccountDataExportTests
                 new BillChangeEntity
                 {
                     UserId = exportingUserId,
+                    BillStreamId = stream.Id,
                     CurrentStatementId = statement.Id,
                     ChangeType = BillChangeType.TotalIncrease,
                     Confidence = BillChangeConfidence.Confirmed,
@@ -287,6 +289,7 @@ public sealed class AccountDataExportTests
                 new BillAlertEntity
                 {
                     UserId = exportingUserId,
+                    BillStreamId = stream.Id,
                     BillChangeId = change.Id,
                     AlertType = BillAlertType.BillIncrease,
                     Severity = BillAlertSeverity.Warning,
@@ -300,6 +303,7 @@ public sealed class AccountDataExportTests
                 new BillStatementUploadEntity
                 {
                     UserId = exportingUserId,
+                    BillStreamId = stream.Id,
                     BillStatementId = statement.Id,
                     StorageKey = StatementStorageKey,
                     MediaType = "application/pdf",
@@ -343,6 +347,7 @@ public sealed class AccountDataExportTests
                 {
                     UserId = exportingUserId,
                     BankTransactionId = transaction.Id,
+                    BillStreamId = stream.Id,
                     CreatedAtUtc = now,
                     UpdatedAtUtc = now
                 };
@@ -564,8 +569,7 @@ public sealed class AccountDataExportTests
             {
                 UserId = userId,
                 BankAccountId = account.Id,
-                BillStreamId = stream.Id,
-                PlaidTransactionId = $"{OtherUserMarker}-transaction",
+PlaidTransactionId = $"{OtherUserMarker}-transaction",
                 Name = OtherUserMarker,
                 Amount = 1m,
                 PostedDate = new DateOnly(2026, 8, 20),
