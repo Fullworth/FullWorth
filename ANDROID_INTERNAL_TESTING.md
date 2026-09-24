@@ -31,6 +31,14 @@ The workflow runs automatically for Android/MAUI-relevant pull requests so each 
 
 Pull-request artifacts are test candidates only. A successful PR artifact does not authorize merge, production deployment, store distribution, or real-device acceptance; the normal exact-head FullWorth CI gate still applies.
 
+## Automated emulator smoke
+
+After the signed artifact is created, the workflow downloads that exact artifact on a fresh Ubuntu runner, verifies its SHA-256 file, boots an Android 35 Google APIs x86_64 emulator, installs package `com.companyname.billwatch`, launches it through the Android launcher intent, and requires the FullWorth process to remain alive and foregrounded without an AndroidRuntime fatal exception.
+
+The emulator uses an isolated Android user/AVD home under the GitHub runner's temporary directory and verifies the created AVD is visible before launch. Its ADB-connect and Android-boot waits are deliberately bounded. If the AVD is missing, the emulator exits, or the device fails to become reachable, the gate fails closed and prints a sanitized emulator-log tail instead of hanging until GitHub cancels the job.
+
+This is packaging/install/launch coverage only. It can catch broken signing, malformed packages, install failures, launcher-registration failures, and immediate startup crashes without using a FullWorth account or financial data. It does **not** replace physical-device interaction acceptance.
+
 ## Install test
 
 Download the `fullworth-android-internal-<commit>` artifact from the successful workflow run. Verify its included SHA-256 file before sideloading the APK onto a test Android device.
