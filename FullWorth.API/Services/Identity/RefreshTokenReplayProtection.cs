@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
@@ -18,37 +19,46 @@ public sealed class RefreshTokenReplayGuard(
     IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
     TimeProvider timeProvider)
 {
-    internal const string TokenProvider =
-        "FullWorth.RefreshReplay";
+    private const string TokenProvider =
+        "FullWorth.RefreshFamily";
 
-    public async Task<bool> TryConsumeAsync(
-        string? refreshToken,
-        CancellationToken cancellationToken = default)
+    private const string FamilyItemKey =
+        "FullWorth.RefreshFamilyId";
+
+    private const string StateVersion =
+        "v1";
+
+    private const int MaxActiveFamiliesPerUser =
+        16;
+
+    public async Task<AccessTokenResponse?>
+        TryRotateAsync(
+            string? refreshToken,
+            CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(
                 refreshToken))
         {
-            return false;
+            return null;
         }
 
-        var refreshTokenProtector =
-            bearerTokenOptions
-                .Get(
-                    IdentityConstants.BearerScheme)
-                .RefreshTokenProtector;
+        var options =
+            bearerTokenOptions.Get(
+                IdentityConstants.BearerScheme);
 
         var refreshTicket =
-            refreshTokenProtector.Unprotect(
-                refreshToken);
+            options.RefreshTokenProtector
+                .Unprotect(
+                    refreshToken);
 
         var nowUtc =
             timeProvider.GetUtcNow();
 
         if (refreshTicket?.Properties?.ExpiresUtc is not
-                { } expiresAtUtc ||
-            nowUtc >= expiresAtUtc)
+                { } presentedExpiresAtUtc ||
+            nowUtc >= presentedExpiresAtUtc)
         {
-            return false;
+            return null;
         }
 
         var user =
@@ -57,75 +67,204 @@ public sealed class RefreshTokenReplayGuard(
 
         if (user is null)
         {
+            return null;
+        }
+
+        var presentedHash =
+            HashToken(
+                refreshToken);
+
+        var suppliedFamilyKey =
+            refreshTicket.Properties.Items
+                .GetValueOrDefault(
+                    FamilyItemKey);
+
+        var isFirstFamilyRefresh =
+            string.IsNullOrWhiteSpace(
+                suppliedFamilyKey);
+
+        var familyKey =
+            isFirstFamilyRefresh
+                ? presentedHash
+                : suppliedFamilyKey!;
+
+        if (!IsValidHash(
+                familyKey))
+        {
+            return null;
+        }
+
+        if (!isFirstFamilyRefresh)
+        {
+            var currentStateValue =
+                await dbContext.UserTokens
+                    .AsNoTracking()
+                    .Where(
+                        token =>
+                            token.UserId == user.Id &&
+                            token.LoginProvider ==
+                                TokenProvider &&
+                            token.Name ==
+                                familyKey)
+                    .Select(
+                        token =>
+                            token.Value)
+                    .SingleOrDefaultAsync(
+                        cancellationToken);
+
+            if (!TryParseState(
+                    currentStateValue,
+                    out var currentHash,
+                    out var familyExpiresAtUtc) ||
+                familyExpiresAtUtc <=
+                    nowUtc ||
+                !FixedTimeHashEquals(
+                    currentHash,
+                    presentedHash))
+            {
+                return null;
+            }
+        }
+
+        var principal =
+            await signInManager.CreateUserPrincipalAsync(
+                user);
+
+        var rotated =
+            CreateRotatedTokens(
+                options,
+                principal,
+                familyKey,
+                nowUtc);
+
+        var rotatedHash =
+            HashToken(
+                rotated.Response.RefreshToken);
+
+        var nextStateValue =
+            FormatState(
+                rotatedHash,
+                rotated.RefreshExpiresAtUtc);
+
+        if (isFirstFamilyRefresh)
+        {
+            var accepted =
+                await TryCreateFamilyAsync(
+                    user.Id,
+                    familyKey,
+                    nextStateValue,
+                    nowUtc,
+                    cancellationToken);
+
+            return accepted
+                ? rotated.Response
+                : null;
+        }
+
+        var updated =
+            await TryAdvanceFamilyAsync(
+                user.Id,
+                familyKey,
+                presentedHash,
+                nextStateValue,
+                cancellationToken);
+
+        return updated
+            ? rotated.Response
+            : null;
+    }
+
+    private async Task<bool> TryCreateFamilyAsync(
+        Guid userId,
+        string familyKey,
+        string stateValue,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var existingFamily =
+            await dbContext.UserTokens
+                .AsNoTracking()
+                .AnyAsync(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider &&
+                        token.Name ==
+                            familyKey,
+                    cancellationToken);
+
+        if (existingFamily)
+        {
             return false;
         }
 
-        var tokenHash =
-            Convert.ToHexString(
-                    SHA256.HashData(
-                        Encoding.UTF8.GetBytes(
-                            refreshToken)))
-                .ToLowerInvariant();
-
-        var markerName =
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"{expiresAtUtc.ToUnixTimeSeconds()}:{tokenHash}");
-
-        var existingMarkers =
+        var familyRows =
             await dbContext.UserTokens
                 .Where(
                     token =>
-                        token.UserId == user.Id &&
+                        token.UserId == userId &&
                         token.LoginProvider ==
                             TokenProvider)
                 .ToListAsync(
                     cancellationToken);
 
-        if (existingMarkers.Any(
-                token =>
-                    string.Equals(
-                        token.Name,
-                        markerName,
-                        StringComparison.Ordinal)))
-        {
-            return false;
-        }
+        var activeFamilies =
+            new List<(
+                IdentityUserToken<Guid> Token,
+                DateTimeOffset ExpiresAtUtc)>();
 
-        var nowUnixSeconds =
-            nowUtc.ToUnixTimeSeconds();
-
-        foreach (var marker in existingMarkers)
+        foreach (var familyRow in familyRows)
         {
-            if (TryReadExpiryUnixSeconds(
-                    marker.Name,
-                    out var markerExpiry) &&
-                markerExpiry <=
-                    nowUnixSeconds)
+            if (!TryParseState(
+                    familyRow.Value,
+                    out _,
+                    out var expiresAtUtc) ||
+                expiresAtUtc <=
+                    nowUtc)
             {
                 dbContext.UserTokens.Remove(
-                    marker);
+                    familyRow);
+
+                continue;
             }
+
+            activeFamilies.Add(
+                (
+                    familyRow,
+                    expiresAtUtc));
         }
 
-        var consumedMarker =
+        foreach (var excessFamily in
+                 activeFamilies
+                     .OrderBy(
+                         family =>
+                             family.ExpiresAtUtc)
+                     .Take(
+                         Math.Max(
+                             0,
+                             activeFamilies.Count -
+                             MaxActiveFamiliesPerUser +
+                             1)))
+        {
+            dbContext.UserTokens.Remove(
+                excessFamily.Token);
+        }
+
+        dbContext.UserTokens.Add(
             new IdentityUserToken<Guid>
             {
                 UserId =
-                    user.Id,
+                    userId,
 
                 LoginProvider =
                     TokenProvider,
 
                 Name =
-                    markerName,
+                    familyKey,
 
                 Value =
-                    null
-            };
-
-        dbContext.UserTokens.Add(
-            consumedMarker);
+                    stateValue
+            });
 
         try
         {
@@ -135,51 +274,307 @@ public sealed class RefreshTokenReplayGuard(
             return true;
         }
         catch (DbUpdateException exception)
-            when (exception.InnerException is
-                PostgresException postgresException &&
-                postgresException.SqlState ==
-                    PostgresErrorCodes.UniqueViolation)
+            when (IsUniqueViolation(
+                exception))
         {
-            /*
-             * Concurrent refresh attempts can both pass the read check, but
-             * AspNetUserTokens has a composite primary key. Exactly one
-             * insert wins in PostgreSQL; the loser is a replay.
-             */
-            dbContext.Entry(
-                    consumedMarker)
-                .State =
-                    EntityState.Detached;
-
             return false;
         }
     }
 
-    private static bool TryReadExpiryUnixSeconds(
-        string? markerName,
-        out long expiresAtUnixSeconds)
+    private async Task<bool> TryAdvanceFamilyAsync(
+        Guid userId,
+        string familyKey,
+        string expectedCurrentHash,
+        string nextStateValue,
+        CancellationToken cancellationToken)
     {
-        expiresAtUnixSeconds =
-            0;
+        if (dbContext.Database.IsRelational())
+        {
+            var currentStatePrefix =
+                $"{StateVersion}|";
+
+            /*
+             * The value predicate is completed below after reading the
+             * current row. ExecuteUpdate then performs compare-and-swap in
+             * PostgreSQL so concurrent requests using the same token cannot
+             * both advance a family.
+             */
+            var currentStateValue =
+                await dbContext.UserTokens
+                    .AsNoTracking()
+                    .Where(
+                        token =>
+                            token.UserId == userId &&
+                            token.LoginProvider ==
+                                TokenProvider &&
+                            token.Name ==
+                                familyKey &&
+                            token.Value != null &&
+                            token.Value.StartsWith(
+                                currentStatePrefix))
+                    .Select(
+                        token =>
+                            token.Value)
+                    .SingleOrDefaultAsync(
+                        cancellationToken);
+
+            if (!TryParseState(
+                    currentStateValue,
+                    out var persistedHash,
+                    out _) ||
+                !FixedTimeHashEquals(
+                    persistedHash,
+                    expectedCurrentHash))
+            {
+                return false;
+            }
+
+            var rowsUpdated =
+                await dbContext.UserTokens
+                    .Where(
+                        token =>
+                            token.UserId == userId &&
+                            token.LoginProvider ==
+                                TokenProvider &&
+                            token.Name ==
+                                familyKey &&
+                            token.Value ==
+                                currentStateValue)
+                    .ExecuteUpdateAsync(
+                        setters =>
+                            setters.SetProperty(
+                                token =>
+                                    token.Value,
+                                nextStateValue),
+                        cancellationToken);
+
+            return rowsUpdated == 1;
+        }
+
+        /*
+         * EF's in-memory provider is used by the security integration suite
+         * and does not implement ExecuteUpdate. Sequential replay behavior is
+         * still exercised there; PostgreSQL's conditional update is the
+         * production concurrency barrier.
+         */
+        var family =
+            await dbContext.UserTokens
+                .SingleOrDefaultAsync(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider &&
+                        token.Name ==
+                            familyKey,
+                    cancellationToken);
+
+        if (family is null ||
+            !TryParseState(
+                family.Value,
+                out var persistedHash,
+                out _) ||
+            !FixedTimeHashEquals(
+                persistedHash,
+                expectedCurrentHash))
+        {
+            return false;
+        }
+
+        family.Value =
+            nextStateValue;
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    private static RotatedTokens CreateRotatedTokens(
+        BearerTokenOptions options,
+        System.Security.Claims.ClaimsPrincipal principal,
+        string familyKey,
+        DateTimeOffset nowUtc)
+    {
+        var accessExpiresAtUtc =
+            nowUtc +
+            options.BearerTokenExpiration;
+
+        var accessProperties =
+            new AuthenticationProperties
+            {
+                ExpiresUtc =
+                    accessExpiresAtUtc
+            };
+
+        var accessTicket =
+            new AuthenticationTicket(
+                principal,
+                accessProperties,
+                $"{IdentityConstants.BearerScheme}:AccessToken");
+
+        var refreshExpiresAtUtc =
+            nowUtc +
+            options.RefreshTokenExpiration;
+
+        var refreshProperties =
+            new AuthenticationProperties
+            {
+                ExpiresUtc =
+                    refreshExpiresAtUtc
+            };
+
+        refreshProperties.Items[
+            FamilyItemKey] =
+                familyKey;
+
+        var refreshTicket =
+            new AuthenticationTicket(
+                principal,
+                refreshProperties,
+                $"{IdentityConstants.BearerScheme}:RefreshToken");
+
+        var accessToken =
+            options.BearerTokenProtector
+                .Protect(
+                    accessTicket);
+
+        var rotatedRefreshToken =
+            options.RefreshTokenProtector
+                .Protect(
+                    refreshTicket);
+
+        return new RotatedTokens(
+            new AccessTokenResponse
+            {
+                AccessToken =
+                    accessToken,
+
+                ExpiresIn =
+                    (long)options
+                        .BearerTokenExpiration
+                        .TotalSeconds,
+
+                RefreshToken =
+                    rotatedRefreshToken
+            },
+            refreshExpiresAtUtc);
+    }
+
+    private static string HashToken(
+        string token)
+    {
+        return Convert.ToHexString(
+                SHA256.HashData(
+                    Encoding.UTF8.GetBytes(
+                        token)))
+            .ToLowerInvariant();
+    }
+
+    private static bool FixedTimeHashEquals(
+        string left,
+        string right)
+    {
+        if (!IsValidHash(left) ||
+            !IsValidHash(right))
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(
+            Convert.FromHexString(
+                left),
+            Convert.FromHexString(
+                right));
+    }
+
+    private static bool IsValidHash(
+        string? value)
+    {
+        return value is
+            { Length: 64 } &&
+               value.All(
+                   character =>
+                       character is >= '0' and <= '9' ||
+                       character is >= 'a' and <= 'f');
+    }
+
+    private static string FormatState(
+        string currentHash,
+        DateTimeOffset expiresAtUtc)
+    {
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{StateVersion}|{expiresAtUtc.ToUnixTimeSeconds()}|{currentHash}");
+    }
+
+    private static bool TryParseState(
+        string? value,
+        out string currentHash,
+        out DateTimeOffset expiresAtUtc)
+    {
+        currentHash =
+            string.Empty;
+
+        expiresAtUtc =
+            default;
 
         if (string.IsNullOrWhiteSpace(
-                markerName))
+                value))
         {
             return false;
         }
 
-        var separatorIndex =
-            markerName.IndexOf(
-                ':');
+        var parts =
+            value.Split(
+                '|',
+                3,
+                StringSplitOptions.None);
 
-        return separatorIndex > 0 &&
-               long.TryParse(
-                   markerName.AsSpan(
-                       0,
-                       separatorIndex),
-                   NumberStyles.None,
-                   CultureInfo.InvariantCulture,
-                   out expiresAtUnixSeconds);
+        if (parts.Length != 3 ||
+            !string.Equals(
+                parts[0],
+                StateVersion,
+                StringComparison.Ordinal) ||
+            !long.TryParse(
+                parts[1],
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var expiresAtUnixSeconds) ||
+            !IsValidHash(
+                parts[2]))
+        {
+            return false;
+        }
+
+        currentHash =
+            parts[2];
+
+        try
+        {
+            expiresAtUtc =
+                DateTimeOffset.FromUnixTimeSeconds(
+                    expiresAtUnixSeconds);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
+
+        return true;
     }
+
+    private static bool IsUniqueViolation(
+        DbUpdateException exception)
+    {
+        return exception.InnerException is
+                   PostgresException postgresException &&
+               postgresException.SqlState ==
+                   PostgresErrorCodes.UniqueViolation;
+    }
+
+    private sealed record RotatedTokens(
+        AccessTokenResponse Response,
+        DateTimeOffset RefreshExpiresAtUtc);
 }
 
 public sealed class RefreshTokenReplayEndpointFilter(
@@ -201,17 +596,14 @@ public sealed class RefreshTokenReplayEndpointFilter(
                 context);
         }
 
-        var accepted =
-            await replayGuard.TryConsumeAsync(
+        var rotated =
+            await replayGuard.TryRotateAsync(
                 refreshRequest.RefreshToken,
                 context.HttpContext.RequestAborted);
 
-        if (!accepted)
-        {
-            return Results.Unauthorized();
-        }
-
-        return await next(
-            context);
+        return rotated is null
+            ? Results.Unauthorized()
+            : Results.Ok(
+                rotated);
     }
 }
