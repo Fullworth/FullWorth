@@ -1,6 +1,7 @@
 using System.Data;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -9,6 +10,7 @@ namespace FullWorth.API.Services.Subscriptions;
 public sealed class SubscriptionAccessKeyRedemptionService(
     FullWorthDbContext dbContext,
     SubscriptionAccessKeyGenerator keyGenerator,
+    IAdminAuditLogWriter auditLogWriter,
     TimeProvider timeProvider)
 {
     public async Task<SubscriptionAccessKeyRedemptionResult> RedeemAsync(
@@ -92,16 +94,14 @@ public sealed class SubscriptionAccessKeyRedemptionService(
                     EntitlementId = entitlement.Id,
                     RedeemedAtUtc = nowUtc
                 });
-            dbContext.AdminAuditLogs.Add(
-                new AdminAuditLogEntity
-                {
-                    ActorUserId = userId,
-                    TargetUserId = userId,
-                    Action = "SubscriptionAccessKeyRedeemed",
-                    SubjectType = nameof(SubscriptionAccessKeyEntity),
-                    SubjectId = accessKey.Id,
-                    CreatedAtUtc = nowUtc
-                });
+            auditLogWriter.Stage(
+                new AdminAuditLogWrite(
+                    userId,
+                    TargetUserId: userId,
+                    Action: "SubscriptionAccessKeyRedeemed",
+                    SubjectType: nameof(SubscriptionAccessKeyEntity),
+                    SubjectId: accessKey.Id,
+                    CreatedAtUtc: nowUtc));
 
             await dbContext.SaveChangesAsync(cancellationToken);
 
