@@ -15,20 +15,6 @@ public sealed class BillStatementPersistenceService
     private readonly BillStatementPaymentDueAlertService
         _paymentDueAlertService;
 
-    /*
-     * Preserve existing direct test construction.
-     */
-    public BillStatementPersistenceService(
-        FullWorthDbContext dbContext,
-        BillStatementChangeDetectionService changeDetectionService)
-        : this(
-            dbContext,
-            changeDetectionService,
-            new BillStatementPaymentDueAlertService(
-                dbContext))
-    {
-    }
-
     public BillStatementPersistenceService(
         FullWorthDbContext dbContext,
         BillStatementChangeDetectionService changeDetectionService,
