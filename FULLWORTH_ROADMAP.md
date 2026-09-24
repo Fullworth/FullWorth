@@ -6,7 +6,9 @@ Status: Active planning document
 
 Completion notation: `~~strikethrough~~` means the roadmap item is completed to the level of evidence the item requires. Unstruck items remain open, partial, or awaiting real-environment acceptance.
 
-Repository: `RealizmModz/FullWorth`
+Repository: `Fullworth/FullWorth`
+
+Revenue launch execution target (2026-09-24): see [LAUNCH_PLAN.md](LAUNCH_PLAN.md) for the October 23 target, full roadmap coverage, open external dependencies, and evidence requirements. The historical snapshots below are not current production verification.
 
 Integration branch: `development`
 
