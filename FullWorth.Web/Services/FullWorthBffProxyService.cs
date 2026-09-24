@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using FullWorth.Web.Infrastructure;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -16,11 +17,18 @@ public sealed class FullWorthBffProxyService
     private readonly IHttpClientFactory
         _httpClientFactory;
 
+    private readonly IWebSessionTicketAccessor?
+        _sessionTicketAccessor;
+
     public FullWorthBffProxyService(
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IWebSessionTicketAccessor? sessionTicketAccessor = null)
     {
         _httpClientFactory =
             httpClientFactory;
+
+        _sessionTicketAccessor =
+            sessionTicketAccessor;
     }
 
     public Task<IResult>
@@ -623,6 +631,17 @@ public sealed class FullWorthBffProxyService
 
         if (!response.IsSuccessStatusCode)
         {
+            var concurrentlyRotatedSession =
+                await TryRecoverConcurrentRefreshAsync(
+                    httpContext,
+                    session.RefreshToken,
+                    cancellationToken);
+
+            if (concurrentlyRotatedSession is not null)
+            {
+                return concurrentlyRotatedSession;
+            }
+
             await httpContext.SignOutAsync(
                 CookieAuthenticationDefaults
                     .AuthenticationScheme);
@@ -725,6 +744,61 @@ public sealed class FullWorthBffProxyService
             refreshedTokens.AccessToken,
             refreshedTokens.RefreshToken,
             expiresAtUtc);
+    }
+
+    private async Task<WebApiSession?>
+        TryRecoverConcurrentRefreshAsync(
+            HttpContext httpContext,
+            string attemptedRefreshToken,
+            CancellationToken cancellationToken)
+    {
+        if (_sessionTicketAccessor is null)
+        {
+            return null;
+        }
+
+        /*
+         * One API refresh request wins the database replay barrier. A
+         * concurrent BFF request may receive that replay 401 before the
+         * winning request finishes renewing the shared Redis ticket. Briefly
+         * reread the same opaque session reference so the losing request can
+         * adopt the winner's rotated pair instead of logging the user out.
+         */
+        for (var attempt = 0;
+             attempt < 10;
+             attempt++)
+        {
+            if (attempt > 0)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(50),
+                    cancellationToken);
+            }
+
+            var latest =
+                await _sessionTicketAccessor
+                    .ReadLatestAsync(
+                        httpContext,
+                        cancellationToken);
+
+            if (latest is null ||
+                string.Equals(
+                    latest.RefreshToken,
+                    attemptedRefreshToken,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return new WebApiSession(
+                latest.Principal,
+                latest.Properties,
+                latest.AccessToken,
+                latest.RefreshToken,
+                latest.ExpiresAtUtc);
+        }
+
+        return null;
     }
 
     private static bool ShouldRefresh(
