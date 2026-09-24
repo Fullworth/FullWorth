@@ -30,9 +30,11 @@ owners = {
     "SubscriptionAccessKeyRedemptions": "Subscriptions",
     "AdminAuditLogs": "Admin",
     "Users": "Identity",
+    "Roles": "Identity",
+    "UserRoles": "Identity",
 }
 
-modules = {"Accounts", "Bills", "Plaid", "Statements", "Subscriptions"}
+modules = {"Accounts", "Admin", "Bills", "Plaid", "Statements", "Subscriptions"}
 
 entity_owners = {
     "BillStreamEntity": "Bills",
