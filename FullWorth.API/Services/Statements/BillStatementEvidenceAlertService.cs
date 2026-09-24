@@ -121,12 +121,12 @@ public sealed class BillStatementEvidenceAlertService
 
             var title =
                 Truncate(
-                    `${providerName}: new fee — ${currentItem.Description}`,
+                    $"{providerName}: new fee — {currentItem.Description}",
                     MaxTitleLength);
 
             var message =
                 Truncate(
-                    `${FormatMoney(currentItem.Amount)} labeled "${currentItem.Description}" appeared on the latest provider statement. FullWorth is not assuming this fee will recur.`,
+                    $"{FormatMoney(currentItem.Amount)} labeled \"{currentItem.Description}\" appeared on the latest provider statement. FullWorth is not assuming this fee will recur.",
                     MaxMessageLength);
 
             results.Add(
@@ -172,12 +172,12 @@ public sealed class BillStatementEvidenceAlertService
 
             var title =
                 Truncate(
-                    `${providerName}: discount removed — ${previousItem.Description}`,
+                    $"{providerName}: discount removed — {previousItem.Description}",
                     MaxTitleLength);
 
             var message =
                 Truncate(
-                    `A ${FormatMoney(discountAmount)} discount labeled "${previousItem.Description}" was present on the previous provider statement but is absent from the latest statement. FullWorth has not assumed why the discount ended.`,
+                    $"A {FormatMoney(discountAmount)} discount labeled \"{previousItem.Description}\" was present on the previous provider statement but is absent from the latest statement. FullWorth has not assumed why the discount ended.",
                     MaxMessageLength);
 
             results.Add(
@@ -281,7 +281,7 @@ public sealed class BillStatementEvidenceAlertService
         decimal amount)
     {
         return
-            `$${Math.Abs(amount):0.00}`;
+            $"${Math.Abs(amount):0.00}";
     }
 
     private static string Truncate(
