@@ -84,6 +84,8 @@ Controller/application orchestration is separately ratcheted by `deploy/tests/co
 
 Statements no longer reads or mutates Bills-owned `BillStreams` or `BillAlerts` directly. Bill Stream context crosses `IBillStreamReadGateway`, and statement-driven alert desired state crosses `IBillAlertReconciliationGateway`; Bills owns alert persistence and stages those changes inside the shared modular-monolith unit of work.
 
+Bills no longer reads Statements-owned statement/change tables directly from its controller. Bill-detail history crosses `IBillStatementHistoryReadGateway`; Statements owns the user-scoped statement/change queries and returns immutable read projections.
+
 Bills no longer reads Plaid-owned bank tables directly:
 
 - connection-health and refresh-scheduling queries cross `IBankConnectionReadGateway`;
