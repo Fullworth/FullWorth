@@ -15,6 +15,8 @@ public sealed class AdminAccessKeyRequestContractTests
             true,
             1,
             null,
+            "FullWorth!Tests123",
+            null,
             "Founding beta tester");
 
         var json = JsonSerializer.Serialize(

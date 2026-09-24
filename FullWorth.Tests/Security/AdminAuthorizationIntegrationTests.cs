@@ -1,12 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
 using FullWorth.API.Authorization;
+using FullWorth.API.Data.Entities;
 using FullWorth.Tests.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FullWorth.Tests.Security;
 
 public sealed class AdminAuthorizationIntegrationTests
 {
+    private const string TestPassword =
+        "FullWorth!Tests123";
+
     [Theory]
     [InlineData(FullWorthRoles.Owner)]
     [InlineData(FullWorthRoles.Admin)]
@@ -256,6 +262,91 @@ public sealed class AdminAuthorizationIntegrationTests
     }
 
     [Fact]
+    public async Task CreateAccessKey_WrongPassword_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                client,
+                FullWorthRoles.Owner);
+
+        TestUserAuthentication.Authorize(
+            client,
+            owner);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/admin/subscription/access-keys",
+                CreateAccessKeyRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAccessKey_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                client,
+                FullWorthRoles.Owner);
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    owner.Email);
+
+            Assert.NotNull(
+                user);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    user!,
+                    true);
+
+            Assert.True(
+                enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            client,
+            owner);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/admin/subscription/access-keys",
+                CreateAccessKeyRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task AccessKeyLifecycle_CreateRedeemExhaustAndRevoke_IsEnforcedEndToEnd()
     {
         using var factory =
@@ -388,7 +479,9 @@ public sealed class AdminAuthorizationIntegrationTests
             revokedRedeemResponse.StatusCode);
     }
 
-    private static object CreateAccessKeyRequest() =>
+    private static object CreateAccessKeyRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
         new
         {
             purpose = "Beta",
@@ -397,6 +490,8 @@ public sealed class AdminAuthorizationIntegrationTests
             grantsLifetimeAccess = false,
             maxRedemptions = 1,
             expiresAtUtc = DateTimeOffset.UtcNow.AddDays(7),
+            currentPassword,
+            twoFactorCode,
             label = (string?)null
         };
 

@@ -19,6 +19,8 @@ grep -Fq 'BILLWATCH_ACCESS_KEY_SMOKE_ALLOW_MUTATIONS=true' "$smoke_script" ||
     fail "lifecycle smoke must require explicit mutation opt-in."
 grep -Fq 'chmod 600 "$auth_config"' "$smoke_script" ||
     fail "lifecycle smoke must protect bearer curl configuration."
+grep -Fq '"currentPassword":"%s"' "$smoke_script" ||
+    fail "access-key creation must include strong reauthentication credentials."
 if grep -E -- '--header[ =]+["'\'']?Authorization: Bearer' "$smoke_script" >/dev/null; then
     fail "lifecycle smoke must not place bearer tokens in curl argv."
 fi
