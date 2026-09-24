@@ -1,6 +1,7 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Plaid;
 using FullWorth.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -30,7 +31,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -111,7 +114,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -179,7 +184,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -236,7 +243,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -279,7 +288,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -320,7 +331,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -374,7 +387,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
@@ -464,7 +479,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
 
         var service =
             new RecurringBillDiscoveryPersistenceService(
-                dbContext);
+                dbContext,
+                new PlaidBankTransactionDiscoveryGateway(
+                    dbContext));
 
         var result =
             await service.DiscoverAndSaveAsync(
