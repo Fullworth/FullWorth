@@ -23,7 +23,6 @@ public sealed record AccountBankAccountExportRecord(
 public sealed record AccountBankTransactionExportRecord(
     Guid Id,
     Guid BankAccountId,
-    Guid? BillStreamId,
     string Name,
     string? MerchantName,
     decimal Amount,
@@ -80,9 +79,14 @@ public sealed record AccountBillAlertExportRecord(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);
 
+public sealed record AccountBillTransactionAssociationExportRecord(
+    Guid BankTransactionId,
+    Guid BillStreamId);
+
 public sealed record AccountBillExportSnapshot(
     IReadOnlyList<AccountBillStreamExportRecord> BillStreams,
-    IReadOnlyList<AccountBillAlertExportRecord> BillAlerts);
+    IReadOnlyList<AccountBillAlertExportRecord> BillAlerts,
+    IReadOnlyList<AccountBillTransactionAssociationExportRecord> TransactionAssociations);
 
 public interface IAccountBillExportGateway
 {
