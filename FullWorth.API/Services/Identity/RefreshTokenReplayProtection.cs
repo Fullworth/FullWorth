@@ -191,6 +191,10 @@ public sealed class RefreshTokenRotationService(
                 FamilyProperty,
                 out var suppliedFamilyId);
 
+        var hasExplicitFamily =
+            !string.IsNullOrWhiteSpace(
+                suppliedFamilyId);
+
         /*
          * Framework-issued login tokens do not contain a family identifier
          * until FullWorth performs their first rotation. Deriving the same
@@ -198,11 +202,10 @@ public sealed class RefreshTokenRotationService(
          * original generation revoke that family too.
          */
         var familyId =
-            string.IsNullOrWhiteSpace(
-                    suppliedFamilyId)
-                ? HashValue(
-                    refreshToken)
-                : suppliedFamilyId!;
+            hasExplicitFamily
+                ? suppliedFamilyId!
+                : HashValue(
+                    refreshToken);
 
         if (!IsValidHash(
                 familyId))
@@ -212,10 +215,31 @@ public sealed class RefreshTokenRotationService(
 
         if (!dbContext.Database.IsRelational())
         {
-            return await DeleteFamilyAsync(
-                user.Id,
-                familyId,
-                cancellationToken);
+            var revoked =
+                await DeleteFamilyAsync(
+                    user.Id,
+                    familyId,
+                    cancellationToken);
+
+            if (revoked ||
+                hasExplicitFamily)
+            {
+                return revoked;
+            }
+
+            /*
+             * A framework-issued first-generation token has no family row
+             * until its first refresh. If logout arrives before enrollment,
+             * fail secure by rotating the user's security stamp. That is
+             * broader than current-session revocation, but it guarantees the
+             * presented token cannot remain usable.
+             */
+            var stampResult =
+                await signInManager.UserManager
+                    .UpdateSecurityStampAsync(
+                        user);
+
+            return stampResult.Succeeded;
         }
 
         await using var transaction =
@@ -237,6 +261,18 @@ public sealed class RefreshTokenRotationService(
                 user.Id,
                 familyId,
                 cancellationToken);
+
+        if (!revoked &&
+            !hasExplicitFamily)
+        {
+            var stampResult =
+                await signInManager.UserManager
+                    .UpdateSecurityStampAsync(
+                        user);
+
+            revoked =
+                stampResult.Succeeded;
+        }
 
         await transaction.CommitAsync(
             cancellationToken);
