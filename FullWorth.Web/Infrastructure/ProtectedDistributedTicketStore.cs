@@ -41,6 +41,11 @@ public sealed class ProtectedDistributedTicketStore(
                     RandomNumberGenerator.GetBytes(32))
                 .ToLowerInvariant();
 
+        ticket.Properties.Items[
+            WebSessionTicketAccessor
+                .SessionKeyItem] =
+                    key;
+
         await WriteAsync(
             key,
             ticket,
@@ -66,6 +71,11 @@ public sealed class ProtectedDistributedTicketStore(
     {
         ValidateKey(key);
         ArgumentNullException.ThrowIfNull(ticket);
+
+        ticket.Properties.Items[
+            WebSessionTicketAccessor
+                .SessionKeyItem] =
+                    key;
 
         return WriteAsync(
             key,
@@ -130,6 +140,17 @@ public sealed class ProtectedDistributedTicketStore(
 
                 return null;
             }
+
+            /*
+             * Keep the opaque server-side store key in server-only ticket
+             * metadata. CookieAuthenticationHandler replaces the browser
+             * ticket with its own protected session-reference cookie, so this
+             * value is not bearer material and is not exposed client-side.
+             */
+            ticket.Properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem] =
+                        key;
 
             return ticket;
         }
