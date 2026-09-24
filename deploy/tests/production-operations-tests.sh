@@ -25,6 +25,7 @@ write_valid_env()
         -e 's/replace-with-the-deployed-git-commit/0123456789abcdef0123456789abcdef01234567/' \
         -e 's/owner@example\.com/ops@fullworth.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
+        -e 's/replace-with-a-separate-long-random-web-session-password/web-session-password-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
         -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.fullworth.test/production#' \
@@ -123,6 +124,16 @@ weak_env="$temp_dir/weak.env"
 write_valid_env "$weak_env"
 sed -i 's/database-password-with-more-than-32-characters/short/' "$weak_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_env"
+
+weak_web_session_env="$temp_dir/weak-web-session.env"
+write_valid_env "$weak_web_session_env"
+sed -i 's/web-session-password-with-more-than-32-characters/short/' "$weak_web_session_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_web_session_env"
+
+reused_web_session_env="$temp_dir/reused-web-session.env"
+write_valid_env "$reused_web_session_env"
+sed -i 's/web-session-password-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_web_session_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_web_session_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"
