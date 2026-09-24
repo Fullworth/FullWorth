@@ -120,6 +120,98 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     [Fact]
+    public async Task RefreshToken_IsSingleUseAndRotatedTokenCanBeUsedOnce()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"refresh-replay-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var loginResult =
+            await LoginAsync(
+                client,
+                email);
+
+        using var firstRefreshResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        loginResult.RefreshToken
+                });
+
+        firstRefreshResponse.EnsureSuccessStatusCode();
+
+        var firstRefresh =
+            await firstRefreshResponse.Content
+                .ReadFromJsonAsync<LoginResult>();
+
+        Assert.NotNull(
+            firstRefresh);
+
+        using var replayOriginalResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        loginResult.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            replayOriginalResponse.StatusCode);
+
+        using var secondRefreshResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstRefresh!.RefreshToken
+                });
+
+        secondRefreshResponse.EnsureSuccessStatusCode();
+
+        var secondRefresh =
+            await secondRefreshResponse.Content
+                .ReadFromJsonAsync<LoginResult>();
+
+        Assert.NotNull(
+            secondRefresh);
+
+        using var replayRotatedResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstRefresh.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            replayRotatedResponse.StatusCode);
+
+        Assert.NotEqual(
+            loginResult.RefreshToken,
+            firstRefresh.RefreshToken);
+
+        Assert.NotEqual(
+            firstRefresh.RefreshToken,
+            secondRefresh!.RefreshToken);
+    }
+
+    [Fact]
     public async Task AuthenticatedUserWithoutStaffRole_RemainsForbidden()
     {
         using var factory =
