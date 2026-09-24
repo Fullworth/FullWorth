@@ -301,7 +301,7 @@ builder.Services.AddScoped<
     IdentityUserExistenceGateway>();
 
 builder.Services.AddScoped<
-    RefreshTokenReplayGuard>();
+    RefreshTokenRotationService>();
 
 builder.Services.AddScoped<
     AccountDataExportBuilder>();
