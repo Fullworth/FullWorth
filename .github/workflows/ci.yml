@@ -342,6 +342,7 @@ jobs:
           sh deploy/tests/project-boundary-tests.sh
           sh deploy/tests/service-module-boundary-tests.sh
           sh deploy/tests/data-ownership-boundary-tests.sh
+          sh deploy/tests/controller-data-ownership-boundary-tests.sh
           sh deploy/tests/legacy-brand-compatibility-tests.sh
           sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
