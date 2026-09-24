@@ -16,6 +16,7 @@ using FullWorth.API.Services.Statements;
 using FullWorth.API.Services.Subscriptions;
 using FullWorth.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -129,6 +130,25 @@ builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<FullWorthDbContext>();
+
+builder.Services.Configure<BearerTokenOptions>(
+    IdentityConstants.BearerScheme,
+    options =>
+    {
+        /*
+         * Bearer access tokens are not revalidated against the user's
+         * security stamp on every API request. Keep their post-change
+         * exposure window deliberately short; refresh validates the
+         * security stamp before issuing a replacement token.
+         */
+        options.BearerTokenExpiration =
+            TimeSpan.FromMinutes(
+                15);
+
+        options.RefreshTokenExpiration =
+            TimeSpan.FromDays(
+                14);
+    });
 
 builder.Services.Configure<IdentityOptions>(
     options =>
