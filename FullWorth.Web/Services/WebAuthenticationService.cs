@@ -457,6 +457,14 @@ public sealed class WebAuthenticationService
              * all sessions through the Identity security stamp.
              */
         }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            /*
+             * Treat an HttpClient timeout like an unavailable server. Local
+             * sign-out still completes in the finally block.
+             */
+        }
         finally
         {
             await httpContext.SignOutAsync(
