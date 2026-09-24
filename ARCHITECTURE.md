@@ -78,11 +78,11 @@ The first explicit data ownership map covers the highest-risk finance domains:
 - Bills owns `BillStreams` and `BillAlerts`.
 - Statements owns `BillStatements`, `BillLineItems`, `BillChanges`, `BillStatementUploads`, and `BillStatementAiEvaluations`.
 
-CI enforces a ratchet through `deploy/tests/data-ownership-boundary-tests.sh`. Existing cross-owner reads are temporarily enumerated as exact file/table exceptions so they can be removed incrementally. New cross-owner table access fails CI.
+CI enforces service-module persistence ownership through `deploy/tests/data-ownership-boundary-tests.sh`. The Bills, Plaid, and Statements service modules now have zero direct cross-owner DbSet exceptions. New cross-owner service-table access fails CI.
 
-Current exceptions are intentionally narrow:
+Controller/application orchestration is separately ratcheted by `deploy/tests/controller-data-ownership-boundary-tests.sh`. Existing controller cross-owner access is frozen as exact module/table/file migration debt. New controller cross-owner DbSet access fails CI, and stale exceptions must be removed in the same change that removes the dependency.
 
-- Statements reads Bills-owned `BillStreams` and `BillAlerts` for statement processing/change/alert workflows.
+Statements no longer reads or mutates Bills-owned `BillStreams` or `BillAlerts` directly. Bill Stream context crosses `IBillStreamReadGateway`, and statement-driven alert desired state crosses `IBillAlertReconciliationGateway`; Bills owns alert persistence and stages those changes inside the shared modular-monolith unit of work.
 
 Bills no longer reads Plaid-owned bank tables directly:
 
