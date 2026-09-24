@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Statements;
@@ -16,11 +17,24 @@ public sealed class BillStatementPaymentDueAlertService
     private readonly FullWorthDbContext
         _dbContext;
 
+    private readonly IBillStreamReadGateway
+        _billStreamGateway;
+
     public BillStatementPaymentDueAlertService(
-        FullWorthDbContext dbContext)
+        FullWorthDbContext dbContext,
+        IBillStreamReadGateway billStreamGateway)
     {
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        ArgumentNullException.ThrowIfNull(
+            billStreamGateway);
+
         _dbContext =
             dbContext;
+
+        _billStreamGateway =
+            billStreamGateway;
     }
 
     public async Task ReconcileAsync(
@@ -104,55 +118,39 @@ public sealed class BillStatementPaymentDueAlertService
                 CultureInfo.InvariantCulture);
 
         /*
-         * The title acts as the semantic identity for a payment-due
-         * event within a Bill Stream.
-         *
-         * Resolve the owned provider and its payment-due alerts in one
-         * database round trip. Ownership remains part of the SQL query.
+         * Resolve Bill Stream ownership and provider context through the
+         * Bills-owned boundary. Statements keeps ownership of alert
+         * persistence, but does not read the Bills table directly.
          */
-        var ownedRows =
-            await (
-                from stream in
-                    _dbContext.BillStreams
-                where
-                    stream.Id ==
-                        billStreamId &&
-                    stream.UserId ==
-                        userId
-                join alert in
-                    _dbContext.BillAlerts
-                        .Where(
-                            alert =>
-                                alert.UserId ==
-                                    userId &&
-                                alert.AlertType ==
-                                    BillAlertType.PaymentDue)
-                    on (Guid?)stream.Id
-                    equals alert.BillStreamId
-                    into paymentAlerts
-                from alert in
-                    paymentAlerts.DefaultIfEmpty()
-                select new
-                {
-                    stream.ProviderName,
-                    Alert =
-                        alert
-                })
-                .ToListAsync(
-                    cancellationToken);
+        var billStream =
+            await _billStreamGateway.GetOwnedAsync(
+                userId,
+                billStreamId,
+                cancellationToken);
 
-        if (ownedRows.Count ==
-                0 ||
+        if (billStream is null ||
             string.IsNullOrWhiteSpace(
-                ownedRows[0].ProviderName))
+                billStream.ProviderName))
         {
             throw new InvalidOperationException(
                 "The owned bill stream could not be found.");
         }
 
         var providerName =
-            ownedRows[0]
-                .ProviderName;
+            billStream.ProviderName;
+
+        var paymentAlerts =
+            await _dbContext.BillAlerts
+                .Where(
+                    alert =>
+                        alert.UserId ==
+                            userId &&
+                        alert.BillStreamId ==
+                            billStreamId &&
+                        alert.AlertType ==
+                            BillAlertType.PaymentDue)
+                .ToListAsync(
+                    cancellationToken);
 
         var title =
             Truncate(
@@ -183,11 +181,7 @@ public sealed class BillStatementPaymentDueAlertService
                 MaxMessageLength);
 
         var matchingAlerts =
-            ownedRows
-                .Select(
-                    row =>
-                        row.Alert)
-                .OfType<BillAlertEntity>()
+            paymentAlerts
                 .Where(
                     alert =>
                         string.Equals(
