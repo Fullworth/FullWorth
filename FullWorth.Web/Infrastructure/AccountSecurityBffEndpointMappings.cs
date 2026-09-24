@@ -48,6 +48,26 @@ public static class AccountSecurityBffEndpointMappings
                         context.RequestAborted);
             });
 
+        bff.MapPost(
+            "/sessions/revoke-all",
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                SensitiveCredentialBffRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(
+                    context);
+
+                return await writeProxyService
+                    .ForwardJsonAndSignOutOnSuccessAsync(
+                        context,
+                        HttpMethod.Post,
+                        "/api/account/security/sessions/revoke-all",
+                        request,
+                        context.RequestAborted);
+            });
+
         MapSecurePost<ChangeEmailBffRequest>(
             bff,
             "/email",
