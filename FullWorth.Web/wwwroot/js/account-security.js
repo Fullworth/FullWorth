@@ -494,8 +494,8 @@ export function updateProfile(displayName) {
         "FullWorth could not update your profile.");
 }
 
-export function changePassword(currentPassword, newPassword, twoFactorCode) {
-    return postJson(
+export async function changePassword(currentPassword, newPassword, twoFactorCode) {
+    await postJson(
         "/bff/account/security/password",
         {
             currentPassword,
@@ -503,6 +503,8 @@ export function changePassword(currentPassword, newPassword, twoFactorCode) {
             twoFactorCode: twoFactorCode || null
         },
         "We couldn’t update your password. Please try again.");
+
+    window.location.replace("/login");
 }
 
 export function requestEmailChange(currentPassword, newEmail, twoFactorCode) {
