@@ -1,5 +1,6 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
@@ -98,6 +99,7 @@ public sealed class SubscriptionAccessKeyRedemptionServiceTests
         return new SubscriptionAccessKeyRedemptionService(
             dbContext,
             generator,
+            new AdminAuditLogWriter(dbContext),
             new FixedTimeProvider(NowUtc));
     }
 
