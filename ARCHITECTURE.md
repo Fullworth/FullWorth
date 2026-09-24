@@ -82,9 +82,10 @@ CI enforces a ratchet through `deploy/tests/data-ownership-boundary-tests.sh`. E
 
 Current exceptions are intentionally narrow:
 
-- Bills reads Plaid-owned `BankConnections` for connection-health and refresh scheduling.
 - Bills reads Plaid-owned `BankTransactions` for recurring-bill discovery.
 - Statements reads Bills-owned `BillStreams` and `BillAlerts` for statement processing/change/alert workflows.
+
+Bills no longer reads Plaid-owned `BankConnections` directly. Connection-health and refresh-scheduling queries now cross `IBankConnectionReadGateway`; the Plaid module owns `PlaidBankConnectionReadGateway` and returns only the read-only projections Bills needs.
 
 Those exceptions are migration debt, not approved architecture. The ratchet also fails when an exception disappears until its stale allowance is removed, so the baseline can only tighten.
 
