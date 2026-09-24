@@ -374,6 +374,118 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     [Fact]
+    public async Task SecurityStampChange_PrunesInvalidatedRefreshFamilies()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"refresh-stamp-prune-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var originalLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        using var establishFamilyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        originalLogin.RefreshToken
+                });
+
+        establishFamilyResponse.EnsureSuccessStatusCode();
+
+        var establishedFamily =
+            await establishFamilyResponse.Content
+                .ReadFromJsonAsync<LoginResult>();
+
+        Assert.NotNull(
+            establishedFamily);
+
+        await using (
+            var stampScope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                stampScope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    email);
+
+            Assert.NotNull(
+                user);
+
+            var stampResult =
+                await userManager.UpdateSecurityStampAsync(
+                    user!);
+
+            Assert.True(
+                stampResult.Succeeded);
+        }
+
+        using var staleRefreshResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        establishedFamily!.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            staleRefreshResponse.StatusCode);
+
+        var newLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        using var newFamilyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        newLogin.RefreshToken
+                });
+
+        newFamilyResponse.EnsureSuccessStatusCode();
+
+        await using var verificationScope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            verificationScope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        var familyRows =
+            await dbContext.UserTokens
+                .Where(
+                    token =>
+                        token.LoginProvider ==
+                            "FullWorth.RefreshFamily")
+                .ToListAsync();
+
+        Assert.Single(
+            familyRows);
+    }
+
+    [Fact]
     public async Task RefreshTokenRotation_KeepsOneReplayMarkerPerLoginFamily()
     {
         using var factory =
