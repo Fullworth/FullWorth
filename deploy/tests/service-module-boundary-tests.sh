@@ -21,12 +21,7 @@ modules = {
     "Subscriptions",
 }
 
-# Temporary, explicit legacy coupling. This is a ratchet, not an architectural endorsement.
-# When a listed dependency is removed, this test intentionally fails until the allowance
-# is deleted in the same change.
-allowed_cross_module_references = {
-    ("Bills", "Plaid", "FullWorth.API/Services/Bills/BillMonitoringRefreshService.cs"),
-}
+allowed_cross_module_references = set()
 
 reference_pattern = re.compile(
     r"FullWorth\.API\.Services\.(Accounts|Bills|Identity|Plaid|Statements|Subscriptions)\b"
