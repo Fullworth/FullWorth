@@ -101,8 +101,12 @@ admin_probe_code="$(curl --silent --show-error --output /dev/null --write-out '%
 
 create_payload="$work_directory/create-key.json"
 create_response="$work_directory/create-key-response.json"
-printf '%s' '{"purpose":"Beta","tier":"Beta","durationDays":1,"grantsLifetimeAccess":false,"maxRedemptions":2,"expiresAtUtc":null,"label":"private-beta-lifecycle-smoke"}' > "$create_payload"
+IFS= read -r current_password < "$admin_password_file" || true
+[ -n "${current_password:-}" ] || fail "Admin password file is empty." 64
+printf '{"purpose":"Beta","tier":"Beta","durationDays":1,"grantsLifetimeAccess":false,"maxRedemptions":2,"expiresAtUtc":null,"currentPassword":"%s","twoFactorCode":null,"label":"private-beta-lifecycle-smoke"}' \
+    "$(json_escape "$current_password")" > "$create_payload"
 chmod 600 "$create_payload"
+unset current_password
 
 create_code="$(curl --silent --show-error --output "$create_response" --write-out '%{http_code}' \
     --request POST --config "$admin_auth" --header 'Content-Type: application/json' \
