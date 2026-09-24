@@ -231,6 +231,29 @@ public sealed class ExternalIdentityController : ControllerBase
                 createResult);
         }
 
+        /*
+         * Revoke existing refresh capability before adding a new durable
+         * sign-in method. ASP.NET Core Identity 10 rotates the security stamp
+         * when a login is removed, but AddLoginAsync itself does not.
+         *
+         * Security ordering matters here: if the later provider-link write
+         * fails, the user may need to sign in again, but a newly added login
+         * is never left behind with previously issued refresh sessions still
+         * valid.
+         */
+        var securityStampResult =
+            await _userManager.UpdateSecurityStampAsync(
+                user);
+
+        if (!securityStampResult.Succeeded)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "External sign-in could not be linked safely.");
+        }
+
         var addLoginResult =
             await _userManager.AddLoginAsync(
                 user,
