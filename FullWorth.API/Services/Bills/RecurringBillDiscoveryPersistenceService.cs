@@ -39,6 +39,9 @@ public sealed class RecurringBillDiscoveryPersistenceService
     private readonly IBankTransactionDiscoveryGateway
         _transactionGateway;
 
+    private readonly IBillTransactionAssociationGateway
+        _associationGateway;
+
     private readonly BillStreamDiscoveryService
         _discoveryService;
 
@@ -53,7 +56,8 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
     public RecurringBillDiscoveryPersistenceService(
         FullWorthDbContext dbContext,
-        IBankTransactionDiscoveryGateway transactionGateway)
+        IBankTransactionDiscoveryGateway transactionGateway,
+        IBillTransactionAssociationGateway associationGateway)
     {
         ArgumentNullException.ThrowIfNull(
             dbContext);
@@ -61,11 +65,17 @@ public sealed class RecurringBillDiscoveryPersistenceService
         ArgumentNullException.ThrowIfNull(
             transactionGateway);
 
+        ArgumentNullException.ThrowIfNull(
+            associationGateway);
+
         _dbContext =
             dbContext;
 
         _transactionGateway =
             transactionGateway;
+
+        _associationGateway =
+            associationGateway;
 
         _discoveryService =
             new BillStreamDiscoveryService();
@@ -100,12 +110,34 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     userId,
                     cancellationToken);
 
+        var transactionIds =
+            transactionSnapshots
+                .Select(transaction => transaction.TransactionId)
+                .ToArray();
+
+        var associationSnapshots =
+            await _associationGateway.GetAsync(
+                userId,
+                transactionIds,
+                cancellationToken);
+
+        var billStreamIdByTransactionId =
+            associationSnapshots
+                .ToDictionary(
+                    association => association.BankTransactionId,
+                    association => association.BillStreamId);
+
         var persistedTransactions =
             transactionSnapshots
                 .Select(
                     transaction =>
                         new DiscoveryTransaction(
-                            transaction))
+                            transaction,
+                            billStreamIdByTransactionId.TryGetValue(
+                                transaction.TransactionId,
+                                out var billStreamId)
+                                ? billStreamId
+                                : null))
                 .ToList();
 
         /*
@@ -516,14 +548,14 @@ public sealed class RecurringBillDiscoveryPersistenceService
                             transaction.BillStreamId)
                 .Select(
                     transaction =>
-                        new BankTransactionBillStreamAssignment(
+                        new BillTransactionAssociationAssignment(
                             transaction.Id,
                             transaction.OriginalBillStreamId,
                             transaction.BillStreamId))
                 .ToArray();
 
-        await _transactionGateway
-            .StageBillStreamAssignmentsAsync(
+        await _associationGateway
+            .StageAssignmentsAsync(
                 userId,
                 linkAssignments,
                 now,
@@ -798,11 +830,12 @@ public sealed class RecurringBillDiscoveryPersistenceService
     private sealed class DiscoveryTransaction
     {
         public DiscoveryTransaction(
-            BankTransactionDiscoveryRecord source)
+            BankTransactionDiscoveryRecord source,
+            Guid? billStreamId)
         {
             Id = source.TransactionId;
-            OriginalBillStreamId = source.BillStreamId;
-            BillStreamId = source.BillStreamId;
+            OriginalBillStreamId = billStreamId;
+            BillStreamId = billStreamId;
             Name = source.Name;
             MerchantName = source.MerchantName;
             Amount = source.Amount;
