@@ -4,10 +4,8 @@ using FullWorth.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 
 namespace FullWorth.Tests.Security;
 
@@ -81,7 +79,7 @@ public sealed class ProtectedDistributedTicketStoreTests
     }
 
     [Fact]
-    public async Task SessionAccessor_ResolvesOpaqueCookieReferenceToLatestStoredTicket()
+    public async Task SessionAccessor_ResolvesLatestStoredTicketByOpaqueServerKey()
     {
         const string accessToken =
             "server-only-access-token";
@@ -89,13 +87,10 @@ public sealed class ProtectedDistributedTicketStoreTests
         const string refreshToken =
             "server-only-refresh-token";
 
-        var dataProtection =
-            new EphemeralDataProtectionProvider();
-
         var store =
             new ProtectedDistributedTicketStore(
                 CreateCache(),
-                dataProtection,
+                new EphemeralDataProtectionProvider(),
                 TimeProvider.System);
 
         var storedTicket =
@@ -108,62 +103,19 @@ public sealed class ProtectedDistributedTicketStoreTests
             await store.StoreAsync(
                 storedTicket);
 
-        var cookieOptions =
-            new CookieAuthenticationOptions
-            {
-                Cookie =
-                {
-                    Name =
-                        "__Host-BillWatch.Web.Auth"
-                },
-
-                CookieManager =
-                    new ChunkingCookieManager(),
-
-                TicketDataFormat =
-                    new TicketDataFormat(
-                        dataProtection.CreateProtector(
-                            "FullWorth.Tests.CookieReference"))
-            };
-
-        var referencePrincipal =
-            new ClaimsPrincipal(
-                new ClaimsIdentity(
-                    [
-                        new Claim(
-                            "Microsoft.AspNetCore.Authentication.Cookies-SessionId",
-                            sessionKey)
-                    ],
-                    CookieAuthenticationDefaults
-                        .AuthenticationScheme));
-
-        var referenceTicket =
-            new AuthenticationTicket(
-                referencePrincipal,
-                new AuthenticationProperties(),
-                CookieAuthenticationDefaults
-                    .AuthenticationScheme);
-
-        var protectedCookie =
-            cookieOptions.TicketDataFormat.Protect(
-                referenceTicket);
-
-        var context =
-            new DefaultHttpContext();
-
-        context.Request.Headers.Cookie =
-            $"{cookieOptions.Cookie.Name}={protectedCookie}";
+        Assert.Equal(
+            sessionKey,
+            storedTicket.Properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem]);
 
         var accessor =
             new WebSessionTicketAccessor(
-                new StaticOptionsMonitor<
-                    CookieAuthenticationOptions>(
-                    cookieOptions),
                 store);
 
         var snapshot =
             await accessor.ReadLatestAsync(
-                context);
+                storedTicket.Properties);
 
         Assert.NotNull(
             snapshot);
@@ -176,15 +128,11 @@ public sealed class ProtectedDistributedTicketStoreTests
             refreshToken,
             snapshot.RefreshToken);
 
-        Assert.DoesNotContain(
-            accessToken,
-            protectedCookie,
-            StringComparison.Ordinal);
-
-        Assert.DoesNotContain(
-            refreshToken,
-            protectedCookie,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            sessionKey,
+            snapshot.Properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem]);
     }
 
     [Fact]
@@ -323,23 +271,5 @@ public sealed class ProtectedDistributedTicketStoreTests
             CookieAuthenticationDefaults
                 .AuthenticationScheme);
     }
-    private sealed class StaticOptionsMonitor<T>(
-        T value)
-        : IOptionsMonitor<T>
-    {
-        public T CurrentValue =>
-            value;
 
-        public T Get(
-            string? name)
-        {
-            return value;
-        }
-
-        public IDisposable? OnChange(
-            Action<T, string?> listener)
-        {
-            return null;
-        }
-    }
 }
