@@ -109,6 +109,7 @@ The application fails closed outside Development unless these settings are prese
 - `ConnectionStrings__BillWatchDatabase`
 - `DataProtection__KeysPath`
 - `BillStatementStorage__RootPath`
+- `WebSession__RedisHost` / `BILLWATCH_WEB_SESSION_REDIS_PASSWORD`
 - `Plaid__ClientId`
 - `Plaid__Secret`
 - `Plaid__Environment`
