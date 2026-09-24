@@ -1,8 +1,5 @@
-﻿using System.Globalization;
-using FullWorth.API.Data;
-using FullWorth.API.Data.Entities;
+using System.Globalization;
 using FullWorth.API.Services.Contracts;
-using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Statements;
 
@@ -14,27 +11,27 @@ public sealed class BillStatementPaymentDueAlertService
     private const int MaxMessageLength =
         2000;
 
-    private readonly FullWorthDbContext
-        _dbContext;
-
     private readonly IBillStreamReadGateway
         _billStreamGateway;
 
-    public BillStatementPaymentDueAlertService(
-        FullWorthDbContext dbContext,
-        IBillStreamReadGateway billStreamGateway)
-    {
-        ArgumentNullException.ThrowIfNull(
-            dbContext);
+    private readonly IBillAlertReconciliationGateway
+        _billAlertGateway;
 
+    public BillStatementPaymentDueAlertService(
+        IBillStreamReadGateway billStreamGateway,
+        IBillAlertReconciliationGateway billAlertGateway)
+    {
         ArgumentNullException.ThrowIfNull(
             billStreamGateway);
 
-        _dbContext =
-            dbContext;
+        ArgumentNullException.ThrowIfNull(
+            billAlertGateway);
 
         _billStreamGateway =
             billStreamGateway;
+
+        _billAlertGateway =
+            billAlertGateway;
     }
 
     public async Task ReconcileAsync(
@@ -63,20 +60,11 @@ public sealed class BillStatementPaymentDueAlertService
                 nameof(billStreamId));
         }
 
-        /*
-         * No explicit provider due date means no alert.
-         *
-         * FullWorth does not guess due dates.
-         */
         if (!dueDate.HasValue)
         {
             return;
         }
 
-        /*
-         * An old provider due date is not enough evidence to claim
-         * that money is currently owed or overdue.
-         */
         if (dueDate.Value <
             today)
         {
@@ -109,19 +97,14 @@ public sealed class BillStatementPaymentDueAlertService
         var severity =
             daysUntilDue <=
             7
-                ? BillAlertSeverity.Warning
-                : BillAlertSeverity.Info;
+                ? BillAlertContractSeverity.Warning
+                : BillAlertContractSeverity.Info;
 
         var formattedDueDate =
             dueDate.Value.ToString(
                 "MMM d, yyyy",
                 CultureInfo.InvariantCulture);
 
-        /*
-         * Resolve Bill Stream ownership and provider context through the
-         * Bills-owned boundary. Statements keeps ownership of alert
-         * persistence, but does not read the Bills table directly.
-         */
         var billStream =
             await _billStreamGateway.GetOwnedAsync(
                 userId,
@@ -138,19 +121,6 @@ public sealed class BillStatementPaymentDueAlertService
 
         var providerName =
             billStream.ProviderName;
-
-        var paymentAlerts =
-            await _dbContext.BillAlerts
-                .Where(
-                    alert =>
-                        alert.UserId ==
-                            userId &&
-                        alert.BillStreamId ==
-                            billStreamId &&
-                        alert.AlertType ==
-                            BillAlertType.PaymentDue)
-                .ToListAsync(
-                    cancellationToken);
 
         var title =
             Truncate(
@@ -180,105 +150,33 @@ public sealed class BillStatementPaymentDueAlertService
                 $"{amount} is due {timing}. FullWorth found this due date directly on the provider statement.",
                 MaxMessageLength);
 
-        var matchingAlerts =
-            paymentAlerts
-                .Where(
-                    alert =>
-                        string.Equals(
-                            alert.Title,
-                            title,
-                            StringComparison.Ordinal))
-                .OrderBy(
-                    alert =>
-                        alert.CreatedAtUtc)
-                .ThenBy(
-                    alert =>
-                        alert.Id)
-                .ToList();
+        await _billAlertGateway
+            .StageReconciliationAsync(
+                userId,
+                billStreamId,
+                [
+                    new BillAlertReconciliationScope(
+                        BillChangeId:
+                            null,
 
-        if (matchingAlerts.Count ==
-            0)
-        {
-            _dbContext.BillAlerts.Add(
-                new BillAlertEntity
-                {
-                    UserId =
-                        userId,
+                        ManagedAlertTypes:
+                            [
+                                BillAlertContractType.PaymentDue
+                            ],
 
-                    BillStreamId =
-                        billStreamId,
-
-                    BillChangeId =
-                        null,
-
-                    AlertType =
-                        BillAlertType.PaymentDue,
-
-                    Severity =
-                        severity,
-
-                    Title =
-                        title,
-
-                    Message =
-                        message,
-
-                    IsRead =
-                        false,
-
-                    IsDismissed =
-                        false,
-
-                    CreatedAtUtc =
-                        now,
-
-                    UpdatedAtUtc =
-                        now
-                });
-
-            return;
-        }
-
-        var primaryAlert =
-            matchingAlerts[0];
-
-        var changed =
-            primaryAlert.Severity !=
-                severity ||
-            !string.Equals(
-                primaryAlert.Message,
-                message,
-                StringComparison.Ordinal);
-
-        if (changed)
-        {
-            primaryAlert.Severity =
-                severity;
-
-            primaryAlert.Message =
-                message;
-
-            primaryAlert.IsRead =
-                false;
-
-            primaryAlert.IsDismissed =
-                false;
-
-            primaryAlert.UpdatedAtUtc =
-                now;
-        }
-
-        /*
-         * Defensive cleanup if older code or a race ever produced
-         * duplicate alerts for this same due event.
-         */
-        if (matchingAlerts.Count >
-            1)
-        {
-            _dbContext.BillAlerts.RemoveRange(
-                matchingAlerts.Skip(
-                    1));
-        }
+                        DesiredAlerts:
+                            [
+                                new BillAlertDesiredState(
+                                    BillAlertContractType.PaymentDue,
+                                    severity,
+                                    title,
+                                    message)
+                            ])
+                ],
+                removeBillChangeIds:
+                    [],
+                now,
+                cancellationToken);
     }
 
     private static string FormatAmount(
@@ -291,7 +189,10 @@ public sealed class BillStatementPaymentDueAlertService
                 StringComparison.Ordinal))
         {
             return
-                $"${amount:0.00}";
+                "$" +
+                amount.ToString(
+                    "0.00",
+                    CultureInfo.InvariantCulture);
         }
 
         return
