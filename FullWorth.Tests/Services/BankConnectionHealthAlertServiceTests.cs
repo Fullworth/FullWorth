@@ -1,6 +1,7 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Plaid;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.Tests.Services;
@@ -26,7 +27,9 @@ public sealed class BankConnectionHealthAlertServiceTests
 
         var service =
             new BankConnectionHealthAlertService(
-                dbContext);
+                dbContext,
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId);
@@ -94,7 +97,9 @@ public sealed class BankConnectionHealthAlertServiceTests
 
         var service =
             new BankConnectionHealthAlertService(
-                dbContext);
+                dbContext,
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId);
@@ -146,7 +151,9 @@ public sealed class BankConnectionHealthAlertServiceTests
 
         var service =
             new BankConnectionHealthAlertService(
-                dbContext);
+                dbContext,
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId);
@@ -199,7 +206,9 @@ public sealed class BankConnectionHealthAlertServiceTests
 
         var service =
             new BankConnectionHealthAlertService(
-                dbContext);
+                dbContext,
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId);
