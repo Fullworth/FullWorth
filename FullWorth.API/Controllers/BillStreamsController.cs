@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,13 +16,16 @@ public sealed class BillStreamsController : ControllerBase
 {
     private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IBankTransactionBillMetricsGateway _transactionMetricsGateway;
 
     public BillStreamsController(
         FullWorthDbContext dbContext,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IBankTransactionBillMetricsGateway transactionMetricsGateway)
     {
         _dbContext = dbContext;
         _userManager = userManager;
+        _transactionMetricsGateway = transactionMetricsGateway;
     }
 
     [HttpGet]
@@ -67,68 +71,20 @@ public sealed class BillStreamsController : ControllerBase
                     stream.Id)
                 .ToList();
 
-        /*
-         * Calculate stream metrics in PostgreSQL instead of loading every
-         * historical transaction into API memory. The correlated subqueries
-         * stay ownership-scoped and return one compact row per Bill Stream.
-         */
         var metricsByStream =
-            await _dbContext.BankTransactions
-                .AsNoTracking()
-                .Where(transaction =>
-                    transaction.UserId == userId &&
-                    transaction.BillStreamId != null &&
-                    streamIds.Contains(
-                        transaction.BillStreamId.Value) &&
-                    !transaction.IsRemoved &&
-                    !transaction.IsPending)
-                .GroupBy(transaction =>
-                    transaction.BillStreamId!.Value)
-                .Select(group =>
-                    new
-                    {
-                        BillStreamId =
-                            group.Key,
-
-                        CurrentAmount =
-                            group
-                                .OrderByDescending(transaction =>
-                                    transaction.PostedDate)
-                                .ThenByDescending(transaction =>
-                                    transaction.CreatedAtUtc)
-                                .Select(transaction =>
-                                    transaction.Amount)
-                                .First(),
-
-                        PreviousAverage =
-                            group.Count() <= 1
-                                ? 0m
-                                : group
-                                    .OrderByDescending(transaction =>
-                                        transaction.PostedDate)
-                                    .ThenByDescending(transaction =>
-                                        transaction.CreatedAtUtc)
-                                    .Skip(1)
-                                    .Average(transaction =>
-                                        transaction.Amount)
-                    })
-                .ToDictionaryAsync(
-                    metric =>
-                        metric.BillStreamId,
-                    metric =>
-                        (
-                            metric.CurrentAmount,
-                            metric.PreviousAverage
-                        ),
+            await _transactionMetricsGateway
+                .GetMetricsAsync(
+                    userId,
+                    streamIds,
                     cancellationToken);
 
         var results =
             streams
                 .Select(stream =>
                 {
-                    var metrics =
-                        metricsByStream.GetValueOrDefault(
-                            stream.Id);
+                    metricsByStream.TryGetValue(
+                        stream.Id,
+                        out var metrics);
 
                     return new BillStreamResult(
                         Id:
@@ -144,10 +100,12 @@ public sealed class BillStreamsController : ControllerBase
                             stream.IsActive,
 
                         CurrentAmount:
-                            metrics.CurrentAmount,
+                            metrics?.CurrentAmount ??
+                            0m,
 
                         PreviousAverage:
-                            metrics.PreviousAverage);
+                            metrics?.PreviousAverage ??
+                            0m);
                 })
                 .ToList();
 
@@ -170,11 +128,6 @@ public sealed class BillStreamsController : ControllerBase
             return NotFound();
         }
 
-        /*
-         * Read the stream and its transaction metrics in one database round
-         * trip. The scalar subqueries remain ownership-scoped and avoid
-         * issuing separate queries for current amount and prior average.
-         */
         var streamSnapshot =
             await _dbContext.BillStreams
                 .AsNoTracking()
@@ -191,42 +144,7 @@ public sealed class BillStreamsController : ControllerBase
                             candidate.Id,
                             candidate.ProviderName,
                             candidate.Category,
-                            candidate.IsActive,
-
-                            CurrentAmount =
-                                _dbContext.BankTransactions
-                                    .Where(transaction =>
-                                        transaction.UserId ==
-                                            userId &&
-                                        transaction.BillStreamId ==
-                                            billStreamId &&
-                                        !transaction.IsRemoved &&
-                                        !transaction.IsPending)
-                                    .OrderByDescending(transaction =>
-                                        transaction.PostedDate)
-                                    .ThenByDescending(transaction =>
-                                        transaction.CreatedAtUtc)
-                                    .Select(transaction =>
-                                        (decimal?)transaction.Amount)
-                                    .FirstOrDefault(),
-
-                            PreviousAverage =
-                                _dbContext.BankTransactions
-                                    .Where(transaction =>
-                                        transaction.UserId ==
-                                            userId &&
-                                        transaction.BillStreamId ==
-                                            billStreamId &&
-                                        !transaction.IsRemoved &&
-                                        !transaction.IsPending)
-                                    .OrderByDescending(transaction =>
-                                        transaction.PostedDate)
-                                    .ThenByDescending(transaction =>
-                                        transaction.CreatedAtUtc)
-                                    .Skip(1)
-                                    .Select(transaction =>
-                                        (decimal?)transaction.Amount)
-                                    .Average()
+                            candidate.IsActive
                         })
                 .SingleOrDefaultAsync(
                     cancellationToken);
@@ -236,12 +154,23 @@ public sealed class BillStreamsController : ControllerBase
             return NotFound();
         }
 
+        var metricsByStream =
+            await _transactionMetricsGateway
+                .GetMetricsAsync(
+                    userId,
+                    [billStreamId],
+                    cancellationToken);
+
+        metricsByStream.TryGetValue(
+            billStreamId,
+            out var streamMetrics);
+
         var currentAmount =
-            streamSnapshot.CurrentAmount ??
+            streamMetrics?.CurrentAmount ??
             0m;
 
         var previousAverage =
-            streamSnapshot.PreviousAverage ??
+            streamMetrics?.PreviousAverage ??
             0m;
 
         var statements =
