@@ -153,6 +153,23 @@ if web_environment.get("WebSession__RedisHost") != "web-session-cache":
 if web_environment.get("WebSession__RedisPassword") != redis_password:
     fail("Web and session cache must use the same protected session-cache credential.")
 
+if session_cache.get("volumes"):
+    fail("web-session-cache must remain ephemeral and must not mount persistent volumes.")
+
+redis_command = " ".join(session_cache.get("command", []))
+
+for required_fragment in (
+    "--requirepass",
+    "--appendonly no",
+    "--maxmemory 128mb",
+    "--maxmemory-policy volatile-ttl",
+):
+    if required_fragment not in redis_command:
+        fail(
+            "web-session-cache is missing required runtime control "
+            f"{required_fragment!r}."
+        )
+
 edge = services["edge"]
 
 if edge.get("read_only") is not True:
