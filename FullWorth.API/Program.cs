@@ -6,6 +6,7 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Infrastructure;
+using FullWorth.API.Services.Accounts;
 using FullWorth.API.Services.Bills;
 using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
@@ -262,6 +263,9 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     AdminUserManagementService>();
+
+builder.Services.AddScoped<
+    AccountDataExportBuilder>();
 
 /*
  * Rate limiting is intentionally fail-closed.
@@ -573,6 +577,10 @@ builder.Services.AddScoped<
     AccountBankDeletionGateway>();
 
 builder.Services.AddScoped<
+    IAccountBankExportGateway,
+    AccountBankExportGateway>();
+
+builder.Services.AddScoped<
     RecurringBillDiscoveryPersistenceService>();
 
 builder.Services.AddScoped<
@@ -590,6 +598,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAccountBillDeletionGateway,
     AccountBillDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountBillExportGateway,
+    AccountBillExportGateway>();
 
 builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
@@ -622,6 +634,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAccountStatementDeletionGateway,
     AccountStatementDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountStatementExportGateway,
+    AccountStatementExportGateway>();
 
 builder.Services.AddScoped<
     PdfBillStatementTextExtractor>();

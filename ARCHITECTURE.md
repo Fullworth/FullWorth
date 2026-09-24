@@ -78,9 +78,9 @@ The first explicit data ownership map covers the highest-risk finance domains:
 - Bills owns `BillStreams` and `BillAlerts`.
 - Statements owns `BillStatements`, `BillLineItems`, `BillChanges`, `BillStatementUploads`, and `BillStatementAiEvaluations`.
 
-CI enforces service-module persistence ownership through `deploy/tests/data-ownership-boundary-tests.sh`. The Bills, Plaid, and Statements service modules now have zero direct cross-owner DbSet exceptions. New cross-owner service-table access fails CI.
+CI enforces service-module persistence ownership through `deploy/tests/data-ownership-boundary-tests.sh`. Accounts, Bills, Plaid, and Statements now have zero direct cross-owner finance DbSet exceptions. The guard resolves actual `FullWorthDbContext` identifiers and also rejects cross-owner `Set<Entity>()` access, so DTO/property names cannot create false positives or bypass ownership. New cross-owner service-table access fails CI.
 
-Controller/application orchestration is separately ratcheted by `deploy/tests/controller-data-ownership-boundary-tests.sh`. Existing controller cross-owner access is frozen as exact module/table/file migration debt. New controller cross-owner DbSet access fails CI, and stale exceptions must be removed in the same change that removes the dependency.
+Controller/application orchestration is separately ratcheted by `deploy/tests/controller-data-ownership-boundary-tests.sh`. The controller baseline now has zero cross-owner DbSet exceptions. New controller cross-owner DbSet access fails CI.
 
 Statements no longer reads or mutates Bills-owned `BillStreams` or `BillAlerts` directly. Bill Stream context crosses `IBillStreamReadGateway`, and statement-driven alert desired state crosses `IBillAlertReconciliationGateway`; Bills owns alert persistence and stages those changes inside the shared modular-monolith unit of work.
 
@@ -90,7 +90,7 @@ Admin controllers no longer read Subscriptions-owned access-key, entitlement, or
 
 API controllers now have zero direct cross-owner DbSet exceptions. Account deletion coordinates owner-specific bank, bill, statement, and subscription deletion contracts while retaining the shared scoped DbContext only as the modular-monolith transaction boundary. Provider revocation and statement-file quarantine stay inside their owning modules.
 
-`AccountDataExportBuilder` remains intentional migration debt at the Accounts service layer because it still assembles a cross-domain export from owner tables directly. Do not treat the zero-controller baseline as approval for that service-level access; the next ownership expansion should ratchet Accounts and replace those reads with owner export projections.
+`AccountDataExportBuilder` now assembles the user export from `IAccountBankExportGateway`, `IAccountBillExportGateway`, and `IAccountStatementExportGateway`. Plaid, Bills, and Statements own their user-scoped export queries and expose only safe immutable projections; Accounts keeps only profile/Identity export assembly.
 
 Bills no longer reads Plaid-owned bank tables directly:
 
@@ -101,7 +101,7 @@ Bills no longer reads Plaid-owned bank tables directly:
 
 The staged-write behavior is an explicit same-process atomicity contract. If the bank-data module is later moved behind a network boundary, replace that mechanism with an outbox/coordinator or a Bills-owned association model rather than silently giving up atomicity.
 
-Those exceptions are migration debt, not approved architecture. The ratchet also fails when an exception disappears until its stale allowance is removed, so the baseline can only tighten.
+The active service and controller ownership baselines are exception-free. Future domain expansion should preserve that zero-exception model rather than introduce temporary shortcuts.
 
 Every user-owned resource remains ownership-scoped. Cross-module convenience is not permission to bypass ownership checks.
 
