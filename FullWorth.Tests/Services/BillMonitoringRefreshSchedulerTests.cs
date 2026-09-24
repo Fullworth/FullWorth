@@ -1,6 +1,7 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Plaid;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.Tests.Services;
@@ -55,7 +56,8 @@ public sealed class BillMonitoringRefreshSchedulerTests
 
         var scheduler =
             new BillMonitoringRefreshScheduler(
-                dbContext);
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         var results =
             await scheduler.GetDueUserIdsAsync(
@@ -116,7 +118,8 @@ public sealed class BillMonitoringRefreshSchedulerTests
 
         var scheduler =
             new BillMonitoringRefreshScheduler(
-                dbContext);
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         var results =
             await scheduler.GetDueUserIdsAsync(
@@ -167,7 +170,8 @@ public sealed class BillMonitoringRefreshSchedulerTests
 
         var scheduler =
             new BillMonitoringRefreshScheduler(
-                dbContext);
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         var results =
             await scheduler.GetDueUserIdsAsync(
@@ -206,7 +210,8 @@ public sealed class BillMonitoringRefreshSchedulerTests
 
         var scheduler =
             new BillMonitoringRefreshScheduler(
-                dbContext);
+                new PlaidBankConnectionReadGateway(
+                    dbContext));
 
         var results =
             await scheduler.GetDueUserIdsAsync(
