@@ -87,6 +87,22 @@ public sealed class AdminIdentityMutationGateway(
 
         ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
 
+        var targetExists =
+            await dbContext.Users
+                .AsNoTracking()
+                .AnyAsync(
+                    user =>
+                        user.Id == targetUserId,
+                    cancellationToken);
+
+        if (!targetExists)
+        {
+            return new AdminIdentityRoleMutationResult(
+                Found: false,
+                Changed: false,
+                RoleId: null);
+        }
+
         var normalizedRoleName =
             roleName.Trim().ToUpperInvariant();
 
