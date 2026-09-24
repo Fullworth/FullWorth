@@ -106,12 +106,15 @@ for name in ("api", "web"):
     if tmp_entry is None:
         fail(f"{name} must provide bounded writable /tmp storage.")
 
-    for option in ("noexec", "nosuid", "nodev", "size=268435456"):
+    for option in ("noexec", "nosuid", "nodev"):
         if option not in tmp_entry:
             fail(
                 f"{name} /tmp is missing required option {option!r}: "
                 f"{tmp_entry!r}"
             )
+
+    if "size=256m" not in tmp_entry and "size=268435456" not in tmp_entry:
+        fail(f"{name} /tmp must be capped at 256 MiB: {tmp_entry!r}")
 
 for service_name in ("api", "web", "database"):
     if services[service_name].get("ports"):
