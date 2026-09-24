@@ -230,11 +230,33 @@ public sealed class BillAlertReconciliationGateway(
                         message));
             }
 
+            if (scope.Mode is not
+                    BillAlertReconciliationMode.ReplaceManagedSet and not
+                    BillAlertReconciliationMode.SingleManagedSlot and not
+                    BillAlertReconciliationMode.UpsertDesiredIdentities)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(scopes),
+                    scope.Mode,
+                    "Unsupported alert reconciliation mode.");
+            }
+
+            if (scope.Mode ==
+                    BillAlertReconciliationMode.SingleManagedSlot &&
+                desired.Count >
+                    1)
+            {
+                throw new ArgumentException(
+                    "Single-slot alert reconciliation accepts at most one desired alert.",
+                    nameof(scopes));
+            }
+
             normalizedScopes.Add(
                 new NormalizedScope(
                     scope.BillChangeId,
                     managedTypes,
-                    desired));
+                    desired,
+                    scope.Mode));
         }
 
         if (normalizedScopes.Count ==
@@ -361,136 +383,41 @@ public sealed class BillAlertReconciliationGateway(
                             alert.Id)
                     .ToList();
 
-            var existingByIdentity =
-                new Dictionary<
-                    AlertIdentity,
-                    BillAlertEntity>();
-
-            foreach (var alert in
-                     existing)
+            switch (scope.Mode)
             {
-                var identity =
-                    new AlertIdentity(
-                        alert.AlertType,
-                        alert.Title);
+                case BillAlertReconciliationMode.ReplaceManagedSet:
+                    ReconcileReplaceManagedSet(
+                        userId,
+                        billStreamId,
+                        scope,
+                        existing,
+                        now,
+                        removedAlertIds);
+                    break;
 
-                if (existingByIdentity.TryAdd(
-                        identity,
-                        alert))
-                {
-                    continue;
-                }
+                case BillAlertReconciliationMode.SingleManagedSlot:
+                    ReconcileSingleManagedSlot(
+                        userId,
+                        billStreamId,
+                        scope,
+                        existing,
+                        now,
+                        removedAlertIds);
+                    break;
 
-                if (removedAlertIds.Add(
-                        alert.Id))
-                {
-                    dbContext.BillAlerts.Remove(
-                        alert);
-                }
-            }
+                case BillAlertReconciliationMode.UpsertDesiredIdentities:
+                    ReconcileUpsertDesiredIdentities(
+                        userId,
+                        billStreamId,
+                        scope,
+                        existing,
+                        now,
+                        removedAlertIds);
+                    break;
 
-            var desiredIdentities =
-                new HashSet<AlertIdentity>();
-
-            foreach (var desired in
-                     scope.Desired)
-            {
-                var identity =
-                    new AlertIdentity(
-                        desired.AlertType,
-                        desired.Title);
-
-                desiredIdentities.Add(
-                    identity);
-
-                if (!existingByIdentity.TryGetValue(
-                        identity,
-                        out var existingAlert))
-                {
-                    dbContext.BillAlerts.Add(
-                        new BillAlertEntity
-                        {
-                            UserId =
-                                userId,
-
-                            BillStreamId =
-                                billStreamId,
-
-                            BillChangeId =
-                                scope.BillChangeId,
-
-                            AlertType =
-                                desired.AlertType,
-
-                            Severity =
-                                desired.Severity,
-
-                            Title =
-                                desired.Title,
-
-                            Message =
-                                desired.Message,
-
-                            IsRead =
-                                false,
-
-                            IsDismissed =
-                                false,
-
-                            CreatedAtUtc =
-                                now,
-
-                            UpdatedAtUtc =
-                                now
-                        });
-
-                    continue;
-                }
-
-                var contentChanged =
-                    existingAlert.Severity !=
-                        desired.Severity ||
-                    !string.Equals(
-                        existingAlert.Message,
-                        desired.Message,
-                        StringComparison.Ordinal);
-
-                if (!contentChanged)
-                {
-                    continue;
-                }
-
-                existingAlert.Severity =
-                    desired.Severity;
-
-                existingAlert.Message =
-                    desired.Message;
-
-                existingAlert.IsRead =
-                    false;
-
-                existingAlert.IsDismissed =
-                    false;
-
-                existingAlert.UpdatedAtUtc =
-                    now;
-            }
-
-            foreach (var pair in
-                     existingByIdentity)
-            {
-                if (desiredIdentities.Contains(
-                        pair.Key))
-                {
-                    continue;
-                }
-
-                if (removedAlertIds.Add(
-                        pair.Value.Id))
-                {
-                    dbContext.BillAlerts.Remove(
-                        pair.Value);
-                }
+                default:
+                    throw new InvalidOperationException(
+                        "The normalized alert reconciliation mode is unsupported.");
             }
         }
 
@@ -501,6 +428,313 @@ public sealed class BillAlertReconciliationGateway(
          * unit of work. Statement rows, Bill Changes, and Bills-owned alerts
          * must commit together.
          */
+    }
+
+    private void ReconcileReplaceManagedSet(
+        Guid userId,
+        Guid billStreamId,
+        NormalizedScope scope,
+        IReadOnlyList<BillAlertEntity> existing,
+        DateTimeOffset now,
+        ISet<Guid> removedAlertIds)
+    {
+        var existingByIdentity =
+            new Dictionary<
+                AlertIdentity,
+                BillAlertEntity>();
+
+        foreach (var alert in
+                 existing)
+        {
+            var identity =
+                new AlertIdentity(
+                    alert.AlertType,
+                    alert.Title);
+
+            if (existingByIdentity.TryAdd(
+                    identity,
+                    alert))
+            {
+                continue;
+            }
+
+            RemoveAlert(
+                alert,
+                removedAlertIds);
+        }
+
+        var desiredIdentities =
+            new HashSet<AlertIdentity>();
+
+        foreach (var desired in
+                 scope.Desired)
+        {
+            var identity =
+                new AlertIdentity(
+                    desired.AlertType,
+                    desired.Title);
+
+            desiredIdentities.Add(
+                identity);
+
+            if (!existingByIdentity.TryGetValue(
+                    identity,
+                    out var existingAlert))
+            {
+                AddAlert(
+                    userId,
+                    billStreamId,
+                    scope.BillChangeId,
+                    desired,
+                    now);
+
+                continue;
+            }
+
+            ApplyDesiredContent(
+                existingAlert,
+                desired,
+                now,
+                allowIdentityChange:
+                    false);
+        }
+
+        foreach (var pair in
+                 existingByIdentity)
+        {
+            if (desiredIdentities.Contains(
+                    pair.Key))
+            {
+                continue;
+            }
+
+            RemoveAlert(
+                pair.Value,
+                removedAlertIds);
+        }
+    }
+
+    private void ReconcileSingleManagedSlot(
+        Guid userId,
+        Guid billStreamId,
+        NormalizedScope scope,
+        IReadOnlyList<BillAlertEntity> existing,
+        DateTimeOffset now,
+        ISet<Guid> removedAlertIds)
+    {
+        var desired =
+            scope.Desired
+                .SingleOrDefault();
+
+        if (desired is null)
+        {
+            foreach (var alert in
+                     existing)
+            {
+                RemoveAlert(
+                    alert,
+                    removedAlertIds);
+            }
+
+            return;
+        }
+
+        if (existing.Count ==
+            0)
+        {
+            AddAlert(
+                userId,
+                billStreamId,
+                scope.BillChangeId,
+                desired,
+                now);
+
+            return;
+        }
+
+        ApplyDesiredContent(
+            existing[0],
+            desired,
+            now,
+            allowIdentityChange:
+                true);
+
+        foreach (var duplicate in
+                 existing.Skip(
+                     1))
+        {
+            RemoveAlert(
+                duplicate,
+                removedAlertIds);
+        }
+    }
+
+    private void ReconcileUpsertDesiredIdentities(
+        Guid userId,
+        Guid billStreamId,
+        NormalizedScope scope,
+        IReadOnlyList<BillAlertEntity> existing,
+        DateTimeOffset now,
+        ISet<Guid> removedAlertIds)
+    {
+        foreach (var desired in
+                 scope.Desired)
+        {
+            var matching =
+                existing
+                    .Where(
+                        alert =>
+                            alert.AlertType ==
+                                desired.AlertType &&
+                            string.Equals(
+                                alert.Title,
+                                desired.Title,
+                                StringComparison.Ordinal))
+                    .ToList();
+
+            if (matching.Count ==
+                0)
+            {
+                AddAlert(
+                    userId,
+                    billStreamId,
+                    scope.BillChangeId,
+                    desired,
+                    now);
+
+                continue;
+            }
+
+            ApplyDesiredContent(
+                matching[0],
+                desired,
+                now,
+                allowIdentityChange:
+                    false);
+
+            foreach (var duplicate in
+                     matching.Skip(
+                         1))
+            {
+                RemoveAlert(
+                    duplicate,
+                    removedAlertIds);
+            }
+        }
+    }
+
+    private void AddAlert(
+        Guid userId,
+        Guid billStreamId,
+        Guid? billChangeId,
+        NormalizedDesiredAlert desired,
+        DateTimeOffset now)
+    {
+        dbContext.BillAlerts.Add(
+            new BillAlertEntity
+            {
+                UserId =
+                    userId,
+
+                BillStreamId =
+                    billStreamId,
+
+                BillChangeId =
+                    billChangeId,
+
+                AlertType =
+                    desired.AlertType,
+
+                Severity =
+                    desired.Severity,
+
+                Title =
+                    desired.Title,
+
+                Message =
+                    desired.Message,
+
+                IsRead =
+                    false,
+
+                IsDismissed =
+                    false,
+
+                CreatedAtUtc =
+                    now,
+
+                UpdatedAtUtc =
+                    now
+            });
+    }
+
+    private static void ApplyDesiredContent(
+        BillAlertEntity alert,
+        NormalizedDesiredAlert desired,
+        DateTimeOffset now,
+        bool allowIdentityChange)
+    {
+        var changed =
+            alert.Severity !=
+                desired.Severity ||
+            !string.Equals(
+                alert.Message,
+                desired.Message,
+                StringComparison.Ordinal) ||
+            (
+                allowIdentityChange &&
+                (
+                    alert.AlertType !=
+                        desired.AlertType ||
+                    !string.Equals(
+                        alert.Title,
+                        desired.Title,
+                        StringComparison.Ordinal)
+                )
+            );
+
+        if (!changed)
+        {
+            return;
+        }
+
+        if (allowIdentityChange)
+        {
+            alert.AlertType =
+                desired.AlertType;
+
+            alert.Title =
+                desired.Title;
+        }
+
+        alert.Severity =
+            desired.Severity;
+
+        alert.Message =
+            desired.Message;
+
+        alert.IsRead =
+            false;
+
+        alert.IsDismissed =
+            false;
+
+        alert.UpdatedAtUtc =
+            now;
+    }
+
+    private void RemoveAlert(
+        BillAlertEntity alert,
+        ISet<Guid> removedAlertIds)
+    {
+        if (!removedAlertIds.Add(
+                alert.Id))
+        {
+            return;
+        }
+
+        dbContext.BillAlerts.Remove(
+            alert);
     }
 
     private static void ValidateIdentity(
@@ -585,7 +819,8 @@ public sealed class BillAlertReconciliationGateway(
     private sealed record NormalizedScope(
         Guid? BillChangeId,
         IReadOnlySet<BillAlertType> ManagedTypes,
-        IReadOnlyList<NormalizedDesiredAlert> Desired);
+        IReadOnlyList<NormalizedDesiredAlert> Desired,
+        BillAlertReconciliationMode Mode);
 
     private sealed record NormalizedDesiredAlert(
         BillAlertType AlertType,
