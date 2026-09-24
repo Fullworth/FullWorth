@@ -546,6 +546,10 @@ builder.Services.AddScoped<
     PlaidBankDataSyncGateway>();
 
 builder.Services.AddScoped<
+    IBankConnectionReadGateway,
+    PlaidBankConnectionReadGateway>();
+
+builder.Services.AddScoped<
     PlaidConnectionDisconnectService>();
 
 builder.Services.AddScoped<
