@@ -1,4 +1,6 @@
-﻿namespace FullWorth.Web.Infrastructure;
+﻿using Microsoft.Extensions.Caching.Distributed;
+
+namespace FullWorth.Web.Infrastructure;
 
 public static class HealthEndpointMappings
 {
@@ -24,6 +26,7 @@ public static class HealthEndpointMappings
                 "/health/ready",
                 async (
                     IHttpClientFactory httpClientFactory,
+                    IDistributedCache sessionCache,
                     CancellationToken cancellationToken) =>
                 {
                     try
@@ -35,6 +38,43 @@ public static class HealthEndpointMappings
 
                         timeout.CancelAfter(
                             TimeSpan.FromSeconds(5));
+
+                        var sessionProbeKey =
+                            "health:" +
+                            Guid.NewGuid()
+                                .ToString("N");
+
+                        var sessionProbeValue =
+                            Guid.NewGuid()
+                                .ToByteArray();
+
+                        await sessionCache.SetAsync(
+                            sessionProbeKey,
+                            sessionProbeValue,
+                            new DistributedCacheEntryOptions
+                            {
+                                AbsoluteExpirationRelativeToNow =
+                                    TimeSpan.FromSeconds(30)
+                            },
+                            timeout.Token);
+
+                        var sessionProbeRead =
+                            await sessionCache.GetAsync(
+                                sessionProbeKey,
+                                timeout.Token);
+
+                        await sessionCache.RemoveAsync(
+                            sessionProbeKey,
+                            timeout.Token);
+
+                        if (sessionProbeRead is null ||
+                            !sessionProbeRead.SequenceEqual(
+                                sessionProbeValue))
+                        {
+                            return Results.StatusCode(
+                                StatusCodes
+                                    .Status503ServiceUnavailable);
+                        }
 
                         var client =
                             httpClientFactory
@@ -91,6 +131,12 @@ public static class HealthEndpointMappings
                                 .Status503ServiceUnavailable);
                     }
                     catch (HttpRequestException)
+                    {
+                        return Results.StatusCode(
+                            StatusCodes
+                                .Status503ServiceUnavailable);
+                    }
+                    catch (InvalidOperationException)
                     {
                         return Results.StatusCode(
                             StatusCodes
