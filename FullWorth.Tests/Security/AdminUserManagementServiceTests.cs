@@ -2,6 +2,8 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
+using FullWorth.API.Services.Identity;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -188,6 +190,9 @@ public sealed class AdminUserManagementServiceTests
     {
         return new AdminUserManagementService(
             dbContext,
+            new AdminIdentityMutationGateway(dbContext),
+            new AdminSubscriptionMutationGateway(dbContext),
+            new AdminAuditLogWriter(dbContext),
             new FixedTimeProvider(NowUtc));
     }
 
