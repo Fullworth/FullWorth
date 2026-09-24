@@ -368,8 +368,6 @@ public sealed class FullWorthDbContext
 
                 entity.HasIndex(transaction => transaction.BankAccountId);
 
-                entity.HasIndex(transaction => transaction.BillStreamId);
-
                 entity.HasIndex(transaction => transaction.PostedDate);
 
                 entity.HasIndex(transaction => new
@@ -397,20 +395,6 @@ public sealed class FullWorthDbContext
                         account.UserId
                     })
                     .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(transaction => transaction.BillStream)
-                    .WithMany()
-                    .HasForeignKey(transaction => new
-                    {
-                        transaction.BillStreamId,
-                        transaction.UserId
-                    })
-                    .HasPrincipalKey(stream => new
-                    {
-                        stream.Id,
-                        stream.UserId
-                    })
-                    .OnDelete(DeleteBehavior.Restrict);
             });
     }
 
