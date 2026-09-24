@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -182,19 +181,36 @@ public sealed class RefreshTokenRotationService(
                     cancellationToken);
 
         /*
-         * Serialize refresh-family mutations per user across API instances.
-         * The database remains the source of truth; this is not an in-memory
-         * lock that disappears when FullWorth scales horizontally.
+         * Lock the Identity user row before mutating refresh-family state.
+         * PostgreSQL row locking serializes concurrent refreshes for this user
+         * and also orders refresh rotation against ordinary Identity writes
+         * that update SecurityStamp.
          */
-        var lockKey =
-            CreateAdvisoryLockKey(
-                userId);
+        var lockedUser =
+            await dbContext.Users
+                .FromSqlInterpolated(
+                    $"SELECT * FROM \"AspNetUsers\" WHERE \"Id\" = {userId} FOR UPDATE")
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    cancellationToken);
 
-        await dbContext.Database
-            .ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock({lockKey});",
-                cancellationToken);
+        if (lockedUser is null ||
+            string.IsNullOrWhiteSpace(
+                lockedUser.SecurityStamp) ||
+            !FixedTimeHashEquals(
+                HashValue(
+                    lockedUser.SecurityStamp),
+                securityStampHash))
+        {
+            return false;
+        }
 
+        /*
+         * The stamp was validated once when the refresh ticket was decoded
+         * and again after the database row lock was acquired. A password,
+         * role, 2FA, provider, or other security-stamp change can therefore
+         * never race a stale refresh token through family rotation.
+         */
         var accepted =
             isFirstFamilyRefresh
                 ? await TryCreateFamilyAsync(
@@ -570,20 +586,6 @@ public sealed class RefreshTokenRotationService(
                    character =>
                        character is >= '0' and <= '9' ||
                        character is >= 'a' and <= 'f');
-    }
-
-    private static long CreateAdvisoryLockKey(
-        Guid userId)
-    {
-        Span<byte> digest =
-            stackalloc byte[32];
-
-        SHA256.HashData(
-            userId.ToByteArray(),
-            digest);
-
-        return BinaryPrimitives.ReadInt64BigEndian(
-            digest[..8]);
     }
 
     private sealed record RotatedTokens(
