@@ -1,4 +1,5 @@
 using System.Net;
+using FullWorth.Web.Infrastructure;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -8,7 +9,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 namespace FullWorth.Web.Services;
 
 public sealed class AdminBffWriteProxyService(
-    IHttpClientFactory httpClientFactory)
+    IHttpClientFactory httpClientFactory,
+    IWebSessionTicketAccessor? sessionTicketAccessor = null)
 {
     private const string SubscriptionCheckoutPath =
         "/api/subscription/checkout";
@@ -303,8 +305,20 @@ public sealed class AdminBffWriteProxyService(
 
         if (!response.IsSuccessStatusCode)
         {
+            var concurrentlyRotatedSession =
+                await TryRecoverConcurrentRefreshAsync(
+                    httpContext,
+                    session.RefreshToken,
+                    cancellationToken);
+
+            if (concurrentlyRotatedSession is not null)
+            {
+                return concurrentlyRotatedSession;
+            }
+
             await httpContext.SignOutAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme);
+
             return null;
         }
 
@@ -380,6 +394,54 @@ public sealed class AdminBffWriteProxyService(
             refreshedTokens.AccessToken,
             refreshedTokens.RefreshToken,
             expiresAtUtc);
+    }
+
+    private async Task<WebApiSession?>
+        TryRecoverConcurrentRefreshAsync(
+            HttpContext httpContext,
+            string attemptedRefreshToken,
+            CancellationToken cancellationToken)
+    {
+        if (sessionTicketAccessor is null)
+        {
+            return null;
+        }
+
+        for (var attempt = 0;
+             attempt < 10;
+             attempt++)
+        {
+            if (attempt > 0)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(50),
+                    cancellationToken);
+            }
+
+            var latest =
+                await sessionTicketAccessor
+                    .ReadLatestAsync(
+                        httpContext,
+                        cancellationToken);
+
+            if (latest is null ||
+                string.Equals(
+                    latest.RefreshToken,
+                    attemptedRefreshToken,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return new WebApiSession(
+                latest.Principal,
+                latest.Properties,
+                latest.AccessToken,
+                latest.RefreshToken,
+                latest.ExpiresAtUtc);
+        }
+
+        return null;
     }
 
     private static bool IsAllowedApiPath(
