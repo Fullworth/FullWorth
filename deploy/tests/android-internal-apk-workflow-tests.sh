@@ -54,7 +54,7 @@ grep -Fq '*-Signed.apk' "$workflow" ||
     fail "workflow does not require the signed APK output."
 grep -Fq 'Get-FileHash -Algorithm SHA256' "$workflow" ||
     fail "workflow does not publish an APK integrity hash."
-grep -Fq 'actions/upload-artifact@v4' "$workflow" ||
+grep -Fq 'actions/upload-artifact@v7' "$workflow" ||
     fail "workflow does not publish the test package as a GitHub artifact."
 grep -Fq 'actions/download-artifact@v8' "$workflow" ||
     fail "workflow does not retrieve the signed APK for emulator smoke testing."

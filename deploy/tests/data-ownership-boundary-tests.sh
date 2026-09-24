@@ -26,14 +26,28 @@ owners = {
     "BillStatementAiEvaluations": "Statements",
 }
 
-modules = {"Bills", "Plaid", "Statements"}
+modules = {"Accounts", "Bills", "Plaid", "Statements"}
+
+entity_owners = {
+    "BillStreamEntity": "Bills",
+    "BillAlertEntity": "Bills",
+    "BankConnectionEntity": "Plaid",
+    "BankAccountEntity": "Plaid",
+    "BankTransactionEntity": "Plaid",
+    "PlaidLinkSessionEntity": "Plaid",
+    "BillStatementEntity": "Statements",
+    "BillLineItemEntity": "Statements",
+    "BillChangeEntity": "Statements",
+    "BillStatementUploadEntity": "Statements",
+    "BillStatementAiEvaluationEntity": "Statements",
+}
 
 # Existing cross-owner table access is frozen here as a temporary ceiling.
 # New cross-owner access must use an explicit contract instead.
 allowed_cross_owner_access = set()
 
-set_pattern = re.compile(
-    r"\b(" + "|".join(sorted(map(re.escape, owners), key=len, reverse=True)) + r")\b"
+db_context_identifier_pattern = re.compile(
+    r"\bFullWorthDbContext\s+([A-Za-z_][A-Za-z0-9_]*)"
 )
 
 seen_allowances = set()
@@ -56,7 +70,43 @@ for module in sorted(modules):
             with open(path, "r", encoding="utf-8-sig") as handle:
                 content = handle.read()
 
-            referenced_sets = set(set_pattern.findall(content))
+            context_identifiers = set(
+                db_context_identifier_pattern.findall(content)
+            )
+
+            referenced_sets = set()
+            referenced_entities = set()
+
+            for identifier in context_identifiers:
+                escaped_identifier = re.escape(identifier)
+
+                property_pattern = re.compile(
+                    rf"\b{escaped_identifier}\s*\.\s*("
+                    + "|".join(
+                        sorted(
+                            map(re.escape, owners),
+                            key=len,
+                            reverse=True))
+                    + r")\b"
+                )
+
+                referenced_sets.update(
+                    property_pattern.findall(content)
+                )
+
+                set_pattern = re.compile(
+                    rf"\b{escaped_identifier}\s*\.\s*Set\s*<\s*("
+                    + "|".join(
+                        sorted(
+                            map(re.escape, entity_owners),
+                            key=len,
+                            reverse=True))
+                    + r")\s*>\s*\("
+                )
+
+                referenced_entities.update(
+                    set_pattern.findall(content)
+                )
 
             for db_set in sorted(referenced_sets):
                 owner = owners[db_set]
@@ -71,6 +121,21 @@ for module in sorted(modules):
                 errors.append(
                     f"forbidden direct cross-owner data access: {module} -> "
                     f"{db_set} (owned by {owner}) in {rel}; use an explicit owner contract"
+                )
+
+            for entity_type in sorted(referenced_entities):
+                owner = entity_owners[entity_type]
+                if owner == module:
+                    continue
+
+                edge = (module, entity_type, rel)
+                if edge in allowed_cross_owner_access:
+                    seen_allowances.add(edge)
+                    continue
+
+                errors.append(
+                    f"forbidden direct cross-owner entity access: {module} -> "
+                    f"{entity_type} (owned by {owner}) in {rel}; use an explicit owner contract"
                 )
 
 stale = sorted(allowed_cross_owner_access - seen_allowances)

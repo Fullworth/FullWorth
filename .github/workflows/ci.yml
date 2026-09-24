@@ -159,6 +159,7 @@ jobs:
             ".dockerignore",
             ".env.production.example",
             "AI_SHADOW_CORPUS.md",
+            "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
             "Dockerfile",
@@ -426,7 +427,7 @@ jobs:
 
       - name: Upload visual acceptance screenshots
         if: always() && steps.visual_changes.outputs.required == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fullworth-visual-${{ github.run_id }}
           path: FullWorth.VisualTests/artifacts

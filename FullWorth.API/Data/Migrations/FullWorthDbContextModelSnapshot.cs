@@ -415,8 +415,6 @@ namespace FullWorth.API.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("BillChangeId", "UserId");
-
                     b.HasIndex("BillStreamId", "UserId");
 
                     b.HasIndex("UserId", "IsDismissed", "IsRead", "CreatedAtUtc");
@@ -486,6 +484,8 @@ namespace FullWorth.API.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "UserId");
 
                     b.HasIndex("BillStreamId");
 
@@ -1279,19 +1279,11 @@ namespace FullWorth.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FullWorth.API.Data.Entities.BillChangeEntity", "BillChange")
-                        .WithMany()
-                        .HasForeignKey("BillChangeId", "UserId")
-                        .HasPrincipalKey("Id", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("FullWorth.API.Data.Entities.BillStreamEntity", "BillStream")
                         .WithMany()
                         .HasForeignKey("BillStreamId", "UserId")
                         .HasPrincipalKey("Id", "UserId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("BillChange");
 
                     b.Navigation("BillStream");
 

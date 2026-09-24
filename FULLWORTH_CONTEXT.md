@@ -1,25 +1,61 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-22
+Last updated: 2026-09-24
 
-## Current migration checkpoint — 2026-09-22
+## Architecture modularization checkpoint — 2026-09-24
 
-This checkpoint supersedes the older branch/domain summaries below; historical production evidence remains historical.
+FullWorth is being evolved as a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
 
-- Repository: `RealizmModz/FullWorth`; integration branch: `development`.
-- Repository branch cleanup completed successfully on 2026-09-22. PR #249 merged the SHA-pinned reviewed-stale cleanup extension into `development` as `142eac4b0b380c81964da0f065c325bea951d994` after exact-head FullWorth CI #817 passed all three required jobs. PR #247 then promoted that maintenance state to `master` as `5c8a75af702031d14652325939e3b3c03c5df639` after exact-head FullWorth CI #818 passed all three required jobs.
-- The owner-only cleanup command on issue #245 triggered FullWorth Branch Cleanup run #3 against master `5c8a75af702031d14652325939e3b3c03c5df639`; the workflow completed successfully. The repository now has only `master`, `development`, and the intentionally preserved `feat/ui-foundation-primitives` branch. Do not delete that preserved branch until its unmerged reusable UI work is deliberately reviewed or superseded.
-- The current promoted product-code baseline remains development head `d4ab89de5a7a0ff1407c1188defd199c1a0e3d04`, promoted through PR #241 to master merge `a5c45ee91aefc30897418919f9ba24b9844afb2a` after exact-head FullWorth CI #806 passed. The later `5c8a75af...` master state is repository-maintenance/handoff work, not a newly claimed production deployment.
-- PR #218 merged the refreshed migration checkpoint as `b7ae2d975ece59959f4c239bdb93d33bfd9dc43c` after exact-head CI #763. PR #217 merged the legacy-compatibility guard as `af3501202d8d7f2946bf7469c5887ae4b8b4a24b` after CI #756. PR #216/#215/#214 completed the private-corpus, test/readiness, and operator-visible migration layers after CI #750/#745/#735.
-- The BillWatch → FullWorth cosmetic/operator migration is complete up to the explicit compatibility boundary. CI fails closed if a future change accidentally renames frozen secure-storage, claim/cookie/Data Protection, browser preference, Stripe metadata, external-auth, telemetry, alert/backup, legacy sender/domain, proof-confirmation, deployment-path, private-corpus, or context-pointer identifiers without an explicit compatibility migration.
-- Installed-device acceptance now has a release-pinned metadata-only human-attestation path. Android evidence is required by the same-release private-beta acceptance bundle; iOS evidence is verified and included when supplied. The fixed phase set now covers installed PWA launch, first-run setup, display/accessibility preference application, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile security dialogs. Plaid Hosted Link return remains independently proven by the existing Plaid observation evidence.
-- The evidence harness does **not** complete the real device gate by itself. Actual installed-device checks still need to be performed on the exact release candidate before their evidence can be recorded. Do not infer Android/iOS acceptance from browser/CI results.
-- PR #241 promoted the current personalization/readability/external-auth/GitHub-deploy release candidate to `master` as merge commit `a5c45ee91aefc30897418919f9ba24b9844afb2a` after exact-head FullWorth CI #806 passed. Production has **not** yet been claimed on that release. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` until a guarded deployment and verification of the new master release completes.
-- Remaining BillWatch names are compatibility boundaries or internal implementation identifiers, not unfinished cosmetic branding. Do not rename `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, systemd unit filenames, Data Protection application/purpose strings, persisted secure-storage/browser keys, claims/cookies, Stripe metadata, alert source IDs, backup tags, proof confirmation phrases, database/configuration identifiers, or the verified legacy email sender without a dedicated compatibility migration.
-- Preserve `security@billbeacon.net` and the legacy BillBeacon domain aliases until their separate external-provider/retirement checks are complete. FullWorth is now the canonical production Web/API domain, while the legacy aliases remain compatibility surfaces.
-- Production release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` was operator-reported live on 2026-09-22. The detailed deployment transcript is not stored in this context, so do not infer additional per-step production evidence beyond what was explicitly observed or previously verified.
-- Google/Apple provider-backed account creation is implemented and merged. Real provider acceptance remains open until protected provider credentials are configured outside GitHub and callback, registration, sign-in, linking, and account-isolation behavior are proven end to end.
-- The guarded GitHub-only production-deploy workflow is implemented on master. It is manual-only, exact-master-SHA gated, uses the protected `production` environment, keeps FullWorth application secrets on the production host, and still requires actual deployment/verification evidence before production can be claimed.
+Completed checkpoints:
+- #261 project dependency airlocks and CI-enforced project graph.
+- #262 bounded Android emulator packaging/install/launch smoke. This is repository packaging proof only; it does not satisfy physical installed-PWA acceptance #251.
+- #263 direct sibling service-module coupling ratchet.
+- #264 provider-neutral bank synchronization airlock.
+- #265 persistence ownership ratchet for finance service modules.
+- #266–#274 incremental Plaid/Bills/Statements ownership extractions.
+- #275 controller data-ownership ratchet.
+- #276 Statements-owned Bill detail history read airlock.
+- #277 Subscriptions-owned admin read airlock.
+- #278 owner-specific account deletion airlocks. Controller data-ownership baseline is now zero exceptions.
+
+Active:
+- #279 extracts account export reads behind owner projections and expands service data-ownership enforcement to Accounts at a zero-exception baseline.
+- #280 removes unnecessary MAUI Android builds for architecture-only documentation.
+- #260 remains the architecture roadmap issue.
+
+Architecture rules:
+- Modules depend on contracts, not sibling implementations.
+- Controllers must not read another module's private persistence directly.
+- Accounts, Bills, Plaid, and Statements are moving toward zero direct cross-owner finance DbSet access.
+- Shared scoped DbContext transactions are an explicit modular-monolith coordination mechanism; moving a boundary across a network later requires an outbox/coordinator or equivalent rather than silently losing atomicity.
+- Sensitive provider credentials, statement storage identifiers, and cross-user financial evidence must not leak through contracts, logs, export payloads, or exceptions.
+
+Remaining schema-level coupling under review:
+- `BillAlerts.BillChangeId` still has a database foreign key into Statements-owned `BillChanges`; the intended next step is to keep the ID as an opaque correlation identifier while removing the cross-domain FK/navigation.
+- `BankTransactions.BillStreamId` still points from Plaid-owned persistence into Bills-owned `BillStreams`; a Bills-owned association model remains a later migration candidate.
+
+Production remains unchanged by this architecture work unless a separate guarded production deployment is explicitly approved.
+
+## Current migration checkpoint — 2026-09-24
+
+This checkpoint supersedes the older branch/domain summaries below; current GitHub source and exact-head CI remain authoritative.
+
+- Repository: `RealizmModz/FullWorth`; release branch: `master`; integration branch: `development`.
+- The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No architecture merge listed below is being claimed as deployed.
+- Production remains untouched unless a guarded deployment is separately and explicitly approved.
+- PR #261 established project dependency airlocks. PR #263 added direct sibling service-module coupling enforcement with zero exceptions. PR #264 introduced the provider-neutral bank synchronization airlock.
+- PR #265 established finance data-ownership enforcement. PR #266 moved Bills connection reads behind a Plaid-owned contract. PR #267 moved recurring-bill transaction discovery/link updates behind a Plaid-owned contract.
+- PR #270 and PR #273 removed Statements direct reads of Bills-owned Bill Streams. PR #274 moved statement-driven Bill Alert persistence behind a Bills-owned reconciliation gateway; the Bills/Plaid/Statements service ownership baseline reached zero exceptions.
+- PR #275 added controller/application data-ownership enforcement and routed statement-upload Bill Stream ownership through the Bills gateway.
+- PR #276 moved Bill-detail statement/change history behind a Statements-owned read gateway.
+- PR #277 moved admin access-key/subscription/program reads behind a Subscriptions-owned read gateway.
+- PR #278 merged to `development` as `e0a6a59cf5ab6010fd2f03dd13c9a2f239f830dd` after exact-head CI #857 passed backend/tests, MAUI Android, and Linux production-container/security/backup/recovery. Account deletion now coordinates Plaid/Bills/Statements/Subscriptions owner contracts, and the controller data-ownership ratchet has zero exceptions.
+- PR #279 is the active Accounts-service checkpoint. It moves account export reads behind Plaid/Bills/Statements export gateways and expands service ownership enforcement to Accounts at a zero-exception target. Initial stacked CI exposed and fixed a missing Accounts namespace import; final integration-base CI must still pass before merge.
+- PR #280 is stacked behind #279 and adds `ARCHITECTURE.md` to the MAUI-safe documentation list. It exists only to avoid unrelated Android builds for future architecture-doc-only changes; it still requires its own final exact-head CI because it changes `ci.yml`.
+- Issue #260 is the modular-architecture tracker. After #279/#280, the next persistence boundary is schema coupling: first evaluate/remove the `BillAlerts -> BillChanges` FK while preserving `BillChangeId` as an opaque correlation ID, then handle `BankTransactions.BillStreamId` with a proper Bills-owned association rather than merely dropping referential integrity.
+- Android physical installed-PWA acceptance remains open under issue #251. CI, browser tests, and emulator proof do not satisfy that gate. A real Android tester may become available; use the release-pinned checklist against the exact deployed release.
+- iOS Add to Home Screen failure remains tracked separately in issue #258.
+- No real-device, Plaid/provider, backup-immutability, legal-review, production, or human acceptance evidence may be fabricated or inferred from CI.
 
 ## FullWorth brand transition
 
@@ -264,16 +300,14 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Current GitHub `master` is `5c8a75af702031d14652325939e3b3c03c5df639` from PR #247. Its exact promotion head `142eac4b0b380c81964da0f065c325bea951d994` passed FullWorth CI #818 across backend build/tests, MAUI Android, and Linux production/security/backup/recovery before merge. This was a repository-maintenance/handoff promotion, not a production deployment.
-2. Current GitHub `development` is `142eac4b0b380c81964da0f065c325bea951d994`. PR #249's exact head `2dbb8b5ec43a96bf7719fc7e136c340e52b5e300` passed FullWorth CI #817 before squash merge.
-3. FullWorth Branch Cleanup run #3 completed successfully from the owner-only issue #245 command against master `5c8a75af...`. Only `master`, `development`, and intentionally preserved `feat/ui-foundation-primitives` remain.
-4. The operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` from 2026-09-22. No newer GitHub merge is being claimed as deployed. Release-pinned real-device acceptance therefore still targets `81a74f...` unless production is deliberately advanced through the guarded deployment path.
-5. The BillWatch → FullWorth cosmetic/operator migration is complete up to the guarded compatibility boundary. Do not rename frozen `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, Data Protection/purpose strings, persisted keys, claims/cookies, Stripe metadata, legacy sender/domain, alert/backup IDs, proof phrases, or related compatibility identifiers without a dedicated migration.
-6. The next release checkpoint is real installed-device acceptance against deployed release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`; do not create a new release merely to generate acceptance evidence.
-7. Perform the real installed-device checks against that deployed release: Android installed PWA is required; iOS home-screen PWA is where-available. Verify installed launch, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile Change password / Change email dialogs.
-8. Plaid Hosted Link return remains a separate human/provider observation proof. Do not merge it into the installed-device attestation or manufacture either evidence path.
-9. If real-device acceptance exposes a defect, stop launch progression, fix it on a focused branch from current `development`, require exact-head CI, merge back to `development`, promote a new verified master candidate, redeploy through the guarded path, and repeat release-pinned acceptance for the new release.
-10. The same-release private-beta acceptance bundle requires machine technical evidence, alert-observation evidence, Plaid observation evidence, and Android installed-device evidence. iOS evidence is included when supplied.
-11. Provider-enforced immutable/Object-Lock/WORM backup protection and qualified Terms/Privacy review remain separate trusted-beta launch gates and are not implied by CI, deployment, or the private-beta acceptance bundle.
-12. Preserve every authentication, BFF, antiforgery, HTTPS, ownership, token-protection, statement, backup, migration, and financial-data security invariant while completing the release gate.
-13. Do not repeat browser screenshot, Chromium offline, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants them.
+1. Read current GitHub `development`, open PRs, issue #260, and this checkpoint before making changes.
+2. PR #278 is merged into `development` as `e0a6a59cf5ab6010fd2f03dd13c9a2f239f830dd`; controller cross-owner DbSet exceptions are zero.
+3. Finish PR #279 first: keep it based on current `development`, require exact-head backend/tests + MAUI gate + Linux production-container/security/backup/recovery green, then merge only if the final head remains unchanged.
+4. After #279 merges, retarget PR #280 to the resulting `development`, require fresh exact-head CI, then merge the MAUI detector efficiency fix.
+5. Update issue #260 as each checkpoint merges. Do not mark schema decoupling complete until the database relationships themselves are removed or replaced.
+6. Next schema checkpoint: remove the Bills-owned `BillAlerts` foreign-key/navigation dependency on Statements-owned `BillChanges` while preserving nullable/indexed `BillChangeId` as correlation metadata and preserving the public alert API.
+7. The harder remaining schema boundary is `BankTransaction.BillStreamId`; prefer a Bills-owned transaction-to-bill association model rather than simply dropping the FK.
+8. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
+9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
+10. Preserve authentication, BFF, antiforgery, HTTPS, ownership, provider-token, statement-storage, backup/recovery, migration, and financial-data boundaries. Never weaken them to make modularization pass.
+
