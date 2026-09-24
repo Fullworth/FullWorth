@@ -568,6 +568,10 @@ builder.Services.AddScoped<
     BillStreamReadGateway>();
 
 builder.Services.AddScoped<
+    IBillAlertReconciliationGateway,
+    BillAlertReconciliationGateway>();
+
+builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
 
 builder.Services.AddScoped<
