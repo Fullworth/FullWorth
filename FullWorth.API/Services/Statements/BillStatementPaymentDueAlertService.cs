@@ -171,7 +171,10 @@ public sealed class BillStatementPaymentDueAlertService
                                     severity,
                                     title,
                                     message)
-                            ])
+                            ],
+
+                        Mode:
+                            BillAlertReconciliationMode.UpsertDesiredIdentities)
                 ],
                 removeBillChangeIds:
                     [],
