@@ -1,5 +1,6 @@
 using System.Text;
 using FullWorth.API.Data;
+using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Statements;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,7 +47,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
             () => storage.OpenRead(userId, stored.StorageKey));
 
         var recovery = new AccountDeletionStatementQuarantineRecovery(
-            dbContext,
+            new IdentityUserExistenceGateway(dbContext),
             storage,
             logger);
 
@@ -94,7 +95,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
         Assert.True(entry.WasPresent);
 
         var recovery = new AccountDeletionStatementQuarantineRecovery(
-            dbContext,
+            new IdentityUserExistenceGateway(dbContext),
             storage,
             logger);
 
@@ -195,7 +196,7 @@ public sealed class AccountDeletionQuarantineRecoveryTests
 
         var recovery =
             new AccountDeletionStatementQuarantineRecovery(
-                dbContext,
+                new IdentityUserExistenceGateway(dbContext),
                 storage,
                 logger);
 
