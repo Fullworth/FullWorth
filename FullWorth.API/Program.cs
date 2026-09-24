@@ -257,6 +257,10 @@ builder.Services.AddScoped<
     AdminSubscriptionReadGateway>();
 
 builder.Services.AddScoped<
+    IAccountSubscriptionDeletionGateway,
+    AccountSubscriptionDeletionGateway>();
+
+builder.Services.AddScoped<
     AdminUserManagementService>();
 
 /*
@@ -565,6 +569,10 @@ builder.Services.AddScoped<
     PlaidConnectionDisconnectService>();
 
 builder.Services.AddScoped<
+    IAccountBankDeletionGateway,
+    AccountBankDeletionGateway>();
+
+builder.Services.AddScoped<
     RecurringBillDiscoveryPersistenceService>();
 
 builder.Services.AddScoped<
@@ -578,6 +586,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IBillAlertReconciliationGateway,
     BillAlertReconciliationGateway>();
+
+builder.Services.AddScoped<
+    IAccountBillDeletionGateway,
+    AccountBillDeletionGateway>();
 
 builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
@@ -606,6 +618,10 @@ builder.Services.Configure<BillStatementOcrOptions>(
 
 builder.Services.AddScoped<
     SecureBillStatementStorageService>();
+
+builder.Services.AddScoped<
+    IAccountStatementDeletionGateway,
+    AccountStatementDeletionGateway>();
 
 builder.Services.AddScoped<
     PdfBillStatementTextExtractor>();
