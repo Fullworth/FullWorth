@@ -142,5 +142,6 @@ assert_networks edge \
 
 assert_read_only_runtime api 256
 assert_read_only_runtime web 256
+assert_read_only_runtime edge 128
 
 echo "FullWorth production exposure verification passed."
