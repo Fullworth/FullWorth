@@ -30,6 +30,9 @@ public sealed class FullWorthDbContext
     public DbSet<BankTransactionEntity> BankTransactions =>
         Set<BankTransactionEntity>();
 
+    public DbSet<BillTransactionLinkEntity> BillTransactionLinks =>
+        Set<BillTransactionLinkEntity>();
+
     public DbSet<BillStatementEntity> BillStatements =>
         Set<BillStatementEntity>();
 
@@ -78,6 +81,7 @@ public sealed class FullWorthDbContext
         ConfigureBankConnection(builder);
         ConfigureBankAccount(builder);
         ConfigureBankTransaction(builder);
+        ConfigureBillTransactionLink(builder);
         ConfigureBillStatement(builder);
         ConfigureBillLineItem(builder);
         ConfigureBillChange(builder);
@@ -364,8 +368,6 @@ public sealed class FullWorthDbContext
 
                 entity.HasIndex(transaction => transaction.BankAccountId);
 
-                entity.HasIndex(transaction => transaction.BillStreamId);
-
                 entity.HasIndex(transaction => transaction.PostedDate);
 
                 entity.HasIndex(transaction => new
@@ -394,19 +396,77 @@ public sealed class FullWorthDbContext
                     })
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(transaction => transaction.BillStream)
+            });
+    }
+
+    private static void ConfigureBillTransactionLink(
+        ModelBuilder builder)
+    {
+        builder.Entity<BillTransactionLinkEntity>(
+            entity =>
+            {
+                entity.ToTable("BillTransactionLinks");
+
+                entity.HasKey(
+                    link =>
+                        link.BankTransactionId);
+
+                entity.Property(
+                        link =>
+                            link.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.Property(
+                        link =>
+                            link.UpdatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(
+                    link =>
+                        link.UserId);
+
+                entity.HasIndex(
+                    link =>
+                        link.BillStreamId);
+
+                entity.HasIndex(
+                    link =>
+                        new
+                        {
+                            link.UserId,
+                            link.BillStreamId
+                        });
+
+                entity.HasOne(
+                        link =>
+                            link.User)
                     .WithMany()
-                    .HasForeignKey(transaction => new
-                    {
-                        transaction.BillStreamId,
-                        transaction.UserId
-                    })
-                    .HasPrincipalKey(stream => new
-                    {
-                        stream.Id,
-                        stream.UserId
-                    })
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .HasForeignKey(
+                        link =>
+                            link.UserId)
+                    .OnDelete(
+                        DeleteBehavior.Cascade);
+
+                entity.HasOne(
+                        link =>
+                            link.BillStream)
+                    .WithMany()
+                    .HasForeignKey(
+                        link =>
+                            new
+                            {
+                                link.BillStreamId,
+                                link.UserId
+                            })
+                    .HasPrincipalKey(
+                        stream =>
+                            new
+                            {
+                                stream.Id,
+                                stream.UserId
+                            })
+                    .OnDelete(
+                        DeleteBehavior.Cascade);
             });
     }
 
