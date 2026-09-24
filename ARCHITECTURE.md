@@ -103,6 +103,8 @@ The staged-write behavior is an explicit same-process atomicity contract. If the
 
 The active service and controller ownership baselines are exception-free. Future domain expansion should preserve that zero-exception model rather than introduce temporary shortcuts.
 
+Bills keeps `BillAlert.BillChangeId` only as an opaque correlation identifier. The database no longer enforces a Bills-to-Statements foreign key for that field, so alert persistence does not require direct schema ownership of `BillChanges`; the scalar ID and its index remain for traceability and API compatibility.
+
 Every user-owned resource remains ownership-scoped. Cross-module convenience is not permission to bypass ownership checks.
 
 A module that owns data is responsible for enforcing the rules around that data. Other modules should request behavior through the owning module's contract rather than query private tables as an implementation shortcut.
