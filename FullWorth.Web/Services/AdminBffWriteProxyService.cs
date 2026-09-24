@@ -421,7 +421,7 @@ public sealed class AdminBffWriteProxyService(
             var latest =
                 await sessionTicketAccessor
                     .ReadLatestAsync(
-                        httpContext,
+                        session.Properties,
                         cancellationToken);
 
             if (latest is null ||
