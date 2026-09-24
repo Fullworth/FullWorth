@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
 
 namespace FullWorth.Web.Infrastructure;
 
@@ -137,6 +138,12 @@ public static class HealthEndpointMappings
                                 .Status503ServiceUnavailable);
                     }
                     catch (InvalidOperationException)
+                    {
+                        return Results.StatusCode(
+                            StatusCodes
+                                .Status503ServiceUnavailable);
+                    }
+                    catch (RedisException)
                     {
                         return Results.StatusCode(
                             StatusCodes
