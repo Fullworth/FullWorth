@@ -107,7 +107,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
                         transaction.TransactionId)
                 .ToArray();
 
-        var persistedLinks =
+        List<BillTransactionLinkEntity> persistedLinks =
             transactionIds.Length ==
                 0
                 ? []
