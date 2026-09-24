@@ -741,19 +741,6 @@ public sealed class FullWorthDbContext
                     })
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(alert => alert.BillChange)
-                    .WithMany()
-                    .HasForeignKey(alert => new
-                    {
-                        alert.BillChangeId,
-                        alert.UserId
-                    })
-                    .HasPrincipalKey(change => new
-                    {
-                        change.Id,
-                        change.UserId
-                    })
-                    .OnDelete(DeleteBehavior.Restrict);
             });
     }
 
