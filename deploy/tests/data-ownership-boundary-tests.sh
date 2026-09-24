@@ -31,7 +31,6 @@ modules = {"Bills", "Plaid", "Statements"}
 # Existing cross-owner table access is frozen here as a temporary ceiling.
 # New cross-owner access must use an explicit contract instead.
 allowed_cross_owner_access = {
-    ("Statements", "BillStreams", "FullWorth.API/Services/Statements/BillStatementPaymentDueAlertService.cs"),
     ("Statements", "BillStreams", "FullWorth.API/Services/Statements/BillStatementChangeDetectionService.cs"),
     ("Statements", "BillAlerts", "FullWorth.API/Services/Statements/BillStatementEvidenceAlertService.cs"),
     ("Statements", "BillAlerts", "FullWorth.API/Services/Statements/BillStatementPaymentDueAlertService.cs"),
