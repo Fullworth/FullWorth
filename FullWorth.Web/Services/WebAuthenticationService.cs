@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using FullWorth.Core.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -478,9 +479,12 @@ public sealed class WebAuthenticationService
                     true,
 
                 ExpiresUtc =
-                    rememberMe
-                        ? now.AddDays(30)
-                        : now.AddHours(12)
+                    now.Add(
+                        rememberMe
+                            ? AuthenticationSecurityDefaults
+                                .PersistentWebSessionLifetime
+                            : AuthenticationSecurityDefaults
+                                .BrowserSessionMaximumLifetime)
             };
 
         properties.StoreTokens(
