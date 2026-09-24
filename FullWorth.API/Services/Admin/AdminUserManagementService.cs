@@ -2,7 +2,7 @@ using System.Data;
 using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
-using Microsoft.AspNetCore.Identity;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -10,6 +10,9 @@ namespace FullWorth.API.Services.Admin;
 
 public sealed class AdminUserManagementService(
     FullWorthDbContext dbContext,
+    IAdminIdentityMutationGateway identityGateway,
+    IAdminSubscriptionMutationGateway subscriptionGateway,
+    IAdminAuditLogWriter auditLogWriter,
     TimeProvider timeProvider)
 {
     public async Task<AdminUserMutationResult> AssignRoleAsync(
@@ -28,10 +31,11 @@ public sealed class AdminUserManagementService(
         return await InTransactionAsync(
             async () =>
             {
-                var state = await LoadManagementStateAsync(
-                    actorUserId,
-                    targetUserId,
-                    cancellationToken);
+                var state =
+                    await LoadManagementStateAsync(
+                        actorUserId,
+                        targetUserId,
+                        cancellationToken);
 
                 if (state is null ||
                     !FullWorthRoleHierarchy.CanManageUser(
@@ -44,34 +48,28 @@ public sealed class AdminUserManagementService(
                     return AdminUserMutationResult.Forbidden;
                 }
 
-                var role = await dbContext.Roles.SingleOrDefaultAsync(
-                    candidate => candidate.NormalizedName == roleName.ToUpper(),
-                    cancellationToken);
+                var mutation =
+                    await identityGateway.StageAssignRoleAsync(
+                        targetUserId,
+                        roleName,
+                        cancellationToken);
 
-                if (role is null)
+                if (!mutation.Found ||
+                    !mutation.RoleId.HasValue)
                 {
                     return AdminUserMutationResult.NotFound;
                 }
 
-                var exists = await dbContext.UserRoles.AnyAsync(
-                    userRole => userRole.UserId == targetUserId &&
-                        userRole.RoleId == role.Id,
-                    cancellationToken);
-
-                if (!exists)
+                if (mutation.Changed)
                 {
-                    dbContext.UserRoles.Add(
-                        new IdentityUserRole<Guid>
-                        {
-                            UserId = targetUserId,
-                            RoleId = role.Id
-                        });
                     AddAudit(
                         actorUserId,
                         targetUserId,
                         "StaffRoleAssigned",
-                        role.Id);
-                    await dbContext.SaveChangesAsync(cancellationToken);
+                        mutation.RoleId.Value);
+
+                    await dbContext.SaveChangesAsync(
+                        cancellationToken);
                 }
 
                 return AdminUserMutationResult.Success;
@@ -95,10 +93,11 @@ public sealed class AdminUserManagementService(
         return await InTransactionAsync(
             async () =>
             {
-                var state = await LoadManagementStateAsync(
-                    actorUserId,
-                    targetUserId,
-                    cancellationToken);
+                var state =
+                    await LoadManagementStateAsync(
+                        actorUserId,
+                        targetUserId,
+                        cancellationToken);
 
                 if (state is null ||
                     !FullWorthRoleHierarchy.CanManageUser(
@@ -108,32 +107,30 @@ public sealed class AdminUserManagementService(
                     return AdminUserMutationResult.Forbidden;
                 }
 
-                var role = await dbContext.Roles.SingleOrDefaultAsync(
-                    candidate => candidate.NormalizedName == roleName.ToUpper(),
-                    cancellationToken);
+                var mutation =
+                    await identityGateway.StageRemoveRoleAsync(
+                        targetUserId,
+                        roleName,
+                        cancellationToken);
 
-                if (role is null)
+                if (!mutation.Found ||
+                    !mutation.RoleId.HasValue)
                 {
                     return AdminUserMutationResult.NotFound;
                 }
 
-                var userRole = await dbContext.UserRoles.SingleOrDefaultAsync(
-                    candidate => candidate.UserId == targetUserId &&
-                        candidate.RoleId == role.Id,
-                    cancellationToken);
-
-                if (userRole is null)
+                if (mutation.Changed)
                 {
-                    return AdminUserMutationResult.NotFound;
+                    AddAudit(
+                        actorUserId,
+                        targetUserId,
+                        "StaffRoleRemoved",
+                        mutation.RoleId.Value);
+
+                    await dbContext.SaveChangesAsync(
+                        cancellationToken);
                 }
 
-                dbContext.UserRoles.Remove(userRole);
-                AddAudit(
-                    actorUserId,
-                    targetUserId,
-                    "StaffRoleRemoved",
-                    role.Id);
-                await dbContext.SaveChangesAsync(cancellationToken);
                 return AdminUserMutationResult.Success;
             },
             cancellationToken);
@@ -154,10 +151,11 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Invalid;
         }
 
-        var state = await LoadManagementStateAsync(
-            actorUserId,
-            targetUserId,
-            cancellationToken);
+        var state =
+            await LoadManagementStateAsync(
+                actorUserId,
+                targetUserId,
+                cancellationToken);
 
         if (state is null ||
             !FullWorthRoleHierarchy.CanManageUser(
@@ -167,29 +165,29 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
-        var nowUtc = timeProvider.GetUtcNow();
-        var entitlement = new SubscriptionEntitlementEntity
-        {
-            UserId = targetUserId,
-            Tier = tier,
-            Source = SubscriptionEntitlementSource.Complimentary,
-            StartsAtUtc = nowUtc,
-            EndsAtUtc = grantsLifetimeAccess
-                ? null
-                : nowUtc.AddDays(durationDays!.Value),
-            GrantedByUserId = actorUserId,
-            CreatedAtUtc = nowUtc,
-            UpdatedAtUtc = nowUtc
-        };
+        var nowUtc =
+            timeProvider.GetUtcNow();
 
-        dbContext.SubscriptionEntitlements.Add(entitlement);
+        var entitlementId =
+            subscriptionGateway.StageGrantEntitlement(
+                targetUserId,
+                tier.ToString(),
+                durationDays,
+                grantsLifetimeAccess,
+                actorUserId,
+                nowUtc);
+
         AddAudit(
             actorUserId,
             targetUserId,
             "SubscriptionEntitlementGranted",
-            entitlement.Id);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return AdminUserMutationResult.SuccessWithId(entitlement.Id);
+            entitlementId);
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return AdminUserMutationResult.SuccessWithId(
+            entitlementId);
     }
 
     public async Task<AdminUserMutationResult> RevokeEntitlementAsync(
@@ -198,10 +196,11 @@ public sealed class AdminUserManagementService(
         Guid entitlementId,
         CancellationToken cancellationToken = default)
     {
-        var state = await LoadManagementStateAsync(
-            actorUserId,
-            targetUserId,
-            cancellationToken);
+        var state =
+            await LoadManagementStateAsync(
+                actorUserId,
+                targetUserId,
+                cancellationToken);
 
         if (state is null ||
             !FullWorthRoleHierarchy.CanManageUser(
@@ -211,29 +210,31 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
-        var entitlement = await dbContext.SubscriptionEntitlements
-            .SingleOrDefaultAsync(
-                candidate => candidate.Id == entitlementId &&
-                    candidate.UserId == targetUserId,
+        var nowUtc =
+            timeProvider.GetUtcNow();
+
+        var mutation =
+            await subscriptionGateway.StageRevokeEntitlementAsync(
+                targetUserId,
+                entitlementId,
+                nowUtc,
                 cancellationToken);
 
-        if (entitlement is null)
+        if (!mutation.Found)
         {
             return AdminUserMutationResult.NotFound;
         }
 
-        if (!entitlement.IsRevoked)
+        if (mutation.Changed)
         {
-            var nowUtc = timeProvider.GetUtcNow();
-            entitlement.IsRevoked = true;
-            entitlement.RevokedAtUtc = nowUtc;
-            entitlement.UpdatedAtUtc = nowUtc;
             AddAudit(
                 actorUserId,
                 targetUserId,
                 "SubscriptionEntitlementRevoked",
-                entitlement.Id);
-            await dbContext.SaveChangesAsync(cancellationToken);
+                entitlementId);
+
+            await dbContext.SaveChangesAsync(
+                cancellationToken);
         }
 
         return AdminUserMutationResult.Success;
@@ -247,17 +248,20 @@ public sealed class AdminUserManagementService(
         DateTimeOffset? endsAtUtc,
         CancellationToken cancellationToken = default)
     {
-        var nowUtc = timeProvider.GetUtcNow();
+        var nowUtc =
+            timeProvider.GetUtcNow();
+
         if (!Enum.IsDefined(program) ||
             endsAtUtc <= nowUtc)
         {
             return AdminUserMutationResult.Invalid;
         }
 
-        var state = await LoadManagementStateAsync(
-            actorUserId,
-            targetUserId,
-            cancellationToken);
+        var state =
+            await LoadManagementStateAsync(
+                actorUserId,
+                targetUserId,
+                cancellationToken);
 
         if (state is null ||
             !FullWorthRoleHierarchy.CanManageUser(
@@ -267,34 +271,15 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
-        var membership = await dbContext.UserProgramMemberships
-            .SingleOrDefaultAsync(
-                candidate => candidate.UserId == targetUserId &&
-                    candidate.Program == program,
+        var membershipId =
+            await subscriptionGateway.StageSetProgramMembershipAsync(
+                targetUserId,
+                program.ToString(),
+                isActive,
+                endsAtUtc,
+                actorUserId,
+                nowUtc,
                 cancellationToken);
-
-        if (membership is null)
-        {
-            membership = new UserProgramMembershipEntity
-            {
-                UserId = targetUserId,
-                Program = program,
-                StartsAtUtc = nowUtc,
-                EndsAtUtc = endsAtUtc,
-                IsActive = isActive,
-                GrantedByUserId = actorUserId,
-                CreatedAtUtc = nowUtc,
-                UpdatedAtUtc = nowUtc
-            };
-            dbContext.UserProgramMemberships.Add(membership);
-        }
-        else
-        {
-            membership.IsActive = isActive;
-            membership.EndsAtUtc = endsAtUtc;
-            membership.GrantedByUserId = actorUserId;
-            membership.UpdatedAtUtc = nowUtc;
-        }
 
         AddAudit(
             actorUserId,
@@ -302,9 +287,13 @@ public sealed class AdminUserManagementService(
             isActive
                 ? "UserProgramMembershipEnabled"
                 : "UserProgramMembershipDisabled",
-            membership.Id);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return AdminUserMutationResult.SuccessWithId(membership.Id);
+            membershipId);
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return AdminUserMutationResult.SuccessWithId(
+            membershipId);
     }
 
     private async Task<ManagementState?> LoadManagementStateAsync(
@@ -312,39 +301,38 @@ public sealed class AdminUserManagementService(
         Guid targetUserId,
         CancellationToken cancellationToken)
     {
-        if (!await dbContext.Users.AnyAsync(
-                user => user.Id == targetUserId,
-                cancellationToken))
+        var snapshot =
+            await identityGateway.GetManagementSnapshotAsync(
+                actorUserId,
+                targetUserId,
+                cancellationToken);
+
+        if (snapshot is null)
         {
             return null;
         }
 
-        var assignments = await (
-            from userRole in dbContext.UserRoles
-            join role in dbContext.Roles on userRole.RoleId equals role.Id
-            where userRole.UserId == actorUserId ||
-                userRole.UserId == targetUserId
-            select new { userRole.UserId, role.Name })
-            .ToListAsync(cancellationToken);
+        var actorHighest =
+            snapshot.ActorRoles
+                .OrderByDescending(
+                    FullWorthRoleHierarchy.GetRank)
+                .FirstOrDefault();
 
-        var actorHighest = assignments
-            .Where(item => item.UserId == actorUserId)
-            .Select(item => item.Name)
-            .OrderByDescending(FullWorthRoleHierarchy.GetRank)
-            .FirstOrDefault();
-
-        if (!FullWorthRoles.IsStaffRole(actorHighest))
+        if (!FullWorthRoles.IsStaffRole(
+                actorHighest))
         {
             return null;
         }
 
-        var targetHighest = assignments
-            .Where(item => item.UserId == targetUserId)
-            .Select(item => item.Name)
-            .OrderByDescending(FullWorthRoleHierarchy.GetRank)
-            .FirstOrDefault();
+        var targetHighest =
+            snapshot.TargetRoles
+                .OrderByDescending(
+                    FullWorthRoleHierarchy.GetRank)
+                .FirstOrDefault();
 
-        return new ManagementState(actorHighest, targetHighest);
+        return new ManagementState(
+            actorHighest,
+            targetHighest);
     }
 
     private void AddAudit(
@@ -353,37 +341,41 @@ public sealed class AdminUserManagementService(
         string action,
         Guid subjectId)
     {
-        dbContext.AdminAuditLogs.Add(
-            new AdminAuditLogEntity
-            {
-                ActorUserId = actorUserId,
-                TargetUserId = targetUserId,
-                Action = action,
-                SubjectType = "UserAdministration",
-                SubjectId = subjectId,
-                CreatedAtUtc = timeProvider.GetUtcNow()
-            });
+        auditLogWriter.Stage(
+            new AdminAuditLogWrite(
+                actorUserId,
+                targetUserId,
+                action,
+                "UserAdministration",
+                subjectId,
+                timeProvider.GetUtcNow()));
     }
 
     private async Task<AdminUserMutationResult> InTransactionAsync(
         Func<Task<AdminUserMutationResult>> action,
         CancellationToken cancellationToken)
     {
-        IDbContextTransaction? transaction = null;
+        IDbContextTransaction? transaction =
+            null;
 
         try
         {
             if (dbContext.Database.IsRelational())
             {
-                transaction = await dbContext.Database.BeginTransactionAsync(
-                    IsolationLevel.Serializable,
-                    cancellationToken);
+                transaction =
+                    await dbContext.Database.BeginTransactionAsync(
+                        IsolationLevel.Serializable,
+                        cancellationToken);
             }
 
-            var result = await action();
-            if (transaction is not null && result.Succeeded)
+            var result =
+                await action();
+
+            if (transaction is not null &&
+                result.Succeeded)
             {
-                await transaction.CommitAsync(cancellationToken);
+                await transaction.CommitAsync(
+                    cancellationToken);
             }
 
             return result;
@@ -409,12 +401,17 @@ public sealed record AdminUserMutationResult(
 {
     public static AdminUserMutationResult Success { get; } =
         new(true, "success");
+
     public static AdminUserMutationResult Forbidden { get; } =
         new(false, "forbidden");
+
     public static AdminUserMutationResult NotFound { get; } =
         new(false, "not_found");
+
     public static AdminUserMutationResult Invalid { get; } =
         new(false, "invalid");
-    public static AdminUserMutationResult SuccessWithId(Guid id) =>
+
+    public static AdminUserMutationResult SuccessWithId(
+        Guid id) =>
         new(true, "success", id);
 }
