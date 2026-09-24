@@ -359,6 +359,59 @@ public sealed class WebBffRefreshSecurityTests
     }
 
     [Fact]
+    public async Task SharedSessionRefreshFailure_DoesNotDeleteSessionWhileWinnerMayStillBePersisting()
+    {
+        const string oldAccessToken =
+            "old-access-secret";
+
+        const string oldRefreshToken =
+            "old-refresh-secret";
+
+        using var handler =
+            new CapturingHandler(
+                new HttpResponseMessage(
+                    HttpStatusCode.Unauthorized));
+
+        using var factory =
+            new SingleClientFactory(
+                handler);
+
+        var authentication =
+            CreateAuthentication(
+                oldAccessToken,
+                oldRefreshToken,
+                DateTimeOffset.UtcNow.AddSeconds(10),
+                sessionStoreKey:
+                    "auth-ticket:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+
+        var context =
+            CreateHttpContext(
+                authentication);
+
+        var service =
+            new FullWorthBffProxyService(
+                factory,
+                new EmptySessionTicketAccessor());
+
+        var result =
+            await service.ForwardGetAsync(
+                context,
+                "/api/account/export");
+
+        Assert.False(
+            authentication.SignedOut);
+
+        _ =
+            await ExecuteResultAsync(
+                context,
+                result);
+
+        Assert.Equal(
+            StatusCodes.Status401Unauthorized,
+            context.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task RefreshFailure_SignsOutAndFailsClosed_WithoutForwardingRequest()
     {
         const string oldAccessToken = "old-access-secret";
@@ -435,7 +488,8 @@ public sealed class WebBffRefreshSecurityTests
         CreateAuthentication(
             string accessToken,
             string refreshToken,
-            DateTimeOffset expiresAtUtc)
+            DateTimeOffset expiresAtUtc,
+            string? sessionStoreKey = null)
     {
         var identity =
             new ClaimsIdentity(
@@ -460,6 +514,15 @@ public sealed class WebBffRefreshSecurityTests
                 accessToken,
                 refreshToken,
                 expiresAtUtc);
+
+        if (!string.IsNullOrWhiteSpace(
+                sessionStoreKey))
+        {
+            properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem] =
+                        sessionStoreKey;
+        }
 
         var ticket =
             new AuthenticationTicket(
@@ -574,12 +637,26 @@ public sealed class WebBffRefreshSecurityTests
     {
         public Task<WebSessionTicketSnapshot?>
             ReadLatestAsync(
-                HttpContext httpContext,
+                AuthenticationProperties currentProperties,
                 CancellationToken cancellationToken = default)
         {
             return Task.FromResult<
                 WebSessionTicketSnapshot?>(
                     snapshot);
+        }
+    }
+
+    private sealed class EmptySessionTicketAccessor
+        : IWebSessionTicketAccessor
+    {
+        public Task<WebSessionTicketSnapshot?>
+            ReadLatestAsync(
+                AuthenticationProperties currentProperties,
+                CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<
+                WebSessionTicketSnapshot?>(
+                    null);
         }
     }
 
