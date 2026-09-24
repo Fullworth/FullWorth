@@ -30,6 +30,13 @@ public sealed class AccountBillExportGateway(
                 .ThenBy(item => item.Id)
                 .ToListAsync(cancellationToken);
 
+        var transactionLinks =
+            await dbContext.BillTransactionLinks
+                .AsNoTracking()
+                .Where(item => item.UserId == userId)
+                .OrderBy(item => item.BankTransactionId)
+                .ToListAsync(cancellationToken);
+
         return new AccountBillExportSnapshot(
             streams
                 .Select(item => new AccountBillStreamExportRecord(
@@ -54,6 +61,11 @@ public sealed class AccountBillExportGateway(
                     item.IsDismissed,
                     item.CreatedAtUtc,
                     item.UpdatedAtUtc))
+                .ToArray(),
+            transactionLinks
+                .Select(item => new AccountBillTransactionLinkExportRecord(
+                    item.BankTransactionId,
+                    item.BillStreamId))
                 .ToArray());
     }
 
