@@ -22,6 +22,9 @@ public sealed class AdminBffWriteProxyService(
     private const string AccountSecurityPath =
         "/api/account/security";
 
+    private const string PasswordChangePath =
+        "/api/account/security/password";
+
     private const string ExternalIdentityLinkPath =
         "/api/auth/external/link";
 
@@ -51,6 +54,13 @@ public sealed class AdminBffWriteProxyService(
                 AccountDeletionPath,
                 StringComparison.Ordinal);
 
+        var isPasswordChange =
+            method == HttpMethod.Post &&
+            string.Equals(
+                requestUri,
+                PasswordChangePath,
+                StringComparison.Ordinal);
+
         if (method != HttpMethod.Post &&
             method != HttpMethod.Put &&
             !isAccountDeletion)
@@ -70,7 +80,9 @@ public sealed class AdminBffWriteProxyService(
             method,
             requestUri,
             body,
-            signOutOnSuccess: isAccountDeletion,
+            signOutOnSuccess:
+                isAccountDeletion ||
+                isPasswordChange,
             cancellationToken);
     }
 
