@@ -26,7 +26,7 @@ public sealed class RefreshTokenReplayGuard(
         "FullWorth.RefreshFamilyId";
 
     private const string StateVersion =
-        "v1";
+        "v2";
 
     private const int MaxActiveFamiliesPerUser =
         16;
@@ -69,6 +69,16 @@ public sealed class RefreshTokenReplayGuard(
         {
             return null;
         }
+
+        if (string.IsNullOrWhiteSpace(
+                user.SecurityStamp))
+        {
+            return null;
+        }
+
+        var securityStampHash =
+            HashToken(
+                user.SecurityStamp);
 
         var presentedHash =
             HashToken(
@@ -115,9 +125,13 @@ public sealed class RefreshTokenReplayGuard(
             if (!TryParseState(
                     currentStateValue,
                     out var currentHash,
-                    out var familyExpiresAtUtc) ||
+                    out var familyExpiresAtUtc,
+                    out var persistedSecurityStampHash) ||
                 familyExpiresAtUtc <=
                     nowUtc ||
+                !FixedTimeHashEquals(
+                    persistedSecurityStampHash,
+                    securityStampHash) ||
                 !FixedTimeHashEquals(
                     currentHash,
                     presentedHash))
@@ -144,7 +158,8 @@ public sealed class RefreshTokenReplayGuard(
         var nextStateValue =
             FormatState(
                 rotatedHash,
-                rotated.RefreshExpiresAtUtc);
+                rotated.RefreshExpiresAtUtc,
+                securityStampHash);
 
         if (isFirstFamilyRefresh)
         {
@@ -153,6 +168,7 @@ public sealed class RefreshTokenReplayGuard(
                     user.Id,
                     familyKey,
                     nextStateValue,
+                    securityStampHash,
                     nowUtc,
                     cancellationToken);
 
@@ -178,6 +194,7 @@ public sealed class RefreshTokenReplayGuard(
         Guid userId,
         string familyKey,
         string stateValue,
+        string currentSecurityStampHash,
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
@@ -218,9 +235,13 @@ public sealed class RefreshTokenReplayGuard(
             if (!TryParseState(
                     familyRow.Value,
                     out _,
-                    out var expiresAtUtc) ||
+                    out var expiresAtUtc,
+                    out var familySecurityStampHash) ||
                 expiresAtUtc <=
-                    nowUtc)
+                    nowUtc ||
+                !FixedTimeHashEquals(
+                    familySecurityStampHash,
+                    currentSecurityStampHash))
             {
                 dbContext.UserTokens.Remove(
                     familyRow);
@@ -503,19 +524,24 @@ public sealed class RefreshTokenReplayGuard(
 
     private static string FormatState(
         string currentHash,
-        DateTimeOffset expiresAtUtc)
+        DateTimeOffset expiresAtUtc,
+        string securityStampHash)
     {
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{StateVersion}|{expiresAtUtc.ToUnixTimeSeconds()}|{currentHash}");
+            $"{StateVersion}|{expiresAtUtc.ToUnixTimeSeconds()}|{currentHash}|{securityStampHash}");
     }
 
     private static bool TryParseState(
         string? value,
         out string currentHash,
-        out DateTimeOffset expiresAtUtc)
+        out DateTimeOffset expiresAtUtc,
+        out string securityStampHash)
     {
         currentHash =
+            string.Empty;
+
+        securityStampHash =
             string.Empty;
 
         expiresAtUtc =
@@ -530,10 +556,10 @@ public sealed class RefreshTokenReplayGuard(
         var parts =
             value.Split(
                 '|',
-                3,
+                4,
                 StringSplitOptions.None);
 
-        if (parts.Length != 3 ||
+        if (parts.Length != 4 ||
             !string.Equals(
                 parts[0],
                 StateVersion,
@@ -544,13 +570,18 @@ public sealed class RefreshTokenReplayGuard(
                 CultureInfo.InvariantCulture,
                 out var expiresAtUnixSeconds) ||
             !IsValidHash(
-                parts[2]))
+                parts[2]) ||
+            !IsValidHash(
+                parts[3]))
         {
             return false;
         }
 
         currentHash =
             parts[2];
+
+        securityStampHash =
+            parts[3];
 
         try
         {
