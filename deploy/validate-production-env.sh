@@ -151,6 +151,7 @@ legacy_web_host=$(read_optional_value BILLWATCH_LEGACY_WEB_HOST)
 release_id=$(read_value BILLWATCH_RELEASE_ID)
 acme_email=$(read_value ACME_EMAIL)
 database_password=$(read_value BILLWATCH_DATABASE_PASSWORD)
+web_session_redis_password=$(read_value BILLWATCH_WEB_SESSION_REDIS_PASSWORD)
 plaid_client_id=$(read_value PLAID_CLIENT_ID)
 plaid_secret=$(read_value PLAID_SECRET)
 plaid_environment=$(read_value PLAID_ENVIRONMENT)
@@ -165,6 +166,7 @@ for required_pair in \
     "BILLWATCH_RELEASE_ID:$release_id" \
     "ACME_EMAIL:$acme_email" \
     "BILLWATCH_DATABASE_PASSWORD:$database_password" \
+    "BILLWATCH_WEB_SESSION_REDIS_PASSWORD:$web_session_redis_password" \
     "PLAID_CLIENT_ID:$plaid_client_id" \
     "PLAID_SECRET:$plaid_secret" \
     "RESTIC_REPOSITORY:$restic_repository" \
@@ -221,6 +223,15 @@ esac
 
 [ "${#database_password}" -ge 32 ] ||
     fail "BILLWATCH_DATABASE_PASSWORD must contain at least 32 characters."
+
+[ "${#web_session_redis_password}" -ge 32 ] ||
+    fail "BILLWATCH_WEB_SESSION_REDIS_PASSWORD must contain at least 32 characters."
+
+[ "$web_session_redis_password" != "$database_password" ] ||
+    fail "BILLWATCH_WEB_SESSION_REDIS_PASSWORD must be independent from BILLWATCH_DATABASE_PASSWORD."
+
+[ "$web_session_redis_password" != "$restic_password" ] ||
+    fail "BILLWATCH_WEB_SESSION_REDIS_PASSWORD must be independent from RESTIC_PASSWORD."
 
 [ "${#restic_password}" -ge 24 ] ||
     fail "RESTIC_PASSWORD must contain at least 24 characters."
