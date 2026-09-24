@@ -1,18 +1,179 @@
-using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Statements;
-using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.Tests.Services;
 
 public sealed class BillStatementEvidenceAlertServiceTests
 {
     [Fact]
-    public async Task PreloadedAlerts_MustBelongToRequestedChange()
+    public void ForeignChange_IsRejected()
     {
-        await using var dbContext =
-            CreateDbContext();
+        var userId =
+            Guid.NewGuid();
 
+        var billStreamId =
+            Guid.NewGuid();
+
+        var change =
+            new BillChangeEntity
+            {
+                UserId =
+                    Guid.NewGuid(),
+
+                BillStreamId =
+                    billStreamId,
+
+                CurrentStatementId =
+                    Guid.NewGuid(),
+
+                ChangeType =
+                    BillChangeType.TotalIncrease
+            };
+
+        var service =
+            new BillStatementEvidenceAlertService();
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                service.BuildDesiredAlerts(
+                    userId,
+                    billStreamId,
+                    "Example Provider",
+                    change,
+                    [],
+                    []));
+    }
+
+    [Fact]
+    public void OwnedChange_WithoutEvidence_ReturnsNoAlerts()
+    {
+        var userId =
+            Guid.NewGuid();
+
+        var billStreamId =
+            Guid.NewGuid();
+
+        var change =
+            new BillChangeEntity
+            {
+                UserId =
+                    userId,
+
+                BillStreamId =
+                    billStreamId,
+
+                CurrentStatementId =
+                    Guid.NewGuid(),
+
+                ChangeType =
+                    BillChangeType.TotalIncrease
+            };
+
+        var service =
+            new BillStatementEvidenceAlertService();
+
+        var results =
+            service.BuildDesiredAlerts(
+                userId,
+                billStreamId,
+                "Example Provider",
+                change,
+                [],
+                []);
+
+        Assert.Empty(
+            results);
+    }
+
+    [Fact]
+    public void NewFee_ReturnsWarningDesiredAlert()
+    {
+        var userId =
+            Guid.NewGuid();
+
+        var billStreamId =
+            Guid.NewGuid();
+
+        var previousStatementId =
+            Guid.NewGuid();
+
+        var currentStatementId =
+            Guid.NewGuid();
+
+        var change =
+            new BillChangeEntity
+            {
+                UserId =
+                    userId,
+
+                BillStreamId =
+                    billStreamId,
+
+                PreviousStatementId =
+                    previousStatementId,
+
+                CurrentStatementId =
+                    currentStatementId,
+
+                ChangeType =
+                    BillChangeType.TotalIncrease
+            };
+
+        var currentFee =
+            new BillLineItemEntity
+            {
+                UserId =
+                    userId,
+
+                BillStatementId =
+                    currentStatementId,
+
+                Description =
+                    "Late fee",
+
+                Amount =
+                    7.50m,
+
+                Category =
+                    "Fee"
+            };
+
+        var service =
+            new BillStatementEvidenceAlertService();
+
+        var alert =
+            Assert.Single(
+                service.BuildDesiredAlerts(
+                    userId,
+                    billStreamId,
+                    "Example Provider",
+                    change,
+                    [],
+                    [currentFee]));
+
+        Assert.Equal(
+            BillAlertContractType.NewFee,
+            alert.AlertType);
+
+        Assert.Equal(
+            BillAlertContractSeverity.Warning,
+            alert.Severity);
+
+        Assert.Contains(
+            "new fee",
+            alert.Title,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "Late fee",
+            alert.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForeignLineItem_IsRejected()
+    {
         var userId =
             Guid.NewGuid();
 
@@ -38,105 +199,36 @@ public sealed class BillStatementEvidenceAlertServiceTests
                     BillChangeType.TotalIncrease
             };
 
-        var unrelatedAlert =
-            new BillAlertEntity
+        var foreignLineItem =
+            new BillLineItemEntity
             {
                 UserId =
                     Guid.NewGuid(),
 
-                BillStreamId =
-                    billStreamId,
+                BillStatementId =
+                    currentStatementId,
 
-                BillChangeId =
-                    change.Id,
+                Description =
+                    "Fee",
 
-                AlertType =
-                    BillAlertType.NewFee,
+                Amount =
+                    5m,
 
-                Severity =
-                    BillAlertSeverity.Warning,
-
-                Title =
-                    "Unrelated alert",
-
-                Message =
-                    "Unrelated"
+                Category =
+                    "Fee"
             };
 
         var service =
-            new BillStatementEvidenceAlertService(
-                dbContext);
+            new BillStatementEvidenceAlertService();
 
-        await Assert.ThrowsAsync<
-            InvalidOperationException>(
+        Assert.Throws<InvalidOperationException>(
             () =>
-                service.ReconcileAsync(
+                service.BuildDesiredAlerts(
                     userId,
                     billStreamId,
                     "Example Provider",
                     change,
                     [],
-                    [],
-                    DateTimeOffset.UtcNow,
-                    preloadedAlerts:
-                        [unrelatedAlert]));
-    }
-
-    [Fact]
-    public async Task EmptyPreloadedAlerts_AreAcceptedForOwnedChange()
-    {
-        await using var dbContext =
-            CreateDbContext();
-
-        var userId =
-            Guid.NewGuid();
-
-        var billStreamId =
-            Guid.NewGuid();
-
-        var change =
-            new BillChangeEntity
-            {
-                UserId =
-                    userId,
-
-                BillStreamId =
-                    billStreamId,
-
-                CurrentStatementId =
-                    Guid.NewGuid(),
-
-                ChangeType =
-                    BillChangeType.TotalIncrease
-            };
-
-        var service =
-            new BillStatementEvidenceAlertService(
-                dbContext);
-
-        await service.ReconcileAsync(
-            userId,
-            billStreamId,
-            "Example Provider",
-            change,
-            [],
-            [],
-            DateTimeOffset.UtcNow,
-            preloadedAlerts:
-                []);
-
-        Assert.Empty(
-            dbContext.BillAlerts.Local);
-    }
-
-    private static FullWorthDbContext
-        CreateDbContext()
-    {
-        return new FullWorthDbContext(
-            new DbContextOptionsBuilder<
-                    FullWorthDbContext>()
-                .UseInMemoryDatabase(
-                    $"statement-evidence-{Guid.NewGuid():N}")
-                .Options);
+                    [foreignLineItem]));
     }
 }
