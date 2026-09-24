@@ -234,20 +234,23 @@ public sealed class RefreshTokenReplayGuard(
                     expiresAtUtc));
         }
 
-        foreach (var excessFamily in
-                 activeFamilies
-                     .OrderBy(
-                         family =>
-                             family.ExpiresAtUtc)
-                     .Take(
-                         Math.Max(
-                             0,
-                             activeFamilies.Count -
-                             MaxActiveFamiliesPerUser +
-                             1)))
+        if (activeFamilies.Count >=
+            MaxActiveFamiliesPerUser)
         {
-            dbContext.UserTokens.Remove(
-                excessFamily.Token);
+            /*
+             * Never evict an active replay record merely to make room. Its
+             * original login-issued refresh token can still be inside its
+             * validity window and, because that token predates family
+             * metadata, deleting the row could let it establish the family
+             * again. Reject creation until an existing family expires.
+             */
+            if (dbContext.ChangeTracker.HasChanges())
+            {
+                await dbContext.SaveChangesAsync(
+                    cancellationToken);
+            }
+
+            return false;
         }
 
         dbContext.UserTokens.Add(
