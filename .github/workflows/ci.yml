@@ -231,6 +231,7 @@ jobs:
       BILLWATCH_BACKUP_WORK_SIZE: 1g
       BILLWATCH_BACKUP_CLIENT_MODE: append-only
       BILLWATCH_DATABASE_PASSWORD: ci-only-password
+      BILLWATCH_WEB_SESSION_REDIS_PASSWORD: ci-web-session-password-more-than-32-characters
       BILLWATCH_HOST: localhost
       BILLWATCH_WEB_HOST: web.localhost
       BILLWATCH_RELEASE_ID: ${{ github.sha }}
