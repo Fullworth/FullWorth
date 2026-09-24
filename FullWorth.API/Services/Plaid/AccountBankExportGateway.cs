@@ -73,7 +73,6 @@ public sealed class AccountBankExportGateway(
                 .Select(item => new AccountBankTransactionExportRecord(
                     item.Id,
                     item.BankAccountId,
-                    item.BillStreamId,
                     item.Name,
                     item.MerchantName,
                     item.Amount,
