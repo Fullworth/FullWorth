@@ -384,24 +384,34 @@ public sealed class BillStatementChangeDetectionService
 
         var alertScopes =
             new List<BillAlertReconciliationScope>(
-                activeChanges.Count);
+                activeChanges.Count * 2);
 
         foreach (var activeChange in
                  activeChanges)
         {
-            var desiredAlerts =
-                new List<BillAlertDesiredState>();
-
             var changeAlert =
                 BuildDesiredAlert(
                     providerName,
                     activeChange);
 
-            if (changeAlert is not null)
-            {
-                desiredAlerts.Add(
-                    changeAlert);
-            }
+            alertScopes.Add(
+                new BillAlertReconciliationScope(
+                    BillChangeId:
+                        activeChange.Id,
+
+                    ManagedAlertTypes:
+                        [
+                            BillAlertContractType.BillIncrease,
+                            BillAlertContractType.BillDecrease
+                        ],
+
+                    DesiredAlerts:
+                        changeAlert is null
+                            ? []
+                            : [changeAlert],
+
+                    Mode:
+                        BillAlertReconciliationMode.SingleManagedSlot));
 
             IReadOnlyList<BillLineItemEntity>
                 previousEvidence =
@@ -432,7 +442,7 @@ public sealed class BillStatementChangeDetectionService
                     currentItems;
             }
 
-            desiredAlerts.AddRange(
+            var evidenceAlerts =
                 _evidenceAlertService
                     .BuildDesiredAlerts(
                         userId,
@@ -440,7 +450,7 @@ public sealed class BillStatementChangeDetectionService
                         providerName,
                         activeChange,
                         previousEvidence,
-                        currentEvidence));
+                        currentEvidence);
 
             alertScopes.Add(
                 new BillAlertReconciliationScope(
@@ -449,14 +459,15 @@ public sealed class BillStatementChangeDetectionService
 
                     ManagedAlertTypes:
                         [
-                            BillAlertContractType.BillIncrease,
-                            BillAlertContractType.BillDecrease,
                             BillAlertContractType.NewFee,
                             BillAlertContractType.RemovedDiscount
                         ],
 
                     DesiredAlerts:
-                        desiredAlerts.AsReadOnly()));
+                        evidenceAlerts,
+
+                    Mode:
+                        BillAlertReconciliationMode.ReplaceManagedSet));
         }
 
         await _billAlertGateway
