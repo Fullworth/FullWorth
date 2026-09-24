@@ -96,9 +96,25 @@ cleanup()
     status=$?
     trap - EXIT HUP INT TERM
 
-    adb emu kill >/dev/null 2>&1 || true
-    kill "$emulator_pid" >/dev/null 2>&1 || true
-    wait "$emulator_pid" >/dev/null 2>&1 || true
+    if kill -0 "$emulator_pid" 2>/dev/null; then
+        timeout 5 adb emu kill >/dev/null 2>&1 || true
+
+        shutdown_attempt=0
+        while kill -0 "$emulator_pid" 2>/dev/null && [ "$shutdown_attempt" -lt 10 ]
+        do
+            shutdown_attempt=$((shutdown_attempt + 1))
+            sleep 1
+        done
+
+        if kill -0 "$emulator_pid" 2>/dev/null; then
+            kill "$emulator_pid" >/dev/null 2>&1 || true
+            sleep 2
+        fi
+
+        if kill -0 "$emulator_pid" 2>/dev/null; then
+            kill -KILL "$emulator_pid" >/dev/null 2>&1 || true
+        fi
+    fi
 
     if [ "$status" -ne 0 ]; then
         printf '%s\n' "Sanitized emulator log tail:" >&2
