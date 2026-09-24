@@ -293,9 +293,6 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<Guid>("BankAccountId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BillStreamId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("CategoryDetailed")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -344,15 +341,11 @@ namespace FullWorth.API.Data.Migrations
 
                     b.HasIndex("BankAccountId");
 
-                    b.HasIndex("BillStreamId");
-
                     b.HasIndex("PostedDate");
 
                     b.HasIndex("UserId");
 
                     b.HasIndex("BankAccountId", "UserId");
-
-                    b.HasIndex("BillStreamId", "UserId");
 
                     b.HasIndex("UserId", "PlaidTransactionId")
                         .IsUnique();
@@ -780,6 +773,36 @@ namespace FullWorth.API.Data.Migrations
                     b.HasIndex("UserId", "ProviderName");
 
                     b.ToTable("BillStreams", (string)null);
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.BillTransactionLinkEntity", b =>
+                {
+                    b.Property<Guid>("BankTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BillStreamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("BankTransactionId");
+
+                    b.HasIndex("BillStreamId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BillStreamId", "UserId");
+
+                    b.HasIndex("UserId", "BillStreamId");
+
+                    b.ToTable("BillTransactionLinks", (string)null);
                 });
 
             modelBuilder.Entity("FullWorth.API.Data.Entities.PlaidLinkSessionEntity", b =>
@@ -1258,15 +1281,7 @@ namespace FullWorth.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FullWorth.API.Data.Entities.BillStreamEntity", "BillStream")
-                        .WithMany()
-                        .HasForeignKey("BillStreamId", "UserId")
-                        .HasPrincipalKey("Id", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("BankAccount");
-
-                    b.Navigation("BillStream");
 
                     b.Navigation("User");
                 });
@@ -1422,6 +1437,26 @@ namespace FullWorth.API.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.BillTransactionLinkEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.BillStreamEntity", "BillStream")
+                        .WithMany()
+                        .HasForeignKey("BillStreamId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BillStream");
 
                     b.Navigation("User");
                 });
