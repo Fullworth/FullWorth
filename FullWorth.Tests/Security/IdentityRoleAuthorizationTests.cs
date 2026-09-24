@@ -6,9 +6,11 @@ using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.Core.Legal;
 using FullWorth.Tests.Infrastructure;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FullWorth.Tests.Security;
 
@@ -246,6 +248,129 @@ public sealed class IdentityRoleAuthorizationTests
             secondRefresh.RefreshToken,
             refreshFamily.Value ?? string.Empty,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RefreshFamilyLimit_DoesNotEvictActiveReplayProtection()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"refresh-family-limit-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var loginResult =
+            await LoginAsync(
+                client,
+                email);
+
+        var bearerOptions =
+            factory.Services
+                .GetRequiredService<
+                    IOptionsMonitor<
+                        BearerTokenOptions>>()
+                .Get(
+                    IdentityConstants
+                        .BearerScheme);
+
+        var loginRefreshTicket =
+            bearerOptions
+                .RefreshTokenProtector
+                .Unprotect(
+                    loginResult.RefreshToken);
+
+        Assert.NotNull(
+            loginRefreshTicket);
+
+        var firstGenerationTokens =
+            Enumerable
+                .Range(
+                    0,
+                    17)
+                .Select(
+                    _ =>
+                        bearerOptions
+                            .RefreshTokenProtector
+                            .Protect(
+                                loginRefreshTicket!))
+                .ToArray();
+
+        Assert.Equal(
+            17,
+            firstGenerationTokens
+                .Distinct(
+                    StringComparer.Ordinal)
+                .Count());
+
+        for (var index = 0;
+             index < 16;
+             index++)
+        {
+            using var accepted =
+                await client.PostAsJsonAsync(
+                    "/api/auth/refresh",
+                    new
+                    {
+                        refreshToken =
+                            firstGenerationTokens[index]
+                    });
+
+            Assert.Equal(
+                HttpStatusCode.OK,
+                accepted.StatusCode);
+        }
+
+        using var overLimit =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstGenerationTokens[16]
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            overLimit.StatusCode);
+
+        using var replayFirst =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstGenerationTokens[0]
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            replayFirst.StatusCode);
+
+        await using var verificationScope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            verificationScope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        var familyCount =
+            await dbContext.UserTokens
+                .CountAsync(
+                    token =>
+                        token.LoginProvider ==
+                            "FullWorth.RefreshFamily");
+
+        Assert.Equal(
+            16,
+            familyCount);
     }
 
     [Fact]
