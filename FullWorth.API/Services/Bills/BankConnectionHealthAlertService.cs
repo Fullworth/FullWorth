@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Bills;
@@ -12,11 +13,24 @@ public sealed class BankConnectionHealthAlertService
     private readonly FullWorthDbContext
         _dbContext;
 
+    private readonly IBankConnectionReadGateway
+        _bankConnectionReadGateway;
+
     public BankConnectionHealthAlertService(
-        FullWorthDbContext dbContext)
+        FullWorthDbContext dbContext,
+        IBankConnectionReadGateway bankConnectionReadGateway)
     {
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        ArgumentNullException.ThrowIfNull(
+            bankConnectionReadGateway);
+
         _dbContext =
             dbContext;
+
+        _bankConnectionReadGateway =
+            bankConnectionReadGateway;
     }
 
     public async Task ReconcileAsync(
@@ -37,24 +51,9 @@ public sealed class BankConnectionHealthAlertService
          * connections never need to be materialized here.
          */
         var attentionInstitutionNames =
-            await _dbContext.BankConnections
-                .AsNoTracking()
-                .Where(
-                    connection =>
-                        connection.UserId ==
-                            userId &&
-                        connection.Status ==
-                            BankConnectionStatus.RequiresAttention)
-                .OrderBy(
-                    connection =>
-                        connection.InstitutionName)
-                .ThenBy(
-                    connection =>
-                        connection.Id)
-                .Select(
-                    connection =>
-                        connection.InstitutionName)
-                .ToListAsync(
+            await _bankConnectionReadGateway
+                .GetAttentionInstitutionNamesAsync(
+                    userId,
                     cancellationToken);
 
         var existingAlerts =
