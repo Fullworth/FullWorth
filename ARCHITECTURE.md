@@ -44,9 +44,16 @@ CI enforces this graph through `deploy/tests/project-boundary-tests.sh`.
 
 CI also scans the named API service domains through `deploy/tests/service-module-boundary-tests.sh`.
 
-The current known direct sibling-service dependency is Bills to Plaid in `BillMonitoringRefreshService.cs`. That edge is temporarily allowlisted so the guard can land without a large rewrite. The allowance is a ceiling, not permission to add similar dependencies elsewhere.
+Direct sibling-service dependencies are no longer allowlisted. New sibling-service references fail CI and should use an explicit contract instead.
 
-New sibling-service references fail CI and should use an explicit contract instead. If the existing allowlisted edge is removed, the test also fails until the stale allowance is deleted in the same change.
+The first extracted airlock is bank-data synchronization:
+
+- Bills depends on `IBankDataSyncGateway` in the neutral Contracts area.
+- Plaid owns `PlaidBankDataSyncGateway`, which implements that contract by delegating to the existing Plaid synchronization coordinator.
+- Bills does not know Plaid implementation types and does not construct the Plaid coordinator.
+- The composition root in `Program.cs` selects the active implementation.
+
+This is the pattern for future extraction work: consumer modules depend on narrow contracts; provider modules own implementations; the composition root connects them.
 
 ## Domain modules inside the API
 
