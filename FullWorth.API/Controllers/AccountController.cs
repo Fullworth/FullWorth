@@ -18,6 +18,7 @@ namespace FullWorth.API.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly FullWorthDbContext _dbContext;
+    private readonly AccountDataExportBuilder _accountDataExportBuilder;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAccountBankDeletionGateway _bankDeletionGateway;
     private readonly IAccountBillDeletionGateway _billDeletionGateway;
@@ -27,6 +28,7 @@ public sealed class AccountController : ControllerBase
 
     public AccountController(
         FullWorthDbContext dbContext,
+        AccountDataExportBuilder accountDataExportBuilder,
         UserManager<ApplicationUser> userManager,
         IAccountBankDeletionGateway bankDeletionGateway,
         IAccountBillDeletionGateway billDeletionGateway,
@@ -35,6 +37,7 @@ public sealed class AccountController : ControllerBase
         ILogger<AccountController> logger)
     {
         _dbContext = dbContext;
+        _accountDataExportBuilder = accountDataExportBuilder;
         _userManager = userManager;
         _bankDeletionGateway = bankDeletionGateway;
         _billDeletionGateway = billDeletionGateway;
@@ -60,8 +63,7 @@ public sealed class AccountController : ControllerBase
             return NotFound();
         }
 
-        var export = await AccountDataExportBuilder.CreateAsync(
-            _dbContext,
+        var export = await _accountDataExportBuilder.CreateAsync(
             user,
             cancellationToken);
 
