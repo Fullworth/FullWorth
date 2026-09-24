@@ -100,12 +100,46 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     userId,
                     cancellationToken);
 
+        var transactionIds =
+            transactionSnapshots
+                .Select(
+                    transaction =>
+                        transaction.TransactionId)
+                .ToArray();
+
+        var persistedLinks =
+            transactionIds.Length ==
+                0
+                ? []
+                : await _dbContext.BillTransactionLinks
+                    .Where(
+                        link =>
+                            link.UserId ==
+                                userId &&
+                            transactionIds.Contains(
+                                link.BankTransactionId))
+                    .ToListAsync(
+                        cancellationToken);
+
+        var linksByTransactionId =
+            persistedLinks
+                .ToDictionary(
+                    link =>
+                        link.BankTransactionId);
+
         var persistedTransactions =
             transactionSnapshots
                 .Select(
                     transaction =>
-                        new DiscoveryTransaction(
-                            transaction))
+                    {
+                        linksByTransactionId.TryGetValue(
+                            transaction.TransactionId,
+                            out var link);
+
+                        return new DiscoveryTransaction(
+                            transaction,
+                            link?.BillStreamId);
+                    })
                 .ToList();
 
         /*
@@ -508,30 +542,87 @@ public sealed class RecurringBillDiscoveryPersistenceService
             }
         }
 
-        var linkAssignments =
-            persistedTransactions
-                .Where(
-                    transaction =>
-                        transaction.OriginalBillStreamId !=
-                            transaction.BillStreamId)
-                .Select(
-                    transaction =>
-                        new BankTransactionBillStreamAssignment(
-                            transaction.Id,
-                            transaction.OriginalBillStreamId,
-                            transaction.BillStreamId))
-                .ToArray();
+        foreach (var transaction in
+                 persistedTransactions)
+        {
+            if (transaction.OriginalBillStreamId ==
+                transaction.BillStreamId)
+            {
+                continue;
+            }
 
-        await _transactionGateway
-            .StageBillStreamAssignmentsAsync(
-                userId,
-                linkAssignments,
-                now,
-                cancellationToken);
+            if (linksByTransactionId.TryGetValue(
+                    transaction.Id,
+                    out var existingLink))
+            {
+                if (existingLink.BillStreamId !=
+                    transaction.OriginalBillStreamId)
+                {
+                    throw new InvalidOperationException(
+                        "A bank transaction bill link changed during recurring-bill discovery.");
+                }
+
+                if (!transaction.BillStreamId.HasValue)
+                {
+                    _dbContext.BillTransactionLinks.Remove(
+                        existingLink);
+
+                    linksByTransactionId.Remove(
+                        transaction.Id);
+
+                    continue;
+                }
+
+                existingLink.BillStreamId =
+                    transaction.BillStreamId.Value;
+
+                existingLink.UpdatedAtUtc =
+                    now;
+
+                continue;
+            }
+
+            if (transaction.OriginalBillStreamId.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "A bank transaction bill link changed during recurring-bill discovery.");
+            }
+
+            if (!transaction.BillStreamId.HasValue)
+            {
+                continue;
+            }
+
+            var newLink =
+                new BillTransactionLinkEntity
+                {
+                    BankTransactionId =
+                        transaction.Id,
+
+                    UserId =
+                        userId,
+
+                    BillStreamId =
+                        transaction.BillStreamId.Value,
+
+                    CreatedAtUtc =
+                        now,
+
+                    UpdatedAtUtc =
+                        now
+                };
+
+            _dbContext.BillTransactionLinks.Add(
+                newLink);
+
+            linksByTransactionId.Add(
+                transaction.Id,
+                newLink);
+        }
 
         /*
-         * Bill Streams, alerts, and provider-owned transaction-link changes
-         * commit together in the current scoped modular-monolith unit of work.
+         * Bill Streams, alerts, and Bills-owned transaction links commit
+         * together in the current scoped modular-monolith unit of work.
          */
         await _dbContext.SaveChangesAsync(
             cancellationToken);
@@ -798,11 +889,12 @@ public sealed class RecurringBillDiscoveryPersistenceService
     private sealed class DiscoveryTransaction
     {
         public DiscoveryTransaction(
-            BankTransactionDiscoveryRecord source)
+            BankTransactionDiscoveryRecord source,
+            Guid? billStreamId)
         {
             Id = source.TransactionId;
-            OriginalBillStreamId = source.BillStreamId;
-            BillStreamId = source.BillStreamId;
+            OriginalBillStreamId = billStreamId;
+            BillStreamId = billStreamId;
             Name = source.Name;
             MerchantName = source.MerchantName;
             Amount = source.Amount;
