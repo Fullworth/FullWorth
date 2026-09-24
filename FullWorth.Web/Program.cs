@@ -179,6 +179,10 @@ authenticationBuilder
     .AddFullWorthExternalAuthentication(
         builder.Configuration);
 
+builder.Services.AddFullWorthWebSessionStore(
+    builder.Configuration,
+    builder.Environment);
+
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
