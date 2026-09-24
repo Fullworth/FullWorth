@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using FullWorth.API.Data.Entities;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
@@ -33,6 +34,75 @@ public sealed class AccountPasswordAuthorizationTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task IdentityPasswordChange_RotatesSecurityStamp()
+    {
+        await using var factory =
+            new FullWorthApiFactory();
+
+        await using var scope =
+            factory.Services
+                .CreateAsyncScope();
+
+        var userManager =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
+
+        var email =
+            $"password-stamp-{Guid.NewGuid():N}@fullworth.local";
+
+        var user =
+            new ApplicationUser
+            {
+                Id =
+                    Guid.NewGuid(),
+
+                UserName =
+                    email,
+
+                Email =
+                    email
+            };
+
+        var createResult =
+            await userManager.CreateAsync(
+                user,
+                "FullWorth!Initial123");
+
+        Assert.True(
+            createResult.Succeeded);
+
+        var originalStamp =
+            await userManager.GetSecurityStampAsync(
+                user);
+
+        var changeResult =
+            await userManager.ChangePasswordAsync(
+                user,
+                "FullWorth!Initial123",
+                "FullWorth!Replacement456");
+
+        Assert.True(
+            changeResult.Succeeded);
+
+        var changedStamp =
+            await userManager.GetSecurityStampAsync(
+                user);
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                originalStamp));
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                changedStamp));
+
+        Assert.NotEqual(
+            originalStamp,
+            changedStamp);
     }
 
     [Fact]
