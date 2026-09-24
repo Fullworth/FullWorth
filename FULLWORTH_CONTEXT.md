@@ -36,7 +36,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `ac722b0f5f68dc3699374ccc183e8df8654f106f` after PR #310 closed the refresh/security-stamp race discovered after PR #309.
+- Current `development`: `489568293aa0af3deea1682f9f7ce2f2f2362cf0` after PR #314 completed the account-wide/Web sign-out-everywhere checkpoint.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -55,7 +55,10 @@ Security program:
 - PR #308 revokes refresh sessions atomically with two-factor recovery-code regeneration.
 - PR #309 adds bounded single-use refresh-token families, replay rejection, PostgreSQL-backed concurrency control, and distributed Web/BFF refresh-race recovery. Review after merge found that its advisory lock did not serialize against ordinary Identity security-stamp writes.
 - PR #310 replaces that advisory lock with a transaction-scoped `AspNetUsers` row lock and revalidates the current security stamp after the row is locked, closing the refresh/security-change race. Exact head `c11658733ba29820237e6e8501d026741894146b` passed dependency security and full CI #934 before squash merge as `ac722b0f5f68dc3699374ccc183e8df8654f106f`.
-- Remaining token/session work includes deliberate logout/current-session revocation and explicit cross-device/session-wide revocation semantics.
+- PR #312 revokes the current enrolled refresh family on first-party Web/MAUI logout while preserving independent sessions. Exact head `79e25b1f24189030b4b0d8c2b96c520ef66545d5` passed dependency security and full CI #937 before squash merge as `2109bb8d1950aeab3229cf79c9d959d4c23eb9fb`.
+- PR #313 adds strongly reauthenticated account-wide refresh revocation using ASP.NET Core Identity `SecurityStamp` rotation. Existing refresh tokens across sessions fail immediately; already-issued bearer access is still bounded by the explicit 15-minute lifetime. Exact head `b2947dcc24404005a620d096138b3bd48bf0f3df` passed dependency security and full CI #938 before squash merge as `8a338197139a1ad63094eab589b590060aff92e4`.
+- PR #314 exposes account-wide revocation through an antiforgery-protected Web/BFF `Sign out everywhere` control, signs out the current Redis-backed Web session after a successful revocation, discloses the bounded 15-minute remote access-token window, and adds Spanish localization plus antiforgery coverage. Exact head `4722c7f9bd421cb6c3c91659ba17057cb0ae6354` passed dependency security and full CI #939 before squash merge as `489568293aa0af3deea1682f9f7ce2f2f2362cf0`; the generated desktop/mobile Settings screenshots were visually inspected and the new card rendered cleanly.
+- The current token/session lifecycle checkpoint is complete: refresh replay is single-use/bounded, first-party logout revokes the current refresh family, account-wide revocation rotates Identity `SecurityStamp`, and the Web sign-out-everywhere flow removes the current server-side Web session on success. Already-issued remote bearer access remains bounded by the explicit 15-minute access-token lifetime; FullWorth does not claim instant remote bearer-token invalidation.
 - External OIDC uses authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, explicit provider response modes, and hardened nonce/correlation cookies; PR #305 regression-locks these invariants.
 - Database runtime/migration privilege separation, stronger production secret injection, Data Protection key-at-rest/rotation design, parser-worker isolation, host/SSH/firewall hardening, security-event detection, SBOM/provenance, and immutable/off-host recovery proof remain open security work.
 
@@ -308,9 +311,9 @@ Before trusted external beta invitations:
 ## Immediate resume point
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
-2. PRs #305–#310 are merged. External OIDC invariants are regression-locked; refresh sessions are revoked on external-sign-in, staff-role, and recovery-code security changes; refresh tokens are single-use within bounded families; and PR #310 closes the PostgreSQL security-stamp race found after #309.
-3. Continue security issue #291 in small reviewable slices. The next token/session checkpoint is deliberate logout/current-session revocation and explicit cross-device/session-wide revocation semantics.
-4. Preserve the framework Identity bearer-token format and the bounded refresh-family design. Do not invent a custom token format; prefer existing Identity/security-stamp primitives for logout and broader revocation.
+2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
+3. Continue security issue #291 in small reviewable slices. The next identity checkpoint is to inventory destructive/security-sensitive operations for strong reauthentication, preserve the controls that already exist, and patch only confirmed gaps one bounded workflow at a time.
+4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
 7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
