@@ -94,7 +94,8 @@ public static class TestUserAuthentication
 
         return new TestUserSession(
             Email: email,
-            AccessToken: loginResult.AccessToken);
+            AccessToken: loginResult.AccessToken,
+            RefreshToken: loginResult.RefreshToken);
     }
 
     public static async Task<Guid> GetUserIdAsync(
@@ -225,4 +226,5 @@ public static class TestUserAuthentication
 
 public sealed record TestUserSession(
     string Email,
-    string AccessToken);
+    string AccessToken,
+    string RefreshToken);
