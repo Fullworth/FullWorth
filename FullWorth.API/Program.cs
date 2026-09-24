@@ -265,6 +265,14 @@ builder.Services.AddScoped<
     AdminUserManagementService>();
 
 builder.Services.AddScoped<
+    IAdminAuditLogWriter,
+    AdminAuditLogWriter>();
+
+builder.Services.AddScoped<
+    IIdentityUserExistenceGateway,
+    IdentityUserExistenceGateway>();
+
+builder.Services.AddScoped<
     AccountDataExportBuilder>();
 
 /*
