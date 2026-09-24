@@ -23,4 +23,34 @@ public sealed class IdentityUserExistenceGateway(
                 user => user.Id == userId,
                 cancellationToken);
     }
+
+    public async Task<IReadOnlySet<Guid>> GetExistingUserIdsAsync(
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            userIds);
+
+        if (userIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var ids =
+            userIds
+                .Where(userId => userId != Guid.Empty)
+                .Distinct()
+                .ToArray();
+
+        if (ids.Length == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return await dbContext.Users
+            .AsNoTracking()
+            .Where(user => ids.Contains(user.Id))
+            .Select(user => user.Id)
+            .ToHashSetAsync(cancellationToken);
+    }
 }
