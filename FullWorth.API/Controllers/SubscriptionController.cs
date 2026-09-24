@@ -1,6 +1,7 @@
 using System.Text;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,6 +18,7 @@ public sealed class SubscriptionController(
     FullWorthDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     SubscriptionAccessKeyRedemptionService redemptionService,
+    IIdentityUserExistenceGateway userExistenceGateway,
     TimeProvider timeProvider,
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration)
@@ -325,6 +327,7 @@ public sealed class SubscriptionController(
             httpClientFactory.CreateClient(),
             StripeBillingOptions.FromConfiguration(configuration),
             dbContext,
+            userExistenceGateway,
             timeProvider);
 
     private static async Task<StripeWebhookPayloadReadResult> ReadWebhookPayloadAsync(
