@@ -13,11 +13,43 @@ namespace FullWorth.Tests.Security;
 
 public sealed class WebOidcSecurityConfigurationTests
 {
-    private const string GoogleScheme =
-        "FullWorth.Web.Google";
+    public static IEnumerable<object[]>
+        ProviderSecurityProfiles()
+    {
+        yield return
+        [
+            "FullWorth.Web.Google",
+            "Google",
+            OpenIdConnectResponseMode.Query,
+            true
+        ];
 
-    [Fact]
-    public void GoogleOidc_UsesCodePkceAndStrictTokenValidation()
+        yield return
+        [
+            "FullWorth.Web.Apple",
+            "Apple",
+            OpenIdConnectResponseMode.FormPost,
+            false
+        ];
+
+        yield return
+        [
+            "FullWorth.Web.Microsoft",
+            "Microsoft",
+            OpenIdConnectResponseMode.Query,
+            true
+        ];
+    }
+
+    [Theory]
+    [MemberData(
+        nameof(
+            ProviderSecurityProfiles))]
+    public void OidcProviders_UseCodePkceAndStrictTokenValidation(
+        string scheme,
+        string _,
+        string expectedResponseMode,
+        bool expectsProfileScope)
     {
         using var services =
             BuildServices();
@@ -28,14 +60,14 @@ public sealed class WebOidcSecurityConfigurationTests
                     IOptionsMonitor<
                         OpenIdConnectOptions>>()
                 .Get(
-                    GoogleScheme);
+                    scheme);
 
         Assert.Equal(
             OpenIdConnectResponseType.Code,
             options.ResponseType);
 
         Assert.Equal(
-            OpenIdConnectResponseMode.Query,
+            expectedResponseMode,
             options.ResponseMode);
 
         Assert.True(
@@ -69,17 +101,33 @@ public sealed class WebOidcSecurityConfigurationTests
             OpenIdConnectScope.Email,
             options.Scope);
 
-        Assert.Contains(
-            OpenIdConnectScope.Profile,
-            options.Scope);
+        if (expectsProfileScope)
+        {
+            Assert.Contains(
+                OpenIdConnectScope.Profile,
+                options.Scope);
+        }
+        else
+        {
+            Assert.DoesNotContain(
+                OpenIdConnectScope.Profile,
+                options.Scope);
+        }
 
         Assert.DoesNotContain(
             OpenIdConnectScope.OfflineAccess,
             options.Scope);
     }
 
-    [Fact]
-    public void GoogleOidc_NonceAndCorrelationCookiesAreHostOnlySecureAndCrossSiteCompatible()
+    [Theory]
+    [MemberData(
+        nameof(
+            ProviderSecurityProfiles))]
+    public void OidcProviders_NonceAndCorrelationCookiesAreHostOnlySecureAndCrossSiteCompatible(
+        string scheme,
+        string displayName,
+        string _,
+        bool __)
     {
         using var services =
             BuildServices();
@@ -90,15 +138,15 @@ public sealed class WebOidcSecurityConfigurationTests
                     IOptionsMonitor<
                         OpenIdConnectOptions>>()
                 .Get(
-                    GoogleScheme);
+                    scheme);
 
         AssertRemoteCookie(
             options.CorrelationCookie,
-            "__Host-BillWatch.Web.Google.Correlation.");
+            $"__Host-BillWatch.Web.{displayName}.Correlation.");
 
         AssertRemoteCookie(
             options.NonceCookie,
-            "__Host-BillWatch.Web.Google.Nonce.");
+            $"__Host-BillWatch.Web.{displayName}.Nonce.");
     }
 
     [Fact]
@@ -157,15 +205,23 @@ public sealed class WebOidcSecurityConfigurationTests
                         string,
                         string?>
                     {
-                        [
-                            "ExternalIdentity:Google:ClientId"
-                        ] =
-                            "oidc-security-test-client",
+                        ["ExternalIdentity:Google:ClientId"] =
+                            "oidc-google-test-client",
 
-                        [
-                            "ExternalIdentity:Google:ClientSecret"
-                        ] =
-                            "oidc-security-test-secret"
+                        ["ExternalIdentity:Google:ClientSecret"] =
+                            "oidc-google-test-secret",
+
+                        ["ExternalIdentity:Apple:ClientId"] =
+                            "oidc-apple-test-client",
+
+                        ["ExternalIdentity:Apple:ClientSecret"] =
+                            "oidc-apple-test-secret",
+
+                        ["ExternalIdentity:Microsoft:ClientId"] =
+                            "oidc-microsoft-test-client",
+
+                        ["ExternalIdentity:Microsoft:ClientSecret"] =
+                            "oidc-microsoft-test-secret"
                     })
                 .Build();
 
