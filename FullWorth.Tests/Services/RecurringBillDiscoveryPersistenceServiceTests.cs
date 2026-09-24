@@ -33,6 +33,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -69,9 +71,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.All(
             dbContext.BankTransactions,
             transaction =>
-                Assert.Equal(
-                    billStream.Id,
-                    transaction.BillStreamId));
+                Assert.Contains(
+                    dbContext.BillTransactionAssociations,
+                    association =>
+                        association.BankTransactionId == transaction.Id &&
+                        association.BillStreamId == billStream.Id));
     }
 
     [Fact]
@@ -116,6 +120,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -148,9 +154,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.All(
             dbContext.BankTransactions,
             transaction =>
-                Assert.Equal(
-                    billStream.Id,
-                    transaction.BillStreamId));
+                Assert.Contains(
+                    dbContext.BillTransactionAssociations,
+                    association =>
+                        association.BankTransactionId == transaction.Id &&
+                        association.BillStreamId == billStream.Id));
     }
 
     [Fact]
@@ -186,6 +194,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -207,9 +217,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.All(
             dbContext.BankTransactions,
             transaction =>
-                Assert.Equal(
-                    billStream.Id,
-                    transaction.BillStreamId));
+                Assert.Contains(
+                    dbContext.BillTransactionAssociations,
+                    association =>
+                        association.BankTransactionId == transaction.Id &&
+                        association.BillStreamId == billStream.Id));
     }
 
     [Fact]
@@ -245,6 +257,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -290,6 +304,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -333,6 +349,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -389,6 +407,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -456,8 +476,15 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
                 null,
                 null);
 
-        staleTransaction.BillStreamId =
-            staleStream.Id;
+        dbContext.BillTransactionAssociations.Add(
+            new BillTransactionAssociationEntity
+            {
+                UserId = userId,
+                BankTransactionId = staleTransaction.Id,
+                BillStreamId = staleStream.Id,
+                CreatedAtUtc = now.AddMonths(-1),
+                UpdatedAtUtc = now.AddMonths(-1)
+            });
 
         AddMonthlyTransactions(
             dbContext,
@@ -481,6 +508,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             new RecurringBillDiscoveryPersistenceService(
                 dbContext,
                 new PlaidBankTransactionDiscoveryGateway(
+                    dbContext),
+                new BillTransactionAssociationGateway(
                     dbContext));
 
         var result =
@@ -521,8 +550,10 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.False(
             staleStream.IsActive);
 
-        Assert.Null(
-            staleTransaction.BillStreamId);
+        Assert.DoesNotContain(
+            dbContext.BillTransactionAssociations,
+            association =>
+                association.BankTransactionId == staleTransaction.Id);
 
         var cloudOne =
             Assert.Single(
@@ -547,9 +578,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
                         transaction.MerchantName ==
                             "Example Cloud One"),
             transaction =>
-                Assert.Equal(
-                    cloudOne.Id,
-                    transaction.BillStreamId));
+                Assert.Contains(
+                    dbContext.BillTransactionAssociations,
+                    association =>
+                        association.BankTransactionId == transaction.Id &&
+                        association.BillStreamId == cloudOne.Id));
 
         Assert.All(
             dbContext.BankTransactions
@@ -558,9 +591,11 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
                         transaction.MerchantName ==
                             "Example Cloud Two"),
             transaction =>
-                Assert.Equal(
-                    cloudTwo.Id,
-                    transaction.BillStreamId));
+                Assert.Contains(
+                    dbContext.BillTransactionAssociations,
+                    association =>
+                        association.BankTransactionId == transaction.Id &&
+                        association.BillStreamId == cloudTwo.Id));
     }
 
     private static FullWorthDbContext CreateDbContext()

@@ -343,11 +343,22 @@ public sealed class AccountDataExportTests
                     CompletedAtUtc = now
                 };
 
+            var transactionAssociation =
+                new BillTransactionAssociationEntity
+                {
+                    UserId = exportingUserId,
+                    BankTransactionId = transaction.Id,
+                    BillStreamId = stream.Id,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+
             dbContext.AddRange(
                 stream,
                 connection,
                 account,
                 transaction,
+                transactionAssociation,
                 statement,
                 lineItem,
                 change,
@@ -412,9 +423,16 @@ public sealed class AccountDataExportTests
         Assert.Equal(
             accountId,
             Assert.Single(export.BankAccounts).Id);
+        var exportedTransaction =
+            Assert.Single(export.BankTransactions);
+
         Assert.Equal(
             transactionId,
-            Assert.Single(export.BankTransactions).Id);
+            exportedTransaction.Id);
+
+        Assert.Equal(
+            streamId,
+            exportedTransaction.BillStreamId);
         Assert.Equal(
             streamId,
             Assert.Single(export.BillStreams).Id);
@@ -561,6 +579,16 @@ public sealed class AccountDataExportTests
                 UpdatedAtUtc = now
             };
 
+        var transactionAssociation =
+            new BillTransactionAssociationEntity
+            {
+                UserId = userId,
+                BankTransactionId = transaction.Id,
+                BillStreamId = stream.Id,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            };
+
         var statement =
             new BillStatementEntity
             {
@@ -665,6 +693,7 @@ public sealed class AccountDataExportTests
             connection,
             account,
             transaction,
+            transactionAssociation,
             statement,
             lineItem,
             change,
