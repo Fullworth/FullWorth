@@ -437,9 +437,6 @@ public sealed class AccountDeletionTests
                     BankAccountId =
                         deletingAccount.Id,
 
-                    BillStreamId =
-                        deletingStream.Id,
-
                     PlaidTransactionId =
                         $"deleting-transaction-{Guid.NewGuid():N}",
 
@@ -463,9 +460,6 @@ public sealed class AccountDeletionTests
                     BankAccountId =
                         remainingAccount.Id,
 
-                    BillStreamId =
-                        remainingStream.Id,
-
                     PlaidTransactionId =
                         $"remaining-transaction-{Guid.NewGuid():N}",
 
@@ -483,6 +477,30 @@ public sealed class AccountDeletionTests
             dbContext.BankTransactions.AddRange(
                 deletingTransaction,
                 remainingTransaction);
+
+            dbContext.BillTransactionLinks.AddRange(
+                new BillTransactionLinkEntity
+                {
+                    BankTransactionId =
+                        deletingTransaction.Id,
+
+                    UserId =
+                        deletingUserId,
+
+                    BillStreamId =
+                        deletingStream.Id
+                },
+                new BillTransactionLinkEntity
+                {
+                    BankTransactionId =
+                        remainingTransaction.Id,
+
+                    UserId =
+                        remainingUserId,
+
+                    BillStreamId =
+                        remainingStream.Id
+                });
 
             deletingTransactionId =
                 deletingTransaction.Id;
@@ -520,6 +538,13 @@ public sealed class AccountDeletionTests
                             deletingTransactionId));
 
         Assert.False(
+            await verificationDbContext.BillTransactionLinks
+                .AnyAsync(
+                    item =>
+                        item.BankTransactionId ==
+                            deletingTransactionId));
+
+        Assert.False(
             await verificationDbContext.BankAccounts
                 .AnyAsync(
                     item =>
@@ -545,6 +570,13 @@ public sealed class AccountDeletionTests
                 .AnyAsync(
                     item =>
                         item.Id ==
+                            remainingTransactionId));
+
+        Assert.True(
+            await verificationDbContext.BillTransactionLinks
+                .AnyAsync(
+                    item =>
+                        item.BankTransactionId ==
                             remainingTransactionId));
 
         Assert.True(
