@@ -319,4 +319,6 @@ public sealed record AdminCreateAccessKeyRequest(
     bool GrantsLifetimeAccess,
     int MaxRedemptions,
     DateTimeOffset? ExpiresAtUtc,
+    string CurrentPassword,
+    string? TwoFactorCode,
     string? Label = null);
