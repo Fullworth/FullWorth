@@ -41,10 +41,13 @@ case "$*" in
     *"compose "*" ps -q database")
         printf '%s\n' database-id
         ;;
+    *"compose "*" ps -q web-session-cache")
+        printf '%s\n' web-session-cache-id
+        ;;
     *"compose "*" ps -q edge")
         printf '%s\n' edge-id
         ;;
-    *".NetworkSettings.Ports"*api-id|*".NetworkSettings.Ports"*web-id|*".NetworkSettings.Ports"*database-id)
+    *".NetworkSettings.Ports"*api-id|*".NetworkSettings.Ports"*web-id|*".NetworkSettings.Ports"*database-id|*".NetworkSettings.Ports"*web-session-cache-id)
         :
         ;;
     *".NetworkSettings.Ports"*edge-id)
@@ -72,7 +75,11 @@ case "$*" in
         printf '%s\n' \
             billwatch_web_api \
             billwatch_web_edge \
-            billwatch_web_egress
+            billwatch_web_egress \
+            billwatch_web_session
+        ;;
+    *".NetworkSettings.Networks"*web-session-cache-id)
+        printf '%s\n' billwatch_web_session
         ;;
     *".NetworkSettings.Networks"*database-id)
         printf '%s\n' billwatch_data
@@ -91,6 +98,13 @@ case "$*" in
             printf '%s\n' 'false 256'
         else
             printf '%s\n' 'true 256'
+        fi
+        ;;
+    *".HostConfig.ReadonlyRootfs"*web-session-cache-id)
+        if [ "${BILLWATCH_TEST_WRITABLE_SESSION_CACHE:-false}" = true ]; then
+            printf '%s\n' 'false 128'
+        else
+            printf '%s\n' 'true 128'
         fi
         ;;
     *".HostConfig.ReadonlyRootfs"*edge-id)
@@ -118,6 +132,12 @@ expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_WRITABLE_WEB=tr
 expect_failure env \
     PATH="$fake_bin:$PATH" \
     BILLWATCH_TEST_WRITABLE_EDGE=true \
+    "$deployment/deploy/verify-production-exposure.sh" \
+    "$deployment"
+
+expect_failure env \
+    PATH="$fake_bin:$PATH" \
+    BILLWATCH_TEST_WRITABLE_SESSION_CACHE=true \
     "$deployment/deploy/verify-production-exposure.sh" \
     "$deployment"
 
