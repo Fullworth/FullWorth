@@ -566,8 +566,12 @@ builder.Services.AddScoped<
     PlaidBankTransactionDiscoveryGateway>();
 
 builder.Services.AddScoped<
+    IBankTransactionMetricReadGateway,
+    PlaidBankTransactionMetricReadGateway>();
+
+builder.Services.AddScoped<
     IBankTransactionBillMetricsGateway,
-    PlaidBankTransactionBillMetricsGateway>();
+    BillTransactionBillMetricsGateway>();
 
 builder.Services.AddScoped<
     PlaidConnectionDisconnectService>();
