@@ -72,6 +72,22 @@ Do not perform a big-bang rewrite.
 
 ## Data ownership
 
+The first explicit data ownership map covers the highest-risk finance domains:
+
+- Plaid owns `BankConnections`, `BankAccounts`, `BankTransactions`, and `PlaidLinkSessions`.
+- Bills owns `BillStreams` and `BillAlerts`.
+- Statements owns `BillStatements`, `BillLineItems`, `BillChanges`, `BillStatementUploads`, and `BillStatementAiEvaluations`.
+
+CI enforces a ratchet through `deploy/tests/data-ownership-boundary-tests.sh`. Existing cross-owner reads are temporarily enumerated as exact file/table exceptions so they can be removed incrementally. New cross-owner table access fails CI.
+
+Current exceptions are intentionally narrow:
+
+- Bills reads Plaid-owned `BankConnections` for connection-health and refresh scheduling.
+- Bills reads Plaid-owned `BankTransactions` for recurring-bill discovery.
+- Statements reads Bills-owned `BillStreams` and `BillAlerts` for statement processing/change/alert workflows.
+
+Those exceptions are migration debt, not approved architecture. The ratchet also fails when an exception disappears until its stale allowance is removed, so the baseline can only tighten.
+
 Every user-owned resource remains ownership-scoped. Cross-module convenience is not permission to bypass ownership checks.
 
 A module that owns data is responsible for enforcing the rules around that data. Other modules should request behavior through the owning module's contract rather than query private tables as an implementation shortcut.
