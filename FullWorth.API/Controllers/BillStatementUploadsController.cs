@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Statements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -22,12 +23,14 @@ public sealed class BillStatementUploadsController
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SecureBillStatementStorageService _storageService;
     private readonly BillStatementProcessingSignal _processingSignal;
+    private readonly IBillStreamReadGateway _billStreamGateway;
 
     public BillStatementUploadsController(
         FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
         SecureBillStatementStorageService storageService,
-        BillStatementProcessingSignal processingSignal)
+        BillStatementProcessingSignal processingSignal,
+        IBillStreamReadGateway billStreamGateway)
     {
         _dbContext =
             dbContext;
@@ -40,6 +43,9 @@ public sealed class BillStatementUploadsController
 
         _processingSignal =
             processingSignal;
+
+        _billStreamGateway =
+            billStreamGateway;
     }
 
     [HttpPost]
@@ -67,18 +73,13 @@ public sealed class BillStatementUploadsController
             return NotFound();
         }
 
-        var billStreamExists =
-            await _dbContext.BillStreams
-                .AsNoTracking()
-                .AnyAsync(
-                    stream =>
-                        stream.Id ==
-                            billStreamId &&
-                        stream.UserId ==
-                            userId,
-                    cancellationToken);
+        var billStream =
+            await _billStreamGateway.GetOwnedAsync(
+                userId,
+                billStreamId,
+                cancellationToken);
 
-        if (!billStreamExists)
+        if (billStream is null)
         {
             return NotFound();
         }
