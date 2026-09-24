@@ -307,8 +307,7 @@ public sealed class AdminBffWriteProxyService(
         {
             var concurrentlyRotatedSession =
                 await TryRecoverConcurrentRefreshAsync(
-                    httpContext,
-                    session.RefreshToken,
+                    session,
                     cancellationToken);
 
             if (concurrentlyRotatedSession is not null)
@@ -409,8 +408,7 @@ public sealed class AdminBffWriteProxyService(
 
     private async Task<WebApiSession?>
         TryRecoverConcurrentRefreshAsync(
-            HttpContext httpContext,
-            string attemptedRefreshToken,
+            WebApiSession session,
             CancellationToken cancellationToken)
     {
         if (sessionTicketAccessor is null)
@@ -438,7 +436,7 @@ public sealed class AdminBffWriteProxyService(
             if (latest is null ||
                 string.Equals(
                     latest.RefreshToken,
-                    attemptedRefreshToken,
+                    session.RefreshToken,
                     StringComparison.Ordinal))
             {
                 continue;
