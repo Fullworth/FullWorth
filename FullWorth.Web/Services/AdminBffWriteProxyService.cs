@@ -74,6 +74,38 @@ public sealed class AdminBffWriteProxyService(
             cancellationToken);
     }
 
+    public Task<IResult> ForwardJsonAndSignOutOnSuccessAsync<T>(
+        HttpContext httpContext,
+        HttpMethod method,
+        string requestUri,
+        T body,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(method);
+
+        if (method != HttpMethod.Post &&
+            method != HttpMethod.Put)
+        {
+            return Task.FromResult<IResult>(
+                Results.BadRequest());
+        }
+
+        if (!IsAllowedApiPath(requestUri))
+        {
+            return Task.FromResult<IResult>(
+                Results.BadRequest());
+        }
+
+        return ForwardCoreAsync(
+            httpContext,
+            method,
+            requestUri,
+            body,
+            signOutOnSuccess: true,
+            cancellationToken);
+    }
+
     private async Task<IResult> ForwardCoreAsync<T>(
         HttpContext httpContext,
         HttpMethod method,
