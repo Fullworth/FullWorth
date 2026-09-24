@@ -58,6 +58,12 @@ public sealed class AccountDataExportBuilder(
                 userId,
                 cancellationToken);
 
+        var billStreamIdByTransactionId =
+            bills.TransactionAssociations
+                .ToDictionary(
+                    association => association.BankTransactionId,
+                    association => association.BillStreamId);
+
         return new AccountDataExportResult(
             SchemaVersion:
                 CurrentSchemaVersion,
@@ -120,7 +126,11 @@ public sealed class AccountDataExportBuilder(
                             new BankTransactionExport(
                                 item.Id,
                                 item.BankAccountId,
-                                item.BillStreamId,
+                                billStreamIdByTransactionId.TryGetValue(
+                                    item.Id,
+                                    out var billStreamId)
+                                    ? billStreamId
+                                    : null,
                                 item.Name,
                                 item.MerchantName,
                                 item.Amount,
