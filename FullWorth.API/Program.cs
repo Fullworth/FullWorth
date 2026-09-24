@@ -14,7 +14,9 @@ using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Plaid;
 using FullWorth.API.Services.Statements;
 using FullWorth.API.Services.Subscriptions;
+using FullWorth.Core.Security;
 using FullWorth.Core.Services;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -129,6 +131,19 @@ builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<FullWorthDbContext>();
+
+builder.Services.Configure<BearerTokenOptions>(
+    IdentityConstants.BearerScheme,
+    options =>
+    {
+        options.BearerTokenExpiration =
+            AuthenticationSecurityDefaults
+                .AccessTokenLifetime;
+
+        options.RefreshTokenExpiration =
+            AuthenticationSecurityDefaults
+                .RefreshTokenLifetime;
+    });
 
 builder.Services.Configure<IdentityOptions>(
     options =>
