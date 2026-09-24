@@ -16,6 +16,13 @@ public enum BillAlertContractSeverity
     Critical = 2
 }
 
+public enum BillAlertReconciliationMode
+{
+    ReplaceManagedSet = 0,
+    SingleManagedSlot = 1,
+    UpsertDesiredIdentities = 2
+}
+
 public sealed record BillAlertDesiredState(
     BillAlertContractType AlertType,
     BillAlertContractSeverity Severity,
@@ -25,7 +32,8 @@ public sealed record BillAlertDesiredState(
 public sealed record BillAlertReconciliationScope(
     Guid? BillChangeId,
     IReadOnlyCollection<BillAlertContractType> ManagedAlertTypes,
-    IReadOnlyCollection<BillAlertDesiredState> DesiredAlerts);
+    IReadOnlyCollection<BillAlertDesiredState> DesiredAlerts,
+    BillAlertReconciliationMode Mode);
 
 public interface IBillAlertReconciliationGateway
 {
