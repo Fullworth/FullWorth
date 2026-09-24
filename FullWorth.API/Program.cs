@@ -564,6 +564,10 @@ builder.Services.AddScoped<
     RecurringBillDiscoveryPersistenceService>();
 
 builder.Services.AddScoped<
+    IBillStreamReadGateway,
+    BillStreamReadGateway>();
+
+builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
 
 builder.Services.AddScoped<
