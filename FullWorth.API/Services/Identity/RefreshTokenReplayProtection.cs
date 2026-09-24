@@ -94,17 +94,28 @@ public sealed class RefreshTokenRotationService(
          * security changes instead of allowing both to commit as if they
          * happened first.
          */
-        _ =
-            await dbContext.Database
-                .ExecuteSqlInterpolatedAsync(
+        var lockedUser =
+            await dbContext.Users
+                .FromSqlInterpolated(
                     $"""
-                    SELECT 1
+                    SELECT *
                     FROM "AspNetUsers"
                     WHERE "Id" = {user.Id}
-                    FOR UPDATE;
-                    """,
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(
                     cancellationToken);
 
+        if (lockedUser is null)
+        {
+            return null;
+        }
+
+        /*
+         * The UserManager lookup above may already have this user tracked.
+         * Reload after the row lock so security-stamp validation below sees
+         * the database state that is serialized by that lock.
+         */
         await dbContext.Entry(
                 user)
             .ReloadAsync(
