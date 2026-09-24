@@ -22,7 +22,9 @@ public sealed class BillStreamDiscoveryService
         ArgumentNullException.ThrowIfNull(transactions);
 
         var transactionList =
-            transactions.ToList();
+            transactions
+                .Where(transaction => !transaction.IsPending)
+                .ToList();
 
         var statementList =
             statements?.ToList()
