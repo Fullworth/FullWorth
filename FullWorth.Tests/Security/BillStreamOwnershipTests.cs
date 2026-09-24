@@ -137,16 +137,19 @@ public sealed class BillStreamOwnershipTests
                     UpdatedAtUtc = now
                 };
 
+            var transactions =
+                new[]
+                {
+                    oldestTransaction,
+                    previousTransaction,
+                    latestTransaction
+                };
+
             dbContext.BankTransactions.AddRange(
-                oldestTransaction,
-                previousTransaction,
-                latestTransaction);
+                transactions);
 
             dbContext.BillTransactionAssociations.AddRange(
-                oldestTransaction,
-                previousTransaction,
-                latestTransaction)
-                .Select(
+                transactions.Select(
                     transaction =>
                         new BillTransactionAssociationEntity
                         {
@@ -155,7 +158,7 @@ public sealed class BillStreamOwnershipTests
                             BillStreamId = streamId,
                             CreatedAtUtc = now,
                             UpdatedAtUtc = now
-                        });
+                        }));
 
             await dbContext.SaveChangesAsync();
         }
