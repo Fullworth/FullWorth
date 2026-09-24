@@ -295,6 +295,121 @@ public sealed class RefreshTokenRotationService(
         return revoked;
     }
 
+    public async Task<bool> RevokeAllFamiliesAsync(
+        ApplicationUser user,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            user);
+
+        if (user.Id == Guid.Empty)
+        {
+            return false;
+        }
+
+        if (!dbContext.Database.IsRelational())
+        {
+            var stampResult =
+                await signInManager.UserManager
+                    .UpdateSecurityStampAsync(
+                        user);
+
+            if (!stampResult.Succeeded)
+            {
+                return false;
+            }
+
+            await DeleteAllFamiliesAsync(
+                user.Id,
+                cancellationToken);
+
+            return true;
+        }
+
+        await using var transaction =
+            await dbContext.Database
+                .BeginTransactionAsync(
+                    cancellationToken);
+
+        /*
+         * Use the same Identity-user row lock as refresh rotation/logout.
+         * Whichever security action obtains this lock first establishes the
+         * next valid security stamp; stale refresh work cannot cross it.
+         */
+        var lockedUser =
+            await dbContext.Users
+                .FromSqlInterpolated(
+                    $"SELECT * FROM \"AspNetUsers\" WHERE \"Id\" = {user.Id} FOR UPDATE")
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    cancellationToken);
+
+        if (lockedUser is null)
+        {
+            return false;
+        }
+
+        var stampResult =
+            await signInManager.UserManager
+                .UpdateSecurityStampAsync(
+                    user);
+
+        if (!stampResult.Succeeded)
+        {
+            return false;
+        }
+
+        await DeleteAllFamiliesAsync(
+            user.Id,
+            cancellationToken);
+
+        await transaction.CommitAsync(
+            cancellationToken);
+
+        return true;
+    }
+
+    private async Task DeleteAllFamiliesAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        if (dbContext.Database.IsRelational())
+        {
+            _ =
+                await dbContext.UserTokens
+                    .Where(
+                        token =>
+                            token.UserId == userId &&
+                            token.LoginProvider ==
+                                TokenProvider)
+                    .ExecuteDeleteAsync(
+                        cancellationToken);
+
+            return;
+        }
+
+        var families =
+            await dbContext.UserTokens
+                .Where(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider)
+                .ToListAsync(
+                    cancellationToken);
+
+        if (families.Count == 0)
+        {
+            return;
+        }
+
+        dbContext.UserTokens.RemoveRange(
+            families);
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
     private async Task<bool> DeleteFamilyAsync(
         Guid userId,
         string familyId,
