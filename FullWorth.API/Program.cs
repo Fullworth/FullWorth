@@ -265,6 +265,14 @@ builder.Services.AddScoped<
     AdminUserManagementService>();
 
 builder.Services.AddScoped<
+    IAdminIdentityMutationGateway,
+    AdminIdentityMutationGateway>();
+
+builder.Services.AddScoped<
+    IAdminSubscriptionMutationGateway,
+    AdminSubscriptionMutationGateway>();
+
+builder.Services.AddScoped<
     IAdminAuditLogWriter,
     AdminAuditLogWriter>();
 
