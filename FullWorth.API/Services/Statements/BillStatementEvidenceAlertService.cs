@@ -1,6 +1,5 @@
-﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
-using Microsoft.EntityFrameworkCore;
+using FullWorth.API.Services.Contracts;
 
 namespace FullWorth.API.Services.Statements;
 
@@ -12,26 +11,14 @@ public sealed class BillStatementEvidenceAlertService
     private const int MaxMessageLength =
         2000;
 
-    private readonly FullWorthDbContext
-        _dbContext;
-
-    public BillStatementEvidenceAlertService(
-        FullWorthDbContext dbContext)
-    {
-        _dbContext =
-            dbContext;
-    }
-
-    public async Task ReconcileAsync(
-        Guid userId,
-        Guid billStreamId,
-        string providerName,
-        BillChangeEntity change,
-        IReadOnlyList<BillLineItemEntity> previousLineItems,
-        IReadOnlyList<BillLineItemEntity> currentLineItems,
-        DateTimeOffset now,
-        CancellationToken cancellationToken = default,
-        IReadOnlyList<BillAlertEntity>? preloadedAlerts = null)
+    public IReadOnlyList<BillAlertDesiredState>
+        BuildDesiredAlerts(
+            Guid userId,
+            Guid billStreamId,
+            string providerName,
+            BillChangeEntity change,
+            IReadOnlyList<BillLineItemEntity> previousLineItems,
+            IReadOnlyList<BillLineItemEntity> currentLineItems)
     {
         if (userId ==
             Guid.Empty)
@@ -80,205 +67,14 @@ public sealed class BillStatementEvidenceAlertService
             change.CurrentStatementId,
             currentLineItems);
 
-        var desiredAlerts =
-            BuildDesiredAlerts(
-                providerName.Trim(),
-                previousLineItems,
-                currentLineItems);
-
-        List<BillAlertEntity>
-            existingAlerts;
-
-        if (preloadedAlerts is null)
-        {
-            existingAlerts =
-                await _dbContext.BillAlerts
-                    .Where(
-                        alert =>
-                            alert.UserId ==
-                                userId &&
-                            alert.BillStreamId ==
-                                billStreamId &&
-                            alert.BillChangeId ==
-                                change.Id &&
-                            (
-                                alert.AlertType ==
-                                    BillAlertType.NewFee ||
-                                alert.AlertType ==
-                                    BillAlertType.RemovedDiscount
-                            ))
-                    .OrderBy(
-                        alert =>
-                            alert.CreatedAtUtc)
-                    .ThenBy(
-                        alert =>
-                            alert.Id)
-                    .ToListAsync(
-                        cancellationToken);
-        }
-        else
-        {
-            foreach (var alert in
-                     preloadedAlerts)
-            {
-                if (alert.UserId !=
-                        userId ||
-                    alert.BillStreamId !=
-                        billStreamId ||
-                    alert.BillChangeId !=
-                        change.Id)
-                {
-                    throw new InvalidOperationException(
-                        "A preloaded alert does not belong to the requested bill change.");
-                }
-            }
-
-            existingAlerts =
-                preloadedAlerts
-                    .Where(
-                        alert =>
-                            alert.AlertType ==
-                                BillAlertType.NewFee ||
-                            alert.AlertType ==
-                                BillAlertType.RemovedDiscount)
-                    .OrderBy(
-                        alert =>
-                            alert.CreatedAtUtc)
-                    .ThenBy(
-                        alert =>
-                            alert.Id)
-                    .ToList();
-        }
-
-        var existingByIdentity =
-            new Dictionary<
-                AlertIdentity,
-                BillAlertEntity>();
-
-        var duplicates =
-            new List<BillAlertEntity>();
-
-        foreach (var existingAlert in
-                 existingAlerts)
-        {
-            var identity =
-                new AlertIdentity(
-                    existingAlert.AlertType,
-                    existingAlert.Title);
-
-            if (!existingByIdentity.TryAdd(
-                    identity,
-                    existingAlert))
-            {
-                duplicates.Add(
-                    existingAlert);
-            }
-        }
-
-        if (duplicates.Count >
-            0)
-        {
-            _dbContext.BillAlerts.RemoveRange(
-                duplicates);
-        }
-
-        foreach (var desired in
-                 desiredAlerts)
-        {
-            var identity =
-                new AlertIdentity(
-                    desired.AlertType,
-                    desired.Title);
-
-            if (!existingByIdentity.TryGetValue(
-                    identity,
-                    out var existingAlert))
-            {
-                _dbContext.BillAlerts.Add(
-                    new BillAlertEntity
-                    {
-                        UserId =
-                            userId,
-
-                        BillStreamId =
-                            billStreamId,
-
-                        BillChangeId =
-                            change.Id,
-
-                        BillChange =
-                            change,
-
-                        AlertType =
-                            desired.AlertType,
-
-                        Severity =
-                            BillAlertSeverity.Warning,
-
-                        Title =
-                            desired.Title,
-
-                        Message =
-                            desired.Message,
-
-                        IsRead =
-                            false,
-
-                        IsDismissed =
-                            false,
-
-                        CreatedAtUtc =
-                            now,
-
-                        UpdatedAtUtc =
-                            now
-                    });
-
-                continue;
-            }
-
-            existingByIdentity.Remove(
-                identity);
-
-            var changed =
-                existingAlert.Severity !=
-                    BillAlertSeverity.Warning ||
-                !string.Equals(
-                    existingAlert.Message,
-                    desired.Message,
-                    StringComparison.Ordinal);
-
-            if (!changed)
-            {
-                continue;
-            }
-
-            existingAlert.Severity =
-                BillAlertSeverity.Warning;
-
-            existingAlert.Message =
-                desired.Message;
-
-            existingAlert.IsRead =
-                false;
-
-            existingAlert.IsDismissed =
-                false;
-
-            existingAlert.UpdatedAtUtc =
-                now;
-        }
-
-        if (existingByIdentity.Count >
-            0)
-        {
-            _dbContext.BillAlerts.RemoveRange(
-                existingByIdentity.Values);
-        }
+        return BuildDesiredAlertsCore(
+            providerName.Trim(),
+            previousLineItems,
+            currentLineItems);
     }
 
-    private static IReadOnlyList<DesiredEvidenceAlert>
-        BuildDesiredAlerts(
+    private static IReadOnlyList<BillAlertDesiredState>
+        BuildDesiredAlertsCore(
             string providerName,
             IReadOnlyList<BillLineItemEntity> previousLineItems,
             IReadOnlyList<BillLineItemEntity> currentLineItems)
@@ -292,7 +88,7 @@ public sealed class BillStatementEvidenceAlertService
                 currentLineItems);
 
         var results =
-            new List<DesiredEvidenceAlert>();
+            new List<BillAlertDesiredState>();
 
         foreach (var currentItem in
                  current.Values
@@ -325,17 +121,18 @@ public sealed class BillStatementEvidenceAlertService
 
             var title =
                 Truncate(
-                    $"{providerName}: new fee — {currentItem.Description}",
+                    `${providerName}: new fee — ${currentItem.Description}`,
                     MaxTitleLength);
 
             var message =
                 Truncate(
-                    $"{FormatMoney(currentItem.Amount)} labeled \"{currentItem.Description}\" appeared on the latest provider statement. FullWorth is not assuming this fee will recur.",
+                    `${FormatMoney(currentItem.Amount)} labeled "${currentItem.Description}" appeared on the latest provider statement. FullWorth is not assuming this fee will recur.`,
                     MaxMessageLength);
 
             results.Add(
-                new DesiredEvidenceAlert(
-                    BillAlertType.NewFee,
+                new BillAlertDesiredState(
+                    BillAlertContractType.NewFee,
+                    BillAlertContractSeverity.Warning,
                     title,
                     message));
         }
@@ -375,17 +172,18 @@ public sealed class BillStatementEvidenceAlertService
 
             var title =
                 Truncate(
-                    $"{providerName}: discount removed — {previousItem.Description}",
+                    `${providerName}: discount removed — ${previousItem.Description}`,
                     MaxTitleLength);
 
             var message =
                 Truncate(
-                    $"A {FormatMoney(discountAmount)} discount labeled \"{previousItem.Description}\" was present on the previous provider statement but is absent from the latest statement. FullWorth has not assumed why the discount ended.",
+                    `A ${FormatMoney(discountAmount)} discount labeled "${previousItem.Description}" was present on the previous provider statement but is absent from the latest statement. FullWorth has not assumed why the discount ended.`,
                     MaxMessageLength);
 
             results.Add(
-                new DesiredEvidenceAlert(
-                    BillAlertType.RemovedDiscount,
+                new BillAlertDesiredState(
+                    BillAlertContractType.RemovedDiscount,
+                    BillAlertContractSeverity.Warning,
                     title,
                     message));
         }
@@ -483,7 +281,7 @@ public sealed class BillStatementEvidenceAlertService
         decimal amount)
     {
         return
-            $"${Math.Abs(amount):0.00}";
+            `$${Math.Abs(amount):0.00}`;
     }
 
     private static string Truncate(
@@ -501,17 +299,8 @@ public sealed class BillStatementEvidenceAlertService
             + "…";
     }
 
-    private readonly record struct AlertIdentity(
-        BillAlertType AlertType,
-        string Title);
-
     private sealed record AggregatedLineItem(
         string Description,
         decimal Amount,
         string? Category);
-
-    private sealed record DesiredEvidenceAlert(
-        BillAlertType AlertType,
-        string Title,
-        string Message);
 }
