@@ -224,8 +224,7 @@ public sealed class AccountDataExportTests
                 {
                     UserId = exportingUserId,
                     BankAccountId = account.Id,
-                    BillStreamId = stream.Id,
-                    PlaidTransactionId = PlaidTransactionId,
+PlaidTransactionId = PlaidTransactionId,
                     Name = "Exported Payment",
                     MerchantName = "Exported Internet Provider",
                     Amount = 89.99m,
@@ -570,8 +569,7 @@ public sealed class AccountDataExportTests
             {
                 UserId = userId,
                 BankAccountId = account.Id,
-                BillStreamId = stream.Id,
-                PlaidTransactionId = $"{OtherUserMarker}-transaction",
+PlaidTransactionId = $"{OtherUserMarker}-transaction",
                 Name = OtherUserMarker,
                 Amount = 1m,
                 PostedDate = new DateOnly(2026, 8, 20),

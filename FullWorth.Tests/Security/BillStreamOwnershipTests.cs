@@ -94,46 +94,71 @@ public sealed class BillStreamOwnershipTests
             dbContext.BankAccounts.Add(account);
 
             var now = DateTimeOffset.UtcNow;
-            dbContext.BankTransactions.AddRange(
+
+            var oldestTransaction =
                 new BankTransactionEntity
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     BankAccountId = account.Id,
-                    BillStreamId = streamId,
                     PlaidTransactionId = $"oldest-{Guid.NewGuid():N}",
                     Name = "Metrics Utility",
                     Amount = 10m,
                     PostedDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-2)),
                     CreatedAtUtc = now.AddMonths(-2),
                     UpdatedAtUtc = now.AddMonths(-2)
-                },
+                };
+
+            var previousTransaction =
                 new BankTransactionEntity
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     BankAccountId = account.Id,
-                    BillStreamId = streamId,
                     PlaidTransactionId = $"previous-{Guid.NewGuid():N}",
                     Name = "Metrics Utility",
                     Amount = 20m,
                     PostedDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1)),
                     CreatedAtUtc = now.AddMonths(-1),
                     UpdatedAtUtc = now.AddMonths(-1)
-                },
+                };
+
+            var latestTransaction =
                 new BankTransactionEntity
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     BankAccountId = account.Id,
-                    BillStreamId = streamId,
                     PlaidTransactionId = $"latest-{Guid.NewGuid():N}",
                     Name = "Metrics Utility",
                     Amount = 40m,
                     PostedDate = DateOnly.FromDateTime(DateTime.UtcNow),
                     CreatedAtUtc = now,
                     UpdatedAtUtc = now
-                });
+                };
+
+            var transactions =
+                new[]
+                {
+                    oldestTransaction,
+                    previousTransaction,
+                    latestTransaction
+                };
+
+            dbContext.BankTransactions.AddRange(
+                transactions);
+
+            dbContext.BillTransactionAssociations.AddRange(
+                transactions.Select(
+                    transaction =>
+                        new BillTransactionAssociationEntity
+                        {
+                            UserId = userId,
+                            BankTransactionId = transaction.Id,
+                            BillStreamId = streamId,
+                            CreatedAtUtc = now,
+                            UpdatedAtUtc = now
+                        }));
 
             await dbContext.SaveChangesAsync();
         }

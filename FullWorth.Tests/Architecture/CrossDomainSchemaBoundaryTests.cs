@@ -87,4 +87,32 @@ public sealed class CrossDomainSchemaBoundaryTests
                 foreignKey.PrincipalEntityType.ClrType ==
                     typeof(BankTransactionEntity));
     }
+    [Fact]
+    public void BankTransaction_DoesNotOwnBillStreamLink()
+    {
+        using var dbContext =
+            new FullWorthDbContext(
+                new DbContextOptionsBuilder<FullWorthDbContext>()
+                    .UseInMemoryDatabase(
+                        $"schema-boundary-{Guid.NewGuid():N}")
+                    .Options);
+
+        var transactionEntity =
+            dbContext.Model.FindEntityType(
+                typeof(BankTransactionEntity));
+
+        Assert.NotNull(
+            transactionEntity);
+
+        Assert.Null(
+            transactionEntity!.FindProperty(
+                "BillStreamId"));
+
+        Assert.DoesNotContain(
+            transactionEntity.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(BillStreamEntity));
+    }
+
 }
