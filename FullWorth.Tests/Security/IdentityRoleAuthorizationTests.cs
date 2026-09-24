@@ -486,6 +486,139 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     [Fact]
+    public async Task SecurityStampChange_PrunesOldFamiliesBeforeApplyingFamilyLimit()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"refresh-family-stamp-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var originalLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        var bearerOptions =
+            factory.Services
+                .GetRequiredService<
+                    IOptionsMonitor<
+                        BearerTokenOptions>>()
+                .Get(
+                    IdentityConstants
+                        .BearerScheme);
+
+        var originalTicket =
+            bearerOptions
+                .RefreshTokenProtector
+                .Unprotect(
+                    originalLogin.RefreshToken);
+
+        Assert.NotNull(
+            originalTicket);
+
+        var originalFamilyTokens =
+            Enumerable
+                .Range(
+                    0,
+                    16)
+                .Select(
+                    _ =>
+                        bearerOptions
+                            .RefreshTokenProtector
+                            .Protect(
+                                originalTicket!))
+                .ToArray();
+
+        foreach (var familyToken in
+                 originalFamilyTokens)
+        {
+            using var accepted =
+                await client.PostAsJsonAsync(
+                    "/api/auth/refresh",
+                    new
+                    {
+                        refreshToken =
+                            familyToken
+                    });
+
+            Assert.Equal(
+                HttpStatusCode.OK,
+                accepted.StatusCode);
+        }
+
+        await using (
+            var securityScope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                securityScope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    email);
+
+            Assert.NotNull(
+                user);
+
+            var stampResult =
+                await userManager.UpdateSecurityStampAsync(
+                    user!);
+
+            Assert.True(
+                stampResult.Succeeded,
+                FormatErrors(
+                    stampResult));
+        }
+
+        var postSecurityChangeLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        using var refreshed =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        postSecurityChangeLogin.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            refreshed.StatusCode);
+
+        await using var verificationScope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            verificationScope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        var currentFamilies =
+            await dbContext.UserTokens
+                .Where(
+                    token =>
+                        token.LoginProvider ==
+                            "FullWorth.RefreshFamily")
+                .ToListAsync();
+
+        Assert.Single(
+            currentFamilies);
+    }
+
+    [Fact]
     public async Task RefreshTokenRotation_KeepsOneReplayMarkerPerLoginFamily()
     {
         using var factory =
