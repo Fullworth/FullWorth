@@ -26,6 +26,7 @@ env \
     RESTIC_PASSWORD=ci-restic-password-with-more-than-24-chars \
     RESTIC_REPOSITORY=/repository \
     docker compose \
+        --profile operations \
         --file "$root_dir/compose.production.yml" \
         config \
         --format json > "$config_file"
