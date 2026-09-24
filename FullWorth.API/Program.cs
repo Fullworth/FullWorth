@@ -263,6 +263,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     AdminUserManagementService>();
 
+builder.Services.AddScoped<
+    AccountDataExportBuilder>();
+
 /*
  * Rate limiting is intentionally fail-closed.
  *
@@ -573,6 +576,10 @@ builder.Services.AddScoped<
     AccountBankDeletionGateway>();
 
 builder.Services.AddScoped<
+    IAccountBankExportGateway,
+    AccountBankExportGateway>();
+
+builder.Services.AddScoped<
     RecurringBillDiscoveryPersistenceService>();
 
 builder.Services.AddScoped<
@@ -590,6 +597,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAccountBillDeletionGateway,
     AccountBillDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountBillExportGateway,
+    AccountBillExportGateway>();
 
 builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
@@ -622,6 +633,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAccountStatementDeletionGateway,
     AccountStatementDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountStatementExportGateway,
+    AccountStatementExportGateway>();
 
 builder.Services.AddScoped<
     PdfBillStatementTextExtractor>();
