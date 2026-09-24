@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Identity;
@@ -398,14 +399,35 @@ public sealed class AccountSecurityController(
                 "Two-factor authentication is not enabled.");
         }
 
+        /*
+         * Recovery codes are durable authentication credentials. Rotate the
+         * security stamp on the tracked user before asking Identity to
+         * replace them. GenerateNewTwoFactorRecoveryCodesAsync stages the
+         * replacement and persists it through the same final user update, so
+         * the new codes and refresh-session revocation commit together.
+         */
+        user.SecurityStamp =
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(32))
+                .ToLowerInvariant();
+
         var recoveryCodes =
             await userManager.GenerateNewTwoFactorRecoveryCodesAsync(
                 user,
                 10);
 
+        if (recoveryCodes is null)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not regenerate recovery codes safely.");
+        }
+
         return Ok(
             new TwoFactorRecoveryCodesResponse(
-                recoveryCodes?.ToArray() ?? []));
+                recoveryCodes.ToArray()));
     }
 
     [HttpPost("two-factor/disable")]
