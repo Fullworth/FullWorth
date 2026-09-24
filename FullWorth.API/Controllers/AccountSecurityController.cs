@@ -17,7 +17,8 @@ namespace FullWorth.API.Controllers;
 public sealed class AccountSecurityController(
     UserManager<ApplicationUser> userManager,
     IEmailSender<ApplicationUser> emailSender,
-    IOptions<IdentityEmailOptions> emailOptions)
+    IOptions<IdentityEmailOptions> emailOptions,
+    RefreshTokenRotationService refreshTokenRotationService)
     : ControllerBase
 {
     [HttpGet]
@@ -134,6 +135,48 @@ public sealed class AccountSecurityController(
         if (!result.Succeeded)
         {
             return IdentityValidationProblem(result);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("sessions/revoke-all")]
+    public async Task<IActionResult> RevokeAllSessions(
+        SensitiveCredentialRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user =
+            await GetCurrentUserAsync();
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                user,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
+        }
+
+        var revoked =
+            await refreshTokenRotationService
+                .RevokeAllFamiliesAsync(
+                    user,
+                    cancellationToken);
+
+        if (!revoked)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not revoke all sessions safely.");
         }
 
         return NoContent();
