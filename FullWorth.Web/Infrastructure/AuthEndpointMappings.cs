@@ -471,7 +471,8 @@ public static class AuthEndpointMappings
 
                 await authenticationService
                     .LogoutAsync(
-                        context);
+                        context,
+                        context.RequestAborted);
 
                 return Results.Redirect(
                     "/");

@@ -120,6 +120,18 @@ public sealed class WebAuthenticationService
                 "FullWorth received an invalid sign-in response.");
         }
 
+        tokenResponse =
+            await EnrollRefreshFamilyAsync(
+                tokenResponse,
+                cancellationToken);
+
+        if (tokenResponse is null)
+        {
+            return new AuthOperationResult(
+                false,
+                "FullWorth could not establish a secure sign-in session.");
+        }
+
         await SignInWebSessionAsync(
             httpContext,
             displayName:
@@ -201,6 +213,18 @@ public sealed class WebAuthenticationService
             return new AuthOperationResult(
                 false,
                 "FullWorth received an invalid external sign-in response.");
+        }
+
+        tokenResponse =
+            await EnrollRefreshFamilyAsync(
+                tokenResponse,
+                cancellationToken);
+
+        if (tokenResponse is null)
+        {
+            return new AuthOperationResult(
+                false,
+                "FullWorth could not establish a secure external sign-in session.");
         }
 
         await SignInWebSessionAsync(
@@ -389,11 +413,93 @@ public sealed class WebAuthenticationService
     }
 
     public async Task LogoutAsync(
-        HttpContext httpContext)
+        HttpContext httpContext,
+        CancellationToken cancellationToken = default)
     {
-        await httpContext.SignOutAsync(
-            CookieAuthenticationDefaults
-                .AuthenticationScheme);
+        ArgumentNullException.ThrowIfNull(
+            httpContext);
+
+        try
+        {
+            var authenticateResult =
+                await httpContext.AuthenticateAsync(
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme);
+
+            var refreshToken =
+                authenticateResult.Properties?
+                    .GetTokenValue(
+                        "refresh_token");
+
+            if (!string.IsNullOrWhiteSpace(
+                    refreshToken))
+            {
+                var client =
+                    _httpClientFactory.CreateClient(
+                        "FullWorthApi");
+
+                using var response =
+                    await client.PostAsJsonAsync(
+                        "/api/auth/logout",
+                        new
+                        {
+                            refreshToken
+                        },
+                        cancellationToken);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            /*
+             * A user must always be able to sign out locally. If the API is
+             * unreachable, the 14-day refresh lifetime remains the remote
+             * upper bound and a later explicit security action can revoke
+             * all sessions through the Identity security stamp.
+             */
+        }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            /*
+             * Treat an HttpClient timeout like an unavailable server. Local
+             * sign-out still completes in the finally block.
+             */
+        }
+        finally
+        {
+            await httpContext.SignOutAsync(
+                CookieAuthenticationDefaults
+                    .AuthenticationScheme);
+        }
+    }
+
+    private async Task<AccessTokenResponse?>
+        EnrollRefreshFamilyAsync(
+            AccessTokenResponse tokenResponse,
+            CancellationToken cancellationToken)
+    {
+        var client =
+            _httpClientFactory.CreateClient(
+                "FullWorthApi");
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        tokenResponse.RefreshToken
+                },
+                cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await ReadAccessTokenResponseAsync(
+            response,
+            cancellationToken);
     }
 
     private static async Task<AccessTokenResponse?>

@@ -959,6 +959,28 @@ var authenticationGroup =
             AuthenticationRateLimitPolicy);
 
 authenticationGroup
+    .MapPost(
+        "/logout",
+        async (
+            RefreshTokenLogoutRequest request,
+            RefreshTokenRotationService rotationService,
+            CancellationToken cancellationToken) =>
+        {
+            /*
+             * Logout is intentionally enumeration-safe. A caller receives
+             * NoContent whether the refresh family existed, was already
+             * revoked, or was otherwise unusable.
+             */
+            _ =
+                await rotationService.RevokeFamilyAsync(
+                    request.RefreshToken,
+                    cancellationToken);
+
+            return Results.NoContent();
+        })
+    .AllowAnonymous();
+
+authenticationGroup
     .MapIdentityApi<ApplicationUser>()
     .AddEndpointFilter<
         IEndpointConventionBuilder,
