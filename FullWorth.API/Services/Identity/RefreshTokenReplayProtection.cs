@@ -148,6 +148,139 @@ public sealed class RefreshTokenRotationService(
             : null;
     }
 
+    public async Task<bool> RevokeFamilyAsync(
+        string? refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(
+                refreshToken))
+        {
+            return false;
+        }
+
+        var options =
+            bearerTokenOptions.Get(
+                IdentityConstants.BearerScheme);
+
+        var refreshTicket =
+            options.RefreshTokenProtector
+                .Unprotect(
+                    refreshToken);
+
+        var nowUtc =
+            timeProvider.GetUtcNow();
+
+        if (refreshTicket?.Properties?.ExpiresUtc is not
+                { } expiresAtUtc ||
+            nowUtc >= expiresAtUtc)
+        {
+            return false;
+        }
+
+        var user =
+            await signInManager.ValidateSecurityStampAsync(
+                refreshTicket.Principal);
+
+        if (user is null)
+        {
+            return false;
+        }
+
+        refreshTicket.Properties.Items
+            .TryGetValue(
+                FamilyProperty,
+                out var suppliedFamilyId);
+
+        /*
+         * Framework-issued login tokens do not contain a family identifier
+         * until FullWorth performs their first rotation. Deriving the same
+         * identifier used by RotateAsync lets an already-rotated family's
+         * original generation revoke that family too.
+         */
+        var familyId =
+            string.IsNullOrWhiteSpace(
+                    suppliedFamilyId)
+                ? HashValue(
+                    refreshToken)
+                : suppliedFamilyId!;
+
+        if (!IsValidHash(
+                familyId))
+        {
+            return false;
+        }
+
+        if (!dbContext.Database.IsRelational())
+        {
+            return await DeleteFamilyAsync(
+                user.Id,
+                familyId,
+                cancellationToken);
+        }
+
+        await using var transaction =
+            await dbContext.Database
+                .BeginTransactionAsync(
+                    cancellationToken);
+
+        var lockKey =
+            CreateAdvisoryLockKey(
+                user.Id);
+
+        await dbContext.Database
+            .ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({lockKey});",
+                cancellationToken);
+
+        var revoked =
+            await DeleteFamilyAsync(
+                user.Id,
+                familyId,
+                cancellationToken);
+
+        await transaction.CommitAsync(
+            cancellationToken);
+
+        return revoked;
+    }
+
+    private async Task<bool> DeleteFamilyAsync(
+        Guid userId,
+        string familyId,
+        CancellationToken cancellationToken)
+    {
+        var family =
+            await dbContext.UserTokens
+                .SingleOrDefaultAsync(
+                    token =>
+                        token.UserId == userId &&
+                        token.LoginProvider ==
+                            TokenProvider &&
+                        token.Name ==
+                            familyId,
+                    cancellationToken);
+
+        if (family is null)
+        {
+            return false;
+        }
+
+        /*
+         * Any cryptographically valid generation from the same family may
+         * revoke that family. This intentionally makes logout win against a
+         * concurrent refresh rotation. Possession of a stale family token can
+         * therefore only terminate that same session; it cannot mint tokens
+         * or affect another refresh family.
+         */
+        dbContext.UserTokens.Remove(
+            family);
+
+        await dbContext.SaveChangesAsync(
+            cancellationToken);
+
+        return true;
+    }
+
     private async Task<bool> PersistRotationAsync(
         Guid userId,
         string familyId,
@@ -590,6 +723,9 @@ public sealed class RefreshTokenRotationService(
         AccessTokenResponse Response,
         DateTimeOffset RefreshExpiresAtUtc);
 }
+
+public sealed record RefreshTokenLogoutRequest(
+    string? RefreshToken);
 
 public sealed class RefreshTokenReplayEndpointFilter(
     RefreshTokenRotationService rotationService)
