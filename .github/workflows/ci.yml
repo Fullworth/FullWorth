@@ -461,6 +461,54 @@ jobs:
             --header 'Content-Type: application/json' \
             --data "{\"email\":\"${email}\",\"password\":\"${password}\"}")"
           access_token="$(jq --exit-status --raw-output '.accessToken' <<<"${login_json}")"
+          refresh_token="$(jq --exit-status --raw-output '.refreshToken' <<<"${login_json}")"
+
+          first_refresh_json="$(
+            printf '{"refreshToken":"%s"}' "${refresh_token}" |
+              curl --fail --silent --show-error --insecure \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          first_rotated_access_token="$(jq --exit-status --raw-output '.accessToken' <<<"${first_refresh_json}")"
+          first_rotated_refresh_token="$(jq --exit-status --raw-output '.refreshToken' <<<"${first_refresh_json}")"
+
+          replay_original_code="$(
+            printf '{"refreshToken":"%s"}' "${refresh_token}" |
+              curl --silent --show-error --insecure \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          test "${replay_original_code}" = "401"
+
+          second_refresh_json="$(
+            printf '{"refreshToken":"%s"}' "${first_rotated_refresh_token}" |
+              curl --fail --silent --show-error --insecure \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          second_rotated_access_token="$(jq --exit-status --raw-output '.accessToken' <<<"${second_refresh_json}")"
+
+          replay_first_rotated_code="$(
+            printf '{"refreshToken":"%s"}' "${first_rotated_refresh_token}" |
+              curl --silent --show-error --insecure \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          test "${replay_first_rotated_code}" = "401"
+
+          access_token="${second_rotated_access_token}"
+          unset refresh_token first_rotated_access_token first_rotated_refresh_token
+          unset first_refresh_json second_refresh_json second_rotated_access_token
+          unset replay_original_code replay_first_rotated_code
+
           stream_json="$(curl --fail --silent --show-error --insecure \
             --request POST https://localhost/api/bill-streams \
             --header "Authorization: Bearer ${access_token}" \
