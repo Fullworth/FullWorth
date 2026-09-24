@@ -32,7 +32,6 @@ modules = {"Bills", "Plaid", "Statements"}
 # New cross-owner access must use an explicit contract instead.
 allowed_cross_owner_access = {
     ("Statements", "BillStreams", "FullWorth.API/Services/Statements/BillStatementPaymentDueAlertService.cs"),
-    ("Statements", "BillStreams", "FullWorth.API/Services/Statements/BillStatementChangeDetectionService.cs"),
     ("Statements", "BillAlerts", "FullWorth.API/Services/Statements/BillStatementEvidenceAlertService.cs"),
     ("Statements", "BillAlerts", "FullWorth.API/Services/Statements/BillStatementPaymentDueAlertService.cs"),
     ("Statements", "BillAlerts", "FullWorth.API/Services/Statements/BillStatementChangeDetectionService.cs"),
