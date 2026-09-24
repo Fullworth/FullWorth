@@ -86,7 +86,7 @@ assert_read_only_runtime()
     fi
 }
 
-for service in api web database
+for service in api web database web-session-cache
 do
     id="$(container_id "$service")"
 
@@ -130,7 +130,11 @@ assert_networks api \
 assert_networks web \
     web_edge \
     web_api \
+    web_session \
     web_egress
+
+assert_networks web-session-cache \
+    web_session
 
 assert_networks database \
     data
@@ -142,6 +146,7 @@ assert_networks edge \
 
 assert_read_only_runtime api 256
 assert_read_only_runtime web 256
+assert_read_only_runtime web-session-cache 128
 assert_read_only_runtime edge 128
 
 echo "FullWorth production exposure verification passed."

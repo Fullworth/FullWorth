@@ -17,6 +17,7 @@ env \
     BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true \
     BILLWATCH_BACKUP_WORK_SIZE=1g \
     BILLWATCH_DATABASE_PASSWORD=ci-database-password \
+    BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters \
     BILLWATCH_HOST=api.fullworth.test \
     BILLWATCH_RELEASE_ID=0123456789abcdef0123456789abcdef01234567 \
     BILLWATCH_WEB_HOST=app.fullworth.test \
@@ -54,7 +55,8 @@ def service_networks(name):
 
 expected_networks = {
     "api": {"data", "api_edge", "web_api", "api_egress"},
-    "web": {"web_edge", "web_api", "web_egress"},
+    "web": {"web_edge", "web_api", "web_session", "web_egress"},
+    "web-session-cache": {"web_session"},
     "database": {"data"},
     "backup": {"data", "backup_egress"},
     "restore-database": {"data"},
@@ -69,7 +71,7 @@ for service, expected in expected_networks.items():
             f"expected {sorted(expected)}."
         )
 
-for name in ("data", "api_edge", "web_edge", "web_api"):
+for name in ("data", "api_edge", "web_edge", "web_api", "web_session"):
     if networks[name].get("internal") is not True:
         fail(f"{name} must be an internal-only Docker network.")
 
@@ -116,6 +118,57 @@ for name in ("api", "web"):
 
     if "size=256m" not in tmp_entry and "size=268435456" not in tmp_entry:
         fail(f"{name} /tmp must be capped at 256 MiB: {tmp_entry!r}")
+
+session_cache = services["web-session-cache"]
+
+if session_cache.get("read_only") is not True:
+    fail("web-session-cache root filesystem must be read-only.")
+
+if session_cache.get("pids_limit") != 128:
+    fail("web-session-cache must enforce a 128 PID ceiling.")
+
+if "ALL" not in session_cache.get("cap_drop", []):
+    fail("web-session-cache must drop all Linux capabilities.")
+
+if "no-new-privileges:true" not in session_cache.get("security_opt", []):
+    fail("web-session-cache must disable privilege escalation.")
+
+if session_cache.get("ports"):
+    fail("web-session-cache must not publish host ports.")
+
+if session_cache.get("user") != "999:1000":
+    fail("web-session-cache must run as the Redis unprivileged user.")
+
+redis_environment = session_cache.get("environment", {})
+redis_password = redis_environment.get("REDIS_PASSWORD")
+
+if not redis_password or len(redis_password) < 32:
+    fail("web-session-cache must receive a strong runtime password.")
+
+web_environment = services["web"].get("environment", {})
+
+if web_environment.get("WebSession__RedisHost") != "web-session-cache":
+    fail("Web must resolve its session store only through the isolated cache service.")
+
+if web_environment.get("WebSession__RedisPassword") != redis_password:
+    fail("Web and session cache must use the same protected session-cache credential.")
+
+if session_cache.get("volumes"):
+    fail("web-session-cache must remain ephemeral and must not mount persistent volumes.")
+
+redis_command = " ".join(session_cache.get("command", []))
+
+for required_fragment in (
+    "--requirepass",
+    "--appendonly no",
+    "--maxmemory 128mb",
+    "--maxmemory-policy volatile-ttl",
+):
+    if required_fragment not in redis_command:
+        fail(
+            "web-session-cache is missing required runtime control "
+            f"{required_fragment!r}."
+        )
 
 edge = services["edge"]
 
@@ -167,7 +220,6 @@ if len(edge_ports) != 3:
     fail("edge must be the only service publishing the three public bindings.")
 
 api_environment = services["api"].get("environment", {})
-web_environment = services["web"].get("environment", {})
 
 if api_environment.get("ReverseProxy__KnownProxies__0") != "172.28.0.10":
     fail("API trusted proxy must be pinned to the API-edge Caddy address.")
