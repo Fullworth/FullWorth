@@ -41,4 +41,50 @@ public sealed class CrossDomainSchemaBoundaryTests
                 foreignKey.PrincipalEntityType.ClrType ==
                     typeof(BillChangeEntity));
     }
+
+    [Fact]
+    public void BillTransactionAssociation_OwnsBillLinkWithoutPlaidForeignKey()
+    {
+        using var dbContext =
+            new FullWorthDbContext(
+                new DbContextOptionsBuilder<FullWorthDbContext>()
+                    .UseInMemoryDatabase(
+                        $"schema-boundary-{Guid.NewGuid():N}")
+                    .Options);
+
+        var associationEntity =
+            dbContext.Model.FindEntityType(
+                typeof(BillTransactionAssociationEntity));
+
+        Assert.NotNull(
+            associationEntity);
+
+        var primaryKey =
+            associationEntity!.FindPrimaryKey();
+
+        Assert.NotNull(
+            primaryKey);
+
+        Assert.Equal(
+            new[]
+            {
+                nameof(BillTransactionAssociationEntity.UserId),
+                nameof(BillTransactionAssociationEntity.BankTransactionId)
+            },
+            primaryKey!.Properties
+                .Select(property => property.Name)
+                .ToArray());
+
+        Assert.Contains(
+            associationEntity.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(BillStreamEntity));
+
+        Assert.DoesNotContain(
+            associationEntity.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(BankTransactionEntity));
+    }
 }
