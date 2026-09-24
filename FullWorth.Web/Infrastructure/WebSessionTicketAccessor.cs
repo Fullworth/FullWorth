@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.Extensions.Options;
 
 namespace FullWorth.Web.Infrastructure;
 
@@ -14,67 +12,28 @@ public sealed record WebSessionTicketSnapshot(
 public interface IWebSessionTicketAccessor
 {
     Task<WebSessionTicketSnapshot?> ReadLatestAsync(
-        HttpContext httpContext,
+        AuthenticationProperties currentProperties,
         CancellationToken cancellationToken = default);
 }
 
 public sealed class WebSessionTicketAccessor(
-    IOptionsMonitor<CookieAuthenticationOptions> cookieOptions,
     ProtectedDistributedTicketStore ticketStore)
     : IWebSessionTicketAccessor
 {
-    private const string SessionIdClaim =
-        "Microsoft.AspNetCore.Authentication.Cookies-SessionId";
+    public const string SessionKeyItem =
+        "FullWorth.Web.SessionStoreKey";
 
     public async Task<WebSessionTicketSnapshot?> ReadLatestAsync(
-        HttpContext httpContext,
+        AuthenticationProperties currentProperties,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(
-            httpContext);
+            currentProperties);
 
-        var options =
-            cookieOptions.Get(
-                CookieAuthenticationDefaults
-                    .AuthenticationScheme);
-
-        var cookieName =
-            options.Cookie.Name;
-
-        if (string.IsNullOrWhiteSpace(
-                cookieName))
-        {
-            return null;
-        }
-
-        var cookie =
-            options.CookieManager.GetRequestCookie(
-                httpContext,
-                cookieName);
-
-        if (string.IsNullOrWhiteSpace(
-                cookie))
-        {
-            return null;
-        }
-
-        var sessionReferenceTicket =
-            options.TicketDataFormat.Unprotect(
-                cookie);
-
-        var sessionKey =
-            sessionReferenceTicket?
-                .Principal
-                .Claims
-                .FirstOrDefault(
-                    claim =>
-                        string.Equals(
-                            claim.Type,
-                            SessionIdClaim,
-                            StringComparison.Ordinal))?
-                .Value;
-
-        if (string.IsNullOrWhiteSpace(
+        if (!currentProperties.Items.TryGetValue(
+                SessionKeyItem,
+                out var sessionKey) ||
+            string.IsNullOrWhiteSpace(
                 sessionKey))
         {
             return null;
