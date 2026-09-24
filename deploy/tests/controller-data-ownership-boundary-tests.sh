@@ -33,22 +33,7 @@ owners = {
     "SubscriptionAccessKeyRedemptions": "Subscriptions",
 }
 
-allowed_cross_owner_access = {
-    ("Accounts", "BillStreams", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillAlerts", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BankConnections", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BankAccounts", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BankTransactions", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "PlaidLinkSessions", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillStatements", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillLineItems", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillChanges", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillStatementUploads", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "BillStatementAiEvaluations", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "SubscriptionEntitlements", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "UserProgramMemberships", "FullWorth.API/Controllers/AccountController.cs"),
-    ("Accounts", "SubscriptionAccessKeyRedemptions", "FullWorth.API/Controllers/AccountController.cs"),
-}
+allowed_cross_owner_access = set()
 
 def controller_module(filename):
     if filename.startswith("BillStatement"):

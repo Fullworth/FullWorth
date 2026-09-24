@@ -88,6 +88,10 @@ Bills no longer reads Statements-owned statement/change tables directly from its
 
 Admin controllers no longer read Subscriptions-owned access-key, entitlement, or program-membership tables directly. Administrative subscription metadata crosses `IAdminSubscriptionReadGateway`; Subscriptions owns active-status filtering and access-key status calculation.
 
+API controllers now have zero direct cross-owner DbSet exceptions. Account deletion coordinates owner-specific bank, bill, statement, and subscription deletion contracts while retaining the shared scoped DbContext only as the modular-monolith transaction boundary. Provider revocation and statement-file quarantine stay inside their owning modules.
+
+`AccountDataExportBuilder` remains intentional migration debt at the Accounts service layer because it still assembles a cross-domain export from owner tables directly. Do not treat the zero-controller baseline as approval for that service-level access; the next ownership expansion should ratchet Accounts and replace those reads with owner export projections.
+
 Bills no longer reads Plaid-owned bank tables directly:
 
 - connection-health and refresh-scheduling queries cross `IBankConnectionReadGateway`;

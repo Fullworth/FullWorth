@@ -1,10 +1,8 @@
-using System.Security.Cryptography;
 using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Accounts;
-using FullWorth.API.Services.Plaid;
-using FullWorth.API.Services.Statements;
+using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,21 +19,27 @@ public sealed class AccountController : ControllerBase
 {
     private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly PlaidConnectionDisconnectService _disconnectService;
-    private readonly SecureBillStatementStorageService _statementStorage;
+    private readonly IAccountBankDeletionGateway _bankDeletionGateway;
+    private readonly IAccountBillDeletionGateway _billDeletionGateway;
+    private readonly IAccountStatementDeletionGateway _statementDeletionGateway;
+    private readonly IAccountSubscriptionDeletionGateway _subscriptionDeletionGateway;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
-        PlaidConnectionDisconnectService disconnectService,
-        SecureBillStatementStorageService statementStorage,
+        IAccountBankDeletionGateway bankDeletionGateway,
+        IAccountBillDeletionGateway billDeletionGateway,
+        IAccountStatementDeletionGateway statementDeletionGateway,
+        IAccountSubscriptionDeletionGateway subscriptionDeletionGateway,
         ILogger<AccountController> logger)
     {
         _dbContext = dbContext;
         _userManager = userManager;
-        _disconnectService = disconnectService;
-        _statementStorage = statementStorage;
+        _bankDeletionGateway = bankDeletionGateway;
+        _billDeletionGateway = billDeletionGateway;
+        _statementDeletionGateway = statementDeletionGateway;
+        _subscriptionDeletionGateway = subscriptionDeletionGateway;
         _logger = logger;
     }
 
@@ -148,60 +152,35 @@ public sealed class AccountController : ControllerBase
         }
 
         /*
-         * Revoke external Plaid access before deleting local connection
-         * metadata and protected access tokens. If revocation cannot be
-         * completed safely, do not claim that the FullWorth account was
-         * deleted.
+         * External provider access is revoked by the Plaid-owned boundary
+         * before local financial records enter the deletion transaction.
          */
-        var connectionIds = await _dbContext.BankConnections
-            .AsNoTracking()
-            .Where(connection =>
-                connection.UserId == userId &&
-                connection.Status != BankConnectionStatus.Disconnected)
-            .Select(connection => connection.Id)
-            .ToListAsync(cancellationToken);
-
-        foreach (var connectionId in connectionIds)
+        try
         {
-            try
-            {
-                await _disconnectService.DisconnectAsync(
+            await _bankDeletionGateway
+                .RevokeExternalAccessAsync(
                     userId,
-                    connectionId,
                     cancellationToken);
-            }
-            catch (OperationCanceledException)
-                when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-                when (exception is
-                    PlaidApiException or
-                    HttpRequestException or
-                    CryptographicException or
-                    InvalidOperationException)
-            {
-                _logger.LogWarning(
-                    "FullWorth account deletion could not revoke a bank connection because of {ExceptionType}.",
-                    exception.GetType().Name);
-
-                return StatusCode(
-                    StatusCodes.Status503ServiceUnavailable,
-                    new
-                    {
-                        message =
-                            "FullWorth could not safely finish deleting your account because a bank connection could not be revoked. Your FullWorth account was not deleted. Try again shortly."
-                    });
-            }
         }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (AccountBankRevocationException exception)
+        {
+            _logger.LogWarning(
+                "FullWorth account deletion could not revoke a bank connection because of {ExceptionType}.",
+                exception.ExceptionType);
 
-        var storageKeys = await _dbContext.BillStatementUploads
-            .AsNoTracking()
-            .Where(upload => upload.UserId == userId)
-            .Select(upload => upload.StorageKey)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new
+                {
+                    message =
+                        "FullWorth could not safely finish deleting your account because a bank connection could not be revoked. Your FullWorth account was not deleted. Try again shortly."
+                });
+        }
 
         /*
          * The filesystem cannot participate in the PostgreSQL transaction.
@@ -211,18 +190,16 @@ public sealed class AccountController : ControllerBase
          * quarantine after process crashes by checking whether the user still
          * exists.
          */
-        var quarantinedStatements =
-            new List<BillStatementDeletionQuarantineEntry>();
+        IReadOnlyList<AccountStatementQuarantineEntry>
+            quarantinedStatements;
 
         try
         {
-            foreach (var storageKey in storageKeys)
-            {
-                quarantinedStatements.Add(
-                    _statementStorage.QuarantineForAccountDeletion(
+            quarantinedStatements =
+                await _statementDeletionGateway
+                    .QuarantineOwnedFilesAsync(
                         userId,
-                        storageKey));
-            }
+                        cancellationToken);
         }
         catch (Exception exception)
             when (exception is
@@ -231,9 +208,6 @@ public sealed class AccountController : ControllerBase
                 InvalidOperationException or
                 ArgumentException)
         {
-            RestoreQuarantinedStatementsBestEffort(
-                quarantinedStatements);
-
             _logger.LogError(
                 "FullWorth account deletion could not quarantine statement storage because of {ExceptionType}.",
                 exception.GetType().Name);
@@ -259,96 +233,39 @@ public sealed class AccountController : ControllerBase
             }
 
             /*
-             * Phase 0: erase user-scoped subscription/program records.
-             * Redemptions restrict entitlement deletion, so they go first.
-             * Access-key RedemptionCount intentionally remains consumed:
-             * deleting an account must never make a one-use key reusable.
+             * Each owning module erases its own rows through a narrow
+             * account-deletion contract. Every gateway shares this scoped
+             * DbContext, so its SaveChanges calls remain inside the same
+             * relational transaction.
+             *
+             * Order preserves the existing restrictive foreign keys:
+             * subscriptions first; Bills alerts before Statement changes;
+             * Statements before bank/root resources; Bill Streams last.
              */
-            var accessKeyRedemptions =
-                await _dbContext.SubscriptionAccessKeyRedemptions
-                    .Where(redemption => redemption.UserId == userId)
-                    .ToListAsync(cancellationToken);
+            await _subscriptionDeletionGateway
+                .ApplyOwnedDataDeletionAsync(
+                    userId,
+                    cancellationToken);
 
-            _dbContext.SubscriptionAccessKeyRedemptions.RemoveRange(
-                accessKeyRedemptions);
+            await _billDeletionGateway
+                .ApplyDependentDataDeletionAsync(
+                    userId,
+                    cancellationToken);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _statementDeletionGateway
+                .ApplyOwnedDataDeletionAsync(
+                    userId,
+                    cancellationToken);
 
-            var subscriptionEntitlements =
-                await _dbContext.SubscriptionEntitlements
-                    .Where(entitlement => entitlement.UserId == userId)
-                    .ToListAsync(cancellationToken);
+            await _bankDeletionGateway
+                .ApplyOwnedDataDeletionAsync(
+                    userId,
+                    cancellationToken);
 
-            var programMemberships =
-                await _dbContext.UserProgramMemberships
-                    .Where(membership => membership.UserId == userId)
-                    .ToListAsync(cancellationToken);
-
-            _dbContext.SubscriptionEntitlements.RemoveRange(
-                subscriptionEntitlements);
-            _dbContext.UserProgramMemberships.RemoveRange(
-                programMemberships);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            /* Phase 1: remove statement/stream/account dependents. */
-            var alerts = await _dbContext.BillAlerts
-                .Where(alert => alert.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var lineItems = await _dbContext.BillLineItems
-                .Where(item => item.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var uploads = await _dbContext.BillStatementUploads
-                .Where(upload => upload.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var aiEvaluations = await _dbContext.BillStatementAiEvaluations
-                .Where(evaluation => evaluation.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var changes = await _dbContext.BillChanges
-                .Where(change => change.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var transactions = await _dbContext.BankTransactions
-                .Where(bankTransaction => bankTransaction.UserId == userId)
-                .ToListAsync(cancellationToken);
-
-            _dbContext.BillAlerts.RemoveRange(alerts);
-            _dbContext.BillLineItems.RemoveRange(lineItems);
-            _dbContext.BillStatementAiEvaluations.RemoveRange(aiEvaluations);
-            _dbContext.BillStatementUploads.RemoveRange(uploads);
-            _dbContext.BillChanges.RemoveRange(changes);
-            _dbContext.BankTransactions.RemoveRange(transactions);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            /* Phase 2: remove statement/account/session parents. */
-            var statements = await _dbContext.BillStatements
-                .Where(statement => statement.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var bankAccounts = await _dbContext.BankAccounts
-                .Where(account => account.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var linkSessions = await _dbContext.PlaidLinkSessions
-                .Where(session => session.UserId == userId)
-                .ToListAsync(cancellationToken);
-
-            _dbContext.BillStatements.RemoveRange(statements);
-            _dbContext.BankAccounts.RemoveRange(bankAccounts);
-            _dbContext.PlaidLinkSessions.RemoveRange(linkSessions);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            /* Phase 3: remove top-level financial resources. */
-            var bankConnections = await _dbContext.BankConnections
-                .Where(connection => connection.UserId == userId)
-                .ToListAsync(cancellationToken);
-            var billStreams = await _dbContext.BillStreams
-                .Where(stream => stream.UserId == userId)
-                .ToListAsync(cancellationToken);
-
-            _dbContext.BankConnections.RemoveRange(bankConnections);
-            _dbContext.BillStreams.RemoveRange(billStreams);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _billDeletionGateway
+                .ApplyRootDataDeletionAsync(
+                    userId,
+                    cancellationToken);
 
             /*
              * Identity data is last. Admin audit targets and grantor
@@ -402,7 +319,7 @@ public sealed class AccountController : ControllerBase
         {
             try
             {
-                _statementStorage.CommitAccountDeletionQuarantine(
+                _statementDeletionGateway.CommitQuarantine(
                     entry);
             }
             catch (Exception exception)
@@ -442,13 +359,14 @@ public sealed class AccountController : ControllerBase
     }
 
     private void RestoreQuarantinedStatementsBestEffort(
-        IEnumerable<BillStatementDeletionQuarantineEntry> entries)
+        IEnumerable<AccountStatementQuarantineEntry> entries)
     {
         foreach (var entry in entries.Reverse())
         {
             try
             {
-                _statementStorage.RestoreAccountDeletionQuarantine(entry);
+                _statementDeletionGateway.RestoreQuarantine(
+                    entry);
             }
             catch (Exception exception)
                 when (exception is
