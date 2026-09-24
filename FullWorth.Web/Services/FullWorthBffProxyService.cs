@@ -633,8 +633,7 @@ public sealed class FullWorthBffProxyService
         {
             var concurrentlyRotatedSession =
                 await TryRecoverConcurrentRefreshAsync(
-                    httpContext,
-                    session.RefreshToken,
+                    session,
                     cancellationToken);
 
             if (concurrentlyRotatedSession is not null)
@@ -759,8 +758,7 @@ public sealed class FullWorthBffProxyService
 
     private async Task<WebApiSession?>
         TryRecoverConcurrentRefreshAsync(
-            HttpContext httpContext,
-            string attemptedRefreshToken,
+            WebApiSession session,
             CancellationToken cancellationToken)
     {
         if (_sessionTicketAccessor is null)
@@ -795,7 +793,7 @@ public sealed class FullWorthBffProxyService
             if (latest is null ||
                 string.Equals(
                     latest.RefreshToken,
-                    attemptedRefreshToken,
+                    session.RefreshToken,
                     StringComparison.Ordinal))
             {
                 continue;
