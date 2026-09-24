@@ -301,6 +301,9 @@ builder.Services.AddScoped<
     IdentityUserExistenceGateway>();
 
 builder.Services.AddScoped<
+    RefreshTokenRotationService>();
+
+builder.Services.AddScoped<
     AccountDataExportBuilder>();
 
 /*
@@ -956,7 +959,10 @@ var authenticationGroup =
             AuthenticationRateLimitPolicy);
 
 authenticationGroup
-    .MapIdentityApi<ApplicationUser>();
+    .MapIdentityApi<ApplicationUser>()
+    .AddEndpointFilter<
+        IEndpointConventionBuilder,
+        RefreshTokenReplayEndpointFilter>();
 
 app.Run();
 

@@ -80,6 +80,63 @@ public sealed class ProtectedDistributedTicketStoreTests
     }
 
     [Fact]
+    public async Task SessionAccessor_ResolvesLatestStoredTicketByOpaqueServerKey()
+    {
+        const string accessToken =
+            "server-only-access-token";
+
+        const string refreshToken =
+            "server-only-refresh-token";
+
+        var store =
+            new ProtectedDistributedTicketStore(
+                CreateCache(),
+                new EphemeralDataProtectionProvider(),
+                TimeProvider.System);
+
+        var storedTicket =
+            CreateTicket(
+                accessToken,
+                refreshToken,
+                DateTimeOffset.UtcNow.AddHours(1));
+
+        var sessionKey =
+            await store.StoreAsync(
+                storedTicket);
+
+        Assert.Equal(
+            sessionKey,
+            storedTicket.Properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem]);
+
+        var accessor =
+            new WebSessionTicketAccessor(
+                store);
+
+        var snapshot =
+            await accessor.ReadLatestAsync(
+                storedTicket.Properties);
+
+        Assert.NotNull(
+            snapshot);
+
+        Assert.Equal(
+            accessToken,
+            snapshot!.AccessToken);
+
+        Assert.Equal(
+            refreshToken,
+            snapshot.RefreshToken);
+
+        Assert.Equal(
+            sessionKey,
+            snapshot.Properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem]);
+    }
+
+    [Fact]
     public async Task RemovedTicket_CannotBeRetrieved()
     {
         var store =
@@ -215,4 +272,5 @@ public sealed class ProtectedDistributedTicketStoreTests
             CookieAuthenticationDefaults
                 .AuthenticationScheme);
     }
+
 }

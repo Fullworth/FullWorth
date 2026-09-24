@@ -43,13 +43,11 @@ public sealed class WebTransactionPerformanceBoundaryTests
             transactionsPage,
             StringComparison.Ordinal);
 
-        Assert.Equal(
-            1,
+        Assert.Single(
             Regex.Matches(
-                    transactionsPage,
-                    "FullWorthPerformance\\.getTransactionLoadLimit",
-                    RegexOptions.CultureInvariant)
-                .Count);
+                transactionsPage,
+                "FullWorthPerformance\\.getTransactionLoadLimit",
+                RegexOptions.CultureInvariant));
 
         Assert.Matches(
             @"_transactionLoadLimit\s*=\s*previousLimit;",

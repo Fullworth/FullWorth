@@ -1,4 +1,5 @@
 using System.Net;
+using FullWorth.Web.Infrastructure;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -8,7 +9,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 namespace FullWorth.Web.Services;
 
 public sealed class AdminBffWriteProxyService(
-    IHttpClientFactory httpClientFactory)
+    IHttpClientFactory httpClientFactory,
+    IWebSessionTicketAccessor? sessionTicketAccessor = null)
 {
     private const string SubscriptionCheckoutPath =
         "/api/subscription/checkout";
@@ -303,8 +305,30 @@ public sealed class AdminBffWriteProxyService(
 
         if (!response.IsSuccessStatusCode)
         {
-            await httpContext.SignOutAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme);
+            var concurrentlyRotatedSession =
+                await TryRecoverConcurrentRefreshAsync(
+                    session,
+                    cancellationToken);
+
+            if (concurrentlyRotatedSession is not null)
+            {
+                return concurrentlyRotatedSession;
+            }
+
+            if (sessionTicketAccessor is null ||
+                !session.Properties.Items.ContainsKey(
+                    WebSessionTicketAccessor.SessionKeyItem))
+            {
+                await httpContext.SignOutAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+
+            /*
+             * A distributed winner may still be between receiving its rotated
+             * API pair and renewing Redis. Do not delete the shared session
+             * here; returning unauthorized is fail-closed and allows a later
+             * request to observe the winner's renewed ticket.
+             */
             return null;
         }
 
@@ -380,6 +404,53 @@ public sealed class AdminBffWriteProxyService(
             refreshedTokens.AccessToken,
             refreshedTokens.RefreshToken,
             expiresAtUtc);
+    }
+
+    private async Task<WebApiSession?>
+        TryRecoverConcurrentRefreshAsync(
+            WebApiSession session,
+            CancellationToken cancellationToken)
+    {
+        if (sessionTicketAccessor is null)
+        {
+            return null;
+        }
+
+        for (var attempt = 0;
+             attempt < 10;
+             attempt++)
+        {
+            if (attempt > 0)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(50),
+                    cancellationToken);
+            }
+
+            var latest =
+                await sessionTicketAccessor
+                    .ReadLatestAsync(
+                        session.Properties,
+                        cancellationToken);
+
+            if (latest is null ||
+                string.Equals(
+                    latest.RefreshToken,
+                    session.RefreshToken,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return new WebApiSession(
+                latest.Principal,
+                latest.Properties,
+                latest.AccessToken,
+                latest.RefreshToken,
+                latest.ExpiresAtUtc);
+        }
+
+        return null;
     }
 
     private static bool IsAllowedApiPath(

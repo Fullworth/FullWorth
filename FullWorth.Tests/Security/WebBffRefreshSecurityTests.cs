@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using FullWorth.Web.Infrastructure;
 using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -244,6 +245,173 @@ public sealed class WebBffRefreshSecurityTests
     }
 
     [Fact]
+    public async Task ConcurrentRefreshReplay_ReloadsRotatedServerSession()
+    {
+        const string oldAccessToken =
+            "old-access-secret";
+
+        const string oldRefreshToken =
+            "old-refresh-secret";
+
+        const string newAccessToken =
+            "new-access-secret";
+
+        const string newRefreshToken =
+            "new-refresh-secret";
+
+        using var handler =
+            new CapturingHandler(
+                new HttpResponseMessage(
+                    HttpStatusCode.Unauthorized),
+                JsonResponse(
+                    HttpStatusCode.OK,
+                    "{\"value\":\"recovered\"}"));
+
+        using var factory =
+            new SingleClientFactory(
+                handler);
+
+        var authentication =
+            CreateAuthentication(
+                oldAccessToken,
+                oldRefreshToken,
+                DateTimeOffset.UtcNow.AddSeconds(10));
+
+        var latestProperties =
+            CreateTokenProperties(
+                newAccessToken,
+                newRefreshToken,
+                DateTimeOffset.UtcNow.AddMinutes(15));
+
+        var latestPrincipal =
+            new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [
+                        new Claim(
+                            ClaimTypes.NameIdentifier,
+                            "refresh-security-test")
+                    ],
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme));
+
+        var accessor =
+            new FixedSessionTicketAccessor(
+                new WebSessionTicketSnapshot(
+                    latestPrincipal,
+                    latestProperties,
+                    newAccessToken,
+                    newRefreshToken,
+                    DateTimeOffset.UtcNow.AddMinutes(15)));
+
+        var context =
+            CreateHttpContext(
+                authentication);
+
+        var service =
+            new FullWorthBffProxyService(
+                factory,
+                accessor);
+
+        var result =
+            await service.ForwardGetAsync(
+                context,
+                "/api/bill-streams");
+
+        Assert.Collection(
+            handler.Requests,
+            refresh =>
+            {
+                Assert.Equal(
+                    "/api/auth/refresh",
+                    refresh.Path);
+
+                Assert.Contains(
+                    oldRefreshToken,
+                    refresh.Body,
+                    StringComparison.Ordinal);
+            },
+            forwarded =>
+            {
+                Assert.Equal(
+                    "/api/bill-streams",
+                    forwarded.Path);
+
+                Assert.Equal(
+                    $"Bearer {newAccessToken}",
+                    forwarded.Authorization);
+            });
+
+        Assert.False(
+            authentication.SignedOut);
+
+        var body =
+            await ExecuteResultAsync(
+                context,
+                result);
+
+        Assert.Equal(
+            StatusCodes.Status200OK,
+            context.Response.StatusCode);
+
+        Assert.Equal(
+            "{\"value\":\"recovered\"}",
+            body);
+    }
+
+    [Fact]
+    public async Task SharedSessionRefreshFailure_DoesNotDeleteSessionWhileWinnerMayStillBePersisting()
+    {
+        const string oldAccessToken =
+            "old-access-secret";
+
+        const string oldRefreshToken =
+            "old-refresh-secret";
+
+        using var handler =
+            new CapturingHandler(
+                new HttpResponseMessage(
+                    HttpStatusCode.Unauthorized));
+
+        using var factory =
+            new SingleClientFactory(
+                handler);
+
+        var authentication =
+            CreateAuthentication(
+                oldAccessToken,
+                oldRefreshToken,
+                DateTimeOffset.UtcNow.AddSeconds(10),
+                sessionStoreKey:
+                    "auth-ticket:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+
+        var context =
+            CreateHttpContext(
+                authentication);
+
+        var service =
+            new FullWorthBffProxyService(
+                factory,
+                new EmptySessionTicketAccessor());
+
+        var result =
+            await service.ForwardGetAsync(
+                context,
+                "/api/account/export");
+
+        Assert.False(
+            authentication.SignedOut);
+
+        _ =
+            await ExecuteResultAsync(
+                context,
+                result);
+
+        Assert.Equal(
+            StatusCodes.Status401Unauthorized,
+            context.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task RefreshFailure_SignsOutAndFailsClosed_WithoutForwardingRequest()
     {
         const string oldAccessToken = "old-access-secret";
@@ -320,7 +488,8 @@ public sealed class WebBffRefreshSecurityTests
         CreateAuthentication(
             string accessToken,
             string refreshToken,
-            DateTimeOffset expiresAtUtc)
+            DateTimeOffset expiresAtUtc,
+            string? sessionStoreKey = null)
     {
         var identity =
             new ClaimsIdentity(
@@ -340,6 +509,39 @@ public sealed class WebBffRefreshSecurityTests
             new ClaimsPrincipal(
                 identity);
 
+        var properties =
+            CreateTokenProperties(
+                accessToken,
+                refreshToken,
+                expiresAtUtc);
+
+        if (!string.IsNullOrWhiteSpace(
+                sessionStoreKey))
+        {
+            properties.Items[
+                WebSessionTicketAccessor
+                    .SessionKeyItem] =
+                        sessionStoreKey;
+        }
+
+        var ticket =
+            new AuthenticationTicket(
+                principal,
+                properties,
+                CookieAuthenticationDefaults
+                    .AuthenticationScheme);
+
+        return new CapturingAuthenticationService(
+            AuthenticateResult.Success(
+                ticket));
+    }
+
+    private static AuthenticationProperties
+        CreateTokenProperties(
+            string accessToken,
+            string refreshToken,
+            DateTimeOffset expiresAtUtc)
+    {
         var properties =
             new AuthenticationProperties();
 
@@ -367,16 +569,7 @@ public sealed class WebBffRefreshSecurityTests
                 }
             ]);
 
-        var ticket =
-            new AuthenticationTicket(
-                principal,
-                properties,
-                CookieAuthenticationDefaults
-                    .AuthenticationScheme);
-
-        return new CapturingAuthenticationService(
-            AuthenticateResult.Success(
-                ticket));
+        return properties;
     }
 
     private static DefaultHttpContext
@@ -436,6 +629,35 @@ public sealed class WebBffRefreshSecurityTests
                     Encoding.UTF8,
                     "application/json")
         };
+    }
+
+    private sealed class FixedSessionTicketAccessor(
+        WebSessionTicketSnapshot snapshot)
+        : IWebSessionTicketAccessor
+    {
+        public Task<WebSessionTicketSnapshot?>
+            ReadLatestAsync(
+                AuthenticationProperties currentProperties,
+                CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<
+                WebSessionTicketSnapshot?>(
+                    snapshot);
+        }
+    }
+
+    private sealed class EmptySessionTicketAccessor
+        : IWebSessionTicketAccessor
+    {
+        public Task<WebSessionTicketSnapshot?>
+            ReadLatestAsync(
+                AuthenticationProperties currentProperties,
+                CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<
+                WebSessionTicketSnapshot?>(
+                    null);
+        }
     }
 
     private sealed class SingleClientFactory

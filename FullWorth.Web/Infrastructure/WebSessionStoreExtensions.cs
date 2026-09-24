@@ -84,6 +84,10 @@ public static class WebSessionStoreExtensions
         services.AddSingleton<
             ProtectedDistributedTicketStore>();
 
+        services.AddSingleton<
+            IWebSessionTicketAccessor,
+            WebSessionTicketAccessor>();
+
         services.AddOptions<
                 CookieAuthenticationOptions>(
                 CookieAuthenticationDefaults
