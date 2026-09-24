@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using FullWorth.Tests.Infrastructure;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -130,6 +131,46 @@ public sealed class WebAntiforgeryBoundaryTests
                     StringComparison.OrdinalIgnoreCase));
 
         AssertSecurityHeaders(response);
+    }
+
+    [Fact]
+    public void AntiforgeryCookie_IsHostOnlySecureAndStrict()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        var antiforgeryOptions =
+            factory.Services
+                .GetRequiredService<
+                    IOptions<
+                        AntiforgeryOptions>>()
+                .Value;
+
+        Assert.Equal(
+            "__Host-BillWatch.Web.Antiforgery",
+            antiforgeryOptions.Cookie.Name);
+
+        Assert.True(
+            antiforgeryOptions.Cookie.HttpOnly);
+
+        Assert.Equal(
+            CookieSecurePolicy.Always,
+            antiforgeryOptions.Cookie.SecurePolicy);
+
+        Assert.Equal(
+            SameSiteMode.Strict,
+            antiforgeryOptions.Cookie.SameSite);
+
+        Assert.Equal(
+            "/",
+            antiforgeryOptions.Cookie.Path);
+
+        Assert.True(
+            string.IsNullOrWhiteSpace(
+                antiforgeryOptions.Cookie.Domain));
+
+        Assert.True(
+            antiforgeryOptions.Cookie.IsEssential);
     }
 
     [Fact]
