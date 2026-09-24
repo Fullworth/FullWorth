@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Models;
 using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
@@ -29,11 +30,24 @@ public sealed class BillStatementChangeDetectionService
     private readonly BillStatementEvidenceAlertService
         _evidenceAlertService;
 
+    private readonly IBillStreamReadGateway
+        _billStreamGateway;
+
     public BillStatementChangeDetectionService(
-        FullWorthDbContext dbContext)
+        FullWorthDbContext dbContext,
+        IBillStreamReadGateway billStreamGateway)
     {
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        ArgumentNullException.ThrowIfNull(
+            billStreamGateway);
+
         _dbContext =
             dbContext;
+
+        _billStreamGateway =
+            billStreamGateway;
 
         _evidenceAlertService =
             new BillStatementEvidenceAlertService(
@@ -76,27 +90,22 @@ public sealed class BillStatementChangeDetectionService
                 "The pending statement does not belong to the requested bill stream.");
         }
 
-        var providerName =
-            await _dbContext.BillStreams
-                .AsNoTracking()
-                .Where(
-                    stream =>
-                        stream.Id ==
-                            billStreamId &&
-                        stream.UserId ==
-                            userId)
-                .Select(
-                    stream =>
-                        stream.ProviderName)
-                .SingleOrDefaultAsync(
-                    cancellationToken);
+        var billStream =
+            await _billStreamGateway.GetOwnedAsync(
+                userId,
+                billStreamId,
+                cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(
-                providerName))
+        if (billStream is null ||
+            string.IsNullOrWhiteSpace(
+                billStream.ProviderName))
         {
             throw new InvalidOperationException(
                 "The owned bill stream could not be found.");
         }
+
+        var providerName =
+            billStream.ProviderName;
 
         var statements =
             await _dbContext.BillStatements
