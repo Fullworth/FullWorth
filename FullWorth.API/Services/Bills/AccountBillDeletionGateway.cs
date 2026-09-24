@@ -15,6 +15,15 @@ public sealed class AccountBillDeletionGateway(
         ValidateUserId(
             userId);
 
+        var transactionLinks =
+            await dbContext.BillTransactionLinks
+                .Where(
+                    link =>
+                        link.UserId ==
+                            userId)
+                .ToListAsync(
+                    cancellationToken);
+
         var alerts =
             await dbContext.BillAlerts
                 .Where(
@@ -23,6 +32,9 @@ public sealed class AccountBillDeletionGateway(
                             userId)
                 .ToListAsync(
                     cancellationToken);
+
+        dbContext.BillTransactionLinks.RemoveRange(
+            transactionLinks);
 
         dbContext.BillAlerts.RemoveRange(
             alerts);
