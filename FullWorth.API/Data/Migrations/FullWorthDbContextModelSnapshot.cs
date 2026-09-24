@@ -293,9 +293,6 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<Guid>("BankAccountId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BillStreamId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("CategoryDetailed")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -344,15 +341,11 @@ namespace FullWorth.API.Data.Migrations
 
                     b.HasIndex("BankAccountId");
 
-                    b.HasIndex("BillStreamId");
-
                     b.HasIndex("PostedDate");
 
                     b.HasIndex("UserId");
 
                     b.HasIndex("BankAccountId", "UserId");
-
-                    b.HasIndex("BillStreamId", "UserId");
 
                     b.HasIndex("UserId", "PlaidTransactionId")
                         .IsUnique();
@@ -1281,16 +1274,7 @@ namespace FullWorth.API.Data.Migrations
                         .HasPrincipalKey("Id", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("FullWorth.API.Data.Entities.BillStreamEntity", "BillStream")
-                        .WithMany()
-                        .HasForeignKey("BillStreamId", "UserId")
-                        .HasPrincipalKey("Id", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("BankAccount");
-
-                    b.Navigation("BillStream");
 
                     b.Navigation("User");
                 });
