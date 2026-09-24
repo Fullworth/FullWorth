@@ -22,14 +22,15 @@ public sealed class AdminIdentityMutationGateway(
             return null;
         }
 
-        var targetUser =
+        var targetExists =
             await dbContext.Users
-                .SingleOrDefaultAsync(
+                .AsNoTracking()
+                .AnyAsync(
                     user =>
                         user.Id == targetUserId,
                     cancellationToken);
 
-        if (targetUser is null)
+        if (!targetExists)
         {
             return null;
         }
@@ -87,15 +88,14 @@ public sealed class AdminIdentityMutationGateway(
 
         ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
 
-        var targetExists =
+        var targetUser =
             await dbContext.Users
-                .AsNoTracking()
-                .AnyAsync(
+                .SingleOrDefaultAsync(
                     user =>
                         user.Id == targetUserId,
                     cancellationToken);
 
-        if (!targetExists)
+        if (targetUser is null)
         {
             return new AdminIdentityRoleMutationResult(
                 Found: false,
