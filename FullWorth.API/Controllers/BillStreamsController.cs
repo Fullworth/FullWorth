@@ -17,15 +17,18 @@ public sealed class BillStreamsController : ControllerBase
     private readonly FullWorthDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IBankTransactionBillMetricsGateway _transactionMetricsGateway;
+    private readonly IBillStatementHistoryReadGateway _statementHistoryGateway;
 
     public BillStreamsController(
         FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
-        IBankTransactionBillMetricsGateway transactionMetricsGateway)
+        IBankTransactionBillMetricsGateway transactionMetricsGateway,
+        IBillStatementHistoryReadGateway statementHistoryGateway)
     {
         _dbContext = dbContext;
         _userManager = userManager;
         _transactionMetricsGateway = transactionMetricsGateway;
+        _statementHistoryGateway = statementHistoryGateway;
     }
 
     [HttpGet]
@@ -173,54 +176,44 @@ public sealed class BillStreamsController : ControllerBase
             streamMetrics?.PreviousAverage ??
             0m;
 
+        var statementHistory =
+            await _statementHistoryGateway.GetAsync(
+                userId,
+                billStreamId,
+                cancellationToken);
+
         var statements =
-            await _dbContext.BillStatements
-                .AsNoTracking()
-                .Where(statement =>
-                    statement.UserId == userId &&
-                    statement.BillStreamId ==
-                        billStreamId)
-                .OrderByDescending(statement =>
-                    statement.PeriodEnd)
-                .ThenByDescending(statement =>
-                    statement.StatementDate)
-                .Select(statement =>
-                    new BillStatementHistoryResult(
-                        statement.Id,
-                        statement.PeriodStart,
-                        statement.PeriodEnd,
-                        statement.StatementDate,
-                        statement.DueDate,
-                        statement.TotalAmount,
-                        statement.CurrencyCode))
-                .ToListAsync(
-                    cancellationToken);
+            statementHistory.Statements
+                .Select(
+                    statement =>
+                        new BillStatementHistoryResult(
+                            statement.Id,
+                            statement.PeriodStart,
+                            statement.PeriodEnd,
+                            statement.StatementDate,
+                            statement.DueDate,
+                            statement.TotalAmount,
+                            statement.CurrencyCode))
+                .ToList();
 
         var changes =
-            await _dbContext.BillChanges
-                .AsNoTracking()
-                .Where(change =>
-                    change.UserId == userId &&
-                    change.BillStreamId ==
-                        billStreamId)
-                .OrderByDescending(change =>
-                    change.DetectedAtUtc)
-                .Select(change =>
-                    new BillChangeResult(
-                        change.Id,
-                        change.PreviousStatementId,
-                        change.CurrentStatementId,
-                        change.ChangeType.ToString(),
-                        change.Confidence.ToString(),
-                        change.Description,
-                        change.PreviousAmount,
-                        change.CurrentAmount,
-                        change.AmountDifference,
-                        change.AnnualizedImpact,
-                        change.IsAcknowledged,
-                        change.DetectedAtUtc))
-                .ToListAsync(
-                    cancellationToken);
+            statementHistory.Changes
+                .Select(
+                    change =>
+                        new BillChangeResult(
+                            change.Id,
+                            change.PreviousStatementId,
+                            change.CurrentStatementId,
+                            change.ChangeType,
+                            change.Confidence,
+                            change.Description,
+                            change.PreviousAmount,
+                            change.CurrentAmount,
+                            change.AmountDifference,
+                            change.AnnualizedImpact,
+                            change.IsAcknowledged,
+                            change.DetectedAtUtc))
+                .ToList();
 
         return Ok(
             new BillStreamDetailResult(
