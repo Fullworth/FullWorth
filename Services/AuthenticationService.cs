@@ -319,6 +319,14 @@ public sealed class AuthenticationService
              * cleared in the finally block.
              */
         }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            /*
+             * Treat an HttpClient timeout like an unavailable server. Local
+             * sign-out still completes in the finally block.
+             */
+        }
         finally
         {
             ExpireSession();
