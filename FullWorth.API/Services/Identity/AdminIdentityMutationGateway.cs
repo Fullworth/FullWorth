@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using FullWorth.API.Data;
 using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Identity;
@@ -21,15 +22,14 @@ public sealed class AdminIdentityMutationGateway(
             return null;
         }
 
-        var targetExists =
+        var targetUser =
             await dbContext.Users
-                .AsNoTracking()
-                .AnyAsync(
+                .SingleOrDefaultAsync(
                     user =>
                         user.Id == targetUserId,
                     cancellationToken);
 
-        if (!targetExists)
+        if (targetUser is null)
         {
             return null;
         }
@@ -138,6 +138,9 @@ public sealed class AdminIdentityMutationGateway(
                 RoleId: role.Id);
         }
 
+        StageSessionRevocation(
+            targetUser);
+
         dbContext.UserRoles.Add(
             new IdentityUserRole<Guid>
             {
@@ -202,6 +205,24 @@ public sealed class AdminIdentityMutationGateway(
                 RoleId: role.Id);
         }
 
+        var targetUser =
+            await dbContext.Users
+                .SingleOrDefaultAsync(
+                    user =>
+                        user.Id == targetUserId,
+                    cancellationToken);
+
+        if (targetUser is null)
+        {
+            return new AdminIdentityRoleMutationResult(
+                Found: false,
+                Changed: false,
+                RoleId: role.Id);
+        }
+
+        StageSessionRevocation(
+            targetUser);
+
         dbContext.UserRoles.Remove(
             userRole);
 
@@ -209,5 +230,20 @@ public sealed class AdminIdentityMutationGateway(
             Found: true,
             Changed: true,
             RoleId: role.Id);
+    }
+
+    private static void StageSessionRevocation(
+        FullWorth.API.Data.Entities.ApplicationUser user)
+    {
+        /*
+         * SecurityStamp is an opaque revocation secret. Role mutations are
+         * staged directly in this Identity-owned gateway so stamp rotation is
+         * staged here too and committed atomically with the role row and
+         * Admin audit record by the shared scoped DbContext unit of work.
+         */
+        user.SecurityStamp =
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(32))
+                .ToLowerInvariant();
     }
 }
