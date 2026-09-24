@@ -220,16 +220,16 @@ public sealed class RefreshTokenRotationService(
 
         if (!dbContext.Database.IsRelational())
         {
-            var revoked =
+            var inMemoryRevoked =
                 await DeleteFamilyAsync(
                     user.Id,
                     familyId,
                     cancellationToken);
 
-            if (revoked ||
+            if (inMemoryRevoked ||
                 hasExplicitFamily)
             {
-                return revoked;
+                return inMemoryRevoked;
             }
 
             /*
