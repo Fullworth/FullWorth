@@ -778,7 +778,7 @@ public sealed class FullWorthBffProxyService
             var latest =
                 await _sessionTicketAccessor
                     .ReadLatestAsync(
-                        httpContext,
+                        session.Properties,
                         cancellationToken);
 
             if (latest is null ||
