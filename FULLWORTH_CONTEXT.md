@@ -36,7 +36,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `2cb7a585323ca7be76360fcf1c5e7e0e80012c35` after PR #302 merged the password-change Web-session invalidation checkpoint.
+- Current `development`: `ac722b0f5f68dc3699374ccc183e8df8654f106f` after PR #310 closed the refresh/security-stamp race discovered after PR #309.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -49,8 +49,14 @@ Security program:
 - PR #299 moved Web authentication tickets into a Data-Protection-protected distributed server-side store backed in production by an isolated, password-protected, non-persistent Redis service. The browser auth cookie now carries an opaque protected session reference rather than API access/refresh tokens.
 - PR #300 explicitly set Identity bearer access-token lifetime to 15 minutes and refresh-token lifetime to 14 days, and added regression coverage for password security-stamp rotation.
 - PR #302 ends the current server-side Web session immediately after a successful password change, preserves the session on rejected password changes, and returns the browser to sign-in.
-- Remaining token/session work includes refresh replay/concurrency behavior, cross-device/session-wide revocation semantics, and deliberate logout/security-change behavior across clients.
-- External OIDC currently uses authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, non-persistence of provider access/refresh tokens, and hardened nonce/correlation cookies. These existing invariants should receive regression coverage before protocol behavior is changed.
+- PR #305 locks the existing external OIDC security invariants with regression coverage for authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, response modes, and hardened nonce/correlation cookies.
+- PR #306 revokes refresh sessions when an existing account adds or removes an external sign-in method.
+- PR #307 revokes refresh sessions atomically with staff role promotion/demotion.
+- PR #308 revokes refresh sessions atomically with two-factor recovery-code regeneration.
+- PR #309 adds bounded single-use refresh-token families, replay rejection, PostgreSQL-backed concurrency control, and distributed Web/BFF refresh-race recovery. Review after merge found that its advisory lock did not serialize against ordinary Identity security-stamp writes.
+- PR #310 replaces that advisory lock with a transaction-scoped `AspNetUsers` row lock and revalidates the current security stamp after the row is locked, closing the refresh/security-change race. Exact head `c11658733ba29820237e6e8501d026741894146b` passed dependency security and full CI #934 before squash merge as `ac722b0f5f68dc3699374ccc183e8df8654f106f`.
+- Remaining token/session work includes deliberate logout/current-session revocation and explicit cross-device/session-wide revocation semantics.
+- External OIDC uses authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, explicit provider response modes, and hardened nonce/correlation cookies; PR #305 regression-locks these invariants.
 - Database runtime/migration privilege separation, stronger production secret injection, Data Protection key-at-rest/rotation design, parser-worker isolation, host/SSH/firewall hardening, security-event detection, SBOM/provenance, and immutable/off-host recovery proof remain open security work.
 
 Platform/acceptance:
@@ -302,9 +308,9 @@ Before trusted external beta invitations:
 ## Immediate resume point
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
-2. PR #302 is merged into `development` as `2cb7a585323ca7be76360fcf1c5e7e0e80012c35`. The current browser session is terminated immediately after a successful password change; rejected password changes keep the session intact.
-3. Continue security issue #291 in small reviewable slices. The next low-risk/high-value checkpoint is regression coverage for the already-configured external OIDC invariants: authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, and hardened nonce/correlation cookies.
-4. After the OIDC regression slice, review refresh-token replay/concurrency and cross-device/session-wide revocation semantics. Do not invent a custom token format when ASP.NET Core Identity primitives can be used safely.
+2. PRs #305–#310 are merged. External OIDC invariants are regression-locked; refresh sessions are revoked on external-sign-in, staff-role, and recovery-code security changes; refresh tokens are single-use within bounded families; and PR #310 closes the PostgreSQL security-stamp race found after #309.
+3. Continue security issue #291 in small reviewable slices. The next token/session checkpoint is deliberate logout/current-session revocation and explicit cross-device/session-wide revocation semantics.
+4. Preserve the framework Identity bearer-token format and the bounded refresh-family design. Do not invent a custom token format; prefer existing Identity/security-stamp primitives for logout and broader revocation.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
 7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
