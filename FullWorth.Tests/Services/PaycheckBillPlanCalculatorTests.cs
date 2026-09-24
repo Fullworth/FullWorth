@@ -13,18 +13,18 @@ public sealed class PaycheckBillPlanCalculatorTests
                     AmountDue: 720m,
                     AlreadySetAside: 0m,
                     DueDate: new DateOnly(2026, 12, 18),
-                    CurrentPayDate: new DateOnly(2026, 11, 6),
+                    CurrentPayDate: new DateOnly(2026, 10, 23),
                     PaychecksAhead: 3,
                     Schedule: new PayScheduleDefinition(
                         PayScheduleFrequency.Biweekly,
-                        new DateOnly(2026, 11, 6))));
+                        new DateOnly(2026, 10, 23))));
 
         Assert.Equal(
             BillFundingWindowStatus.NotInFundingWindow,
             result.Status);
 
         Assert.Equal(
-            3,
+            4,
             result.PaychecksRemaining);
 
         Assert.Equal(
@@ -90,7 +90,7 @@ public sealed class PaycheckBillPlanCalculatorTests
         var result =
             PaycheckBillPlanCalculator.Calculate(
                 new PaycheckBillPlanRequest(
-                    AmountDue: 100m,
+                    AmountDue: 100.01m,
                     AlreadySetAside: 0m,
                     DueDate: new DateOnly(2026, 11, 30),
                     CurrentPayDate: new DateOnly(2026, 11, 2),
@@ -104,7 +104,7 @@ public sealed class PaycheckBillPlanCalculatorTests
             result.PaychecksRemaining);
 
         Assert.Equal(
-            50m,
+            50.01m,
             result.RecommendedSetAsideFromCurrentPaycheck);
     }
 
@@ -122,7 +122,7 @@ public sealed class PaycheckBillPlanCalculatorTests
                     Schedule: new PayScheduleDefinition(
                         PayScheduleFrequency.SemiMonthly,
                         new DateOnly(2027, 1, 31),
-                        SecondaryDayOfMonth: 30)));
+                        SecondaryDayOfMonth: 15)));
 
         Assert.Equal(
             BillFundingWindowStatus.Active,
@@ -132,7 +132,7 @@ public sealed class PaycheckBillPlanCalculatorTests
             new[]
             {
                 new DateOnly(2027, 2, 28),
-                new DateOnly(2027, 3, 30).AddDays(-15)
+                new DateOnly(2027, 3, 15)
             },
             result.RemainingPayDates);
 
