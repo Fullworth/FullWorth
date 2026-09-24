@@ -1,5 +1,6 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Subscriptions;
@@ -7,6 +8,7 @@ namespace FullWorth.API.Services.Subscriptions;
 public sealed class AdminSubscriptionAccessKeyService(
     FullWorthDbContext dbContext,
     SubscriptionAccessKeyGenerator keyGenerator,
+    IAdminAuditLogWriter auditLogWriter,
     TimeProvider timeProvider)
 {
     public async Task<CreatedSubscriptionAccessKey> CreateAsync(
@@ -58,15 +60,14 @@ public sealed class AdminSubscriptionAccessKeyService(
         };
 
         dbContext.SubscriptionAccessKeys.Add(accessKey);
-        dbContext.AdminAuditLogs.Add(
-            new AdminAuditLogEntity
-            {
-                ActorUserId = actorUserId,
-                Action = "SubscriptionAccessKeyCreated",
-                SubjectType = nameof(SubscriptionAccessKeyEntity),
-                SubjectId = accessKey.Id,
-                CreatedAtUtc = nowUtc
-            });
+        auditLogWriter.Stage(
+            new AdminAuditLogWrite(
+                actorUserId,
+                TargetUserId: null,
+                Action: "SubscriptionAccessKeyCreated",
+                SubjectType: nameof(SubscriptionAccessKeyEntity),
+                SubjectId: accessKey.Id,
+                CreatedAtUtc: nowUtc));
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -108,15 +109,14 @@ public sealed class AdminSubscriptionAccessKeyService(
         accessKey.IsRevoked = true;
         accessKey.RevokedAtUtc = nowUtc;
 
-        dbContext.AdminAuditLogs.Add(
-            new AdminAuditLogEntity
-            {
-                ActorUserId = actorUserId,
-                Action = "SubscriptionAccessKeyRevoked",
-                SubjectType = nameof(SubscriptionAccessKeyEntity),
-                SubjectId = accessKey.Id,
-                CreatedAtUtc = nowUtc
-            });
+        auditLogWriter.Stage(
+            new AdminAuditLogWrite(
+                actorUserId,
+                TargetUserId: null,
+                Action: "SubscriptionAccessKeyRevoked",
+                SubjectType: nameof(SubscriptionAccessKeyEntity),
+                SubjectId: accessKey.Id,
+                CreatedAtUtc: nowUtc));
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
