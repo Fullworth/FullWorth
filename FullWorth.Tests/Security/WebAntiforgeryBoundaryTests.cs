@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using FullWorth.Tests.Infrastructure;
+using FullWorth.Web.Infrastructure;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -213,6 +214,10 @@ public sealed class WebAntiforgeryBoundaryTests
 
         Assert.False(
             cookieOptions.SlidingExpiration);
+
+        Assert.IsType<
+            ProtectedDistributedTicketStore>(
+                cookieOptions.SessionStore);
     }
 
     [Fact]
