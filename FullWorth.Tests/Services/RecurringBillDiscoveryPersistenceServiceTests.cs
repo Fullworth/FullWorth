@@ -319,11 +319,8 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         Assert.Empty(
             dbContext.BillStreams);
 
-        Assert.All(
-            dbContext.BankTransactions,
-            transaction =>
-                Assert.Null(
-                    transaction.BillStreamId));
+        Assert.Empty(
+            dbContext.BillTransactionAssociations);
     }
 
     [Fact]
