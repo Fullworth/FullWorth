@@ -703,6 +703,200 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     [Fact]
+    public async Task Logout_RevokesOnlyThePresentedEnrolledRefreshFamily()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"logout-family-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var firstLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        var secondLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        using var firstEnrollmentResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstLogin.RefreshToken
+                });
+
+        firstEnrollmentResponse.EnsureSuccessStatusCode();
+
+        var firstFamily =
+            await firstEnrollmentResponse.Content
+                .ReadFromJsonAsync<LoginResult>();
+
+        Assert.NotNull(
+            firstFamily);
+
+        using var secondEnrollmentResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        secondLogin.RefreshToken
+                });
+
+        secondEnrollmentResponse.EnsureSuccessStatusCode();
+
+        var secondFamily =
+            await secondEnrollmentResponse.Content
+                .ReadFromJsonAsync<LoginResult>();
+
+        Assert.NotNull(
+            secondFamily);
+
+        using var logoutResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/logout",
+                new
+                {
+                    refreshToken =
+                        firstFamily!.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            logoutResponse.StatusCode);
+
+        using var revokedFamilyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstFamily.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            revokedFamilyResponse.StatusCode);
+
+        using var unaffectedFamilyResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        secondFamily!.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            unaffectedFamilyResponse.StatusCode);
+
+        using var repeatedLogoutResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/logout",
+                new
+                {
+                    refreshToken =
+                        firstFamily.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            repeatedLogoutResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_BeforeFamilyEnrollment_InvalidatesInitialRefreshSessions()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"logout-initial-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var firstLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        var secondLogin =
+            await LoginAsync(
+                client,
+                email);
+
+        using var logoutResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/logout",
+                new
+                {
+                    refreshToken =
+                        firstLogin.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            logoutResponse.StatusCode);
+
+        using var firstRefreshResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        firstLogin.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            firstRefreshResponse.StatusCode);
+
+        using var secondRefreshResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        secondLogin.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            secondRefreshResponse.StatusCode);
+
+        using var opaqueResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/logout",
+                new
+                {
+                    refreshToken =
+                        "not-a-valid-refresh-token"
+                });
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            opaqueResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task AuthenticatedUserWithoutStaffRole_RemainsForbidden()
     {
         using var factory =
