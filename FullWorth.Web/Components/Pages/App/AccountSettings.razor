@@ -176,6 +176,25 @@
                 </div>
             </section>
 
+            <section class="settings-card">
+                <div class="settings-card-heading">
+                    <div class="settings-card-icon is-muted" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#shield"></use></svg></div>
+                    <div class="settings-copy">
+                        <h2>@L["Signed-in devices"]</h2>
+                        <p>@L["Use this if a device is lost or you do not recognize a FullWorth session."]</p>
+                    </div>
+                </div>
+
+                <div class="settings-value-row compact-value-row">
+                    <span>@L["Other devices"]</span>
+                    <strong>@L["May retain existing access for up to 15 minutes"]</strong>
+                </div>
+
+                <div class="settings-actions">
+                    <button type="button" class="danger-action" disabled="@_isBusy" @onclick="() => OpenDialogAsync(SecurityDialog.RevokeAllSessions)">@L["Sign out everywhere"]</button>
+                </div>
+            </section>
+
             @if (HasConfiguredExternalProvider)
             {
                 <section class="settings-card settings-card-wide">
@@ -346,6 +365,21 @@
                         </div>
                         break;
 
+                    case SecurityDialog.RevokeAllSessions:
+                        <div class="settings-grid single-column">
+                            <label class="settings-field"><span>@L["Current password"]</span><input autofocus type="password" autocomplete="current-password" @bind="_revokeSessionsCurrentPassword" /></label>
+                            @if (_security?.TwoFactorEnabled == true)
+                            {
+                                <label class="settings-field"><span>@L["Current authenticator code"]</span><input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" @bind="_revokeSessionsTwoFactorCode" /></label>
+                            }
+                        </div>
+                        <p class="dialog-note">@L["This device signs out immediately. Other devices lose refresh access immediately, but an already-issued access token can remain usable for up to 15 minutes."]</p>
+                        <div class="settings-dialog-actions">
+                            <button type="button" class="secondary-action" data-dialog-cancel @onclick="CloseDialogAsync">@L["Cancel"]</button>
+                            <button type="button" class="danger-action" disabled="@_isBusy" @onclick="RevokeAllSessionsAsync">@L["Sign out everywhere"]</button>
+                        </div>
+                        break;
+
                     case SecurityDialog.ChangeEmail:
                         <div class="settings-grid single-column">
                             <label class="settings-field"><span>@L["New email address"]</span><input autofocus type="email" autocomplete="email" @bind="_newEmail" /></label>
@@ -480,6 +514,8 @@
     private string _passwordNew = string.Empty;
     private string _passwordConfirm = string.Empty;
     private string _passwordTwoFactorCode = string.Empty;
+    private string _revokeSessionsCurrentPassword = string.Empty;
+    private string _revokeSessionsTwoFactorCode = string.Empty;
     private string _twoFactorCurrentPassword = string.Empty;
     private string _twoFactorCurrentCode = string.Empty;
     private string _twoFactorEnableCode = string.Empty;
@@ -648,6 +684,42 @@
             SetSuccess(L["Password changed successfully."].Value);
             await CloseDialogAsync();
         }, L["We couldn’t update your password. Please try again."].Value);
+    }
+
+    private async Task RevokeAllSessionsAsync()
+    {
+        if (_securityModule is null || _isBusy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                _revokeSessionsCurrentPassword))
+        {
+            SetError(
+                L["Enter your current password."].Value);
+            return;
+        }
+
+        if (_security?.TwoFactorEnabled == true &&
+            string.IsNullOrWhiteSpace(
+                _revokeSessionsTwoFactorCode))
+        {
+            SetError(
+                L["Enter the current code from your authenticator app."].Value);
+            return;
+        }
+
+        await RunActionAsync(
+            async () =>
+            {
+                await _securityModule.InvokeVoidAsync(
+                    "revokeAllSessions",
+                    _revokeSessionsCurrentPassword,
+                    NullIfBlank(
+                        _revokeSessionsTwoFactorCode));
+            },
+            L["We couldn’t sign out your other FullWorth sessions. Please try again."].Value);
     }
 
     private async Task LinkExternalProviderAsync()
@@ -856,6 +928,8 @@
         _passwordNew = string.Empty;
         _passwordConfirm = string.Empty;
         _passwordTwoFactorCode = string.Empty;
+        _revokeSessionsCurrentPassword = string.Empty;
+        _revokeSessionsTwoFactorCode = string.Empty;
         _twoFactorCurrentPassword = string.Empty;
         _twoFactorCurrentCode = string.Empty;
         _twoFactorEnableCode = string.Empty;
@@ -877,6 +951,7 @@
     private string GetDialogKicker() => _activeDialog switch
     {
         SecurityDialog.ChangePassword => L["Password"],
+        SecurityDialog.RevokeAllSessions => L["Sessions"],
         SecurityDialog.ChangeEmail => L["Email"],
         SecurityDialog.RecoveryCodes => L["Recovery"],
         SecurityDialog.ReplaceAuthenticator or SecurityDialog.SetupTwoFactor => L["Two-factor authentication"],
@@ -887,6 +962,7 @@
     private string GetDialogTitle() => _activeDialog switch
     {
         SecurityDialog.ChangePassword => L["Change password"],
+        SecurityDialog.RevokeAllSessions => L["Sign out everywhere?"],
         SecurityDialog.ChangeEmail => L["Change email address"],
         SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Generate new recovery codes"] : L["Save your recovery codes"],
         SecurityDialog.ReplaceAuthenticator => _twoFactorStep switch { 1 => L["Replace authenticator"], 2 => L["Set up the new authenticator"], _ => L["Save your new recovery codes"] },
@@ -898,6 +974,7 @@
     private string GetDialogDescription() => _activeDialog switch
     {
         SecurityDialog.ChangePassword => L["Confirm your identity only for this password change."],
+        SecurityDialog.RevokeAllSessions => L["Revoke the ability of every current FullWorth session to renew access, then sign out this device."],
         SecurityDialog.ChangeEmail => L["Enter the new address and verify this sensitive account change."],
         SecurityDialog.RecoveryCodes => _twoFactorStep == 1 ? L["Verify your identity before FullWorth replaces your current recovery codes."] : L["Each code works once. Store them somewhere safe outside FullWorth."],
         SecurityDialog.ReplaceAuthenticator => _twoFactorStep == 1 ? L["Verify your identity before replacing the authenticator currently protecting your account."] : L["Complete the replacement before leaving this flow."],
@@ -984,7 +1061,7 @@
         if (_timeModule is not null) { try { await _timeModule.DisposeAsync(); } catch (JSDisconnectedException) { } }
     }
 
-    private enum SecurityDialog { None, ChangePassword, ChangeEmail, RecoveryCodes, ReplaceAuthenticator, DisableTwoFactor, SetupTwoFactor }
+    private enum SecurityDialog { None, ChangePassword, RevokeAllSessions, ChangeEmail, RecoveryCodes, ReplaceAuthenticator, DisableTwoFactor, SetupTwoFactor }
     private sealed class AccountPreferenceViewModel { public string TimestampDisplayMode { get; set; } = "Local12Hour"; }
     private sealed class PerformanceProfileViewModel
     {

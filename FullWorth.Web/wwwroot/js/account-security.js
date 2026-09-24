@@ -507,6 +507,18 @@ export async function changePassword(currentPassword, newPassword, twoFactorCode
     window.location.replace("/login");
 }
 
+export async function revokeAllSessions(currentPassword, twoFactorCode) {
+    await postJson(
+        "/bff/account/security/sessions/revoke-all",
+        {
+            currentPassword,
+            twoFactorCode: twoFactorCode || null
+        },
+        "We couldn’t sign out your other FullWorth sessions. Please try again.");
+
+    window.location.replace("/login");
+}
+
 export function requestEmailChange(currentPassword, newEmail, twoFactorCode) {
     return postJson(
         "/bff/account/security/email",
