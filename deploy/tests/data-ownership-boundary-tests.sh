@@ -24,9 +24,15 @@ owners = {
     "BillChanges": "Statements",
     "BillStatementUploads": "Statements",
     "BillStatementAiEvaluations": "Statements",
+    "SubscriptionEntitlements": "Subscriptions",
+    "UserProgramMemberships": "Subscriptions",
+    "SubscriptionAccessKeys": "Subscriptions",
+    "SubscriptionAccessKeyRedemptions": "Subscriptions",
+    "AdminAuditLogs": "Admin",
+    "Users": "Identity",
 }
 
-modules = {"Accounts", "Bills", "Plaid", "Statements"}
+modules = {"Accounts", "Bills", "Plaid", "Statements", "Subscriptions"}
 
 entity_owners = {
     "BillStreamEntity": "Bills",
@@ -40,6 +46,12 @@ entity_owners = {
     "BillChangeEntity": "Statements",
     "BillStatementUploadEntity": "Statements",
     "BillStatementAiEvaluationEntity": "Statements",
+    "SubscriptionEntitlementEntity": "Subscriptions",
+    "UserProgramMembershipEntity": "Subscriptions",
+    "SubscriptionAccessKeyEntity": "Subscriptions",
+    "SubscriptionAccessKeyRedemptionEntity": "Subscriptions",
+    "AdminAuditLogEntity": "Admin",
+    "ApplicationUser": "Identity",
 }
 
 # Existing cross-owner table access is frozen here as a temporary ceiling.
