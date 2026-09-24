@@ -115,15 +115,47 @@ public sealed class BillTransactionAssociationGateway(
 
         if (requestedBillStreamIds.Length > 0)
         {
-            var ownedBillStreamCount =
-                await dbContext.BillStreams
-                    .CountAsync(
-                        stream =>
-                            stream.UserId == userId &&
-                            requestedBillStreamIds.Contains(stream.Id),
-                        cancellationToken);
+            var requestedBillStreamIdSet =
+                requestedBillStreamIds
+                    .ToHashSet();
 
-            if (ownedBillStreamCount != requestedBillStreamIds.Length)
+            var trackedOwnedBillStreamIds =
+                dbContext.ChangeTracker
+                    .Entries<BillStreamEntity>()
+                    .Where(
+                        entry =>
+                            entry.State != EntityState.Deleted &&
+                            entry.Entity.UserId == userId &&
+                            requestedBillStreamIdSet.Contains(
+                                entry.Entity.Id))
+                    .Select(entry => entry.Entity.Id)
+                    .ToHashSet();
+
+            var persistedIdsToVerify =
+                requestedBillStreamIds
+                    .Where(
+                        id =>
+                            !trackedOwnedBillStreamIds.Contains(id))
+                    .ToArray();
+
+            if (persistedIdsToVerify.Length > 0)
+            {
+                var persistedOwnedBillStreamIds =
+                    await dbContext.BillStreams
+                        .AsNoTracking()
+                        .Where(
+                            stream =>
+                                stream.UserId == userId &&
+                                persistedIdsToVerify.Contains(stream.Id))
+                        .Select(stream => stream.Id)
+                        .ToListAsync(cancellationToken);
+
+                trackedOwnedBillStreamIds.UnionWith(
+                    persistedOwnedBillStreamIds);
+            }
+
+            if (trackedOwnedBillStreamIds.Count !=
+                requestedBillStreamIds.Length)
             {
                 throw new KeyNotFoundException(
                     "One or more bill streams were not found.");
