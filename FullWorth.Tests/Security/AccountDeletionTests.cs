@@ -436,11 +436,7 @@ public sealed class AccountDeletionTests
 
                     BankAccountId =
                         deletingAccount.Id,
-
-                    BillStreamId =
-                        deletingStream.Id,
-
-                    PlaidTransactionId =
+PlaidTransactionId =
                         $"deleting-transaction-{Guid.NewGuid():N}",
 
                     Name =
@@ -462,11 +458,7 @@ public sealed class AccountDeletionTests
 
                     BankAccountId =
                         remainingAccount.Id,
-
-                    BillStreamId =
-                        remainingStream.Id,
-
-                    PlaidTransactionId =
+PlaidTransactionId =
                         $"remaining-transaction-{Guid.NewGuid():N}",
 
                     Name =
@@ -777,8 +769,7 @@ public sealed class AccountDeletionTests
         return new BillStatementUploadEntity
         {
             UserId = userId,
-            BillStreamId = billStreamId,
-            StorageKey = file.StorageKey,
+StorageKey = file.StorageKey,
             MediaType = file.MediaType,
             FileExtension = file.FileExtension,
             SizeBytes = file.SizeBytes,
