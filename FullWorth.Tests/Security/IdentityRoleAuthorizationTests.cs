@@ -2,10 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FullWorth.API.Authorization;
+using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.Core.Legal;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FullWorth.Tests.Security;
@@ -209,6 +211,41 @@ public sealed class IdentityRoleAuthorizationTests
         Assert.NotEqual(
             firstRefresh.RefreshToken,
             secondRefresh!.RefreshToken);
+
+        await using var verificationScope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            verificationScope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        var refreshFamilyRows =
+            await dbContext.UserTokens
+                .Where(
+                    token =>
+                        token.LoginProvider ==
+                            "FullWorth.RefreshFamily")
+                .ToListAsync();
+
+        var refreshFamily =
+            Assert.Single(
+                refreshFamilyRows);
+
+        Assert.DoesNotContain(
+            loginResult.RefreshToken,
+            refreshFamily.Value ?? string.Empty,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            firstRefresh.RefreshToken,
+            refreshFamily.Value ?? string.Empty,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            secondRefresh.RefreshToken,
+            refreshFamily.Value ?? string.Empty,
+            StringComparison.Ordinal);
     }
 
     [Fact]
