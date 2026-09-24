@@ -28,10 +28,25 @@ public static class AccountSecurityBffEndpointMappings
             "/profile",
             "/api/account/security/profile");
 
-        MapSecurePost<ChangePasswordBffRequest>(
-            bff,
+        bff.MapPost(
             "/password",
-            "/api/account/security/password");
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                ChangePasswordBffRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(
+                    context);
+
+                return await writeProxyService
+                    .ForwardJsonAndSignOutOnSuccessAsync(
+                        context,
+                        HttpMethod.Post,
+                        "/api/account/security/password",
+                        request,
+                        context.RequestAborted);
+            });
 
         MapSecurePost<ChangeEmailBffRequest>(
             bff,
