@@ -93,6 +93,10 @@ grep -Fq 'avdmanager list avd' "$smoke_script" ||
     fail "created AVD visibility is not verified before emulator launch."
 grep -Fq 'Android AVD metadata was not created in the isolated AVD home.' "$smoke_script" ||
     fail "AVD metadata location is not checked before emulator launch."
+grep -Fq 'timeout 5 adb emu kill' "$smoke_script" ||
+    fail "emulator cleanup does not bound graceful ADB shutdown."
+grep -Fq 'kill -KILL "$emulator_pid"' "$smoke_script" ||
+    fail "emulator cleanup has no forced-termination fallback."
 if grep -Fq 'adb wait-for-device' "$smoke_script"; then
     fail "unbounded adb wait-for-device must not be used in CI."
 fi
