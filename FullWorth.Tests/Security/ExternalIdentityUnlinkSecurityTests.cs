@@ -245,7 +245,7 @@ public sealed class ExternalIdentityUnlinkSecurityTests
     }
 
     [Fact]
-    public async Task Unlink_ReauthenticatedCaller_RemovesOnlyRequestedLogin()
+    public async Task Unlink_ReauthenticatedCaller_RemovesOnlyRequestedLoginAndRotatesSecurityStamp()
     {
         using var factory =
             new FullWorthApiFactory();
@@ -268,6 +268,11 @@ public sealed class ExternalIdentityUnlinkSecurityTests
             session.Email,
             ExternalIdentityProviders.Microsoft,
             "microsoft-subject");
+
+        var originalSecurityStamp =
+            await GetSecurityStampAsync(
+                factory,
+                session.Email);
 
         TestUserAuthentication.Authorize(
             client,
@@ -306,6 +311,37 @@ public sealed class ExternalIdentityUnlinkSecurityTests
                 factory,
                 session.Email,
                 ExternalIdentityProviders.Microsoft));
+
+        var updatedSecurityStamp =
+            await GetSecurityStampAsync(
+                factory,
+                session.Email);
+
+        Assert.NotEqual(
+            originalSecurityStamp,
+            updatedSecurityStamp);
+    }
+
+    private static async Task<string> GetSecurityStampAsync(
+        FullWorthApiFactory factory,
+        string email)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var userManager =
+            scope.ServiceProvider.GetRequiredService<
+                UserManager<ApplicationUser>>();
+
+        var user =
+            await userManager.FindByEmailAsync(
+                email);
+
+        Assert.NotNull(
+            user);
+
+        return await userManager.GetSecurityStampAsync(
+            user!);
     }
 
     private static async Task AddExternalLoginAsync(
