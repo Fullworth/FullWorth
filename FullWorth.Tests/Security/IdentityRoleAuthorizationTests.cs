@@ -374,6 +374,90 @@ public sealed class IdentityRoleAuthorizationTests
     }
 
     [Fact]
+    public async Task RefreshTokenRotation_KeepsOneReplayMarkerPerLoginFamily()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var email =
+            $"refresh-family-{Guid.NewGuid():N}@fullworth.local";
+
+        await RegisterAsync(
+            client,
+            email);
+
+        var loginResult =
+            await LoginAsync(
+                client,
+                email);
+
+        var currentRefreshToken =
+            loginResult.RefreshToken;
+
+        for (var rotation = 0;
+             rotation < 4;
+             rotation++)
+        {
+            using var refreshResponse =
+                await client.PostAsJsonAsync(
+                    "/api/auth/refresh",
+                    new
+                    {
+                        refreshToken =
+                            currentRefreshToken
+                    });
+
+            refreshResponse.EnsureSuccessStatusCode();
+
+            var refreshed =
+                await refreshResponse.Content
+                    .ReadFromJsonAsync<LoginResult>();
+
+            Assert.NotNull(
+                refreshed);
+
+            currentRefreshToken =
+                refreshed!.RefreshToken;
+        }
+
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    FullWorth.API.Data.FullWorthDbContext>();
+
+        var userManager =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    Microsoft.AspNetCore.Identity.UserManager<
+                        FullWorth.API.Data.Entities.ApplicationUser>>();
+
+        var user =
+            await userManager.FindByEmailAsync(
+                email);
+
+        Assert.NotNull(
+            user);
+
+        var familyMarkers =
+            await dbContext.UserTokens
+                .Where(
+                    token =>
+                        token.UserId == user!.Id &&
+                        token.LoginProvider ==
+                            "FullWorth.RefreshFamily")
+                .ToListAsync();
+
+        Assert.Single(
+            familyMarkers);
+    }
+
+    [Fact]
     public async Task AuthenticatedUserWithoutStaffRole_RemainsForbidden()
     {
         using var factory =
