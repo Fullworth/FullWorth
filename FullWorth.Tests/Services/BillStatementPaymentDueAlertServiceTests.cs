@@ -29,8 +29,9 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         await service.ReconcileAsync(
@@ -96,8 +97,9 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         var dueDate =
@@ -187,8 +189,9 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         var today =
@@ -248,8 +251,9 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         await Assert.ThrowsAsync<
@@ -300,8 +304,9 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext,
                 new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
                     dbContext));
 
         var dueDate =
