@@ -49,6 +49,8 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
+
 backup_service="$root_dir/deploy/systemd/billwatch-backup.service"
 
 [ -f "$backup_service" ] ||
