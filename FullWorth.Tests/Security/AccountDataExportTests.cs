@@ -224,7 +224,6 @@ public sealed class AccountDataExportTests
                 {
                     UserId = exportingUserId,
                     BankAccountId = account.Id,
-                    BillStreamId = stream.Id,
                     PlaidTransactionId = PlaidTransactionId,
                     Name = "Exported Payment",
                     MerchantName = "Exported Internet Provider",
@@ -234,6 +233,16 @@ public sealed class AccountDataExportTests
                     AuthorizedDate = new DateOnly(2026, 8, 19),
                     CategoryPrimary = "RENT_AND_UTILITIES",
                     CategoryDetailed = "INTERNET_AND_CABLE",
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+
+            var transactionLink =
+                new BillTransactionLinkEntity
+                {
+                    BankTransactionId = transaction.Id,
+                    UserId = exportingUserId,
+                    BillStreamId = stream.Id,
                     CreatedAtUtc = now,
                     UpdatedAtUtc = now
                 };
@@ -348,6 +357,7 @@ public sealed class AccountDataExportTests
                 connection,
                 account,
                 transaction,
+                transactionLink,
                 statement,
                 lineItem,
                 change,
@@ -412,9 +422,16 @@ public sealed class AccountDataExportTests
         Assert.Equal(
             accountId,
             Assert.Single(export.BankAccounts).Id);
+        var exportedTransaction =
+            Assert.Single(export.BankTransactions);
+
         Assert.Equal(
             transactionId,
-            Assert.Single(export.BankTransactions).Id);
+            exportedTransaction.Id);
+
+        Assert.Equal(
+            streamId,
+            exportedTransaction.BillStreamId);
         Assert.Equal(
             streamId,
             Assert.Single(export.BillStreams).Id);
@@ -552,11 +569,20 @@ public sealed class AccountDataExportTests
             {
                 UserId = userId,
                 BankAccountId = account.Id,
-                BillStreamId = stream.Id,
                 PlaidTransactionId = $"{OtherUserMarker}-transaction",
                 Name = OtherUserMarker,
                 Amount = 1m,
                 PostedDate = new DateOnly(2026, 8, 20),
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            };
+
+        var transactionLink =
+            new BillTransactionLinkEntity
+            {
+                BankTransactionId = transaction.Id,
+                UserId = userId,
+                BillStreamId = stream.Id,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
@@ -665,6 +691,7 @@ public sealed class AccountDataExportTests
             connection,
             account,
             transaction,
+            transactionLink,
             statement,
             lineItem,
             change,
