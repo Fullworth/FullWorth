@@ -3,6 +3,7 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Controllers;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -146,7 +147,10 @@ public sealed class AdminSecurityControllerTests
     {
         return new AdminSecurityController(
             dbContext,
-            new FixedTimeProvider(NowUtc));
+            new AdminSubscriptionReadGateway(
+                dbContext,
+                new FixedTimeProvider(
+                    NowUtc)));
     }
 
     private static SubscriptionAccessKeyEntity CreateKey(
