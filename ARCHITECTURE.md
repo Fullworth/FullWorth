@@ -82,10 +82,16 @@ CI enforces a ratchet through `deploy/tests/data-ownership-boundary-tests.sh`. E
 
 Current exceptions are intentionally narrow:
 
-- Bills reads Plaid-owned `BankTransactions` for recurring-bill discovery.
 - Statements reads Bills-owned `BillStreams` and `BillAlerts` for statement processing/change/alert workflows.
 
-Bills no longer reads Plaid-owned `BankConnections` directly. Connection-health and refresh-scheduling queries now cross `IBankConnectionReadGateway`; the Plaid module owns `PlaidBankConnectionReadGateway` and returns only the read-only projections Bills needs.
+Bills no longer reads Plaid-owned bank tables directly:
+
+- connection-health and refresh-scheduling queries cross `IBankConnectionReadGateway`;
+- recurring-bill discovery reads immutable transaction projections through `IBankTransactionDiscoveryGateway`;
+- bill-link changes cross the same transaction gateway with ownership checks and expected-current-link concurrency checks;
+- the Plaid gateway stages link changes without saving so the current modular-monolith unit of work can still commit Bill Streams, alerts, and transaction links atomically.
+
+The staged-write behavior is an explicit same-process atomicity contract. If the bank-data module is later moved behind a network boundary, replace that mechanism with an outbox/coordinator or a Bills-owned association model rather than silently giving up atomicity.
 
 Those exceptions are migration debt, not approved architecture. The ratchet also fails when an exception disappears until its stale allowance is removed, so the baseline can only tighten.
 
