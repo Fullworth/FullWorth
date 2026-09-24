@@ -8,8 +8,6 @@ public sealed class BankTransactionEntity
 
     public Guid BankAccountId { get; set; }
 
-    public Guid? BillStreamId { get; set; }
-
     public string PlaidTransactionId { get; set; } = string.Empty;
 
     public string Name { get; set; } = string.Empty;
@@ -41,6 +39,4 @@ public sealed class BankTransactionEntity
     public ApplicationUser User { get; set; } = null!;
 
     public BankAccountEntity BankAccount { get; set; } = null!;
-
-    public BillStreamEntity? BillStream { get; set; }
 }
