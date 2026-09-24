@@ -742,6 +742,30 @@ namespace FullWorth.API.Data.Migrations
                     b.ToTable("BillStatementUploads", (string)null);
                 });
 
+            modelBuilder.Entity("FullWorth.API.Data.Entities.BillTransactionAssociationEntity", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BankTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BillStreamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "BankTransactionId");
+
+                    b.HasIndex("BillStreamId", "UserId");
+
+                    b.ToTable("BillTransactionAssociations", (string)null);
+                });
+
             modelBuilder.Entity("FullWorth.API.Data.Entities.BillStreamEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1265,6 +1289,26 @@ namespace FullWorth.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("BankAccount");
+
+                    b.Navigation("BillStream");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.BillTransactionAssociationEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FullWorth.API.Data.Entities.BillStreamEntity", "BillStream")
+                        .WithMany()
+                        .HasForeignKey("BillStreamId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("BillStream");
 
