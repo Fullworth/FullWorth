@@ -363,9 +363,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 transaction.BillStreamId =
                     null;
 
-                transaction.UpdatedAtUtc =
-                    now;
-
                 unlinkedTransactionCount++;
             }
         }
@@ -506,9 +503,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
                 transaction.BillStreamId =
                     persistedStream.Id;
-
-                transaction.UpdatedAtUtc =
-                    now;
 
                 linkedTransactionCount++;
             }
