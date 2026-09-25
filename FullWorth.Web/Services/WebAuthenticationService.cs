@@ -47,6 +47,13 @@ public sealed class WebAuthenticationService
             string? recoveryCode,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before signing in to another account.");
+        }
+
         email =
             email.Trim();
 
@@ -155,6 +162,13 @@ public sealed class WebAuthenticationService
             string? email,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before signing in to another account.");
+        }
+
         provider =
             provider.Trim()
                 .ToLowerInvariant();
@@ -250,6 +264,13 @@ public sealed class WebAuthenticationService
             string legalTermsVersion,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before creating another account.");
+        }
+
         email =
             email.Trim();
 
