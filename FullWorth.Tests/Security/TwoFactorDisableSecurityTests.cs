@@ -16,7 +16,7 @@ public sealed class TwoFactorDisableSecurityTests
         "FullWorth!Tests123";
 
     [Fact]
-    public async Task Disable_ValidReauthentication_DisablesMfaAndInvalidatesExistingRefreshTokens()
+    public async Task Disable_ValidReauthentication_InvalidatesRefreshTokenIssuedAfterMfaWasEnabled()
     {
         await using var factory =
             new FullWorthApiFactory();
@@ -24,62 +24,29 @@ public sealed class TwoFactorDisableSecurityTests
         using var client =
             factory.CreateHttpsClient();
 
-        var firstSession =
+        var initialSession =
             await TestUserAuthentication.RegisterAndLoginAsync(
                 client);
 
-        var secondSession =
-            await TestUserAuthentication.LoginAsync(
+        var sharedKey =
+            await EnableTwoFactorAsync(
                 client,
-                firstSession.Email);
+                initialSession);
 
-        TestUserAuthentication.Authorize(
-            client,
-            firstSession);
-
-        using var setupResponse =
-            await client.PostAsJsonAsync(
-                "/api/account/security/two-factor/setup",
-                new
-                {
-                    currentPassword =
-                        Password,
-
-                    twoFactorCode =
-                        (string?)null
-                });
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            setupResponse.StatusCode);
-
-        var setup =
-            await setupResponse.Content
-                .ReadFromJsonAsync<SetupResponse>();
-
-        Assert.NotNull(setup);
-
-        using var enableResponse =
-            await client.PostAsJsonAsync(
-                "/api/account/security/two-factor/enable",
-                new
-                {
-                    currentPassword =
-                        Password,
-
-                    authenticatorCode =
-                        CreateAuthenticatorCode(
-                            setup.SharedKey)
-                });
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            enableResponse.StatusCode);
+        var mfaSession =
+            await LoginWithTwoFactorAsync(
+                client,
+                initialSession.Email,
+                sharedKey);
 
         var originalSecurityStamp =
             await GetSecurityStampAsync(
                 factory,
-                firstSession.Email);
+                initialSession.Email);
+
+        TestUserAuthentication.Authorize(
+            client,
+            mfaSession);
 
         using var disableResponse =
             await client.PostAsJsonAsync(
@@ -91,7 +58,7 @@ public sealed class TwoFactorDisableSecurityTests
 
                     twoFactorCode =
                         CreateAuthenticatorCode(
-                            setup.SharedKey)
+                            sharedKey)
                 });
 
         Assert.Equal(
@@ -109,54 +76,38 @@ public sealed class TwoFactorDisableSecurityTests
 
             var user =
                 await userManager.FindByEmailAsync(
-                    firstSession.Email);
+                    initialSession.Email);
 
             Assert.NotNull(user);
             Assert.False(
                 await userManager.GetTwoFactorEnabledAsync(
                     user!));
 
-            var updatedSecurityStamp =
-                await userManager.GetSecurityStampAsync(
-                    user!);
-
             Assert.NotEqual(
                 originalSecurityStamp,
-                updatedSecurityStamp);
+                await userManager.GetSecurityStampAsync(
+                    user!));
         }
 
         client.DefaultRequestHeaders.Authorization =
             null;
 
-        using var firstRefreshResponse =
+        using var refreshResponse =
             await client.PostAsJsonAsync(
                 "/api/auth/refresh",
                 new
                 {
                     refreshToken =
-                        firstSession.RefreshToken
+                        mfaSession.RefreshToken
                 });
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
-            firstRefreshResponse.StatusCode);
-
-        using var secondRefreshResponse =
-            await client.PostAsJsonAsync(
-                "/api/auth/refresh",
-                new
-                {
-                    refreshToken =
-                        secondSession.RefreshToken
-                });
-
-        Assert.Equal(
-            HttpStatusCode.Unauthorized,
-            secondRefreshResponse.StatusCode);
+            refreshResponse.StatusCode);
     }
 
     [Fact]
-    public async Task Disable_InvalidAuthenticatorCode_DoesNotDisableMfaOrRevokeRefreshToken()
+    public async Task Disable_InvalidAuthenticatorCode_PreservesMfaStampAndRefreshToken()
     {
         await using var factory =
             new FullWorthApiFactory();
@@ -164,61 +115,33 @@ public sealed class TwoFactorDisableSecurityTests
         using var client =
             factory.CreateHttpsClient();
 
-        var session =
+        var initialSession =
             await TestUserAuthentication.RegisterAndLoginAsync(
                 client);
 
-        TestUserAuthentication.Authorize(
-            client,
-            session);
+        var sharedKey =
+            await EnableTwoFactorAsync(
+                client,
+                initialSession);
 
-        using var setupResponse =
-            await client.PostAsJsonAsync(
-                "/api/account/security/two-factor/setup",
-                new
-                {
-                    currentPassword =
-                        Password,
-
-                    twoFactorCode =
-                        (string?)null
-                });
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            setupResponse.StatusCode);
-
-        var setup =
-            await setupResponse.Content
-                .ReadFromJsonAsync<SetupResponse>();
-
-        Assert.NotNull(setup);
-
-        using var enableResponse =
-            await client.PostAsJsonAsync(
-                "/api/account/security/two-factor/enable",
-                new
-                {
-                    currentPassword =
-                        Password,
-
-                    authenticatorCode =
-                        CreateAuthenticatorCode(
-                            setup.SharedKey)
-                });
-
-        Assert.Equal(
-            HttpStatusCode.OK,
-            enableResponse.StatusCode);
+        var mfaSession =
+            await LoginWithTwoFactorAsync(
+                client,
+                initialSession.Email,
+                sharedKey);
 
         var originalSecurityStamp =
             await GetSecurityStampAsync(
                 factory,
-                session.Email);
+                initialSession.Email);
+
+        TestUserAuthentication.Authorize(
+            client,
+            mfaSession);
 
         var currentCode =
             CreateAuthenticatorCode(
-                setup.SharedKey);
+                sharedKey);
 
         var invalidCode =
             string.Equals(
@@ -255,7 +178,7 @@ public sealed class TwoFactorDisableSecurityTests
 
             var user =
                 await userManager.FindByEmailAsync(
-                    session.Email);
+                    initialSession.Email);
 
             Assert.NotNull(user);
             Assert.True(
@@ -277,12 +200,110 @@ public sealed class TwoFactorDisableSecurityTests
                 new
                 {
                     refreshToken =
-                        session.RefreshToken
+                        mfaSession.RefreshToken
                 });
 
         Assert.Equal(
             HttpStatusCode.OK,
             refreshResponse.StatusCode);
+    }
+
+    private static async Task<string> EnableTwoFactorAsync(
+        HttpClient client,
+        TestUserSession initialSession)
+    {
+        TestUserAuthentication.Authorize(
+            client,
+            initialSession);
+
+        using var setupResponse =
+            await client.PostAsJsonAsync(
+                "/api/account/security/two-factor/setup",
+                new
+                {
+                    currentPassword =
+                        Password,
+
+                    twoFactorCode =
+                        (string?)null
+                });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            setupResponse.StatusCode);
+
+        var setup =
+            await setupResponse.Content
+                .ReadFromJsonAsync<SetupResponse>();
+
+        Assert.NotNull(setup);
+
+        using var enableResponse =
+            await client.PostAsJsonAsync(
+                "/api/account/security/two-factor/enable",
+                new
+                {
+                    currentPassword =
+                        Password,
+
+                    authenticatorCode =
+                        CreateAuthenticatorCode(
+                            setup.SharedKey)
+                });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            enableResponse.StatusCode);
+
+        return setup.SharedKey;
+    }
+
+    private static async Task<TestUserSession>
+        LoginWithTwoFactorAsync(
+            HttpClient client,
+            string email,
+            string sharedKey)
+    {
+        client.DefaultRequestHeaders.Authorization =
+            null;
+
+        using var loginResponse =
+            await client.PostAsJsonAsync(
+                "/api/auth/login",
+                new
+                {
+                    email,
+                    password =
+                        Password,
+
+                    twoFactorCode =
+                        CreateAuthenticatorCode(
+                            sharedKey),
+
+                    twoFactorRecoveryCode =
+                        (string?)null
+                });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var login =
+            await loginResponse.Content
+                .ReadFromJsonAsync<LoginResponse>();
+
+        Assert.NotNull(login);
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                login.AccessToken));
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                login.RefreshToken));
+
+        return new TestUserSession(
+            email,
+            login.AccessToken,
+            login.RefreshToken);
     }
 
     private static async Task<string>
@@ -311,6 +332,12 @@ public sealed class TwoFactorDisableSecurityTests
     private sealed record SetupResponse(
         string SharedKey,
         string OtpAuthUri);
+
+    private sealed record LoginResponse(
+        string TokenType,
+        string AccessToken,
+        long ExpiresIn,
+        string RefreshToken);
 
     private static string CreateAuthenticatorCode(
         string key)
