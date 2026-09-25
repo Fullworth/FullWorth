@@ -83,6 +83,7 @@ if [ -n "$foreign_two_factor_code_file" ]; then
 fi
 if [ -n "$foreign_recovery_code_file" ]; then
     require_secret_file "$foreign_recovery_code_file" "BILLWATCH_WEB_OWNERSHIP_FOREIGN_RECOVERY_CODE_FILE"
+    fail "The ownership smoke derives its fixture through account export strong reauthentication, which requires a current authenticator code. Use BILLWATCH_WEB_OWNERSHIP_FOREIGN_TWO_FACTOR_CODE_FILE instead of a recovery code." 64
 fi
 
 work_directory="$(mktemp -d)"
