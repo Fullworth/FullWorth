@@ -69,6 +69,29 @@ public sealed class AccountDataExportTests
     }
 
     [Fact]
+    public async Task ExportAccountData_LegacyGet_IsNotAvailable()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.GetAsync(
+                "/api/account/export");
+
+        Assert.Equal(
+            HttpStatusCode.MethodNotAllowed,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task ExportAccountData_WrongPassword_IsRejected()
     {
         using var client =
