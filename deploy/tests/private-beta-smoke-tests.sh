@@ -24,6 +24,10 @@ grep -Fq 'BILLWATCH_SMOKE_ALLOW_MUTATIONS:-false' "$smoke_script" ||
     fail "smoke harness mutations must be disabled by default."
 grep -Fq 'Account export contained a forbidden secret or internal-storage field.' "$smoke_script" ||
     fail "smoke harness must inspect account export for forbidden fields."
+grep -Fq '"currentPassword":"%s"' "$smoke_script" ||
+    fail "account export smoke must use current-password reauthentication."
+grep -Fq -- '--request POST' "$smoke_script" ||
+    fail "account export smoke must use POST."
 
 if grep -E -- '--header[ =]+["'\'']?Authorization: Bearer' "$smoke_script" >/dev/null; then
     fail "smoke harness must not place bearer tokens directly in curl argv."
@@ -40,6 +44,7 @@ set -eu
 output=""
 url=""
 request="GET"
+data_binary_file=""
 
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
@@ -54,7 +59,11 @@ do
             request="$2"
             shift 2
             ;;
-        --write-out|--header|--data-binary|--config)
+        --data-binary)
+            data_binary_file="${2#@}"
+            shift 2
+            ;;
+        --write-out|--header|--config)
             shift 2
             ;;
         --silent|--show-error)
@@ -83,6 +92,9 @@ case "$url" in
         body='{"accessToken":"SECRET-REFRESHED-ACCESS-TOKEN","refreshToken":"SECRET-ROTATED-REFRESH-TOKEN"}'
         ;;
     */api/account/export)
+        [ "$request" = "POST" ] || exit 92
+        [ -f "$data_binary_file" ] || exit 93
+        grep -Fq '"currentPassword":"SmokePassword!123456"' "$data_binary_file" || exit 94
         if [ "${FAKE_EXPORT_SECRET:-false}" = "true" ]; then
             body='{"email":"smoke@example.test","protectedAccessToken":"must-never-export"}'
         else
