@@ -152,9 +152,9 @@ public sealed class AdminAuthorizationIntegrationTests
             owner);
 
         using var promoteResponse =
-            await ownerClient.PostAsync(
+            await ownerClient.PostAsJsonAsync(
                 $"/api/admin/users/{targetUserId:D}/roles/Admin",
-                content: null);
+                CreateRoleAssignmentRequest());
 
         Assert.Equal(
             HttpStatusCode.NoContent,
@@ -238,9 +238,9 @@ public sealed class AdminAuthorizationIntegrationTests
             admin);
 
         using var adminEscalationAttempt =
-            await adminClient.PostAsync(
+            await adminClient.PostAsJsonAsync(
                 $"/api/admin/users/{targetUserId:D}/roles/Admin",
-                content: null);
+                CreateRoleAssignmentRequest());
 
         Assert.Equal(
             HttpStatusCode.Forbidden,
@@ -259,6 +259,132 @@ public sealed class AdminAuthorizationIntegrationTests
         Assert.Equal(
             HttpStatusCode.Forbidden,
             adminManageOwnerAttempt.StatusCode);
+    }
+
+    [Fact]
+    public async Task AssignRole_WrongPassword_IsRejectedWithoutGrantingRole()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PostAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Moderator",
+                CreateRoleAssignmentRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        var targetAfter =
+            await TestUserAuthentication.LoginAsync(
+                targetClient,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            targetClient,
+            targetAfter);
+
+        using var adminResponse =
+            await targetClient.GetAsync(
+                "/api/admin/users");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            adminResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task AssignRole_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var ownerUser =
+                await userManager.FindByEmailAsync(
+                    owner.Email);
+
+            Assert.NotNull(
+                ownerUser);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    ownerUser!,
+                    true);
+
+            Assert.True(
+                enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PostAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Moderator",
+                CreateRoleAssignmentRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 
     [Fact]
@@ -478,6 +604,15 @@ public sealed class AdminAuthorizationIntegrationTests
             HttpStatusCode.BadRequest,
             revokedRedeemResponse.StatusCode);
     }
+
+    private static object CreateRoleAssignmentRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
+        new
+        {
+            currentPassword,
+            twoFactorCode
+        };
 
     private static object CreateAccessKeyRequest(
         string currentPassword = TestPassword,
