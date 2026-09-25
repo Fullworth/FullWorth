@@ -293,22 +293,34 @@ public sealed class WebAuthenticationService
 
         if (!response.IsSuccessStatusCode)
         {
-            var error =
-                await ReadRegistrationErrorAsync(
+            var failure =
+                await ReadRegistrationFailureAsync(
                     response,
                     cancellationToken);
 
+            if (failure.IsDuplicateIdentity)
+            {
+                /*
+                 * Anonymous registration must not reveal whether the submitted
+                 * email already belongs to a FullWorth account. Return the same
+                 * public outcome as a newly created account and require the
+                 * caller to sign in separately.
+                 */
+                return AuthOperationResult.Success;
+            }
+
             return new AuthOperationResult(
                 false,
-                error);
+                failure.Message);
         }
 
-        return await LoginAsync(
-            httpContext,
-            email,
-            password,
-            rememberMe: false,
-            cancellationToken);
+        /*
+         * Do not auto-sign-in after registration. A separate sign-in step makes
+         * the public registration outcome indistinguishable from a duplicate
+         * email submission while preserving the existing password-validation
+         * and legal-acceptance errors for malformed requests.
+         */
+        return AuthOperationResult.Success;
     }
 
     public async Task<AuthOperationResult>
@@ -812,16 +824,17 @@ public sealed class WebAuthenticationService
         return null;
     }
 
-    private static async Task<string>
-        ReadRegistrationErrorAsync(
+    private static async Task<RegistrationFailure>
+        ReadRegistrationFailureAsync(
             HttpResponseMessage response,
             CancellationToken cancellationToken)
     {
         if (response.StatusCode ==
             HttpStatusCode.TooManyRequests)
         {
-            return
-                "Too many attempts. Wait a minute and try again.";
+            return new RegistrationFailure(
+                false,
+                "Too many attempts. Wait a minute and try again.");
         }
 
         var body =
@@ -832,8 +845,9 @@ public sealed class WebAuthenticationService
         if (string.IsNullOrWhiteSpace(
                 body))
         {
-            return
-                "FullWorth could not create the account.";
+            return new RegistrationFailure(
+                false,
+                "FullWorth could not create the account.");
         }
 
         try
@@ -854,6 +868,18 @@ public sealed class WebAuthenticationService
                 foreach (var property
                     in errors.EnumerateObject())
                 {
+                    if (property.Name.Equals(
+                            "DuplicateEmail",
+                            StringComparison.OrdinalIgnoreCase) ||
+                        property.Name.Equals(
+                            "DuplicateUserName",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new RegistrationFailure(
+                            true,
+                            string.Empty);
+                    }
+
                     if (property.Value.ValueKind !=
                         JsonValueKind.Array)
                     {
@@ -870,7 +896,9 @@ public sealed class WebAuthenticationService
                         if (!string.IsNullOrWhiteSpace(
                                 message))
                         {
-                            return message;
+                            return new RegistrationFailure(
+                                false,
+                                message);
                         }
                     }
                 }
@@ -886,7 +914,9 @@ public sealed class WebAuthenticationService
                 if (!string.IsNullOrWhiteSpace(
                         message))
                 {
-                    return message;
+                    return new RegistrationFailure(
+                        false,
+                        message);
                 }
             }
 
@@ -900,7 +930,9 @@ public sealed class WebAuthenticationService
                 if (!string.IsNullOrWhiteSpace(
                         message))
                 {
-                    return message;
+                    return new RegistrationFailure(
+                        false,
+                        message);
                 }
             }
         }
@@ -909,9 +941,14 @@ public sealed class WebAuthenticationService
             // Do not expose an unexpected raw server response.
         }
 
-        return
-            "FullWorth could not create the account. Check the information and try again.";
+        return new RegistrationFailure(
+            false,
+            "FullWorth could not create the account. Check the information and try again.");
     }
+
+    private sealed record RegistrationFailure(
+        bool IsDuplicateIdentity,
+        string Message);
 }
 
 public sealed record AuthOperationResult(

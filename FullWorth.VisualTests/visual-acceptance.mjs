@@ -69,10 +69,24 @@ try {
   await page.locator('input[name="acceptedTermsAndPrivacy"]').check();
 
   await Promise.all([
-    page.waitForURL(url => url.pathname === "/app/setup", { timeout: 20000 }),
+    page.waitForURL(url =>
+      url.pathname === "/login" &&
+      url.searchParams.get("message") ===
+        "Registration request received. Sign in to continue.",
+      { timeout: 20000 }),
     page.locator('button[type="submit"]').click()
   ]);
 
+  await settle(".auth-form");
+  await page.locator('input[name="email"]').fill(email);
+  await page.locator('input[name="password"]').fill(password);
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname.startsWith("/app"), { timeout: 20000 }),
+    page.locator('button[type="submit"]').click()
+  ]);
+
+  await page.goto("/app/setup", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
   await page.screenshot({
     path: path.join(outputDir, "setup-desktop-dark.png"),
