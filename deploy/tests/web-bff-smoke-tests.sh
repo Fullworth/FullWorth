@@ -224,6 +224,10 @@ two_factor_file="$temp_dir/two-factor"
 printf '%s\n' '123456' > "$two_factor_file"
 chmod 600 "$two_factor_file"
 
+recovery_file="$temp_dir/recovery"
+printf '%s\n' 'recovery-code' > "$recovery_file"
+chmod 600 "$recovery_file"
+
 run_smoke()
 {
     rm -f "$logged_out"
@@ -237,6 +241,15 @@ run_smoke()
         sh "$smoke_script" \
             'https://web.example.test'
 }
+
+: > "$curl_log"
+if run_smoke \
+    BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE="$recovery_file" \
+    > /dev/null 2>&1; then
+    fail "Web/BFF smoke harness accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "Web/BFF smoke made a request before rejecting recovery-only mode."
 
 : > "$curl_log"
 run_smoke \
