@@ -510,18 +510,6 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
-        /*
-         * Disabling MFA removes an authentication factor. Rotate the
-         * security stamp on the tracked user before the Identity update so
-         * the MFA state change and refresh-session revocation persist
-         * together. Already-issued bearer access remains bounded by the
-         * configured access-token lifetime.
-         */
-        user.SecurityStamp =
-            Convert.ToHexString(
-                    RandomNumberGenerator.GetBytes(32))
-                .ToLowerInvariant();
-
         var result =
             await userManager.SetTwoFactorEnabledAsync(
                 user,
