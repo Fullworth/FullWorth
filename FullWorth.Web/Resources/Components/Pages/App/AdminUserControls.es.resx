@@ -39,4 +39,6 @@
   <data name="Enter your current password before assigning a staff role." xml:space="preserve"><value>Introduce tu contraseña actual antes de asignar un rol de personal.</value></data>
   <data name="Your current password is incorrect." xml:space="preserve"><value>Tu contraseña actual es incorrecta.</value></data>
   <data name="Enter a valid current authenticator code if two-factor authentication is enabled." xml:space="preserve"><value>Introduce un código actual válido del autenticador si la autenticación en dos pasos está activada.</value></data>
+
+  <data name="Enter your current password before granting access." xml:space="preserve"><value>Introduce tu contraseña actual antes de otorgar acceso.</value></data>
 </root>
