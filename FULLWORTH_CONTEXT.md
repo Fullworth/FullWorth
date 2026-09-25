@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-24
 
+## MFA disable/session revocation checkpoint — 2026-09-25
+
+PR #327 fixed replayed MFA enrollment: a repeated successful `two-factor/enable` request now returns 409 before mutation, preserving the recovery codes already issued and leaving the security stamp unchanged. Exact head `0e0359305122532af224e43c90fdb3fe8b93846c` passed dependency security #70 and full CI #958 before squash merge as `eb5cf04420f599694bbd96a00f9a1a0b3f14d459`.
+
+PR #328 fixed the next confirmed MFA gap: disabling 2FA previously left existing refresh families renewable. After valid password/current-authenticator proof, the API now rotates Identity `SecurityStamp` before writing the weaker MFA-disabled state. This ordering is fail-safe: if the later disable write fails, sessions are revoked but MFA remains enabled. Successful Web/BFF disable also removes the current protected Web session and returns the browser to sign-in. Invalid proof rotates nothing, leaves MFA enabled, and preserves the existing refresh session. Existing remote bearer access remains bounded by the normal 15-minute bearer lifetime; FullWorth does not claim instant remote bearer invalidation.
+
+PR #328 initially exposed one Web compile error because the Settings page did not inject `NavigationManager`; the missing injection was fixed without changing security semantics. Corrected exact head `dab33016099419ba7732c24ed1c85bfb72decc47` passed dependency security #73 and full CI #961 across backend/tests, migration verification, MAUI gating, production API/Web containers, visual acceptance, HTTP security, encrypted backup and isolated recovery before squash merge as `8be4e68967632b505a421af1f845209ff5fb3d86`.
+
+The MFA review remains open. Continue with setup/reset failure atomicity, then broader recovery semantics and enumeration/error behavior. Do not claim globally single-use TOTP verification or a complete MFA concurrency audit.
+
 ## MFA enrollment replay checkpoint — 2026-09-25
 
 The enrollment audit reproduced a confirmed defect: replaying a successful `two-factor/enable` request silently replaced the recovery codes just issued and rotated revocation state again. The enable endpoint now rejects an already-enabled account with 409 after password verification and before further mutation. Intentional recovery-code replacement remains on the strongly reauthenticated regeneration endpoint. The Web explains how to obtain replacement codes, with Spanish localization.
@@ -44,7 +54,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `3d8187b4f81a44f2248bbeda66914260a5d0a721` after PR #324 completed the current strong-reauthentication audit by hardening sensitive account export.
+- Current `development`: `8be4e68967632b505a421af1f845209ff5fb3d86` after PR #328 added refresh-session revocation and current-Web-session signout for MFA disable.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -325,7 +335,7 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. MFA enrollment replay is covered by the newer checkpoint above. Continue the remaining MFA review with setup/reset failure atomicity, disabling behavior, recovery semantics, and enumeration/error behavior before changing code.
+3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. MFA enrollment replay is covered by PR #327 and MFA-disable refresh-session revocation by PR #328. Continue the remaining MFA review with setup/reset failure atomicity first, then recovery semantics and enumeration/error behavior; inspect current source and patch only confirmed gaps.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
