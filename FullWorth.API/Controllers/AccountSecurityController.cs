@@ -511,27 +511,12 @@ public sealed class AccountSecurityController(
         }
 
         /*
-         * Disabling MFA weakens the account's authentication boundary.
-         * Revoke every existing refresh family before applying that weaker
-         * state. Existing self-contained access tokens remain bounded by the
-         * normal 15-minute access-token lifetime.
-         *
-         * The ordering is intentional: if the later disable write fails, the
-         * account remains MFA-protected even though sessions were revoked.
+         * ASP.NET Core Identity's SetTwoFactorEnabledAsync transition rotates
+         * SecurityStamp as part of the same user update. FullWorth regression
+         * coverage verifies that refresh tokens issued after MFA enrollment
+         * are rejected after this succeeds, while rejected credential proof
+         * leaves the stamp and refresh session unchanged.
          */
-        var revokeResult =
-            await userManager.UpdateSecurityStampAsync(
-                user);
-
-        if (!revokeResult.Succeeded)
-        {
-            return Problem(
-                statusCode:
-                    StatusCodes.Status503ServiceUnavailable,
-                title:
-                    "FullWorth could not disable two-factor authentication safely.");
-        }
-
         var result =
             await userManager.SetTwoFactorEnabledAsync(
                 user,
