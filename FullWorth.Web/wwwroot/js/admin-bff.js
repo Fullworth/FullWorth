@@ -250,11 +250,18 @@ export async function getAdminAuditLog(
 
 export async function assignAdminRole(
     userId,
-    roleName) {
+    roleName,
+    request) {
+
+    if (!request) {
+        throw new Error(
+            "Reauthentication credentials are required.");
+    }
 
     return await mutateAdminJson(
         `/bff/admin/users/${requireIdentifier(userId, "User ID")}/roles/${requireIdentifier(roleName, "Role")}`,
-        "POST");
+        "POST",
+        request);
 }
 
 export async function removeAdminRole(
