@@ -85,11 +85,32 @@ public sealed class AdminUsersController(
     public async Task<IActionResult> AssignRole(
         Guid targetUserId,
         string roleName,
+        AssignRoleRequest request,
         CancellationToken cancellationToken)
     {
         if (!TryGetActorUserId(out var actorUserId))
         {
             return Unauthorized();
+        }
+
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
+        {
+            return Unauthorized();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
         }
 
         var result = await managementService.AssignRoleAsync(
@@ -222,13 +243,80 @@ public sealed class AdminUsersController(
         };
     }
 
+    private async Task<ActionResult?> ValidateSensitiveCredentialsAsync(
+        ApplicationUser user,
+        string currentPassword,
+        string? twoFactorCode)
+    {
+        if (string.IsNullOrWhiteSpace(currentPassword) ||
+            !await userManager.CheckPasswordAsync(
+                user,
+                currentPassword))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "Current password is incorrect.");
+        }
+
+        if (!await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(twoFactorCode))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "A current authenticator code is required.");
+        }
+
+        var validTwoFactorCode =
+            await userManager.VerifyTwoFactorTokenAsync(
+                user,
+                userManager.Options.Tokens.AuthenticatorTokenProvider,
+                NormalizeAuthenticatorCode(twoFactorCode));
+
+        if (!validTwoFactorCode)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "The authenticator code is invalid.");
+        }
+
+        return null;
+    }
+
     private bool TryGetActorUserId(out Guid actorUserId)
     {
         return Guid.TryParse(
             userManager.GetUserId(User),
             out actorUserId);
     }
+
+    private static string NormalizeAuthenticatorCode(
+        string code)
+    {
+        return code
+            .Replace(
+                " ",
+                string.Empty,
+                StringComparison.Ordinal)
+            .Replace(
+                "-",
+                string.Empty,
+                StringComparison.Ordinal);
+    }
 }
+
+public sealed record AssignRoleRequest(
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record GrantEntitlementRequest(
     string Tier,
