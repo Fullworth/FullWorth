@@ -6,92 +6,294 @@
 
 <div class="landing-page">
     <section class="hero">
+        <div class="hero-aurora hero-aurora-one" aria-hidden="true"></div>
+        <div class="hero-aurora hero-aurora-two" aria-hidden="true"></div>
+
         <div class="hero-copy">
-            <div class="eyebrow"><span></span>@L["One clear view of your money"]</div>
-            <h1>@L["Your entire financial life."] <span>@L["One app."]</span></h1>
-            <p>@L["FullWorth brings accounts, spending, recurring bills, and important changes together so you can see what matters without digging through separate apps."]</p>
-            <div class="hero-actions">
-                <a class="primary-button" href="/register">@L["Get started"] <span aria-hidden="true">→</span></a>
-                <a class="secondary-button" href="#inside">@L["See what's inside"]</a>
+            <div class="eyebrow">
+                <span class="eyebrow-dot"></span>
+                @L["One clear view of your money"]
             </div>
-            <div class="trust-row">
+
+            <h1>
+                @L["Your entire financial life."]
+                <span>@L["One app."]</span>
+            </h1>
+
+            <p class="hero-description">
+                @L["FullWorth brings accounts, spending, recurring bills, and important changes together so you can see what matters without digging through separate apps."]
+            </p>
+
+            <div class="hero-actions">
+                <a class="primary-button" href="/register">
+                    @L["Get started"]
+                    <span aria-hidden="true">→</span>
+                </a>
+
+                <a class="secondary-button" href="#inside">
+                    @L["See what's inside"]
+                </a>
+            </div>
+
+            <div class="trust-row" aria-label="@L["FullWorth product principles"]">
                 <span>✓ @L["Read-only financial visibility"]</span>
                 <span>✓ @L["No money movement"]</span>
                 <span>✓ @L["Evidence-first insights"]</span>
             </div>
         </div>
 
-        <div class="snapshot" aria-label="@L["Example FullWorth financial overview"]">
-            <div class="snapshot-top">
-                <div>
-                    <span class="snapshot-label">@L["Financial overview"]</span>
+        <div class="hero-product">
+            <div class="product-orbit product-orbit-left" aria-hidden="true">
+                <span>@L["Recurring monthly"]</span>
+                <strong>$1,294</strong>
+                <small>@L["11 detected bills"]</small>
+            </div>
+
+            <div class="snapshot" aria-label="@L["Example FullWorth financial overview"]">
+                <div class="snapshot-header">
+                    <div class="snapshot-brand">
+                        <span class="snapshot-logo" aria-hidden="true"></span>
+                        <div>
+                            <strong>FullWorth</strong>
+                            <small>@L["Financial overview"]</small>
+                        </div>
+                    </div>
+
+                    <span class="live-pill">
+                        <i></i>
+                        @L["Connected"]
+                    </span>
+                </div>
+
+                <div class="snapshot-balance">
+                    <span>@L["Example net position"]</span>
                     <strong>$18,420</strong>
-                    <small>@L["Example net position"]</small>
+                    <small>@L["Across your connected financial life"]</small>
                 </div>
-                <span class="live-pill"><i></i>@L["Connected"]</span>
+
+                <div class="metric-grid">
+                    <div>
+                        <span>@L["Cash"]</span>
+                        <strong>$6,840</strong>
+                        <small>@L["Across 2 accounts"]</small>
+                    </div>
+
+                    <div>
+                        <span>@L["Debt"]</span>
+                        <strong>$3,120</strong>
+                        <small>@L["Across 2 accounts"]</small>
+                    </div>
+
+                    <div>
+                        <span>@L["Spent this month"]</span>
+                        <strong>$2,486</strong>
+                        <small>@L["Example activity"]</small>
+                    </div>
+
+                    <div>
+                        <span>@L["Recurring monthly"]</span>
+                        <strong>$1,294</strong>
+                        <small>@L["11 detected bills"]</small>
+                    </div>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-icon">!</div>
+
+                    <div>
+                        <span>@L["Bill change detected"]</span>
+                        <strong>@L["Internet increased by $25/month"]</strong>
+                        <small>@L["$300 annualized impact · explanation available"]</small>
+                    </div>
+
+                    <span class="signal-arrow" aria-hidden="true">→</span>
+                </div>
             </div>
 
-            <div class="metric-grid">
-                <div><span>@L["Cash"]</span><strong>$6,840</strong><small>@L["Across 2 accounts"]</small></div>
-                <div><span>@L["Debt"]</span><strong>$3,120</strong><small>@L["Across 2 accounts"]</small></div>
-                <div><span>@L["Spent this month"]</span><strong>$2,486</strong><small>@L["Example activity"]</small></div>
-                <div><span>@L["Recurring monthly"]</span><strong>$1,294</strong><small>@L["11 detected bills"]</small></div>
-            </div>
-
-            <div class="signal-card">
-                <div class="signal-icon">!</div>
-                <div>
-                    <span>@L["Bill change detected"]</span>
-                    <strong>@L["Internet increased by $25/month"]</strong>
-                    <small>@L["$300 annualized impact · explanation available"]</small>
-                </div>
-                <span class="signal-arrow">→</span>
+            <div class="product-orbit product-orbit-right" aria-hidden="true">
+                <span>@L["Annual impact"]</span>
+                <strong>+$300</strong>
+                <small>@L["From one detected change"]</small>
             </div>
         </div>
     </section>
 
-    <section class="capability-strip" id="inside">
-        <article><span>01</span><strong>@L["See the whole picture"]</strong><p>@L["Bring connected accounts and financial activity into one calm overview."]</p></article>
-        <article><span>02</span><strong>@L["Understand your spending"]</strong><p>@L["See transactions and recurring costs without maintaining another budget."]</p></article>
-        <article><span>03</span><strong>@L["Catch changes early"]</strong><p>@L["Surface meaningful bill increases and their monthly and annual impact."]</p></article>
+    <section class="proof-band" aria-label="@L["What FullWorth brings together"]">
+        <span>@L["Accounts"]</span>
+        <i></i>
+        <span>@L["Transactions"]</span>
+        <i></i>
+        <span>@L["Recurring bills"]</span>
+        <i></i>
+        <span>@L["Statements"]</span>
+        <i></i>
+        <span>@L["Meaningful changes"]</span>
+    </section>
+
+    <section class="capability-section" id="inside">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">@L["Built for clarity"]</span>
+                <h2>
+                    @L["Less financial noise."]
+                    <span>@L["More signal."]</span>
+                </h2>
+            </div>
+
+            <p>
+                @L["FullWorth organizes the parts of your financial life that usually live in separate places, then brings important changes to the surface."]
+            </p>
+        </div>
+
+        <div class="capability-grid">
+            <article class="capability-card">
+                <span class="capability-number">01</span>
+                <div class="capability-icon" aria-hidden="true">◎</div>
+                <strong>@L["See the whole picture"]</strong>
+                <p>@L["Bring connected accounts and financial activity into one calm overview."]</p>
+            </article>
+
+            <article class="capability-card featured-capability">
+                <span class="capability-number">02</span>
+                <div class="capability-icon" aria-hidden="true">↗</div>
+                <strong>@L["Understand your spending"]</strong>
+                <p>@L["See transactions and recurring costs without maintaining another budget."]</p>
+            </article>
+
+            <article class="capability-card">
+                <span class="capability-number">03</span>
+                <div class="capability-icon" aria-hidden="true">!</div>
+                <strong>@L["Catch changes early"]</strong>
+                <p>@L["Surface meaningful bill increases and their monthly and annual impact."]</p>
+            </article>
+        </div>
     </section>
 
     <section class="intelligence-section" id="intelligence">
         <div class="section-copy">
             <div class="section-kicker">@L["More than a dashboard"]</div>
-            <h2>@L["Know what changed,"] <span>@L["not just what you spent."]</span></h2>
-            <p>@L["FullWorth starts with real transaction activity. When trustworthy statement evidence is available, it can connect a recurring increase to the charges behind it instead of guessing."]</p>
+
+            <h2>
+                @L["Know what changed,"]
+                <span>@L["not just what you spent."]</span>
+            </h2>
+
+            <p>
+                @L["FullWorth starts with real transaction activity. When trustworthy statement evidence is available, it can connect a recurring increase to the charges behind it instead of guessing."]
+            </p>
+
             <div class="principles">
-                <div><b>✓</b><span><strong>@L["Transaction-first"]</strong><small>@L["Actual money movement comes first."]</small></span></div>
-                <div><b>✓</b><span><strong>@L["Evidence-backed"]</strong><small>@L["Explanations stay tied to validated evidence."]</small></span></div>
-                <div><b>✓</b><span><strong>@L["Real impact"]</strong><small>@L["See monthly changes and annualized cost."]</small></span></div>
+                <div>
+                    <b>✓</b>
+                    <span>
+                        <strong>@L["Transaction-first"]</strong>
+                        <small>@L["Actual money movement comes first."]</small>
+                    </span>
+                </div>
+
+                <div>
+                    <b>✓</b>
+                    <span>
+                        <strong>@L["Evidence-backed"]</strong>
+                        <small>@L["Explanations stay tied to validated evidence."]</small>
+                    </span>
+                </div>
+
+                <div>
+                    <b>✓</b>
+                    <span>
+                        <strong>@L["Real impact"]</strong>
+                        <small>@L["See monthly changes and annualized cost."]</small>
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div class="change-card">
-            <div class="change-head"><span>@L["Recurring bill"]</span><b>@L["Increase detected"]</b></div>
-            <div class="provider-row"><div class="provider-mark">I</div><div><strong>@L["Internet"]</strong><small>@L["Monthly service"]</small></div></div>
-            <div class="price-row"><span>$79.99</span><i>→</i><strong>$104.99</strong></div>
-            <div class="impact-row"><div><span>@L["Monthly change"]</span><strong>+$25</strong></div><div><span>@L["Annual impact"]</span><strong>+$300</strong></div></div>
-            <div class="reason-row"><span>@L["Why it changed"]</span><strong>@L["Promotion ended + service fee"]</strong></div>
+        <div class="change-stage">
+            <div class="change-glow" aria-hidden="true"></div>
+
+            <div class="change-card">
+                <div class="change-head">
+                    <span>@L["Recurring bill"]</span>
+                    <b>@L["Increase detected"]</b>
+                </div>
+
+                <div class="provider-row">
+                    <div class="provider-mark">I</div>
+                    <div>
+                        <strong>@L["Internet"]</strong>
+                        <small>@L["Monthly service"]</small>
+                    </div>
+                </div>
+
+                <div class="price-row">
+                    <span>$79.99</span>
+                    <i>→</i>
+                    <strong>$104.99</strong>
+                </div>
+
+                <div class="impact-row">
+                    <div>
+                        <span>@L["Monthly change"]</span>
+                        <strong>+$25</strong>
+                    </div>
+
+                    <div>
+                        <span>@L["Annual impact"]</span>
+                        <strong>+$300</strong>
+                    </div>
+                </div>
+
+                <div class="reason-row">
+                    <span>@L["Why it changed"]</span>
+                    <strong>@L["Promotion ended + service fee"]</strong>
+                </div>
+
+                <div class="evidence-row">
+                    <span class="evidence-dot"></span>
+                    @L["Explanation tied to available evidence"]
+                </div>
+            </div>
         </div>
     </section>
 
     <section class="security-section" id="security">
-        <div>
+        <div class="security-copy">
             <div class="section-kicker">@L["Designed for financial data"]</div>
             <h2>@L["Visibility without control of your money."]</h2>
+            <p>@L["FullWorth is designed to monitor and explain financial activity, not move money. Private financial records remain behind authenticated, user-scoped access."]</p>
         </div>
-        <p>@L["FullWorth is designed to monitor and explain financial activity, not move money. Private financial records remain behind authenticated, user-scoped access."]</p>
-        <div class="security-points"><span>✓ @L["Read-only product model"]</span><span>✓ @L["User-scoped records"]</span><span>✓ @L["No invented explanations"]</span></div>
+
+        <div class="security-grid">
+            <div>
+                <span aria-hidden="true">◈</span>
+                <strong>@L["Read-only product model"]</strong>
+            </div>
+
+            <div>
+                <span aria-hidden="true">◎</span>
+                <strong>@L["User-scoped records"]</strong>
+            </div>
+
+            <div>
+                <span aria-hidden="true">✓</span>
+                <strong>@L["No invented explanations"]</strong>
+            </div>
+        </div>
     </section>
 
     <section class="closing-section">
+        <div class="closing-glow" aria-hidden="true"></div>
+
         <div>
             <span>@L["FULLWORTH"]</span>
             <h2>@L["See your money clearly."]</h2>
             <p>@L["Accounts, transactions, recurring costs, and meaningful changes — together."]</p>
         </div>
-        <a href="/register">@L["Create your account"] <span aria-hidden="true">→</span></a>
+
+        <a href="/register">
+            @L["Create your account"]
+            <span aria-hidden="true">→</span>
+        </a>
     </section>
 </div>
