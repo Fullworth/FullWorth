@@ -596,6 +596,92 @@ public sealed class WebPwaBoundaryTests
             StringComparison.OrdinalIgnoreCase);
     }
     [Fact]
+    public void WhatsNewDialog_IsBoundToTheExactDeployedRelease()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var dialog =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "WhatsNewDialog.razor"));
+
+        var layout =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "AppLayout.razor"));
+
+        var productionCompose =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "compose.production.yml"));
+
+        Assert.Contains(
+            "<WhatsNewDialog />",
+            layout,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "Configuration[\"BILLWATCH_RELEASE_ID\"]",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"fullworth.whats-new.seen-release\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"localStorage.getItem\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"localStorage.setItem\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "releaseId.Length != 40",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "character is >= '0' and <= '9' or",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            ">= 'a' and <= 'f'",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}",
+            productionCompose,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "/bff/",
+            dialog,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "/api/",
+            dialog,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task AuthenticatedVisualSystem_DoesNotUseTinyTextSizes()
     {
         using var factory =
