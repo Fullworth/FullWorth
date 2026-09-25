@@ -6,6 +6,7 @@ using FullWorth.API.Services.Accounts;
 using FullWorth.Core.Models;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FullWorth.Tests.Security;
@@ -13,6 +14,9 @@ namespace FullWorth.Tests.Security;
 public sealed class AccountDataExportTests
     : IClassFixture<FullWorthApiFactory>
 {
+    private const string TestPassword =
+        "FullWorth!Tests123";
+
     private const string ProtectedAccessToken =
         "PROTECTED_ACCESS_TOKEN_MUST_NOT_EXPORT";
 
@@ -55,8 +59,105 @@ public sealed class AccountDataExportTests
             _factory.CreateHttpsClient();
 
         using var response =
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_LegacyGet_IsNotAvailable()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
             await client.GetAsync(
                 "/api/account/export");
+
+        Assert.Equal(
+            HttpStatusCode.MethodNotAllowed,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_WrongPassword_IsRejected()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        await using (
+            var scope =
+                _factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    session.Email);
+
+            Assert.NotNull(user);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    user!,
+                    true);
+
+            Assert.True(enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
@@ -93,8 +194,9 @@ public sealed class AccountDataExportTests
              attempt++)
         {
             using var allowedResponse =
-                await limitedClient.GetAsync(
-                    "/api/account/export");
+                await limitedClient.PostAsJsonAsync(
+                    "/api/account/export",
+                    CreateExportRequest());
 
             Assert.Equal(
                 HttpStatusCode.OK,
@@ -102,16 +204,18 @@ public sealed class AccountDataExportTests
         }
 
         using var rejectedResponse =
-            await limitedClient.GetAsync(
-                "/api/account/export");
+            await limitedClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
             rejectedResponse.StatusCode);
 
         using var otherUserResponse =
-            await otherClient.GetAsync(
-                "/api/account/export");
+            await otherClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -224,8 +328,7 @@ public sealed class AccountDataExportTests
                 {
                     UserId = exportingUserId,
                     BankAccountId = account.Id,
-                    BillStreamId = stream.Id,
-                    PlaidTransactionId = PlaidTransactionId,
+PlaidTransactionId = PlaidTransactionId,
                     Name = "Exported Payment",
                     MerchantName = "Exported Internet Provider",
                     Amount = 89.99m,
@@ -343,11 +446,22 @@ public sealed class AccountDataExportTests
                     CompletedAtUtc = now
                 };
 
+            var transactionAssociation =
+                new BillTransactionAssociationEntity
+                {
+                    UserId = exportingUserId,
+                    BankTransactionId = transaction.Id,
+                    BillStreamId = stream.Id,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+
             dbContext.AddRange(
                 stream,
                 connection,
                 account,
                 transaction,
+                transactionAssociation,
                 statement,
                 lineItem,
                 change,
@@ -377,8 +491,9 @@ public sealed class AccountDataExportTests
         }
 
         using var response =
-            await exportingClient.GetAsync(
-                "/api/account/export");
+            await exportingClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -412,9 +527,16 @@ public sealed class AccountDataExportTests
         Assert.Equal(
             accountId,
             Assert.Single(export.BankAccounts).Id);
+        var exportedTransaction =
+            Assert.Single(export.BankTransactions);
+
         Assert.Equal(
             transactionId,
-            Assert.Single(export.BankTransactions).Id);
+            exportedTransaction.Id);
+
+        Assert.Equal(
+            streamId,
+            exportedTransaction.BillStreamId);
         Assert.Equal(
             streamId,
             Assert.Single(export.BillStreams).Id);
@@ -499,6 +621,15 @@ public sealed class AccountDataExportTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    private static object CreateExportRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
+        new
+        {
+            currentPassword,
+            twoFactorCode
+        };
+
     private static Task<Guid> GetUserIdAsync(
         FullWorthDbContext dbContext,
         string email)
@@ -552,11 +683,20 @@ public sealed class AccountDataExportTests
             {
                 UserId = userId,
                 BankAccountId = account.Id,
-                BillStreamId = stream.Id,
-                PlaidTransactionId = $"{OtherUserMarker}-transaction",
+PlaidTransactionId = $"{OtherUserMarker}-transaction",
                 Name = OtherUserMarker,
                 Amount = 1m,
                 PostedDate = new DateOnly(2026, 8, 20),
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            };
+
+        var transactionAssociation =
+            new BillTransactionAssociationEntity
+            {
+                UserId = userId,
+                BankTransactionId = transaction.Id,
+                BillStreamId = stream.Id,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
@@ -665,6 +805,7 @@ public sealed class AccountDataExportTests
             connection,
             account,
             transaction,
+            transactionAssociation,
             statement,
             lineItem,
             change,

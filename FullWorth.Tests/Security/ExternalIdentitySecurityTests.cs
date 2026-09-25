@@ -533,6 +533,124 @@ public sealed class ExternalIdentitySecurityTests
     }
 
     [Fact]
+    public async Task ExternalLink_Success_RotatesSecurityStamp()
+    {
+        const string provider =
+            ExternalIdentityProviders.Google;
+
+        const string subject =
+            "google-subject-link-stamp";
+
+        using var factory =
+            FullWorthApiFactory.WithExternalIdentityValidator(
+                new FixedExternalIdentityTokenValidator(
+                    new ExternalIdentity(
+                        provider,
+                        subject,
+                        "linked-security@fullworth.local",
+                        EmailVerified:
+                            true)));
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication
+                .RegisterAndLoginAsync(
+                    client);
+
+        string originalSecurityStamp;
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    session.Email);
+
+            Assert.NotNull(
+                user);
+
+            originalSecurityStamp =
+                await userManager
+                    .GetSecurityStampAsync(
+                        user!);
+        }
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/link",
+                new
+                {
+                    provider,
+                    idToken =
+                        "valid-test-token",
+                    currentPassword =
+                        TestPassword,
+                    twoFactorCode =
+                        (string?)null,
+                    twoFactorRecoveryCode =
+                        (string?)null
+                });
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            response.StatusCode);
+
+        await using var verificationScope =
+            factory.Services.CreateAsyncScope();
+
+        var verificationUserManager =
+            verificationScope.ServiceProvider
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
+
+        var updatedUser =
+            await verificationUserManager
+                .FindByEmailAsync(
+                    session.Email);
+
+        Assert.NotNull(
+            updatedUser);
+
+        var updatedSecurityStamp =
+            await verificationUserManager
+                .GetSecurityStampAsync(
+                    updatedUser!);
+
+        Assert.NotEqual(
+            originalSecurityStamp,
+            updatedSecurityStamp);
+
+        var logins =
+            await verificationUserManager
+                .GetLoginsAsync(
+                    updatedUser!);
+
+        var linkedLogin =
+            Assert.Single(
+                logins);
+
+        Assert.Equal(
+            provider,
+            linkedLogin.LoginProvider);
+
+        Assert.Equal(
+            subject,
+            linkedLogin.ProviderKey);
+    }
+
+    [Fact]
     public void ConfigurationBinding_OnlyEnablesProvidersWithAnAudience()
     {
         var settings =

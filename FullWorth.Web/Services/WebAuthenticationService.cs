@@ -47,6 +47,13 @@ public sealed class WebAuthenticationService
             string? recoveryCode,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before signing in to another account.");
+        }
+
         email =
             email.Trim();
 
@@ -120,6 +127,18 @@ public sealed class WebAuthenticationService
                 "FullWorth received an invalid sign-in response.");
         }
 
+        tokenResponse =
+            await EnrollRefreshFamilyAsync(
+                tokenResponse,
+                cancellationToken);
+
+        if (tokenResponse is null)
+        {
+            return new AuthOperationResult(
+                false,
+                "FullWorth could not establish a secure sign-in session.");
+        }
+
         await SignInWebSessionAsync(
             httpContext,
             displayName:
@@ -143,6 +162,13 @@ public sealed class WebAuthenticationService
             string? email,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before signing in to another account.");
+        }
+
         provider =
             provider.Trim()
                 .ToLowerInvariant();
@@ -203,6 +229,18 @@ public sealed class WebAuthenticationService
                 "FullWorth received an invalid external sign-in response.");
         }
 
+        tokenResponse =
+            await EnrollRefreshFamilyAsync(
+                tokenResponse,
+                cancellationToken);
+
+        if (tokenResponse is null)
+        {
+            return new AuthOperationResult(
+                false,
+                "FullWorth could not establish a secure external sign-in session.");
+        }
+
         await SignInWebSessionAsync(
             httpContext,
             displayName:
@@ -226,6 +264,13 @@ public sealed class WebAuthenticationService
             string legalTermsVersion,
             CancellationToken cancellationToken = default)
     {
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before creating another account.");
+        }
+
         email =
             email.Trim();
 
@@ -248,22 +293,34 @@ public sealed class WebAuthenticationService
 
         if (!response.IsSuccessStatusCode)
         {
-            var error =
-                await ReadRegistrationErrorAsync(
+            var failure =
+                await ReadRegistrationFailureAsync(
                     response,
                     cancellationToken);
 
+            if (failure.IsDuplicateIdentity)
+            {
+                /*
+                 * Anonymous registration must not reveal whether the submitted
+                 * email already belongs to a FullWorth account. Return the same
+                 * public outcome as a newly created account and require the
+                 * caller to sign in separately.
+                 */
+                return AuthOperationResult.Success;
+            }
+
             return new AuthOperationResult(
                 false,
-                error);
+                failure.Message);
         }
 
-        return await LoginAsync(
-            httpContext,
-            email,
-            password,
-            rememberMe: false,
-            cancellationToken);
+        /*
+         * Do not auto-sign-in after registration. A separate sign-in step makes
+         * the public registration outcome indistinguishable from a duplicate
+         * email submission while preserving the existing password-validation
+         * and legal-acceptance errors for malformed requests.
+         */
+        return AuthOperationResult.Success;
     }
 
     public async Task<AuthOperationResult>
@@ -389,11 +446,93 @@ public sealed class WebAuthenticationService
     }
 
     public async Task LogoutAsync(
-        HttpContext httpContext)
+        HttpContext httpContext,
+        CancellationToken cancellationToken = default)
     {
-        await httpContext.SignOutAsync(
-            CookieAuthenticationDefaults
-                .AuthenticationScheme);
+        ArgumentNullException.ThrowIfNull(
+            httpContext);
+
+        try
+        {
+            var authenticateResult =
+                await httpContext.AuthenticateAsync(
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme);
+
+            var refreshToken =
+                authenticateResult.Properties?
+                    .GetTokenValue(
+                        "refresh_token");
+
+            if (!string.IsNullOrWhiteSpace(
+                    refreshToken))
+            {
+                var client =
+                    _httpClientFactory.CreateClient(
+                        "FullWorthApi");
+
+                using var response =
+                    await client.PostAsJsonAsync(
+                        "/api/auth/logout",
+                        new
+                        {
+                            refreshToken
+                        },
+                        cancellationToken);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            /*
+             * A user must always be able to sign out locally. If the API is
+             * unreachable, the 14-day refresh lifetime remains the remote
+             * upper bound and a later explicit security action can revoke
+             * all sessions through the Identity security stamp.
+             */
+        }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            /*
+             * Treat an HttpClient timeout like an unavailable server. Local
+             * sign-out still completes in the finally block.
+             */
+        }
+        finally
+        {
+            await httpContext.SignOutAsync(
+                CookieAuthenticationDefaults
+                    .AuthenticationScheme);
+        }
+    }
+
+    private async Task<AccessTokenResponse?>
+        EnrollRefreshFamilyAsync(
+            AccessTokenResponse tokenResponse,
+            CancellationToken cancellationToken)
+    {
+        var client =
+            _httpClientFactory.CreateClient(
+                "FullWorthApi");
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        tokenResponse.RefreshToken
+                },
+                cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await ReadAccessTokenResponseAsync(
+            response,
+            cancellationToken);
     }
 
     private static async Task<AccessTokenResponse?>
@@ -685,16 +824,17 @@ public sealed class WebAuthenticationService
         return null;
     }
 
-    private static async Task<string>
-        ReadRegistrationErrorAsync(
+    private static async Task<RegistrationFailure>
+        ReadRegistrationFailureAsync(
             HttpResponseMessage response,
             CancellationToken cancellationToken)
     {
         if (response.StatusCode ==
             HttpStatusCode.TooManyRequests)
         {
-            return
-                "Too many attempts. Wait a minute and try again.";
+            return new RegistrationFailure(
+                false,
+                "Too many attempts. Wait a minute and try again.");
         }
 
         var body =
@@ -705,8 +845,9 @@ public sealed class WebAuthenticationService
         if (string.IsNullOrWhiteSpace(
                 body))
         {
-            return
-                "FullWorth could not create the account.";
+            return new RegistrationFailure(
+                false,
+                "FullWorth could not create the account.");
         }
 
         try
@@ -727,6 +868,18 @@ public sealed class WebAuthenticationService
                 foreach (var property
                     in errors.EnumerateObject())
                 {
+                    if (property.Name.Equals(
+                            "DuplicateEmail",
+                            StringComparison.OrdinalIgnoreCase) ||
+                        property.Name.Equals(
+                            "DuplicateUserName",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new RegistrationFailure(
+                            true,
+                            string.Empty);
+                    }
+
                     if (property.Value.ValueKind !=
                         JsonValueKind.Array)
                     {
@@ -743,7 +896,9 @@ public sealed class WebAuthenticationService
                         if (!string.IsNullOrWhiteSpace(
                                 message))
                         {
-                            return message;
+                            return new RegistrationFailure(
+                                false,
+                                message);
                         }
                     }
                 }
@@ -759,7 +914,9 @@ public sealed class WebAuthenticationService
                 if (!string.IsNullOrWhiteSpace(
                         message))
                 {
-                    return message;
+                    return new RegistrationFailure(
+                        false,
+                        message);
                 }
             }
 
@@ -773,7 +930,9 @@ public sealed class WebAuthenticationService
                 if (!string.IsNullOrWhiteSpace(
                         message))
                 {
-                    return message;
+                    return new RegistrationFailure(
+                        false,
+                        message);
                 }
             }
         }
@@ -782,9 +941,14 @@ public sealed class WebAuthenticationService
             // Do not expose an unexpected raw server response.
         }
 
-        return
-            "FullWorth could not create the account. Check the information and try again.";
+        return new RegistrationFailure(
+            false,
+            "FullWorth could not create the account. Check the information and try again.");
     }
+
+    private sealed record RegistrationFailure(
+        bool IsDuplicateIdentity,
+        string Message);
 }
 
 public sealed record AuthOperationResult(

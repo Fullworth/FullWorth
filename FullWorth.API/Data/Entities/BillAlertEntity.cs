@@ -58,5 +58,4 @@ public sealed class BillAlertEntity
 
     public BillStreamEntity? BillStream { get; set; }
 
-    public BillChangeEntity? BillChange { get; set; }
 }

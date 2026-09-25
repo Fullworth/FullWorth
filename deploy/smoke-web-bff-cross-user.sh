@@ -53,6 +53,12 @@ require_uuid()
         fail "$label was not a canonical UUID." 70
 }
 
+json_escape()
+{
+    printf '%s' "$1" |
+        sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g'
+}
+
 [ -n "$web_base_url" ] || fail "Usage: $0 <https-web-base-url>" 64
 require_https_url "$web_base_url" "The Web/BFF ownership smoke-test base URL"
 web_base_url="${web_base_url%/}"
@@ -77,6 +83,7 @@ if [ -n "$foreign_two_factor_code_file" ]; then
 fi
 if [ -n "$foreign_recovery_code_file" ]; then
     require_secret_file "$foreign_recovery_code_file" "BILLWATCH_WEB_OWNERSHIP_FOREIGN_RECOVERY_CODE_FILE"
+    fail "The ownership smoke derives its fixture through account export strong reauthentication, which requires a current authenticator code. Use BILLWATCH_WEB_OWNERSHIP_FOREIGN_TWO_FACTOR_CODE_FILE instead of a recovery code." 64
 fi
 
 work_directory="$(mktemp -d)"
@@ -87,6 +94,9 @@ cookie_jar="$work_directory/foreign-cookies.txt"
 login_page="$work_directory/foreign-login.html"
 login_headers="$work_directory/foreign-login-headers.txt"
 antiforgery_token_file="$work_directory/foreign-antiforgery-token.txt"
+bff_antiforgery_response="$work_directory/foreign-bff-antiforgery.json"
+bff_security_config="$work_directory/foreign-bff-security.curl"
+export_payload="$work_directory/foreign-account-export-request.json"
 export_response="$work_directory/foreign-account-export.json"
 
 : > "$cookie_jar"
@@ -166,6 +176,7 @@ case "$login_code" in
     *) fail "Foreign-account Web login returned HTTP $login_code instead of a redirect." 69 ;;
 esac
 
+authenticated_with_recovery=false
 location="$(redirect_location)"
 case "$location" in
     /app|/app/*) ;;
@@ -176,6 +187,7 @@ case "$location" in
         elif [ -n "$foreign_recovery_code_file" ]; then
             second_factor_kind='recovery'
             second_factor_file="$foreign_recovery_code_file"
+            authenticated_with_recovery=true
         else
             fail "The foreign account requires two-factor authentication. Supply a current protected authenticator-code or recovery-code file." 65
         fi
@@ -195,17 +207,66 @@ case "$location" in
     *) fail "Foreign-account login did not redirect to /app or the two-factor step." 69 ;;
 esac
 
+if [ "$authenticated_with_recovery" = "true" ]; then
+    fail "The foreign account signed in with a recovery code, but account export strong reauthentication requires a current authenticator code. Supply BILLWATCH_WEB_OWNERSHIP_FOREIGN_TWO_FACTOR_CODE_FILE for this proof." 65
+fi
+
+antiforgery_code="$(
+    curl \
+        --silent \
+        --show-error \
+        --output "$bff_antiforgery_response" \
+        --write-out '%{http_code}' \
+        --cookie "$cookie_jar" \
+        --cookie-jar "$cookie_jar" \
+        "$web_base_url/bff/antiforgery"
+)"
+[ "$antiforgery_code" = "200" ] ||
+    fail "Foreign-account BFF antiforgery endpoint returned HTTP $antiforgery_code." 69
+
+bff_token="$(
+    sed -n 's/.*"requestToken"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+        "$bff_antiforgery_response"
+)"
+rm -f "$bff_antiforgery_response"
+[ -n "$bff_token" ] ||
+    fail "Foreign-account BFF antiforgery endpoint did not return a request token." 70
+
+printf 'header = "X-CSRF-TOKEN: %s"\n' "$bff_token" > "$bff_security_config"
+chmod 600 "$bff_security_config"
+unset bff_token
+
+printf '{"currentPassword":"%s"' \
+    "$(json_escape "$(cat "$foreign_password_file")")" \
+    > "$export_payload"
+
+if [ -n "$foreign_two_factor_code_file" ]; then
+    printf ',"twoFactorCode":"%s"' \
+        "$(json_escape "$(cat "$foreign_two_factor_code_file")")" \
+        >> "$export_payload"
+else
+    printf ',"twoFactorCode":null' >> "$export_payload"
+fi
+printf '}' >> "$export_payload"
+chmod 600 "$export_payload"
+
 export_code="$(
     curl \
         --silent \
         --show-error \
         --output "$export_response" \
         --write-out '%{http_code}' \
+        --request POST \
         --cookie "$cookie_jar" \
         --cookie-jar "$cookie_jar" \
+        --header 'Content-Type: application/json' \
+        --config "$bff_security_config" \
+        --data-binary "@$export_payload" \
         "$web_base_url/bff/account/export"
 )"
-[ "$export_code" = "200" ] || fail "Foreign-account BFF export returned HTTP $export_code." 69
+rm -f "$export_payload"
+[ "$export_code" = "200" ] ||
+    fail "Foreign-account BFF export returned HTTP $export_code. If this account uses two-factor authentication, supply a current authenticator-code file." 69
 
 foreign_statement_upload_id="$(
     sed -n \

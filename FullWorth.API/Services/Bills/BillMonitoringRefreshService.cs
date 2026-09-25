@@ -1,59 +1,43 @@
-﻿using FullWorth.API.Data;
-using FullWorth.API.Services.Plaid;
+using FullWorth.API.Services.Contracts;
 
 namespace FullWorth.API.Services.Bills;
 
 public sealed class BillMonitoringRefreshService
 {
-    private readonly PlaidAccountSyncService _accountSyncService;
-    private readonly PlaidTransactionSyncService _transactionSyncService;
-    private readonly PlaidConnectionSyncCoordinator? _syncCoordinator;
+    private readonly IBankDataSyncGateway _bankDataSyncGateway;
     private readonly RecurringBillDiscoveryPersistenceService _billDiscoveryService;
-    private readonly BankConnectionHealthAlertService? _connectionHealthAlertService;
-    private readonly ILogger<BillMonitoringRefreshService>? _logger;
+    private readonly BankConnectionHealthAlertService _connectionHealthAlertService;
+    private readonly ILogger<BillMonitoringRefreshService> _logger;
 
-    /*
-     * Preserve existing direct test construction.
-     */
     public BillMonitoringRefreshService(
-        PlaidAccountSyncService accountSyncService,
-        PlaidTransactionSyncService transactionSyncService,
-        RecurringBillDiscoveryPersistenceService billDiscoveryService)
-    {
-        _accountSyncService = accountSyncService;
-        _transactionSyncService = transactionSyncService;
-        _billDiscoveryService = billDiscoveryService;
-    }
-
-    /*
-     * ASP.NET Core DI uses this fuller constructor.
-     *
-     * Production refreshes use the coordinator so a Plaid Item error that
-     * explicitly requires user action is persisted as RequiresAttention
-     * before the original provider exception is propagated. Existing direct
-     * tests retain the smaller constructor above.
-     */
-    public BillMonitoringRefreshService(
-        PlaidAccountSyncService accountSyncService,
-        PlaidTransactionSyncService transactionSyncService,
+        IBankDataSyncGateway bankDataSyncGateway,
         RecurringBillDiscoveryPersistenceService billDiscoveryService,
-        FullWorthDbContext dbContext,
+        BankConnectionHealthAlertService connectionHealthAlertService,
         ILogger<BillMonitoringRefreshService> logger)
-        : this(
-            accountSyncService,
-            transactionSyncService,
-            billDiscoveryService)
     {
-        _syncCoordinator =
-            new PlaidConnectionSyncCoordinator(
-                dbContext,
-                accountSyncService,
-                transactionSyncService);
+        ArgumentNullException.ThrowIfNull(
+            bankDataSyncGateway);
+
+        ArgumentNullException.ThrowIfNull(
+            billDiscoveryService);
+
+        ArgumentNullException.ThrowIfNull(
+            connectionHealthAlertService);
+
+        ArgumentNullException.ThrowIfNull(
+            logger);
+
+        _bankDataSyncGateway =
+            bankDataSyncGateway;
+
+        _billDiscoveryService =
+            billDiscoveryService;
 
         _connectionHealthAlertService =
-            new BankConnectionHealthAlertService(dbContext);
+            connectionHealthAlertService;
 
-        _logger = logger;
+        _logger =
+            logger;
     }
 
     public async Task<RecurringBillDiscoveryPersistenceResult> RefreshAsync(
@@ -72,39 +56,24 @@ public sealed class BillMonitoringRefreshService
             /*
              * Always synchronize accounts first.
              *
-             * A brand-new Plaid connection may exist before FullWorth has
+             * A brand-new provider connection may exist before FullWorth has
              * persisted its checking/credit/etc. accounts. Transaction sync
              * depends on those local BankAccount rows.
+             *
+             * Bills intentionally depends on the provider-neutral contract,
+             * not on Plaid implementation types.
              */
-            if (_syncCoordinator is not null)
-            {
-                await _syncCoordinator.SyncAllAccountsAsync(
-                    userId,
-                    cancellationToken);
-            }
-            else
-            {
-                await _accountSyncService.SyncAllAccountsAsync(
-                    userId,
-                    cancellationToken);
-            }
+            await _bankDataSyncGateway.SyncAccountsAsync(
+                userId,
+                cancellationToken);
 
             /*
-             * Pull new/modified/removed Plaid transactions using each
-             * connection's persisted cursor.
+             * Pull new/modified/removed transactions through the same
+             * provider-neutral bank synchronization boundary.
              */
-            if (_syncCoordinator is not null)
-            {
-                await _syncCoordinator.SyncAllTransactionsAsync(
-                    userId,
-                    cancellationToken);
-            }
-            else
-            {
-                await _transactionSyncService.SyncAllAsync(
-                    userId,
-                    cancellationToken);
-            }
+            await _bankDataSyncGateway.SyncTransactionsAsync(
+                userId,
+                cancellationToken);
 
             /*
              * Re-run deterministic recurring-bill discovery against the
@@ -134,8 +103,8 @@ public sealed class BillMonitoringRefreshService
         catch
         {
             /*
-             * The coordinator may persist RequiresAttention before
-             * propagating a Plaid error. Reconcile that state into the
+             * A provider implementation may persist RequiresAttention before
+             * propagating a provider error. Reconcile that state into the
              * Activity feed, but preserve the original refresh exception.
              */
             await TryReconcileConnectionHealthAsync(
@@ -150,11 +119,6 @@ public sealed class BillMonitoringRefreshService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        if (_connectionHealthAlertService is null)
-        {
-            return;
-        }
-
         try
         {
             await _connectionHealthAlertService.ReconcileAsync(
@@ -172,7 +136,7 @@ public sealed class BillMonitoringRefreshService
              * Never log account data, tokens, connection IDs, institution
              * lists, or financial information here.
              */
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Bank connection health alert reconciliation failed with {ExceptionType}.",
                 ex.GetType().Name);
         }

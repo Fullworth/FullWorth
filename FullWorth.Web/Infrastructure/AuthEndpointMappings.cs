@@ -232,7 +232,10 @@ public static class AuthEndpointMappings
                 }
 
                 return Results.Redirect(
-                    "/app/setup");
+                    "/login?message=" +
+                    Uri.EscapeDataString(
+                        localizer[
+                            "Registration request received. Sign in to continue."]));
             });
 
         endpoints.MapPost(
@@ -471,7 +474,8 @@ public static class AuthEndpointMappings
 
                 await authenticationService
                     .LogoutAsync(
-                        context);
+                        context,
+                        context.RequestAborted);
 
                 return Results.Redirect(
                     "/");

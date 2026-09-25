@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Bills;
 using FullWorth.API.Services.Statements;
 using FullWorth.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,10 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext);
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId,
@@ -93,7 +97,10 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext);
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         var dueDate =
             new DateOnly(
@@ -182,7 +189,10 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext);
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         var today =
             new DateOnly(
@@ -241,7 +251,10 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext);
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         await Assert.ThrowsAsync<
             InvalidOperationException>(
@@ -291,7 +304,10 @@ public sealed class BillStatementPaymentDueAlertServiceTests
 
         var service =
             new BillStatementPaymentDueAlertService(
-                dbContext);
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         var dueDate =
             new DateOnly(

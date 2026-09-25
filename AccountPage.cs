@@ -123,7 +123,7 @@ public sealed class AccountPage : ContentPage
 
             if (confirmed)
             {
-                _authenticationService.Logout();
+                await _authenticationService.LogoutAsync();
             }
         };
 
@@ -133,7 +133,7 @@ public sealed class AccountPage : ContentPage
             Children =
             {
                 CreateTitleLabel("Sign-in session"),
-                CreateBodyLabel("Signing out removes FullWorth authentication tokens from this device. Server-side monitoring continues for connected banks until you disconnect them or delete your account."),
+                CreateBodyLabel("Signing out revokes this device's FullWorth refresh session and removes its authentication tokens. Server-side monitoring continues for connected banks until you disconnect them or delete your account."),
                 signOut
             }
         });

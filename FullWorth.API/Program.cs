@@ -6,7 +6,9 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Infrastructure;
+using FullWorth.API.Services.Accounts;
 using FullWorth.API.Services.Bills;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Plaid;
@@ -14,6 +16,7 @@ using FullWorth.API.Services.Statements;
 using FullWorth.API.Services.Subscriptions;
 using FullWorth.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -127,6 +130,25 @@ builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>()
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<FullWorthDbContext>();
+
+builder.Services.Configure<BearerTokenOptions>(
+    IdentityConstants.BearerScheme,
+    options =>
+    {
+        /*
+         * Bearer access tokens are not revalidated against the user's
+         * security stamp on every API request. Keep their post-change
+         * exposure window deliberately short; refresh validates the
+         * security stamp before issuing a replacement token.
+         */
+        options.BearerTokenExpiration =
+            TimeSpan.FromMinutes(
+                15);
+
+        options.RefreshTokenExpiration =
+            TimeSpan.FromDays(
+                14);
+    });
 
 builder.Services.Configure<IdentityOptions>(
     options =>
@@ -252,7 +274,37 @@ builder.Services.AddScoped<
     AdminSubscriptionAccessKeyService>();
 
 builder.Services.AddScoped<
+    IAdminSubscriptionReadGateway,
+    AdminSubscriptionReadGateway>();
+
+builder.Services.AddScoped<
+    IAccountSubscriptionDeletionGateway,
+    AccountSubscriptionDeletionGateway>();
+
+builder.Services.AddScoped<
     AdminUserManagementService>();
+
+builder.Services.AddScoped<
+    IAdminIdentityMutationGateway,
+    AdminIdentityMutationGateway>();
+
+builder.Services.AddScoped<
+    IAdminSubscriptionMutationGateway,
+    AdminSubscriptionMutationGateway>();
+
+builder.Services.AddScoped<
+    IAdminAuditLogWriter,
+    AdminAuditLogWriter>();
+
+builder.Services.AddScoped<
+    IIdentityUserExistenceGateway,
+    IdentityUserExistenceGateway>();
+
+builder.Services.AddScoped<
+    RefreshTokenRotationService>();
+
+builder.Services.AddScoped<
+    AccountDataExportBuilder>();
 
 /*
  * Rate limiting is intentionally fail-closed.
@@ -538,10 +590,65 @@ builder.Services.AddScoped<
     PlaidTransactionSyncService>();
 
 builder.Services.AddScoped<
+    PlaidConnectionSyncCoordinator>();
+
+builder.Services.AddScoped<
+    IBankDataSyncGateway,
+    PlaidBankDataSyncGateway>();
+
+builder.Services.AddScoped<
+    IBankConnectionReadGateway,
+    PlaidBankConnectionReadGateway>();
+
+builder.Services.AddScoped<
+    IBankTransactionDiscoveryGateway,
+    PlaidBankTransactionDiscoveryGateway>();
+
+builder.Services.AddScoped<
+    IBillTransactionAssociationGateway,
+    BillTransactionAssociationGateway>();
+
+builder.Services.AddScoped<
+    IBankTransactionMetricFactsGateway,
+    PlaidBankTransactionMetricFactsGateway>();
+
+builder.Services.AddScoped<
+    IBankTransactionBillMetricsGateway,
+    BillTransactionMetricsGateway>();
+
+builder.Services.AddScoped<
     PlaidConnectionDisconnectService>();
 
 builder.Services.AddScoped<
+    IAccountBankDeletionGateway,
+    AccountBankDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountBankExportGateway,
+    AccountBankExportGateway>();
+
+builder.Services.AddScoped<
     RecurringBillDiscoveryPersistenceService>();
+
+builder.Services.AddScoped<
+    IBillStreamReadGateway,
+    BillStreamReadGateway>();
+
+builder.Services.AddScoped<
+    IBillStatementHistoryReadGateway,
+    BillStatementHistoryReadGateway>();
+
+builder.Services.AddScoped<
+    IBillAlertReconciliationGateway,
+    BillAlertReconciliationGateway>();
+
+builder.Services.AddScoped<
+    IAccountBillDeletionGateway,
+    AccountBillDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountBillExportGateway,
+    AccountBillExportGateway>();
 
 builder.Services.AddScoped<
     BankConnectionHealthAlertService>();
@@ -570,6 +677,14 @@ builder.Services.Configure<BillStatementOcrOptions>(
 
 builder.Services.AddScoped<
     SecureBillStatementStorageService>();
+
+builder.Services.AddScoped<
+    IAccountStatementDeletionGateway,
+    AccountStatementDeletionGateway>();
+
+builder.Services.AddScoped<
+    IAccountStatementExportGateway,
+    AccountStatementExportGateway>();
 
 builder.Services.AddScoped<
     PdfBillStatementTextExtractor>();
@@ -844,7 +959,32 @@ var authenticationGroup =
             AuthenticationRateLimitPolicy);
 
 authenticationGroup
-    .MapIdentityApi<ApplicationUser>();
+    .MapPost(
+        "/logout",
+        async (
+            RefreshTokenLogoutRequest request,
+            RefreshTokenRotationService rotationService,
+            CancellationToken cancellationToken) =>
+        {
+            /*
+             * Logout is intentionally enumeration-safe. A caller receives
+             * NoContent whether the refresh family existed, was already
+             * revoked, or was otherwise unusable.
+             */
+            _ =
+                await rotationService.RevokeFamilyAsync(
+                    request.RefreshToken,
+                    cancellationToken);
+
+            return Results.NoContent();
+        })
+    .AllowAnonymous();
+
+authenticationGroup
+    .MapIdentityApi<ApplicationUser>()
+    .AddEndpointFilter<
+        IEndpointConventionBuilder,
+        RefreshTokenReplayEndpointFilter>();
 
 app.Run();
 

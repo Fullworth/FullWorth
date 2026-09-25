@@ -19,8 +19,10 @@ grep -Fq "github.event.issue.number == 245" "$workflow" ||
     fail "cleanup is not restricted to the control issue."
 grep -Fq "github.event.comment.body == '/cleanup-merged-branches'" "$workflow" ||
     fail "cleanup does not require the exact command."
-grep -Fq 'github.actor == github.repository_owner' "$workflow" ||
-    fail "cleanup is not restricted to the repository owner."
+grep -Fq "github.repository == 'Fullworth/FullWorth'" "$workflow" ||
+    fail "cleanup is not restricted to the FullWorth repository."
+grep -Fq "github.actor == 'RealizmModz'" "$workflow" ||
+    fail "cleanup is not restricted to the authorized repository maintainer."
 grep -Fq 'contents: write' "$workflow" ||
     fail "workflow lacks the ref-deletion permission."
 grep -Fq 'pull-requests: read' "$workflow" ||

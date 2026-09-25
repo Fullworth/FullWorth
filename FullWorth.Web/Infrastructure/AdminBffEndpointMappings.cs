@@ -85,9 +85,10 @@ public static class AdminBffEndpointMappings
             async (
                 HttpContext context,
                 IAntiforgery antiforgery,
-                FullWorthBffProxyService proxyService,
+                AdminBffWriteProxyService writeProxyService,
                 Guid targetUserId,
-                string roleName) =>
+                string roleName,
+                AdminAssignRoleRequest request) =>
             {
                 await antiforgery.ValidateRequestAsync(context);
 
@@ -99,10 +100,11 @@ public static class AdminBffEndpointMappings
                     return Results.BadRequest();
                 }
 
-                return await proxyService.ForwardPostAsync(
+                return await writeProxyService.ForwardJsonAsync(
                     context,
+                    HttpMethod.Post,
                     $"/api/admin/users/{targetUserId:D}/roles/{normalizedRole}",
-                    includeEmptyJsonBody: false,
+                    request,
                     context.RequestAborted);
             });
 
@@ -303,14 +305,22 @@ public static class AdminBffEndpointMappings
     }
 }
 
+public sealed record AdminAssignRoleRequest(
+    string CurrentPassword,
+    string? TwoFactorCode);
+
 public sealed record AdminGrantEntitlementRequest(
     string Tier,
     int? DurationDays,
-    bool GrantsLifetimeAccess);
+    bool GrantsLifetimeAccess,
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminProgramMembershipRequest(
     bool IsActive,
-    DateTimeOffset? EndsAtUtc);
+    DateTimeOffset? EndsAtUtc,
+    string? CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminCreateAccessKeyRequest(
     string Purpose,
@@ -319,4 +329,6 @@ public sealed record AdminCreateAccessKeyRequest(
     bool GrantsLifetimeAccess,
     int MaxRedemptions,
     DateTimeOffset? ExpiresAtUtc,
+    string CurrentPassword,
+    string? TwoFactorCode,
     string? Label = null);

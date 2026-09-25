@@ -1,10 +1,9 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Models;
 using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
-using EntityBillAlertType =
-    FullWorth.API.Data.Entities.BillAlertType;
 
 namespace FullWorth.API.Services.Statements;
 
@@ -29,15 +28,41 @@ public sealed class BillStatementChangeDetectionService
     private readonly BillStatementEvidenceAlertService
         _evidenceAlertService;
 
+    private readonly IBillStreamReadGateway
+        _billStreamGateway;
+
+    private readonly IBillAlertReconciliationGateway
+        _billAlertGateway;
+
     public BillStatementChangeDetectionService(
-        FullWorthDbContext dbContext)
+        FullWorthDbContext dbContext,
+        IBillStreamReadGateway billStreamGateway,
+        BillStatementEvidenceAlertService evidenceAlertService,
+        IBillAlertReconciliationGateway billAlertGateway)
     {
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        ArgumentNullException.ThrowIfNull(
+            billStreamGateway);
+
+        ArgumentNullException.ThrowIfNull(
+            evidenceAlertService);
+
+        ArgumentNullException.ThrowIfNull(
+            billAlertGateway);
+
         _dbContext =
             dbContext;
 
+        _billStreamGateway =
+            billStreamGateway;
+
         _evidenceAlertService =
-            new BillStatementEvidenceAlertService(
-                dbContext);
+            evidenceAlertService;
+
+        _billAlertGateway =
+            billAlertGateway;
     }
 
     public async Task<BillStatementChangeReconciliationResult>
@@ -76,27 +101,22 @@ public sealed class BillStatementChangeDetectionService
                 "The pending statement does not belong to the requested bill stream.");
         }
 
-        var providerName =
-            await _dbContext.BillStreams
-                .AsNoTracking()
-                .Where(
-                    stream =>
-                        stream.Id ==
-                            billStreamId &&
-                        stream.UserId ==
-                            userId)
-                .Select(
-                    stream =>
-                        stream.ProviderName)
-                .SingleOrDefaultAsync(
-                    cancellationToken);
+        var billStream =
+            await _billStreamGateway.GetOwnedAsync(
+                userId,
+                billStreamId,
+                cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(
-                providerName))
+        if (billStream is null ||
+            string.IsNullOrWhiteSpace(
+                billStream.ProviderName))
         {
             throw new InvalidOperationException(
                 "The owned bill stream could not be found.");
         }
+
+        var providerName =
+            billStream.ProviderName;
 
         var statements =
             await _dbContext.BillStatements
@@ -245,29 +265,6 @@ public sealed class BillStatementChangeDetectionService
                 .ToListAsync(
                     cancellationToken);
 
-        var existingAlerts =
-            await _dbContext.BillAlerts
-                .Where(
-                    alert =>
-                        alert.UserId ==
-                            userId &&
-                        alert.BillStreamId ==
-                            billStreamId &&
-                        alert.BillChangeId.HasValue)
-                .ToListAsync(
-                    cancellationToken);
-
-        var alertsByChangeId =
-            existingAlerts
-                .GroupBy(
-                    alert =>
-                        alert.BillChangeId!.Value)
-                .ToDictionary(
-                    group =>
-                        group.Key,
-                    group =>
-                        group.ToList());
-
         var desiredChanges =
             BuildDesiredChanges(
                 providerName,
@@ -385,35 +382,36 @@ public sealed class BillStatementChangeDetectionService
                         change.Id)
                 .ToList();
 
-        foreach (var changeToRemove in
-                 changesToRemove)
-        {
-            if (!alertsByChangeId.TryGetValue(
-                    changeToRemove.Id,
-                    out var linkedAlerts))
-            {
-                continue;
-            }
-
-            _dbContext.BillAlerts.RemoveRange(
-                linkedAlerts);
-        }
-
-        if (changesToRemove.Count >
-            0)
-        {
-            _dbContext.BillChanges.RemoveRange(
-                changesToRemove);
-        }
+        var alertScopes =
+            new List<BillAlertReconciliationScope>(
+                activeChanges.Count * 2);
 
         foreach (var activeChange in
                  activeChanges)
         {
-            ReconcileAlert(
-                providerName,
-                activeChange,
-                alertsByChangeId,
-                now);
+            var changeAlert =
+                BuildDesiredAlert(
+                    providerName,
+                    activeChange);
+
+            alertScopes.Add(
+                new BillAlertReconciliationScope(
+                    BillChangeId:
+                        activeChange.Id,
+
+                    ManagedAlertTypes:
+                        [
+                            BillAlertContractType.BillIncrease,
+                            BillAlertContractType.BillDecrease
+                        ],
+
+                    DesiredAlerts:
+                        changeAlert is null
+                            ? []
+                            : [changeAlert],
+
+                    Mode:
+                        BillAlertReconciliationMode.SingleManagedSlot));
 
             IReadOnlyList<BillLineItemEntity>
                 previousEvidence =
@@ -444,22 +442,52 @@ public sealed class BillStatementChangeDetectionService
                     currentItems;
             }
 
-            alertsByChangeId.TryGetValue(
-                activeChange.Id,
-                out var preloadedAlerts);
+            var evidenceAlerts =
+                _evidenceAlertService
+                    .BuildDesiredAlerts(
+                        userId,
+                        billStreamId,
+                        providerName,
+                        activeChange,
+                        previousEvidence,
+                        currentEvidence);
 
-            await _evidenceAlertService
-                .ReconcileAsync(
-                    userId,
-                    billStreamId,
-                    providerName,
-                    activeChange,
-                    previousEvidence,
-                    currentEvidence,
-                    now,
-                    cancellationToken,
-                    preloadedAlerts ??
-                        []);
+            alertScopes.Add(
+                new BillAlertReconciliationScope(
+                    BillChangeId:
+                        activeChange.Id,
+
+                    ManagedAlertTypes:
+                        [
+                            BillAlertContractType.NewFee,
+                            BillAlertContractType.RemovedDiscount
+                        ],
+
+                    DesiredAlerts:
+                        evidenceAlerts,
+
+                    Mode:
+                        BillAlertReconciliationMode.ReplaceManagedSet));
+        }
+
+        await _billAlertGateway
+            .StageReconciliationAsync(
+                userId,
+                billStreamId,
+                alertScopes,
+                changesToRemove
+                    .Select(
+                        change =>
+                            change.Id)
+                    .ToArray(),
+                now,
+                cancellationToken);
+
+        if (changesToRemove.Count >
+            0)
+        {
+            _dbContext.BillChanges.RemoveRange(
+                changesToRemove);
         }
 
         return new BillStatementChangeReconciliationResult(
@@ -658,144 +686,7 @@ public sealed class BillStatementChangeDetectionService
             $"{summary} Evidence found: {evidence} {FormatMoney(unexplainedAmount)}/month remains unexplained.");
     }
 
-    private void ReconcileAlert(
-        string providerName,
-        BillChangeEntity change,
-        IReadOnlyDictionary<
-            Guid,
-            List<BillAlertEntity>> alertsByChangeId,
-        DateTimeOffset now)
-    {
-        var desiredAlert =
-            BuildDesiredAlert(
-                providerName,
-                change);
-
-        if (desiredAlert is null)
-        {
-            return;
-        }
-
-        alertsByChangeId.TryGetValue(
-            change.Id,
-            out var linkedAlerts);
-
-        linkedAlerts ??=
-            [];
-
-        var changeAlerts =
-            linkedAlerts
-                .Where(
-                    alert =>
-                        alert.AlertType ==
-                            EntityBillAlertType.BillIncrease ||
-                        alert.AlertType ==
-                            EntityBillAlertType.BillDecrease)
-                .OrderBy(
-                    alert =>
-                        alert.CreatedAtUtc)
-                .ThenBy(
-                    alert =>
-                        alert.Id)
-                .ToList();
-
-        if (changeAlerts.Count ==
-            0)
-        {
-            _dbContext.BillAlerts.Add(
-                new BillAlertEntity
-                {
-                    UserId =
-                        change.UserId,
-
-                    BillStreamId =
-                        change.BillStreamId,
-
-                    BillChangeId =
-                        change.Id,
-
-                    BillChange =
-                        change,
-
-                    AlertType =
-                        desiredAlert.AlertType,
-
-                    Severity =
-                        desiredAlert.Severity,
-
-                    Title =
-                        desiredAlert.Title,
-
-                    Message =
-                        desiredAlert.Message,
-
-                    IsRead =
-                        false,
-
-                    IsDismissed =
-                        false,
-
-                    CreatedAtUtc =
-                        now,
-
-                    UpdatedAtUtc =
-                        now
-                });
-
-            return;
-        }
-
-        var primaryAlert =
-            changeAlerts[0];
-
-        var contentChanged =
-            primaryAlert.AlertType !=
-                desiredAlert.AlertType ||
-            primaryAlert.Severity !=
-                desiredAlert.Severity ||
-            !string.Equals(
-                primaryAlert.Title,
-                desiredAlert.Title,
-                StringComparison.Ordinal) ||
-            !string.Equals(
-                primaryAlert.Message,
-                desiredAlert.Message,
-                StringComparison.Ordinal);
-
-        if (contentChanged)
-        {
-            primaryAlert.AlertType =
-                desiredAlert.AlertType;
-
-            primaryAlert.Severity =
-                desiredAlert.Severity;
-
-            primaryAlert.Title =
-                desiredAlert.Title;
-
-            primaryAlert.Message =
-                desiredAlert.Message;
-
-            primaryAlert.IsRead =
-                false;
-
-            primaryAlert.IsDismissed =
-                false;
-
-            primaryAlert.UpdatedAtUtc =
-                now;
-        }
-
-        if (changeAlerts.Count >
-            1)
-        {
-            _dbContext.BillAlerts.RemoveRange(
-                changeAlerts.Skip(
-                    1));
-        }
-    }
-
-    private static DesiredBillAlert?
+    private static BillAlertDesiredState?
         BuildDesiredAlert(
             string providerName,
             BillChangeEntity change)
@@ -822,12 +713,12 @@ public sealed class BillStatementChangeDetectionService
                             $"{FormatMoney(change.PreviousAmount)} → {FormatMoney(change.CurrentAmount)}. +{FormatMoney(monthlyImpact)}/month · +{FormatMoney(annualImpact)}/year. {change.Description}",
                             MaxAlertMessageLength);
 
-                    return new DesiredBillAlert(
+                    return new BillAlertDesiredState(
                         AlertType:
-                            EntityBillAlertType.BillIncrease,
+                            BillAlertContractType.BillIncrease,
 
                         Severity:
-                            BillAlertSeverity.Warning,
+                            BillAlertContractSeverity.Warning,
 
                         Title:
                             title,
@@ -848,12 +739,12 @@ public sealed class BillStatementChangeDetectionService
                             $"{FormatMoney(change.PreviousAmount)} → {FormatMoney(change.CurrentAmount)}. {FormatMoney(monthlyImpact)}/month less · {FormatMoney(annualImpact)}/year less. {change.Description}",
                             MaxAlertMessageLength);
 
-                    return new DesiredBillAlert(
+                    return new BillAlertDesiredState(
                         AlertType:
-                            EntityBillAlertType.BillDecrease,
+                            BillAlertContractType.BillDecrease,
 
                         Severity:
-                            BillAlertSeverity.Info,
+                            BillAlertContractSeverity.Info,
 
                         Title:
                             title,
@@ -1079,11 +970,6 @@ public sealed class BillStatementChangeDetectionService
         decimal AnnualizedImpact,
         string Description);
 
-    private sealed record DesiredBillAlert(
-        EntityBillAlertType AlertType,
-        BillAlertSeverity Severity,
-        string Title,
-        string Message);
 }
 
 public sealed record BillStatementChangeReconciliationResult(

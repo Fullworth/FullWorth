@@ -28,10 +28,45 @@ public static class AccountSecurityBffEndpointMappings
             "/profile",
             "/api/account/security/profile");
 
-        MapSecurePost<ChangePasswordBffRequest>(
-            bff,
+        bff.MapPost(
             "/password",
-            "/api/account/security/password");
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                ChangePasswordBffRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(
+                    context);
+
+                return await writeProxyService
+                    .ForwardJsonAndSignOutOnSuccessAsync(
+                        context,
+                        HttpMethod.Post,
+                        "/api/account/security/password",
+                        request,
+                        context.RequestAborted);
+            });
+
+        bff.MapPost(
+            "/sessions/revoke-all",
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                SensitiveCredentialBffRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(
+                    context);
+
+                return await writeProxyService
+                    .ForwardJsonAndSignOutOnSuccessAsync(
+                        context,
+                        HttpMethod.Post,
+                        "/api/account/security/sessions/revoke-all",
+                        request,
+                        context.RequestAborted);
+            });
 
         MapSecurePost<ChangeEmailBffRequest>(
             bff,
@@ -58,10 +93,25 @@ public static class AccountSecurityBffEndpointMappings
             "/two-factor/recovery-codes",
             "/api/account/security/two-factor/recovery-codes");
 
-        MapSecurePost<SensitiveCredentialBffRequest>(
-            bff,
+        bff.MapPost(
             "/two-factor/disable",
-            "/api/account/security/two-factor/disable");
+            async (
+                HttpContext context,
+                IAntiforgery antiforgery,
+                AdminBffWriteProxyService writeProxyService,
+                SensitiveCredentialBffRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(
+                    context);
+
+                return await writeProxyService
+                    .ForwardJsonAndSignOutOnSuccessAsync(
+                        context,
+                        HttpMethod.Post,
+                        "/api/account/security/two-factor/disable",
+                        request,
+                        context.RequestAborted);
+            });
 
         MapSecurePost<SensitiveCredentialBffRequest>(
             bff,

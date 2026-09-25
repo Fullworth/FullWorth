@@ -258,6 +258,310 @@ public sealed class AccountDeletionTests
     }
 
     [Fact]
+    public async Task DeleteAccount_RemovesOwnedBankGraphAndPreservesOtherUser()
+    {
+        using var deletingClient =
+            _factory.CreateHttpsClient();
+
+        using var remainingClient =
+            _factory.CreateHttpsClient();
+
+        var deletingSession =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                deletingClient);
+
+        var remainingSession =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                remainingClient);
+
+        TestUserAuthentication.Authorize(
+            deletingClient,
+            deletingSession);
+
+        Guid deletingUserId;
+        Guid remainingUserId;
+        Guid deletingStreamId;
+        Guid remainingStreamId;
+        Guid deletingConnectionId;
+        Guid remainingConnectionId;
+        Guid deletingAccountId;
+        Guid remainingAccountId;
+        Guid deletingTransactionId;
+        Guid remainingTransactionId;
+
+        await using (var setupScope =
+                     _factory.Services.CreateAsyncScope())
+        {
+            var dbContext =
+                setupScope.ServiceProvider
+                    .GetRequiredService<FullWorthDbContext>();
+
+            deletingUserId =
+                await dbContext.Users
+                    .Where(
+                        user =>
+                            user.Email ==
+                                deletingSession.Email)
+                    .Select(
+                        user =>
+                            user.Id)
+                    .SingleAsync();
+
+            remainingUserId =
+                await dbContext.Users
+                    .Where(
+                        user =>
+                            user.Email ==
+                                remainingSession.Email)
+                    .Select(
+                        user =>
+                            user.Id)
+                    .SingleAsync();
+
+            var deletingStream =
+                CreateBillStream(
+                    deletingUserId,
+                    "Deleting bank provider");
+
+            var remainingStream =
+                CreateBillStream(
+                    remainingUserId,
+                    "Remaining bank provider");
+
+            dbContext.BillStreams.AddRange(
+                deletingStream,
+                remainingStream);
+
+            deletingStreamId =
+                deletingStream.Id;
+
+            remainingStreamId =
+                remainingStream.Id;
+
+            var deletingConnection =
+                new BankConnectionEntity
+                {
+                    UserId =
+                        deletingUserId,
+
+                    InstitutionName =
+                        "Deleting Bank",
+
+                    Status =
+                        BankConnectionStatus.Active
+                };
+
+            var remainingConnection =
+                new BankConnectionEntity
+                {
+                    UserId =
+                        remainingUserId,
+
+                    InstitutionName =
+                        "Remaining Bank",
+
+                    Status =
+                        BankConnectionStatus.Active
+                };
+
+            dbContext.BankConnections.AddRange(
+                deletingConnection,
+                remainingConnection);
+
+            deletingConnectionId =
+                deletingConnection.Id;
+
+            remainingConnectionId =
+                remainingConnection.Id;
+
+            var deletingAccount =
+                new BankAccountEntity
+                {
+                    UserId =
+                        deletingUserId,
+
+                    BankConnectionId =
+                        deletingConnection.Id,
+
+                    PlaidAccountId =
+                        $"deleting-{Guid.NewGuid():N}",
+
+                    Name =
+                        "Deleting Checking",
+
+                    AccountType =
+                        BankAccountType.Checking,
+
+                    IsActive =
+                        true
+                };
+
+            var remainingAccount =
+                new BankAccountEntity
+                {
+                    UserId =
+                        remainingUserId,
+
+                    BankConnectionId =
+                        remainingConnection.Id,
+
+                    PlaidAccountId =
+                        $"remaining-{Guid.NewGuid():N}",
+
+                    Name =
+                        "Remaining Checking",
+
+                    AccountType =
+                        BankAccountType.Checking,
+
+                    IsActive =
+                        true
+                };
+
+            dbContext.BankAccounts.AddRange(
+                deletingAccount,
+                remainingAccount);
+
+            deletingAccountId =
+                deletingAccount.Id;
+
+            remainingAccountId =
+                remainingAccount.Id;
+
+            var deletingTransaction =
+                new BankTransactionEntity
+                {
+                    UserId =
+                        deletingUserId,
+
+                    BankAccountId =
+                        deletingAccount.Id,
+PlaidTransactionId =
+                        $"deleting-transaction-{Guid.NewGuid():N}",
+
+                    Name =
+                        "Deleting bank provider",
+
+                    Amount =
+                        42m,
+
+                    PostedDate =
+                        DateOnly.FromDateTime(
+                            DateTime.UtcNow)
+                };
+
+            var remainingTransaction =
+                new BankTransactionEntity
+                {
+                    UserId =
+                        remainingUserId,
+
+                    BankAccountId =
+                        remainingAccount.Id,
+PlaidTransactionId =
+                        $"remaining-transaction-{Guid.NewGuid():N}",
+
+                    Name =
+                        "Remaining bank provider",
+
+                    Amount =
+                        84m,
+
+                    PostedDate =
+                        DateOnly.FromDateTime(
+                            DateTime.UtcNow)
+                };
+
+            dbContext.BankTransactions.AddRange(
+                deletingTransaction,
+                remainingTransaction);
+
+            deletingTransactionId =
+                deletingTransaction.Id;
+
+            remainingTransactionId =
+                remainingTransaction.Id;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var response =
+            await SendDeleteAccountAsync(
+                deletingClient,
+                confirmation:
+                    "DELETE",
+                currentPassword:
+                    TestPassword);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            response.StatusCode);
+
+        await using var verificationScope =
+            _factory.Services.CreateAsyncScope();
+
+        var verificationDbContext =
+            verificationScope.ServiceProvider
+                .GetRequiredService<FullWorthDbContext>();
+
+        Assert.False(
+            await verificationDbContext.BankTransactions
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            deletingTransactionId));
+
+        Assert.False(
+            await verificationDbContext.BankAccounts
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            deletingAccountId));
+
+        Assert.False(
+            await verificationDbContext.BankConnections
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            deletingConnectionId));
+
+        Assert.False(
+            await verificationDbContext.BillStreams
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            deletingStreamId));
+
+        Assert.True(
+            await verificationDbContext.BankTransactions
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            remainingTransactionId));
+
+        Assert.True(
+            await verificationDbContext.BankAccounts
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            remainingAccountId));
+
+        Assert.True(
+            await verificationDbContext.BankConnections
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            remainingConnectionId));
+
+        Assert.True(
+            await verificationDbContext.BillStreams
+                .AnyAsync(
+                    item =>
+                        item.Id ==
+                            remainingStreamId));
+    }
+
+    [Fact]
     public async Task DeleteAccount_RemovesSubscriptionStateButDoesNotRecycleAccessKey()
     {
         using var deletingClient = _factory.CreateHttpsClient();
@@ -465,8 +769,7 @@ public sealed class AccountDeletionTests
         return new BillStatementUploadEntity
         {
             UserId = userId,
-            BillStreamId = billStreamId,
-            StorageKey = file.StorageKey,
+StorageKey = file.StorageKey,
             MediaType = file.MediaType,
             FileExtension = file.FileExtension,
             SizeBytes = file.SizeBytes,

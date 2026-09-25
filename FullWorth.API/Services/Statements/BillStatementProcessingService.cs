@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Statements;
@@ -36,6 +37,7 @@ public sealed class BillStatementProcessingService
     private readonly IBillStatementExtractionService _extractionService;
     private readonly BillStatementValidationService _validationService;
     private readonly BillStatementPersistenceService _persistenceService;
+    private readonly IBillStreamReadGateway _billStreamGateway;
     private readonly ILogger<BillStatementProcessingService> _logger;
 
     public BillStatementProcessingService(
@@ -44,6 +46,7 @@ public sealed class BillStatementProcessingService
         IBillStatementExtractionService extractionService,
         BillStatementValidationService validationService,
         BillStatementPersistenceService persistenceService,
+        IBillStreamReadGateway billStreamGateway,
         ILogger<BillStatementProcessingService> logger)
     {
         _dbContext = dbContext;
@@ -51,6 +54,7 @@ public sealed class BillStatementProcessingService
         _extractionService = extractionService;
         _validationService = validationService;
         _persistenceService = persistenceService;
+        _billStreamGateway = billStreamGateway;
         _logger = logger;
     }
 
@@ -138,21 +142,14 @@ public sealed class BillStatementProcessingService
             }
 
             /*
-             * Resolve Bill Stream context using BOTH resource ID and owner
-             * ID. The context is a hint, not proof of statement facts.
+             * Resolve Bill Stream context through the Bills-owned read
+             * boundary. The context is a hint, not proof of statement facts.
              */
-            var billStreamContext = await _dbContext.BillStreams
-                .AsNoTracking()
-                .Where(stream =>
-                    stream.Id == upload.BillStreamId &&
-                    stream.UserId == upload.UserId)
-                .Select(stream =>
-                    new
-                    {
-                        stream.ProviderName,
-                        stream.Category
-                    })
-                .SingleOrDefaultAsync(cancellationToken);
+            var billStreamContext =
+                await _billStreamGateway.GetOwnedAsync(
+                    upload.UserId,
+                    upload.BillStreamId,
+                    cancellationToken);
 
             if (billStreamContext is null)
             {
@@ -322,8 +319,8 @@ public sealed class BillStatementProcessingBackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var dbContext =
-            scope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
+        var userExistenceGateway =
+            scope.ServiceProvider.GetRequiredService<IIdentityUserExistenceGateway>();
 
         var statementStorage =
             scope.ServiceProvider.GetRequiredService<SecureBillStatementStorageService>();
@@ -334,7 +331,7 @@ public sealed class BillStatementProcessingBackgroundService
                 .CreateLogger<AccountDeletionStatementQuarantineRecovery>();
 
         var recovery = new AccountDeletionStatementQuarantineRecovery(
-            dbContext,
+            userExistenceGateway,
             statementStorage,
             recoveryLogger);
 

@@ -1,6 +1,4 @@
-﻿using FullWorth.API.Data;
-using FullWorth.API.Data.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using FullWorth.API.Services.Contracts;
 using Microsoft.Extensions.Options;
 
 namespace FullWorth.API.Services.Bills;
@@ -44,77 +42,21 @@ public sealed class BillMonitoringBackgroundOptions
     } = 25;
 }
 
-public sealed class BillMonitoringRefreshScheduler
+public sealed class BillMonitoringRefreshScheduler(
+    IBankConnectionReadGateway bankConnectionReadGateway)
 {
-    private readonly FullWorthDbContext
-        _dbContext;
-
-    public BillMonitoringRefreshScheduler(
-        FullWorthDbContext dbContext)
-    {
-        _dbContext =
-            dbContext;
-    }
-
-    public async Task<IReadOnlyList<Guid>>
+    public Task<IReadOnlyList<Guid>>
         GetDueUserIdsAsync(
             DateTimeOffset now,
             TimeSpan refreshCadence,
             int maxUsers,
             CancellationToken cancellationToken = default)
     {
-        if (refreshCadence <=
-            TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(refreshCadence),
-                "Refresh cadence must be greater than zero.");
-        }
-
-        if (maxUsers <=
-            0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(maxUsers),
-                "Maximum users must be greater than zero.");
-        }
-
-        var cutoff =
-            now -
-            refreshCadence;
-
-        /*
-         * Only Active connections are eligible.
-         *
-         * RequiresAttention needs user action and should not be
-         * repeatedly hammered in the background.
-         *
-         * Disconnected connections are intentionally ignored.
-         */
-        return await _dbContext.BankConnections
-            .AsNoTracking()
-            .Where(
-                connection =>
-                    connection.Status ==
-                        BankConnectionStatus.Active &&
-                    (
-                        !connection.LastSuccessfulSyncAtUtc
-                            .HasValue ||
-                        connection.LastSuccessfulSyncAtUtc
-                            .Value <=
-                            cutoff
-                    ))
-            .Select(
-                connection =>
-                    connection.UserId)
-            .Distinct()
-            .OrderBy(
-                userId =>
-                    userId)
-            .Take(
-                maxUsers)
-            .ToListAsync(
-                cancellationToken);
+        return bankConnectionReadGateway.GetDueUserIdsAsync(
+            now,
+            refreshCadence,
+            maxUsers,
+            cancellationToken);
     }
 }
 

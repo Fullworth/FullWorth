@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Bills;
 using FullWorth.API.Services.Statements;
 using FullWorth.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -60,7 +61,12 @@ public sealed class BillStatementAlertGenerationTests
 
         var service =
             new BillStatementChangeDetectionService(
-                dbContext);
+                dbContext,
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId,
@@ -183,7 +189,12 @@ public sealed class BillStatementAlertGenerationTests
 
         var service =
             new BillStatementChangeDetectionService(
-                dbContext);
+                dbContext,
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId,
@@ -269,7 +280,12 @@ public sealed class BillStatementAlertGenerationTests
 
         var service =
             new BillStatementChangeDetectionService(
-                dbContext);
+                dbContext,
+                new BillStreamReadGateway(
+                    dbContext),
+                new BillStatementEvidenceAlertService(),
+                new BillAlertReconciliationGateway(
+                    dbContext));
 
         await service.ReconcileAsync(
             userId,

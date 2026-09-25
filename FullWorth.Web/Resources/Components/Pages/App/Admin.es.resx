@@ -107,4 +107,10 @@
   <data name="User administration" xml:space="preserve"><value>Administración de usuario</value></data>
   <data name="Subscription access key" xml:space="preserve"><value>Clave de acceso de suscripción</value></data>
   <data name="Administrative action" xml:space="preserve"><value>Acción administrativa</value></data>
+
+  <data name="Current password" xml:space="preserve"><value>Contraseña actual</value></data>
+  <data name="Authenticator code (if enabled)" xml:space="preserve"><value>Código del autenticador (si está activado)</value></data>
+  <data name="Enter your current password before creating an access key." xml:space="preserve"><value>Introduce tu contraseña actual antes de crear una clave de acceso.</value></data>
+  <data name="Your current password is incorrect." xml:space="preserve"><value>Tu contraseña actual es incorrecta.</value></data>
+  <data name="Enter a valid current authenticator code if two-factor authentication is enabled." xml:space="preserve"><value>Introduce un código actual válido del autenticador si la autenticación en dos pasos está activada.</value></data>
 </root>

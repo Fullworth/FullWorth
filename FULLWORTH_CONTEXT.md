@@ -1,25 +1,133 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-22
+Last updated: 2026-09-24
 
-## Current migration checkpoint — 2026-09-22
+## Web/BFF cookie fixation checkpoint — 2026-09-25
 
-This checkpoint supersedes the older branch/domain summaries below; historical production evidence remains historical.
+PR #337 completed the session-fixation slice of the Web/BFF cookie-hardening review. The audit confirmed that the primary Web authentication cookie is a `__Host-` cookie with `HttpOnly`, `Secure=Always`, `SameSite=Lax`, root path, and sliding expiration disabled; the antiforgery cookie is also `__Host-`, `HttpOnly`, `Secure=Always`, root-scoped, and `SameSite=Strict`. The production Web session store keeps only an opaque protected browser reference, uses a cryptographically random 256-bit server key, Data-Protection-protects the serialized authentication ticket, applies the ticket's absolute expiration to the distributed cache, removes expired/tampered tickets, and removes the stored ticket on normal sign-out.
 
-- Repository: `RealizmModz/FullWorth`; integration branch: `development`.
-- Repository branch cleanup completed successfully on 2026-09-22. PR #249 merged the SHA-pinned reviewed-stale cleanup extension into `development` as `142eac4b0b380c81964da0f065c325bea951d994` after exact-head FullWorth CI #817 passed all three required jobs. PR #247 then promoted that maintenance state to `master` as `5c8a75af702031d14652325939e3b3c03c5df639` after exact-head FullWorth CI #818 passed all three required jobs.
-- The owner-only cleanup command on issue #245 triggered FullWorth Branch Cleanup run #3 against master `5c8a75af702031d14652325939e3b3c03c5df639`; the workflow completed successfully. The repository now has only `master`, `development`, and the intentionally preserved `feat/ui-foundation-primitives` branch. Do not delete that preserved branch until its unmerged reusable UI work is deliberately reviewed or superseded.
-- The current promoted product-code baseline remains development head `d4ab89de5a7a0ff1407c1188defd199c1a0e3d04`, promoted through PR #241 to master merge `a5c45ee91aefc30897418919f9ba24b9844afb2a` after exact-head FullWorth CI #806 passed. The later `5c8a75af...` master state is repository-maintenance/handoff work, not a newly claimed production deployment.
-- PR #218 merged the refreshed migration checkpoint as `b7ae2d975ece59959f4c239bdb93d33bfd9dc43c` after exact-head CI #763. PR #217 merged the legacy-compatibility guard as `af3501202d8d7f2946bf7469c5887ae4b8b4a24b` after CI #756. PR #216/#215/#214 completed the private-corpus, test/readiness, and operator-visible migration layers after CI #750/#745/#735.
-- The BillWatch → FullWorth cosmetic/operator migration is complete up to the explicit compatibility boundary. CI fails closed if a future change accidentally renames frozen secure-storage, claim/cookie/Data Protection, browser preference, Stripe metadata, external-auth, telemetry, alert/backup, legacy sender/domain, proof-confirmation, deployment-path, private-corpus, or context-pointer identifiers without an explicit compatibility migration.
-- Installed-device acceptance now has a release-pinned metadata-only human-attestation path. Android evidence is required by the same-release private-beta acceptance bundle; iOS evidence is verified and included when supplied. The fixed phase set now covers installed PWA launch, first-run setup, display/accessibility preference application, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile security dialogs. Plaid Hosted Link return remains independently proven by the existing Plaid observation evidence.
-- The evidence harness does **not** complete the real device gate by itself. Actual installed-device checks still need to be performed on the exact release candidate before their evidence can be recorded. Do not infer Android/iOS acceptance from browser/CI results.
-- PR #241 promoted the current personalization/readability/external-auth/GitHub-deploy release candidate to `master` as merge commit `a5c45ee91aefc30897418919f9ba24b9844afb2a` after exact-head FullWorth CI #806 passed. Production has **not** yet been claimed on that release. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` until a guarded deployment and verification of the new master release completes.
-- Remaining BillWatch names are compatibility boundaries or internal implementation identifiers, not unfinished cosmetic branding. Do not rename `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, systemd unit filenames, Data Protection application/purpose strings, persisted secure-storage/browser keys, claims/cookies, Stripe metadata, alert source IDs, backup tags, proof confirmation phrases, database/configuration identifiers, or the verified legacy email sender without a dedicated compatibility migration.
-- Preserve `security@billbeacon.net` and the legacy BillBeacon domain aliases until their separate external-provider/retirement checks are complete. FullWorth is now the canonical production Web/API domain, while the legacy aliases remain compatibility surfaces.
-- Production release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` was operator-reported live on 2026-09-22. The detailed deployment transcript is not stored in this context, so do not infer additional per-step production evidence beyond what was explicitly observed or previously verified.
-- Google/Apple provider-backed account creation is implemented and merged. Real provider acceptance remains open until protected provider credentials are configured outside GitHub and callback, registration, sign-in, linking, and account-isolation behavior are proven end to end.
-- The guarded GitHub-only production-deploy workflow is implemented on master. It is manual-only, exact-master-SHA gated, uses the protected `production` environment, keeps FullWorth application secrets on the production host, and still requires actual deployment/verification evidence before production can be claimed.
+A concrete fixation boundary remained because ASP.NET Core cookie authentication with a custom `SessionStore` can renew an existing server-side session identifier when application code signs in during an already-authenticated request. FullWorth now rejects password login, password registration, external login, and external registration when the Web request is already authenticated, preventing an existing session reference from being repurposed across an account/identity change while preserving intentional same-session token refresh. Focused regression tests prove those flows fail before creating an API client.
+
+Exact PR #337 head `ad3ec5d5871353266f7b0b147457920435d2da51` passed dependency security #84 and full CI #972 before squash merge as `c2bd58c4559fd25277874325ba86a67eb7d5bbfe`. Production was not changed.
+
+Continue the Web/BFF cookie-hardening review with lifetime and renewal alignment. In particular, verify the durable Web session upper bound against the actual refresh-token-family lifetime before changing code; do not assume the 30-day remember-me ticket is justified merely because it is already configured.
+
+## Web/BFF cookie lifetime/renewal checkpoint — 2026-09-25
+
+PR #339 completed the remaining lifetime/renewal proof for the Web/BFF cookie-hardening review without changing production behavior. The primary Web authentication cookie remains host-only `__Host-`, `HttpOnly`, `Secure=Always`, `SameSite=Lax`, root-scoped, bound to the protected distributed server-side ticket store, and non-sliding. Password/external sign-in and registration fixation was already closed by PR #337.
+
+The Web authentication ticket has a fixed absolute expiry of 12 hours for ordinary sessions or 30 days when Remember me is selected. API access tokens remain 15 minutes and refresh tokens 14 days. Successful refresh rotation may issue another 14-day refresh credential, but BFF refresh reuses the existing `AuthenticationProperties` and therefore does not extend the Web ticket's fixed absolute upper bound. PR #339 adds regression proof that the original Web-session expiry survives a server-side token refresh unchanged at cookie timestamp precision.
+
+The first PR #339 CI attempt failed only because the test compared sub-second `DateTimeOffset` precision even though authentication-cookie serialization normalizes expiry to whole seconds. The corrected exact head `df29de1540b3102a05472c01411d98eb814cf946` compares Unix-second precision, passed dependency security #87 and full CI #975, then squash-merged as `c8514750893204bdd585cb5feb3a766cdfefb127`.
+
+Issue #291's cookie-prefix/Secure/HttpOnly/SameSite/lifetime/fixation/renewal item is complete through PRs #337 and #339. The next unchecked identity/security slice is the broader email/recovery account-enumeration review. Do not reopen the completed cookie slice without new evidence.
+
+## MFA recovery/enumeration checkpoint — 2026-09-25
+
+PR #335 completed the remaining MFA recovery/enumeration slice without changing production code. The audit confirmed that the ASP.NET Core Identity-backed password-login path redeems a recovery code once, decrements the remaining-code set, and rejects replay. The forgot-password endpoint returns the same public success for a known confirmed account and an unknown email, and invalid reset-password requests return the same public error fingerprint for a known confirmed account and an unknown email.
+
+The first exact-head CI attempt exposed a test-fixture defect: it had set the 2FA flag without configuring an authenticator key, allowing password login to bypass the recovery-code path. The corrected test configures an authenticator-backed MFA state before login. Corrected exact head `02453b745eac4dfce8dbeb5f86d74902fde2cc60` passed dependency security #82 and full CI #970; PR #335 then squash-merged as `67317a10ec554890cfebc834ac49882cd2191633`.
+
+Issue #291's MFA enrollment/disable/recovery-code replay/enumeration item is complete through PRs #327, #328/#331, #333, and #335. This does not claim globally single-use TOTP verification or a complete MFA concurrency proof. The next unchecked security slice is Web/BFF cookie hardening: review prefixes, Secure/HttpOnly/SameSite, lifetime, fixation, and renewal behavior before changing code.
+
+## MFA setup/reset atomicity checkpoint — 2026-09-25
+
+PR #333 completed the setup/reset atomicity slice. Initial `two-factor/setup` now rejects an already-enabled account with 409 so setup cannot silently disable an active factor; on an MFA-disabled account it uses the framework `ResetAuthenticatorKeyAsync` transition directly instead of performing a redundant false-to-false `SetTwoFactorEnabledAsync` write first.
+
+Authenticator replacement now requires MFA to be enabled, stages `TwoFactorEnabled=false`, a newly generated authenticator key, and a new `SecurityStamp` through the configured Identity store, then persists the staged user/token state through one `UserManager.UpdateAsync` call. This removes the prior two-independent-write replacement sequence. Regression coverage verifies enabled-account setup preserves the existing MFA/key/stamp/recovery-code state, successful replacement stores a different key, disables MFA, rotates revocation state, and rejects a refresh token issued after MFA enrollment. A source-boundary test locks the single-persisted-transition shape.
+
+Exact PR #333 head `07e524984395e1235390323302a3a3b846e0ab5e` passed dependency security #79 and full CI #967 across backend build/tests, migration verification, transaction-stream regression, MAUI gating, production API/Web containers, HTTPS/HTTP security, encrypted backup and isolated recovery before squash merge as `93e0d72b10b9b1b128a3dcd90b19ac6f834da13c`.
+
+The remaining MFA review is recovery semantics and enumeration/error behavior. Preserve Identity's one-time recovery-code redemption behavior and PR #308 regeneration/session-revocation semantics; inspect current source and patch only confirmed gaps. Do not claim globally single-use TOTP verification or a complete MFA concurrency audit.
+
+## MFA disable/session revocation checkpoint — 2026-09-25
+
+PR #327 fixed replayed MFA enrollment: a repeated successful `two-factor/enable` request now returns 409 before mutation, preserving the recovery codes already issued and leaving the security stamp unchanged. Exact head `0e0359305122532af224e43c90fdb3fe8b93846c` passed dependency security #70 and full CI #958 before squash merge as `eb5cf04420f599694bbd96a00f9a1a0b3f14d459`.
+
+PR #328 fixed the product-level MFA-disable gap: successful Web/BFF disable removes the current protected Web session and returns the browser to sign-in, while focused regression coverage proves refresh tokens issued after MFA enrollment are invalidated and invalid proof preserves MFA/session state. During concurrent follow-up work, PR #329 became a superseded test-only exploration and was closed unmerged. The authoritative framework check was performed directly against ASP.NET Core Identity v10.0.12 source: `UserManager.SetTwoFactorEnabledAsync` stages the 2FA flag, calls `UpdateSecurityStampInternal`, and persists both through the same user update. PR #331 therefore removed FullWorth's redundant explicit stamp write and now relies on that framework-owned MFA-disable + stamp transition while preserving the Web signout and regression tests. Existing remote bearer access remains bounded by the normal 15-minute bearer lifetime; FullWorth does not claim instant remote bearer invalidation.
+
+PR #328 initially exposed one Web compile error because the Settings page did not inject `NavigationManager`; the missing injection was fixed without changing security semantics. Corrected exact head `dab33016099419ba7732c24ed1c85bfb72decc47` passed dependency security #73 and full CI #961 across backend/tests, migration verification, MAUI gating, production API/Web containers, visual acceptance, HTTP security, encrypted backup and isolated recovery before squash merge as `8be4e68967632b505a421af1f845209ff5fb3d86`. PR #329's corrected test-only exact head `e9541c17806ee981c2de3a08c5a85ef79ef9a7df` passed dependency security #75 and full CI #963 but was intentionally closed unmerged after overlapping #328. PR #331 exact head `af0426ef3e4702ff95ca9842ab0be88315348d47` passed dependency security #77 and full CI #965 before squash merge as `42209c96391db5675945768e508b605114548df1`; its rationale is grounded in the verified ASP.NET Core Identity v10.0.12 implementation rather than treating the concurrent #329 run as proof of the pre-#328 production state.
+
+The MFA review remains open. Setup/reset failure atomicity is complete through PR #333. Continue with broader recovery semantics and enumeration/error behavior. Do not claim globally single-use TOTP verification or a complete MFA concurrency audit.
+
+## MFA enrollment replay checkpoint — 2026-09-25
+
+The enrollment audit reproduced a confirmed defect: replaying a successful `two-factor/enable` request silently replaced the recovery codes just issued and rotated revocation state again. The enable endpoint now rejects an already-enabled account with 409 after password verification and before further mutation. Intentional recovery-code replacement remains on the strongly reauthenticated regeneration endpoint. The Web explains how to obtain replacement codes, with Spanish localization.
+
+Regression coverage checks that the original ten codes remain usable after a rejected replay, each is redeemable only once, the security stamp stays unchanged, and invalid enrollment proof neither enables MFA nor issues codes. This protects the completed enrollment transition; it does not claim globally single-use TOTP verification across operations or resolve every concurrent enrollment/reset transition.
+
+Read the associated PR and exact-head CI for merge/validation evidence. Continue #291 with setup/reset failure atomicity, disabling behavior, and recovery/enumeration boundaries. No production deployment or complete MFA-audit claim is made.
+
+## Architecture modularization checkpoint — 2026-09-24
+
+FullWorth is a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
+
+Completed architecture checkpoints:
+- #261 established project dependency airlocks and CI-enforced project graph rules.
+- #263 established direct sibling service-module coupling enforcement.
+- #264 introduced the provider-neutral bank synchronization airlock.
+- #265–#279 incrementally moved Accounts, Bills, Plaid, and Statements cross-owner reads/writes behind owner contracts and drove the controller/service ownership ratchets to zero exceptions for the enforced domains.
+- #281 removed the cross-domain database foreign key/navigation from Bills-owned alerts to Statements-owned bill changes while retaining opaque correlation metadata.
+- #286 introduced the Bills-owned bank-transaction association bridge/backfill.
+- #287 moved recurring-discovery/runtime behavior to the Bills-owned transaction association.
+- #288 removed the legacy Plaid-owned `BankTransactions.BillStreamId` column/indexes/foreign key after the bridge and runtime cutover were proven.
+- #289 extended service ownership enforcement to Subscriptions and routed Statements quarantine user-existence reads through Identity.
+- #290 routed Admin user/role/subscription mutations through Identity/Subscriptions owner contracts and added Admin to the zero-exception service ownership ratchet.
+
+Active architecture state:
+- Issue #260 remains the modular-architecture tracker.
+- The previously documented `BillAlerts -> BillChanges` and `BankTransactions.BillStreamId -> BillStreams` schema couplings are resolved by #281 and #286–#288; do not reopen them unless new evidence shows a regression.
+- Continue ownership enforcement only module-by-module after inspecting the current source. Do not introduce broad allowances or perform a big-bang rewrite.
+
+Architecture rules:
+- Modules depend on contracts, not sibling implementations.
+- Controllers and services must not access another module's private persistence directly where an owner contract exists.
+- Shared scoped DbContext transactions are an explicit modular-monolith coordination mechanism. A future network split requires an outbox/coordinator or equivalent rather than silently losing atomicity.
+- Sensitive provider credentials, statement storage identifiers, authentication material, and cross-user financial evidence must not leak through contracts, logs, export payloads, or exceptions.
+
+Production remains unchanged by architecture/security merges unless a separate guarded production deployment is explicitly approved.
+
+## Current migration/security checkpoint — 2026-09-24
+
+This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
+
+- Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
+- Current `development`: `c8514750893204bdd585cb5feb3a766cdfefb127` after PR #339 completed the Web/BFF fixed-lifetime renewal proof.
+- Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
+- The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
+- Production remains untouched unless a guarded deployment is separately and explicitly approved.
+
+Security program:
+- Issue #291 is the active ASVS-based defense-in-depth tracker. It is a hardening/verification program, not a claim of ASVS certification.
+- PR #292 hardened the Web antiforgery cookie and added a commit-pinned pull-request dependency-review gate. GitHub CodeQL default setup is already enabled, and NuGet vulnerability warnings NU1901–NU1904 remain build-blocking.
+- PR #297 split production networking into least-connectivity edge/API/Web/data/egress networks, made the data path internal-only, and proved read-only API/Web roots, bounded noexec/nosuid/nodev temporary storage, PID ceilings, HTTPS, statement handling, encrypted backup, isolated restore, and recovery.
+- PR #298 confined the Caddy edge with a read-only root, `no-new-privileges`, all Linux capabilities dropped except `NET_BIND_SERVICE`, a 128-PID ceiling, and bounded noexec/nosuid/nodev temporary storage.
+- PR #299 moved Web authentication tickets into a Data-Protection-protected distributed server-side store backed in production by an isolated, password-protected, non-persistent Redis service. The browser auth cookie now carries an opaque protected session reference rather than API access/refresh tokens.
+- PR #337 prevents authenticated Web requests from switching to a different password/external identity or creating another account in-place, closing the confirmed session-fixation boundary while preserving intentional same-session token refresh. Exact head `ad3ec5d5871353266f7b0b147457920435d2da51` passed dependency security #84 and full CI #972 before squash merge as `c2bd58c4559fd25277874325ba86a67eb7d5bbfe`.
+- PR #300 explicitly set Identity bearer access-token lifetime to 15 minutes and refresh-token lifetime to 14 days, and added regression coverage for password security-stamp rotation.
+- PR #302 ends the current server-side Web session immediately after a successful password change, preserves the session on rejected password changes, and returns the browser to sign-in.
+- PR #305 locks the existing external OIDC security invariants with regression coverage for authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, response modes, and hardened nonce/correlation cookies.
+- PR #306 revokes refresh sessions when an existing account adds or removes an external sign-in method.
+- PR #307 revokes refresh sessions atomically with staff role promotion/demotion.
+- PR #308 revokes refresh sessions atomically with two-factor recovery-code regeneration.
+- PR #309 adds bounded single-use refresh-token families, replay rejection, PostgreSQL-backed concurrency control, and distributed Web/BFF refresh-race recovery. Review after merge found that its advisory lock did not serialize against ordinary Identity security-stamp writes.
+- PR #310 replaces that advisory lock with a transaction-scoped `AspNetUsers` row lock and revalidates the current security stamp after the row is locked, closing the refresh/security-change race. Exact head `c11658733ba29820237e6e8501d026741894146b` passed dependency security and full CI #934 before squash merge as `ac722b0f5f68dc3699374ccc183e8df8654f106f`.
+- PR #312 revokes the current enrolled refresh family on first-party Web/MAUI logout while preserving independent sessions. Exact head `79e25b1f24189030b4b0d8c2b96c520ef66545d5` passed dependency security and full CI #937 before squash merge as `2109bb8d1950aeab3229cf79c9d959d4c23eb9fb`.
+- PR #313 adds strongly reauthenticated account-wide refresh revocation using ASP.NET Core Identity `SecurityStamp` rotation. Existing refresh tokens across sessions fail immediately; already-issued bearer access is still bounded by the explicit 15-minute lifetime. Exact head `b2947dcc24404005a620d096138b3bd48bf0f3df` passed dependency security and full CI #938 before squash merge as `8a338197139a1ad63094eab589b590060aff92e4`.
+- PR #314 exposes account-wide revocation through an antiforgery-protected Web/BFF `Sign out everywhere` control, signs out the current Redis-backed Web session after a successful revocation, discloses the bounded 15-minute remote access-token window, and adds Spanish localization plus antiforgery coverage. Exact head `4722c7f9bd421cb6c3c91659ba17057cb0ae6354` passed dependency security and full CI #939 before squash merge as `489568293aa0af3deea1682f9f7ce2f2f2362cf0`; the generated desktop/mobile Settings screenshots were visually inspected and the new card rendered cleanly.
+- The current token/session lifecycle checkpoint is complete: refresh replay is single-use/bounded, first-party logout revokes the current refresh family, account-wide revocation rotates Identity `SecurityStamp`, and the Web sign-out-everywhere flow removes the current server-side Web session on success. Already-issued remote bearer access remains bounded by the explicit 15-minute access-token lifetime; FullWorth does not claim instant remote bearer-token invalidation.
+- PR #316 closes the first confirmed strong-reauthentication gap: Admin/Owner subscription access-key creation now requires the actor's current password and, when 2FA is enabled, a current authenticator code before any privilege-granting key is issued. Defensive access-key revocation intentionally remains friction-light for incident response. Exact head `f35648e4da969ce071b44cf4ddf9272cab55f095` passed dependency security and full CI #941 across backend/tests, MAUI gating, production-container/browser/security/recovery before squash merge as `c699ea86a9f8c18d6e3fbcf476b36631efcdc006`.
+- PR #318 fixes the admin Web client regression exposed by #316: the three known strong-reauthentication 401 ProblemDetails responses now remain on the current admin page and surface as credential errors, while ordinary/unrecognized 401 responses still redirect to sign-in. Exact head `60749c1cb758b6fc92baf9e63758a97b3ae3c2e7` passed dependency security and full CI #943 across backend/tests, MAUI gating, production-container/browser/security/recovery before squash merge as `0f102e70c32ba2ac032cd4b72d9a4b002c018364`.
+- PR #320 requires the acting Admin/Owner's current password and, when enabled, current authenticator code before assigning Admin or Moderator roles. Rejected reauthentication fails before mutation; role-removal DELETEs deliberately retain the existing friction-light incident-response path. The Web/BFF carries the credentials only for role grants and surfaces known credential errors on-page. Exact corrected head `d5505c1948c57f2eb6ad17f52ca1cba89662e8ca` passed dependency security and full CI #946 across backend/tests, MAUI gating, production-container/browser/security/recovery before squash merge as `e2eb0cceaf1cb7fbacbaddd791f235da490ff364`.
+- PR #322 extends that strong reauthentication to subscription entitlement grants and program-membership activation. Entitlement revocation and program deactivation stay friction-light for incident response, and the Web clears entered password/2FA values after every mutation attempt. Exact head `65604f56fa61a688b94c068ffc5152c83801cc38` passed dependency security and full CI #948 across backend/tests, MAUI gating, production-container/browser/security/recovery before squash merge as `8984145aded753af228a8a6783128ac22080a9bc`.
+- PR #324 hardens sensitive account export and completes the current strong-reauthentication audit. The API and Web/BFF export surfaces are POST-only, the Web path is antiforgery-protected, fresh account verification is required before export construction, and the previous GET path is regression-blocked. Existing ownership, no-store, rate-limit, and forbidden-secret/storage checks remain covered. Export-bearing smoke harnesses reject recovery-only mode before network use and keep sensitive request material out of process arguments. Exact head `ba5f89c266b8f6b76a10ab977bb70f9c2de3d25a` passed dependency security and full CI #955 before squash merge as `3d8187b4f81a44f2248bbeda66914260a5d0a721`. Generated desktop/mobile privacy screenshots were inspected; the default layout remained clean and responsive, while the automated capture did not open the expanded export-confirmation form.
+- External OIDC uses authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, explicit provider response modes, and hardened nonce/correlation cookies; PR #305 regression-locks these invariants.
+- Database runtime/migration privilege separation, stronger production secret injection, Data Protection key-at-rest/rotation design, parser-worker isolation, host/SSH/firewall hardening, security-event detection, SBOM/provenance, and immutable/off-host recovery proof remain open security work.
+
+Platform/acceptance:
+- Android physical installed-PWA acceptance remains open under issue #251. CI, Chromium, and emulator evidence do not satisfy that gate.
+- iOS Add to Home Screen failure remains tracked separately in issue #258.
+- No real-device, provider, backup-immutability, legal-review, production, or human acceptance evidence may be fabricated or inferred from CI.
 
 ## FullWorth brand transition
 
@@ -117,15 +225,15 @@ Existing browser and offline proofs should not be rerun without relevant source 
 
 ## Repository / stack
 
-Repository: `RealizmModz/FullWorth`
+Repository: `Fullworth/FullWorth`
 
 Default/release branch: `master`
 Active integration branch: `development`
 
 ### Current GitHub baseline
 
-- `master`: `5c8a75af702031d14652325939e3b3c03c5df639` (PR #247 maintenance promotion; exact promotion head `142eac4b0b380c81964da0f065c325bea951d994` passed FullWorth CI #818).
-- `development`: `142eac4b0b380c81964da0f065c325bea951d994` after PR #249 merged the guarded reviewed-stale cleanup extension; exact PR head `2dbb8b5ec43a96bf7719fc7e136c340e52b5e300` passed FullWorth CI #817.
+- `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1` (current GitHub release-branch head; this is not by itself production-deployment evidence).
+- `development`: `2cb7a585323ca7be76360fcf1c5e7e0e80012c35` after PR #302 completed the password-change Web-session invalidation checkpoint with exact-head CI green.
 - Latest code-bearing `development` merge before the later maintenance/handoff work: `d86c7ac09650a6605f9262ede22a339a3f25d757` (PR #197 Web/BFF protected-secret newline normalization; exact head `7e47db358c0fea0c6b7b4a1b5c5347ef99b68770`, full CI #700). Later handoff-only commits may advance the branch without changing product/runtime behavior.
 - PR #163 promoted the frozen development release to `master` as `cbcf261e13636f0330cb9d7be2ce413871e413aa`. Its exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644 across backend/tests, MAUI Android, and the Linux production-container/security/recovery gate before merge.
 - `development` was then fast-forwarded to the verified master merge so both long-lived branches are synchronized at the same release baseline.
@@ -136,7 +244,7 @@ Active integration branch: `development`
 - PR #100 promoted that focused registration hotfix to `master` as `7824cc5f6ddb0231c986a793f15654d0314a8ad5`. Its exact PR head `847e17a...` passed backend build/tests, MAUI Android build, and Linux production container/recovery checks.
 - No post-merge CI run is being claimed for merge commit `7824cc5...`; the verified automated gate is the exact PR #100 head.
 
-Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, encrypted HttpOnly Web/BFF auth, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
+Stack: .NET 10 MAUI + ASP.NET Core API + Blazor Interactive Server Web/BFF, PostgreSQL/EF Core, ASP.NET Core Identity bearer auth, opaque HttpOnly Web session references with Data-Protection-protected server-side Redis auth tickets, Plaid, xUnit, PdfPig, Tesseract, Docker Compose/Caddy/systemd, encrypted Restic recovery.
 
 Public Web: `https://fullworth.org`
 Public API: `https://api.fullworth.org`
@@ -146,7 +254,7 @@ Production path: `/opt/billwatch`
 ## Security invariants
 
 - Plaid access tokens remain server-side/protected at rest.
-- Web bearer/refresh tokens remain inside encrypted HttpOnly BFF state and are not intentionally exposed to browser JavaScript.
+- Web bearer/refresh tokens remain server-side inside Data-Protection-protected distributed authentication tickets. The browser receives only an opaque protected HttpOnly session reference; bearer/refresh material is not intentionally exposed to browser JavaScript.
 - External provider ID tokens/proofs must not be exposed to browser JavaScript.
 - User financial resources and statements remain ownership-scoped; cross-user IDs normally return 404 where appropriate.
 - Staff roles do not grant access to another user's financial evidence.
@@ -264,16 +372,11 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Current GitHub `master` is `5c8a75af702031d14652325939e3b3c03c5df639` from PR #247. Its exact promotion head `142eac4b0b380c81964da0f065c325bea951d994` passed FullWorth CI #818 across backend build/tests, MAUI Android, and Linux production/security/backup/recovery before merge. This was a repository-maintenance/handoff promotion, not a production deployment.
-2. Current GitHub `development` is `142eac4b0b380c81964da0f065c325bea951d994`. PR #249's exact head `2dbb8b5ec43a96bf7719fc7e136c340e52b5e300` passed FullWorth CI #817 before squash merge.
-3. FullWorth Branch Cleanup run #3 completed successfully from the owner-only issue #245 command against master `5c8a75af...`. Only `master`, `development`, and intentionally preserved `feat/ui-foundation-primitives` remain.
-4. The operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` from 2026-09-22. No newer GitHub merge is being claimed as deployed. Release-pinned real-device acceptance therefore still targets `81a74f...` unless production is deliberately advanced through the guarded deployment path.
-5. The BillWatch → FullWorth cosmetic/operator migration is complete up to the guarded compatibility boundary. Do not rename frozen `BILLWATCH_*`, `/opt/billwatch`, `.billwatch-release`, Data Protection/purpose strings, persisted keys, claims/cookies, Stripe metadata, legacy sender/domain, alert/backup IDs, proof phrases, or related compatibility identifiers without a dedicated migration.
-6. The next release checkpoint is real installed-device acceptance against deployed release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`; do not create a new release merely to generate acceptance evidence.
-7. Perform the real installed-device checks against that deployed release: Android installed PWA is required; iOS home-screen PWA is where-available. Verify installed launch, keyboard resize, Back/navigation behavior, controlled PWA update, statement file picker, and installed/mobile Change password / Change email dialogs.
-8. Plaid Hosted Link return remains a separate human/provider observation proof. Do not merge it into the installed-device attestation or manufacture either evidence path.
-9. If real-device acceptance exposes a defect, stop launch progression, fix it on a focused branch from current `development`, require exact-head CI, merge back to `development`, promote a new verified master candidate, redeploy through the guarded path, and repeat release-pinned acceptance for the new release.
-10. The same-release private-beta acceptance bundle requires machine technical evidence, alert-observation evidence, Plaid observation evidence, and Android installed-device evidence. iOS evidence is included when supplied.
-11. Provider-enforced immutable/Object-Lock/WORM backup protection and qualified Terms/Privacy review remain separate trusted-beta launch gates and are not implied by CI, deployment, or the private-beta acceptance bundle.
-12. Preserve every authentication, BFF, antiforgery, HTTPS, ownership, token-protection, statement, backup, migration, and financial-data security invariant while completing the release gate.
-13. Do not repeat browser screenshot, Chromium offline, responsive-browser Back, or browser session-expiry audits unless relevant source changes or new evidence warrants them.
+1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
+2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
+3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. Next inspect Web/BFF cookie prefixes, Secure/HttpOnly/SameSite, lifetime, fixation, and renewal behavior. Patch only confirmed gaps; do not replace the Data Protection-protected Redis ticket-store design from PR #299 without new evidence.
+4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
+5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
+6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
+7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
+8. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, container confinement, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build or architecture check pass.

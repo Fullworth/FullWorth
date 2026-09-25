@@ -109,12 +109,13 @@ The application fails closed outside Development unless these settings are prese
 - `ConnectionStrings__BillWatchDatabase`
 - `DataProtection__KeysPath`
 - `BillStatementStorage__RootPath`
+- `WebSession__RedisHost` / `BILLWATCH_WEB_SESSION_REDIS_PASSWORD`
 - `Plaid__ClientId`
 - `Plaid__Secret`
 - `Plaid__Environment`
 - `AllowedHosts`
 
-When TLS terminates at a reverse proxy, configure only its trusted address under `ReverseProxy__KnownProxies`. The included Compose network pins Caddy to `172.28.0.10` and trusts only that address.
+When TLS terminates at a reverse proxy, configure only its trusted address under `ReverseProxy__KnownProxies`. The included Compose topology gives Caddy a dedicated API-edge address (`172.28.0.10`) and Web-edge address (`172.29.0.10`); API and Web trust only their respective edge address.
 
 Subscription enforcement is controlled by `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED` and defaults to `false`. `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_COHORT` accepts `InternalTester`, `BetaTester`, or `All`; unknown values fail closed as `All`. Enable it only after validating the entitlement and access-key flow. When enabled, targeted users need an active entitlement for financial routes, while subscription recovery, staff administration, data export, bank disconnection, and account deletion remain available through explicit endpoint metadata.
 

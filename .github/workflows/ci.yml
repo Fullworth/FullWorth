@@ -40,6 +40,7 @@ jobs:
 
           $backendSafeExactFiles = @(
             "AI_SHADOW_CORPUS.md",
+            "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
             "README.md",
@@ -158,6 +159,7 @@ jobs:
             ".dockerignore",
             ".env.production.example",
             "AI_SHADOW_CORPUS.md",
+            "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
             "Dockerfile",
@@ -229,6 +231,7 @@ jobs:
       BILLWATCH_BACKUP_WORK_SIZE: 1g
       BILLWATCH_BACKUP_CLIENT_MODE: append-only
       BILLWATCH_DATABASE_PASSWORD: ci-only-password
+      BILLWATCH_WEB_SESSION_REDIS_PASSWORD: ci-web-session-password-more-than-32-characters
       BILLWATCH_HOST: localhost
       BILLWATCH_WEB_HOST: web.localhost
       BILLWATCH_RELEASE_ID: ${{ github.sha }}
@@ -268,6 +271,7 @@ jobs:
 
           $relevantExactFiles = @(
             ".github/workflows/ci.yml",
+            ".github/workflows/android-internal-apk.yml",
             ".github/workflows/production-deploy.yml",
             ".github/workflows/branch-cleanup.yml",
             ".dockerignore",
@@ -337,7 +341,12 @@ jobs:
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
+          sh deploy/tests/project-boundary-tests.sh
+          sh deploy/tests/service-module-boundary-tests.sh
+          sh deploy/tests/data-ownership-boundary-tests.sh
+          sh deploy/tests/controller-data-ownership-boundary-tests.sh
           sh deploy/tests/legacy-brand-compatibility-tests.sh
+          sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
           sh deploy/tests/production-deploy-workflow-tests.sh
           sh deploy/tests/production-operations-tests.sh
@@ -419,7 +428,7 @@ jobs:
 
       - name: Upload visual acceptance screenshots
         if: always() && steps.visual_changes.outputs.required == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fullworth-visual-${{ github.run_id }}
           path: FullWorth.VisualTests/artifacts
@@ -452,6 +461,143 @@ jobs:
             --header 'Content-Type: application/json' \
             --data "{\"email\":\"${email}\",\"password\":\"${password}\"}")"
           access_token="$(jq --exit-status --raw-output '.accessToken' <<<"${login_json}")"
+          refresh_token="$(jq --exit-status --raw-output '.refreshToken' <<<"${login_json}")"
+
+          umask 077
+          refresh_race_dir="$(mktemp -d)"
+          cleanup_refresh_race() {
+            rm -rf "${refresh_race_dir}"
+          }
+          trap cleanup_refresh_race EXIT
+
+          # First-use race: exactly one request may establish the refresh family.
+          printf '{"refreshToken":"%s"}' "${refresh_token}" |
+            curl --silent --show-error --insecure \
+              --output "${refresh_race_dir}/first-a.body" \
+              --write-out '%{http_code}' \
+              --request POST https://localhost/api/auth/refresh \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              >"${refresh_race_dir}/first-a.code" &
+          first_a_pid=$!
+
+          printf '{"refreshToken":"%s"}' "${refresh_token}" |
+            curl --silent --show-error --insecure \
+              --output "${refresh_race_dir}/first-b.body" \
+              --write-out '%{http_code}' \
+              --request POST https://localhost/api/auth/refresh \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              >"${refresh_race_dir}/first-b.code" &
+          first_b_pid=$!
+
+          wait "${first_a_pid}"
+          wait "${first_b_pid}"
+
+          first_a_code="$(cat "${refresh_race_dir}/first-a.code")"
+          first_b_code="$(cat "${refresh_race_dir}/first-b.code")"
+
+          first_successes=0
+          first_replays=0
+          for code in "${first_a_code}" "${first_b_code}"; do
+            case "${code}" in
+              200) first_successes=$((first_successes + 1)) ;;
+              401) first_replays=$((first_replays + 1)) ;;
+              *) echo "Unexpected first refresh race status: ${code}" >&2; exit 1 ;;
+            esac
+          done
+          test "${first_successes}" -eq 1
+          test "${first_replays}" -eq 1
+
+          if [ "${first_a_code}" = "200" ]; then
+            first_refresh_json="$(cat "${refresh_race_dir}/first-a.body")"
+          else
+            first_refresh_json="$(cat "${refresh_race_dir}/first-b.body")"
+          fi
+
+          first_rotated_refresh_token="$(jq --exit-status --raw-output '.refreshToken' <<<"${first_refresh_json}")"
+
+          replay_original_code="$(
+            printf '{"refreshToken":"%s"}' "${refresh_token}" |
+              curl --silent --show-error --insecure \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          test "${replay_original_code}" = "401"
+
+          # Family-advance race: the PostgreSQL compare-and-swap must again
+          # admit exactly one copy of the same rotated token.
+          printf '{"refreshToken":"%s"}' "${first_rotated_refresh_token}" |
+            curl --silent --show-error --insecure \
+              --output "${refresh_race_dir}/second-a.body" \
+              --write-out '%{http_code}' \
+              --request POST https://localhost/api/auth/refresh \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              >"${refresh_race_dir}/second-a.code" &
+          second_a_pid=$!
+
+          printf '{"refreshToken":"%s"}' "${first_rotated_refresh_token}" |
+            curl --silent --show-error --insecure \
+              --output "${refresh_race_dir}/second-b.body" \
+              --write-out '%{http_code}' \
+              --request POST https://localhost/api/auth/refresh \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              >"${refresh_race_dir}/second-b.code" &
+          second_b_pid=$!
+
+          wait "${second_a_pid}"
+          wait "${second_b_pid}"
+
+          second_a_code="$(cat "${refresh_race_dir}/second-a.code")"
+          second_b_code="$(cat "${refresh_race_dir}/second-b.code")"
+
+          second_successes=0
+          second_replays=0
+          for code in "${second_a_code}" "${second_b_code}"; do
+            case "${code}" in
+              200) second_successes=$((second_successes + 1)) ;;
+              401) second_replays=$((second_replays + 1)) ;;
+              *) echo "Unexpected rotated refresh race status: ${code}" >&2; exit 1 ;;
+            esac
+          done
+          test "${second_successes}" -eq 1
+          test "${second_replays}" -eq 1
+
+          if [ "${second_a_code}" = "200" ]; then
+            second_refresh_json="$(cat "${refresh_race_dir}/second-a.body")"
+          else
+            second_refresh_json="$(cat "${refresh_race_dir}/second-b.body")"
+          fi
+
+          second_rotated_access_token="$(jq --exit-status --raw-output '.accessToken' <<<"${second_refresh_json}")"
+
+          replay_first_rotated_code="$(
+            printf '{"refreshToken":"%s"}' "${first_rotated_refresh_token}" |
+              curl --silent --show-error --insecure \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                --request POST https://localhost/api/auth/refresh \
+                --header 'Content-Type: application/json' \
+                --data-binary @-
+          )"
+          test "${replay_first_rotated_code}" = "401"
+
+          access_token="${second_rotated_access_token}"
+
+          cleanup_refresh_race
+          trap - EXIT
+          unset refresh_race_dir refresh_token first_rotated_refresh_token
+          unset first_refresh_json second_refresh_json second_rotated_access_token
+          unset replay_original_code replay_first_rotated_code
+          unset first_a_code first_b_code second_a_code second_b_code
+          unset first_successes first_replays second_successes second_replays
+          unset first_a_pid first_b_pid second_a_pid second_b_pid
+
           stream_json="$(curl --fail --silent --show-error --insecure \
             --request POST https://localhost/api/bill-streams \
             --header "Authorization: Bearer ${access_token}" \

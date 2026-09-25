@@ -1,5 +1,6 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +36,12 @@ public sealed class RecurringBillDiscoveryPersistenceService
     private readonly FullWorthDbContext
         _dbContext;
 
+    private readonly IBankTransactionDiscoveryGateway
+        _transactionGateway;
+
+    private readonly IBillTransactionAssociationGateway
+        _associationGateway;
+
     private readonly BillStreamDiscoveryService
         _discoveryService;
 
@@ -48,10 +55,27 @@ public sealed class RecurringBillDiscoveryPersistenceService
         _discoveryAlertService;
 
     public RecurringBillDiscoveryPersistenceService(
-        FullWorthDbContext dbContext)
+        FullWorthDbContext dbContext,
+        IBankTransactionDiscoveryGateway transactionGateway,
+        IBillTransactionAssociationGateway associationGateway)
     {
+        ArgumentNullException.ThrowIfNull(
+            dbContext);
+
+        ArgumentNullException.ThrowIfNull(
+            transactionGateway);
+
+        ArgumentNullException.ThrowIfNull(
+            associationGateway);
+
         _dbContext =
             dbContext;
+
+        _transactionGateway =
+            transactionGateway;
+
+        _associationGateway =
+            associationGateway;
 
         _discoveryService =
             new BillStreamDiscoveryService();
@@ -80,18 +104,41 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 nameof(userId));
         }
 
-        var persistedTransactions =
-            await _dbContext.BankTransactions
-                .Where(
-                    transaction =>
-                        transaction.UserId ==
-                            userId &&
-                        !transaction.IsRemoved)
-                .OrderBy(
-                    transaction =>
-                        transaction.PostedDate)
-                .ToListAsync(
+        var transactionSnapshots =
+            await _transactionGateway
+                .GetDiscoveryTransactionsAsync(
+                    userId,
                     cancellationToken);
+
+        var transactionIds =
+            transactionSnapshots
+                .Select(transaction => transaction.TransactionId)
+                .ToArray();
+
+        var associationSnapshots =
+            await _associationGateway.GetAsync(
+                userId,
+                transactionIds,
+                cancellationToken);
+
+        var billStreamIdByTransactionId =
+            associationSnapshots
+                .ToDictionary(
+                    association => association.BankTransactionId,
+                    association => association.BillStreamId);
+
+        var persistedTransactions =
+            transactionSnapshots
+                .Select(
+                    transaction =>
+                        new DiscoveryTransaction(
+                            transaction,
+                            billStreamIdByTransactionId.TryGetValue(
+                                transaction.TransactionId,
+                                out var billStreamId)
+                                ? billStreamId
+                                : null))
+                .ToList();
 
         /*
          * Do not discard a transaction merely because Plaid placed it in a
@@ -105,7 +152,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
         var candidateTransactionsByProvider =
             new Dictionary<
                 string,
-                List<BankTransactionEntity>>(
+                List<DiscoveryTransaction>>(
                     StringComparer.OrdinalIgnoreCase);
 
         var coreTransactions =
@@ -348,9 +395,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 transaction.BillStreamId =
                     null;
 
-                transaction.UpdatedAtUtc =
-                    now;
-
                 unlinkedTransactionCount++;
             }
         }
@@ -492,16 +536,34 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 transaction.BillStreamId =
                     persistedStream.Id;
 
-                transaction.UpdatedAtUtc =
-                    now;
-
                 linkedTransactionCount++;
             }
         }
 
+        var linkAssignments =
+            persistedTransactions
+                .Where(
+                    transaction =>
+                        transaction.OriginalBillStreamId !=
+                            transaction.BillStreamId)
+                .Select(
+                    transaction =>
+                        new BillTransactionAssociationAssignment(
+                            transaction.Id,
+                            transaction.OriginalBillStreamId,
+                            transaction.BillStreamId))
+                .ToArray();
+
+        await _associationGateway
+            .StageAssignmentsAsync(
+                userId,
+                linkAssignments,
+                now,
+                cancellationToken);
+
         /*
-         * Bill Streams, transaction links, and discovery alerts commit
-         * together.
+         * Bill Streams, alerts, and provider-owned transaction-link changes
+         * commit together in the current scoped modular-monolith unit of work.
          */
         await _dbContext.SaveChangesAsync(
             cancellationToken);
@@ -539,7 +601,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private BillCategory ResolveBillCategory(
-        IReadOnlyCollection<BankTransactionEntity>
+        IReadOnlyCollection<DiscoveryTransaction>
             transactions)
     {
         foreach (var transaction in
@@ -558,7 +620,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static bool HasStrongTwoOccurrenceSubscriptionEvidence(
-        IReadOnlyCollection<BankTransactionEntity>
+        IReadOnlyCollection<DiscoveryTransaction>
             transactions)
     {
         if (transactions.Count !=
@@ -576,7 +638,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static bool IsStrongUnclassifiedRecurringBill(
-        IReadOnlyCollection<BankTransactionEntity>
+        IReadOnlyCollection<DiscoveryTransaction>
             transactions)
     {
         if (transactions.Count < 3)
@@ -627,7 +689,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static bool IsExplicitlyRejectedFallbackCategory(
-        BankTransactionEntity transaction)
+        DiscoveryTransaction transaction)
     {
         var primary =
             transaction.CategoryPrimary?
@@ -682,7 +744,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static bool HasSubscriptionEvidence(
-        BankTransactionEntity transaction)
+        DiscoveryTransaction transaction)
     {
         return ContainsAny(
                    transaction.CategoryDetailed,
@@ -723,7 +785,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static CoreBankTransaction ToCoreTransaction(
-        BankTransactionEntity transaction,
+        DiscoveryTransaction transaction,
         string normalizedMerchantName)
     {
         return new CoreBankTransaction(
@@ -741,7 +803,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private string GetNormalizedMerchantName(
-        BankTransactionEntity transaction)
+        DiscoveryTransaction transaction)
     {
         return _merchantNormalizer.Normalize(
             GetMerchantName(
@@ -749,7 +811,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
     }
 
     private static string GetMerchantName(
-        BankTransactionEntity transaction)
+        DiscoveryTransaction transaction)
     {
         var merchantName =
             string.IsNullOrWhiteSpace(
@@ -762,8 +824,47 @@ public sealed class RecurringBillDiscoveryPersistenceService
 
     private sealed record AcceptedRecurringDiscovery(
         string ProviderName,
-        IReadOnlyList<BankTransactionEntity> Transactions,
+        IReadOnlyList<DiscoveryTransaction> Transactions,
         BillCategory Category);
+
+    private sealed class DiscoveryTransaction
+    {
+        public DiscoveryTransaction(
+            BankTransactionDiscoveryRecord source,
+            Guid? billStreamId)
+        {
+            Id = source.TransactionId;
+            OriginalBillStreamId = billStreamId;
+            BillStreamId = billStreamId;
+            Name = source.Name;
+            MerchantName = source.MerchantName;
+            Amount = source.Amount;
+            PostedDate = source.PostedDate;
+            IsPending = source.IsPending;
+            CategoryPrimary = source.CategoryPrimary;
+            CategoryDetailed = source.CategoryDetailed;
+        }
+
+        public Guid Id { get; }
+
+        public Guid? OriginalBillStreamId { get; }
+
+        public Guid? BillStreamId { get; set; }
+
+        public string Name { get; }
+
+        public string? MerchantName { get; }
+
+        public decimal Amount { get; }
+
+        public DateOnly PostedDate { get; }
+
+        public bool IsPending { get; }
+
+        public string? CategoryPrimary { get; }
+
+        public string? CategoryDetailed { get; }
+    }
 }
 
 public sealed record RecurringBillDiscoveryPersistenceResult(

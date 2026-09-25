@@ -1,4 +1,5 @@
 using System.Net;
+using FullWorth.Web.Infrastructure;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -8,7 +9,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 namespace FullWorth.Web.Services;
 
 public sealed class AdminBffWriteProxyService(
-    IHttpClientFactory httpClientFactory)
+    IHttpClientFactory httpClientFactory,
+    IWebSessionTicketAccessor? sessionTicketAccessor = null)
 {
     private const string SubscriptionCheckoutPath =
         "/api/subscription/checkout";
@@ -22,6 +24,9 @@ public sealed class AdminBffWriteProxyService(
     private const string AccountSecurityPath =
         "/api/account/security";
 
+    private const string PasswordChangePath =
+        "/api/account/security/password";
+
     private const string ExternalIdentityLinkPath =
         "/api/auth/external/link";
 
@@ -30,6 +35,9 @@ public sealed class AdminBffWriteProxyService(
 
     private const string AccountDeletionPath =
         "/api/account";
+
+    private const string AccountExportPath =
+        "/api/account/export";
 
     private static readonly TimeSpan RefreshBuffer =
         TimeSpan.FromMinutes(1);
@@ -51,6 +59,13 @@ public sealed class AdminBffWriteProxyService(
                 AccountDeletionPath,
                 StringComparison.Ordinal);
 
+        var isPasswordChange =
+            method == HttpMethod.Post &&
+            string.Equals(
+                requestUri,
+                PasswordChangePath,
+                StringComparison.Ordinal);
+
         if (method != HttpMethod.Post &&
             method != HttpMethod.Put &&
             !isAccountDeletion)
@@ -70,7 +85,128 @@ public sealed class AdminBffWriteProxyService(
             method,
             requestUri,
             body,
-            signOutOnSuccess: isAccountDeletion,
+            signOutOnSuccess:
+                isAccountDeletion ||
+                isPasswordChange,
+            cancellationToken);
+    }
+
+    public async Task<IResult> ForwardJsonDownloadAsync<T>(
+        HttpContext httpContext,
+        HttpMethod method,
+        string requestUri,
+        T body,
+        string downloadFileName,
+        string contentType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(method);
+        ArgumentException.ThrowIfNullOrWhiteSpace(downloadFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+
+        if (method != HttpMethod.Post ||
+            !string.Equals(
+                requestUri,
+                AccountExportPath,
+                StringComparison.Ordinal) ||
+            !IsAllowedApiPath(requestUri))
+        {
+            return Results.BadRequest();
+        }
+
+        var session =
+            await GetValidSessionAsync(
+                httpContext,
+                cancellationToken);
+
+        if (session is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var response =
+            await SendAuthorizedJsonAsync(
+                method,
+                requestUri,
+                session.AccessToken,
+                body,
+                cancellationToken);
+
+        if (response.StatusCode ==
+            HttpStatusCode.Unauthorized)
+        {
+            response.Dispose();
+
+            session =
+                await TryRefreshAsync(
+                    httpContext,
+                    session,
+                    cancellationToken);
+
+            if (session is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            response =
+                await SendAuthorizedJsonAsync(
+                    method,
+                    requestUri,
+                    session.AccessToken,
+                    body,
+                    cancellationToken);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                return await ToResultAsync(
+                    response,
+                    cancellationToken);
+            }
+
+            var bytes =
+                await response.Content.ReadAsByteArrayAsync(
+                    cancellationToken);
+
+            return Results.File(
+                bytes,
+                contentType,
+                Path.GetFileName(downloadFileName));
+        }
+    }
+
+    public Task<IResult> ForwardJsonAndSignOutOnSuccessAsync<T>(
+        HttpContext httpContext,
+        HttpMethod method,
+        string requestUri,
+        T body,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(method);
+
+        if (method != HttpMethod.Post &&
+            method != HttpMethod.Put)
+        {
+            return Task.FromResult<IResult>(
+                Results.BadRequest());
+        }
+
+        if (!IsAllowedApiPath(requestUri))
+        {
+            return Task.FromResult<IResult>(
+                Results.BadRequest());
+        }
+
+        return ForwardCoreAsync(
+            httpContext,
+            method,
+            requestUri,
+            body,
+            signOutOnSuccess: true,
             cancellationToken);
     }
 
@@ -259,8 +395,30 @@ public sealed class AdminBffWriteProxyService(
 
         if (!response.IsSuccessStatusCode)
         {
-            await httpContext.SignOutAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme);
+            var concurrentlyRotatedSession =
+                await TryRecoverConcurrentRefreshAsync(
+                    session,
+                    cancellationToken);
+
+            if (concurrentlyRotatedSession is not null)
+            {
+                return concurrentlyRotatedSession;
+            }
+
+            if (sessionTicketAccessor is null ||
+                !session.Properties.Items.ContainsKey(
+                    WebSessionTicketAccessor.SessionKeyItem))
+            {
+                await httpContext.SignOutAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+
+            /*
+             * A distributed winner may still be between receiving its rotated
+             * API pair and renewing Redis. Do not delete the shared session
+             * here; returning unauthorized is fail-closed and allows a later
+             * request to observe the winner's renewed ticket.
+             */
             return null;
         }
 
@@ -338,6 +496,53 @@ public sealed class AdminBffWriteProxyService(
             expiresAtUtc);
     }
 
+    private async Task<WebApiSession?>
+        TryRecoverConcurrentRefreshAsync(
+            WebApiSession session,
+            CancellationToken cancellationToken)
+    {
+        if (sessionTicketAccessor is null)
+        {
+            return null;
+        }
+
+        for (var attempt = 0;
+             attempt < 10;
+             attempt++)
+        {
+            if (attempt > 0)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(50),
+                    cancellationToken);
+            }
+
+            var latest =
+                await sessionTicketAccessor
+                    .ReadLatestAsync(
+                        session.Properties,
+                        cancellationToken);
+
+            if (latest is null ||
+                string.Equals(
+                    latest.RefreshToken,
+                    session.RefreshToken,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return new WebApiSession(
+                latest.Principal,
+                latest.Properties,
+                latest.AccessToken,
+                latest.RefreshToken,
+                latest.ExpiresAtUtc);
+        }
+
+        return null;
+    }
+
     private static bool IsAllowedApiPath(
         string requestUri)
     {
@@ -396,6 +601,12 @@ public sealed class AdminBffWriteProxyService(
                 AccountDeletionPath,
                 StringComparison.Ordinal);
 
+        var isAccountExportPath =
+            string.Equals(
+                requestUri,
+                AccountExportPath,
+                StringComparison.Ordinal);
+
         if (!isAdminPath &&
             !isSubscriptionCheckoutPath &&
             !isSubscriptionRedemptionPath &&
@@ -403,7 +614,8 @@ public sealed class AdminBffWriteProxyService(
             !isAccountSecurityPath &&
             !isExternalIdentityLinkPath &&
             !isExternalIdentityUnlinkPath &&
-            !isAccountDeletionPath)
+            !isAccountDeletionPath &&
+            !isAccountExportPath)
         {
             return false;
         }

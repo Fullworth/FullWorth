@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 
@@ -270,7 +271,12 @@ public sealed class StripeBillingPlanValidationTests
         };
 
         return new TestService(
-            new StripeBillingService(client, options, db, TimeProvider.System),
+            new StripeBillingService(
+                client,
+                options,
+                db,
+                new IdentityUserExistenceGateway(db),
+                TimeProvider.System),
             client,
             db);
     }

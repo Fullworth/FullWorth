@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using FullWorth.Tests.Infrastructure;
+using FullWorth.Web.Infrastructure;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +31,7 @@ public sealed class WebAntiforgeryBoundaryTests
 
         yield return ["POST", $"/bff/alerts/{id:D}/read"];
         yield return ["POST", $"/bff/alerts/{id:D}/dismiss"];
+        yield return ["POST", "/bff/account/export"];
         yield return ["DELETE", "/bff/account"];
         yield return ["POST", "/bff/plaid/link-session"];
         yield return ["POST", $"/bff/plaid/connections/{id:D}/update-link-session"];
@@ -39,6 +42,7 @@ public sealed class WebAntiforgeryBoundaryTests
         yield return ["PUT", "/bff/account/preferences"];
         yield return ["POST", "/bff/account/security/profile"];
         yield return ["POST", "/bff/account/security/password"];
+        yield return ["POST", "/bff/account/security/sessions/revoke-all"];
         yield return ["POST", "/bff/account/security/email"];
         yield return ["POST", "/bff/account/security/two-factor/setup"];
         yield return ["POST", "/bff/account/security/two-factor/enable"];
@@ -133,6 +137,46 @@ public sealed class WebAntiforgeryBoundaryTests
     }
 
     [Fact]
+    public void AntiforgeryCookie_IsHostOnlySecureAndStrict()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        var antiforgeryOptions =
+            factory.Services
+                .GetRequiredService<
+                    IOptions<
+                        AntiforgeryOptions>>()
+                .Value;
+
+        Assert.Equal(
+            "__Host-BillWatch.Web.Antiforgery",
+            antiforgeryOptions.Cookie.Name);
+
+        Assert.True(
+            antiforgeryOptions.Cookie.HttpOnly);
+
+        Assert.Equal(
+            CookieSecurePolicy.Always,
+            antiforgeryOptions.Cookie.SecurePolicy);
+
+        Assert.Equal(
+            SameSiteMode.Strict,
+            antiforgeryOptions.Cookie.SameSite);
+
+        Assert.Equal(
+            "/",
+            antiforgeryOptions.Cookie.Path);
+
+        Assert.True(
+            string.IsNullOrWhiteSpace(
+                antiforgeryOptions.Cookie.Domain));
+
+        Assert.True(
+            antiforgeryOptions.Cookie.IsEssential);
+    }
+
+    [Fact]
     public void AuthenticationCookie_IsHostOnlySecureAndNonSliding()
     {
         using var factory =
@@ -172,6 +216,10 @@ public sealed class WebAntiforgeryBoundaryTests
 
         Assert.False(
             cookieOptions.SlidingExpiration);
+
+        Assert.IsType<
+            ProtectedDistributedTicketStore>(
+                cookieOptions.SessionStore);
     }
 
     [Fact]

@@ -16,6 +16,27 @@
         <div class="admin-user-confirm">
             <span>@L["Confirm: {0}", _pending.Label]</span>
 
+            @if (RequiresPrivilegeGrantReauthentication)
+            {
+                <label class="admin-user-reauth-field">
+                    <span>@L["Current password"]</span>
+                    <input type="password"
+                           autocomplete="current-password"
+                           disabled="@_isBusy"
+                           @bind="_reauthCurrentPassword" />
+                </label>
+
+                <label class="admin-user-reauth-field">
+                    <span>@L["Authenticator code (if enabled)"]</span>
+                    <input type="text"
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           maxlength="12"
+                           disabled="@_isBusy"
+                           @bind="_reauthTwoFactorCode" />
+                </label>
+            }
+
             <button type="button"
                     class="admin-user-control danger"
                     disabled="@_isBusy"
@@ -104,8 +125,13 @@
     private PendingMutation? _pending;
     private bool _isBusy;
     private string? _errorMessage;
+    private string _reauthCurrentPassword = string.Empty;
+    private string _reauthTwoFactorCode = string.Empty;
 
     private bool IsOwner => HasRole(OwnerRole);
+
+    private bool RequiresPrivilegeGrantReauthentication =>
+        _pending?.MakeActive == true;
 
     private void QueueAdminRole() =>
         QueueRole(AdminRole, !HasRole(AdminRole));
@@ -177,6 +203,7 @@
         {
             _pending = null;
             _errorMessage = null;
+            ClearPrivilegeGrantReauthentication();
         }
     }
 
@@ -184,6 +211,15 @@
     {
         if (_isBusy || _pending is null || UserId == Guid.Empty)
         {
+            return;
+        }
+
+        if (RequiresPrivilegeGrantReauthentication &&
+            string.IsNullOrWhiteSpace(
+                _reauthCurrentPassword))
+        {
+            _errorMessage =
+                L["Enter your current password before granting access."];
             return;
         }
 
@@ -210,9 +246,11 @@
             _pending = null;
             Navigation.NavigateTo("/app/admin", forceLoad: true);
         }
-        catch (JSException)
+        catch (JSException exception)
         {
-            _errorMessage = L["FullWorth could not complete that administrative change."];
+            _errorMessage =
+                GetSafeMutationError(
+                    exception.Message);
         }
         catch (Exception)
         {
@@ -220,6 +258,7 @@
         }
         finally
         {
+            ClearPrivilegeGrantReauthentication();
             _isBusy = false;
         }
     }
@@ -232,10 +271,28 @@
             ? "assignAdminRole"
             : "removeAdminRole";
 
+        if (!mutation.MakeActive)
+        {
+            return await module.InvokeAsync<AdminFetchResult<object>>(
+                functionName,
+                UserId.ToString("D"),
+                mutation.Name);
+        }
+
         return await module.InvokeAsync<AdminFetchResult<object>>(
             functionName,
             UserId.ToString("D"),
-            mutation.Name);
+            mutation.Name,
+            new AdminAssignRoleRequest
+            {
+                CurrentPassword =
+                    _reauthCurrentPassword,
+                TwoFactorCode =
+                    string.IsNullOrWhiteSpace(
+                        _reauthTwoFactorCode)
+                        ? null
+                        : _reauthTwoFactorCode.Trim()
+            });
     }
 
     private async Task<AdminFetchResult<object>> MutateProgramAsync(
@@ -249,7 +306,17 @@
             new AdminProgramRequest
             {
                 IsActive = mutation.MakeActive,
-                EndsAtUtc = null
+                EndsAtUtc = null,
+                CurrentPassword =
+                    mutation.MakeActive
+                        ? _reauthCurrentPassword
+                        : null,
+                TwoFactorCode =
+                    mutation.MakeActive &&
+                    !string.IsNullOrWhiteSpace(
+                        _reauthTwoFactorCode)
+                        ? _reauthTwoFactorCode.Trim()
+                        : null
             });
     }
 
@@ -264,8 +331,48 @@
             {
                 Tier = "Standard",
                 DurationDays = mutation.DurationDays,
-                GrantsLifetimeAccess = mutation.GrantsLifetimeAccess
+                GrantsLifetimeAccess = mutation.GrantsLifetimeAccess,
+                CurrentPassword =
+                    _reauthCurrentPassword,
+                TwoFactorCode =
+                    string.IsNullOrWhiteSpace(
+                        _reauthTwoFactorCode)
+                        ? null
+                        : _reauthTwoFactorCode.Trim()
             });
+    }
+
+    private string GetSafeMutationError(
+        string? technicalMessage)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                technicalMessage))
+        {
+            if (technicalMessage.Contains(
+                    "current password is incorrect",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Your current password is incorrect."];
+            }
+
+            if (technicalMessage.Contains(
+                    "authenticator code",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Enter a valid current authenticator code if two-factor authentication is enabled."];
+            }
+        }
+
+        return L["FullWorth could not complete that administrative change."];
+    }
+
+    private void ClearPrivilegeGrantReauthentication()
+    {
+        _reauthCurrentPassword =
+            string.Empty;
+
+        _reauthTwoFactorCode =
+            string.Empty;
     }
 
     private async Task<IJSObjectReference> GetAdminModuleAsync()
@@ -343,10 +450,20 @@
         public T? Value { get; set; }
     }
 
+    private sealed class AdminAssignRoleRequest
+    {
+        public string CurrentPassword { get; set; } =
+            string.Empty;
+
+        public string? TwoFactorCode { get; set; }
+    }
+
     private sealed class AdminProgramRequest
     {
         public bool IsActive { get; set; }
         public DateTimeOffset? EndsAtUtc { get; set; }
+        public string? CurrentPassword { get; set; }
+        public string? TwoFactorCode { get; set; }
     }
 
     private sealed class AdminEntitlementRequest
@@ -354,5 +471,7 @@
         public string Tier { get; set; } = string.Empty;
         public int? DurationDays { get; set; }
         public bool GrantsLifetimeAccess { get; set; }
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string? TwoFactorCode { get; set; }
     }
 }

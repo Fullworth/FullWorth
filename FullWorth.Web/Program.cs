@@ -179,6 +179,10 @@ authenticationBuilder
     .AddFullWorthExternalAuthentication(
         builder.Configuration);
 
+builder.Services.AddFullWorthWebSessionStore(
+    builder.Configuration,
+    builder.Environment);
+
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
@@ -188,6 +192,24 @@ builder.Services.AddAntiforgery(
     {
         options.HeaderName =
             "X-CSRF-TOKEN";
+
+        options.Cookie.Name =
+            "__Host-BillWatch.Web.Antiforgery";
+
+        options.Cookie.HttpOnly =
+            true;
+
+        options.Cookie.SecurePolicy =
+            CookieSecurePolicy.Always;
+
+        options.Cookie.SameSite =
+            SameSiteMode.Strict;
+
+        options.Cookie.Path =
+            "/";
+
+        options.Cookie.IsEssential =
+            true;
     });
 
 builder.Services.Configure<FormOptions>(

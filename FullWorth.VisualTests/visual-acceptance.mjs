@@ -69,11 +69,54 @@ try {
   await page.locator('input[name="acceptedTermsAndPrivacy"]').check();
 
   await Promise.all([
-    page.waitForURL(url => url.pathname === "/app/setup", { timeout: 20000 }),
+    page.waitForURL(url =>
+      url.pathname === "/login" &&
+      url.searchParams.get("message") ===
+        "Registration request received. Sign in to continue.",
+      { timeout: 20000 }),
     page.locator('button[type="submit"]').click()
   ]);
 
+  await settle(".auth-form");
+  await page.locator('input[name="email"]').fill(email);
+  await page.locator('input[name="password"]').fill(password);
+
+  await Promise.all([
+    page.waitForURL(url => url.pathname.startsWith("/app"), { timeout: 20000 }),
+    page.locator('button[type="submit"]').click()
+  ]);
+
+  await page.goto("/app/setup", { waitUntil: "domcontentloaded" });
   await settle(".app-shell");
+
+  const whatsNewDialog = page.locator(".whats-new-dialog");
+
+  await whatsNewDialog.waitFor({
+    state: "visible",
+    timeout: 10000
+  });
+
+  await page.screenshot({
+    path: path.join(outputDir, "whats-new-desktop.png"),
+    fullPage: true
+  });
+
+  await page.locator(".whats-new-primary").click();
+
+  await whatsNewDialog.waitFor({
+    state: "hidden",
+    timeout: 10000
+  });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await settle(".app-shell");
+
+  if (await whatsNewDialog.isVisible()) {
+    throw new Error(
+      "Expected What's new to remain dismissed for the current release."
+    );
+  }
+
   await page.screenshot({
     path: path.join(outputDir, "setup-desktop-dark.png"),
     fullPage: true

@@ -42,6 +42,9 @@ public sealed class FullWorthDbContext
     public DbSet<BillAlertEntity> BillAlerts =>
         Set<BillAlertEntity>();
 
+    public DbSet<BillTransactionAssociationEntity> BillTransactionAssociations =>
+        Set<BillTransactionAssociationEntity>();
+
     public DbSet<BillStatementUploadEntity> BillStatementUploads =>
         Set<BillStatementUploadEntity>();
 
@@ -82,6 +85,7 @@ public sealed class FullWorthDbContext
         ConfigureBillLineItem(builder);
         ConfigureBillChange(builder);
         ConfigureBillAlert(builder);
+        ConfigureBillTransactionAssociation(builder);
         ConfigureBillStatementUpload(builder);
         ConfigureBillStatementAiEvaluation(builder);
         ConfigurePlaidLinkSession(builder);
@@ -364,8 +368,6 @@ public sealed class FullWorthDbContext
 
                 entity.HasIndex(transaction => transaction.BankAccountId);
 
-                entity.HasIndex(transaction => transaction.BillStreamId);
-
                 entity.HasIndex(transaction => transaction.PostedDate);
 
                 entity.HasIndex(transaction => new
@@ -393,20 +395,6 @@ public sealed class FullWorthDbContext
                         account.UserId
                     })
                     .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(transaction => transaction.BillStream)
-                    .WithMany()
-                    .HasForeignKey(transaction => new
-                    {
-                        transaction.BillStreamId,
-                        transaction.UserId
-                    })
-                    .HasPrincipalKey(stream => new
-                    {
-                        stream.Id,
-                        stream.UserId
-                    })
-                    .OnDelete(DeleteBehavior.Restrict);
             });
     }
 
@@ -741,19 +729,53 @@ public sealed class FullWorthDbContext
                     })
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(alert => alert.BillChange)
+            });
+    }
+
+    private static void ConfigureBillTransactionAssociation(
+        ModelBuilder builder)
+    {
+        builder.Entity<BillTransactionAssociationEntity>(
+            entity =>
+            {
+                entity.ToTable("BillTransactionAssociations");
+
+                entity.HasKey(association => new
+                {
+                    association.UserId,
+                    association.BankTransactionId
+                });
+
+                entity.Property(association => association.CreatedAtUtc)
+                    .IsRequired();
+
+                entity.Property(association => association.UpdatedAtUtc)
+                    .IsRequired();
+
+                entity.HasIndex(association => new
+                {
+                    association.BillStreamId,
+                    association.UserId
+                });
+
+                entity.HasOne(association => association.User)
                     .WithMany()
-                    .HasForeignKey(alert => new
+                    .HasForeignKey(association => association.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(association => association.BillStream)
+                    .WithMany()
+                    .HasForeignKey(association => new
                     {
-                        alert.BillChangeId,
-                        alert.UserId
+                        association.BillStreamId,
+                        association.UserId
                     })
-                    .HasPrincipalKey(change => new
+                    .HasPrincipalKey(stream => new
                     {
-                        change.Id,
-                        change.UserId
+                        stream.Id,
+                        stream.UserId
                     })
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.Cascade);
             });
     }
 

@@ -25,6 +25,7 @@ write_valid_env()
         -e 's/replace-with-the-deployed-git-commit/0123456789abcdef0123456789abcdef01234567/' \
         -e 's/owner@example\.com/ops@fullworth.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
+        -e 's/replace-with-a-separate-long-random-web-session-password/web-session-password-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
         -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.fullworth.test/production#' \
@@ -48,6 +49,9 @@ expect_failure()
 }
 
 write_valid_env "$valid_env"
+
+sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
+sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
 
 backup_service="$root_dir/deploy/systemd/billwatch-backup.service"
 
@@ -120,6 +124,16 @@ weak_env="$temp_dir/weak.env"
 write_valid_env "$weak_env"
 sed -i 's/database-password-with-more-than-32-characters/short/' "$weak_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_env"
+
+weak_web_session_env="$temp_dir/weak-web-session.env"
+write_valid_env "$weak_web_session_env"
+sed -i 's/web-session-password-with-more-than-32-characters/short/' "$weak_web_session_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_web_session_env"
+
+reused_web_session_env="$temp_dir/reused-web-session.env"
+write_valid_env "$reused_web_session_env"
+sed -i 's/web-session-password-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_web_session_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_web_session_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"
@@ -267,7 +281,7 @@ case "$*" in
     *'up --detach --wait --wait-timeout 240 --no-build database api web edge'*)
         [ "${BILLWATCH_TEST_FAIL_UP:-false}" != true ] || exit 1
         ;;
-    *'stop api web edge'*) : ;;
+    *'stop api web web-session-cache edge'*) : ;;
 esac
 SCRIPT
 
@@ -325,24 +339,24 @@ chmod 600 "$deployment_root/.billwatch-release"
 expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "bad image revision changed the last verified release marker."
 if grep -q 'up --detach' "$command_log"; then fail "bad image revision reached production startup."; fi
-if grep -q 'stop api web edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
+if grep -q 'stop api web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_SECURITY=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "HTTP security failure changed the last verified release marker."
-grep -q 'stop api web edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
+grep -q 'stop api web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_READINESS=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "readiness failure changed the last verified release marker."
-grep -q 'stop api web edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
+grep -q 'stop api web web-session-cache edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_UP=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "failed startup changed the last verified release marker."
-grep -q 'stop api web edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
+grep -q 'stop api web web-session-cache edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after failure."
 
 sh "$root_dir/deploy/tests/alert-observation-proof-tests.sh" || fail "alert observation proof regression suite failed."

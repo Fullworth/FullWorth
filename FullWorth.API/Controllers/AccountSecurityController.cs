@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Identity;
@@ -15,6 +16,7 @@ namespace FullWorth.API.Controllers;
 [Authorize]
 public sealed class AccountSecurityController(
     UserManager<ApplicationUser> userManager,
+    IUserStore<ApplicationUser> userStore,
     IEmailSender<ApplicationUser> emailSender,
     IOptions<IdentityEmailOptions> emailOptions)
     : ControllerBase
@@ -133,6 +135,55 @@ public sealed class AccountSecurityController(
         if (!result.Succeeded)
         {
             return IdentityValidationProblem(result);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("sessions/revoke-all")]
+    public async Task<IActionResult> RevokeAllSessions(
+        SensitiveCredentialRequest request)
+    {
+        var user =
+            await GetCurrentUserAsync();
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                user,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
+        }
+
+        /*
+         * Rotating SecurityStamp invalidates every previously issued refresh
+         * token for this Identity user. Existing bearer access tokens are
+         * self-contained and remain valid only for their already-bounded
+         * lifetime (currently 15 minutes); FullWorth does not claim that
+         * remote access tokens disappear instantly.
+         *
+         * Stale refresh-family rows are harmless after the stamp rotation and
+         * are pruned by the next legitimate family enrollment.
+         */
+        var revokeResult =
+            await userManager.UpdateSecurityStampAsync(
+                user);
+
+        if (!revokeResult.Succeeded)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not revoke account sessions safely.");
         }
 
         return NoContent();
@@ -289,10 +340,22 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
-        await userManager.SetTwoFactorEnabledAsync(
-            user,
-            false);
+        if (await userManager.GetTwoFactorEnabledAsync(
+                user))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status409Conflict,
+                title:
+                    "Two-factor authentication is already enabled. Use authenticator replacement instead.");
+        }
 
+        /*
+         * Initial setup starts from an MFA-disabled account. Resetting the
+         * authenticator key already rotates SecurityStamp and persists the
+         * new key in one Identity update; a separate false->false 2FA write
+         * would only add another stamp rotation and another persistence step.
+         */
         var resetResult =
             await userManager.ResetAuthenticatorKeyAsync(user);
 
@@ -338,6 +401,15 @@ public sealed class AccountSecurityController(
         {
             return UnauthorizedProblem(
                 "Current password is incorrect.");
+        }
+
+        // Enrollment is a state transition, not a recovery-code replacement API.
+        // A retried enable request must not invalidate codes already issued.
+        if (await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Two-factor authentication is already enabled.");
         }
 
         if (string.IsNullOrWhiteSpace(request.AuthenticatorCode) ||
@@ -398,14 +470,35 @@ public sealed class AccountSecurityController(
                 "Two-factor authentication is not enabled.");
         }
 
+        /*
+         * Recovery codes are durable authentication credentials. Rotate the
+         * security stamp on the tracked user before asking Identity to
+         * replace them. GenerateNewTwoFactorRecoveryCodesAsync stages the
+         * replacement and persists it through the same final user update, so
+         * the new codes and refresh-session revocation commit together.
+         */
+        user.SecurityStamp =
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(32))
+                .ToLowerInvariant();
+
         var recoveryCodes =
             await userManager.GenerateNewTwoFactorRecoveryCodesAsync(
                 user,
                 10);
 
+        if (recoveryCodes is null)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not regenerate recovery codes safely.");
+        }
+
         return Ok(
             new TwoFactorRecoveryCodesResponse(
-                recoveryCodes?.ToArray() ?? []));
+                recoveryCodes.ToArray()));
     }
 
     [HttpPost("two-factor/disable")]
@@ -430,6 +523,13 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
+        /*
+         * ASP.NET Core Identity's SetTwoFactorEnabledAsync transition rotates
+         * SecurityStamp as part of the same user update. FullWorth regression
+         * coverage verifies that refresh tokens issued after MFA enrollment
+         * are rejected after this succeeds, while rejected credential proof
+         * leaves the stamp and refresh session unchanged.
+         */
         var result =
             await userManager.SetTwoFactorEnabledAsync(
                 user,
@@ -465,26 +565,67 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
-        await userManager.SetTwoFactorEnabledAsync(
+        if (!await userManager.GetTwoFactorEnabledAsync(
+                user))
+        {
+            return ValidationProblem(
+                "Two-factor authentication is not enabled.");
+        }
+
+        if (userStore is not
+                IUserTwoFactorStore<ApplicationUser>
+                twoFactorStore ||
+            userStore is not
+                IUserAuthenticatorKeyStore<ApplicationUser>
+                authenticatorKeyStore ||
+            userStore is not
+                IUserSecurityStampStore<ApplicationUser>
+                securityStampStore)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status500InternalServerError,
+                title:
+                    "FullWorth could not replace the authenticator safely.");
+        }
+
+        /*
+         * Authenticator replacement changes three pieces of authentication
+         * state together: MFA becomes disabled until the new authenticator is
+         * confirmed, the old authenticator key is replaced, and refresh
+         * sessions are revoked through SecurityStamp.
+         *
+         * Stage all three values through the configured Identity store, then
+         * persist them with one UserManager.UpdateAsync call. The EF Identity
+         * store tracks the authenticator token without saving it immediately,
+         * so the user row and token row commit in the same SaveChanges call.
+         */
+        var sharedKey =
+            userManager.GenerateNewAuthenticatorKey();
+
+        await twoFactorStore.SetTwoFactorEnabledAsync(
             user,
-            false);
+            false,
+            HttpContext.RequestAborted);
+
+        await authenticatorKeyStore.SetAuthenticatorKeyAsync(
+            user,
+            sharedKey,
+            HttpContext.RequestAborted);
+
+        await securityStampStore.SetSecurityStampAsync(
+            user,
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(32))
+                .ToLowerInvariant(),
+            HttpContext.RequestAborted);
 
         var resetResult =
-            await userManager.ResetAuthenticatorKeyAsync(user);
+            await userManager.UpdateAsync(user);
 
         if (!resetResult.Succeeded)
         {
             return IdentityValidationProblem(resetResult);
-        }
-
-        var sharedKey =
-            await userManager.GetAuthenticatorKeyAsync(user);
-
-        if (string.IsNullOrWhiteSpace(sharedKey))
-        {
-            return Problem(
-                statusCode: StatusCodes.Status500InternalServerError,
-                title: "FullWorth could not reset the authenticator key.");
         }
 
         return Ok(

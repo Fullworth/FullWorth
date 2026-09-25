@@ -29,8 +29,39 @@ async function readSafeError(response) {
     return `FullWorth request failed with status ${response.status}.`;
 }
 
+async function isCredentialReauthenticationFailure(response) {
+    if (response.status !== 401) {
+        return false;
+    }
+
+    const contentType =
+        response.headers.get("content-type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+        return false;
+    }
+
+    try {
+        const payload = await response.clone().json();
+        const title = typeof payload?.title === "string"
+            ? payload.title.trim().toLowerCase()
+            : "";
+
+        return title === "current password is incorrect." ||
+            title === "a current authenticator code is required." ||
+            title === "the authenticator code is invalid.";
+    } catch {
+        return false;
+    }
+}
+
 async function handleAdminResponse(response) {
     if (response.status === 401) {
+        if (await isCredentialReauthenticationFailure(response)) {
+            throw new Error(
+                await readSafeError(response));
+        }
+
         window.location.assign("/login");
         throw new Error("FullWorth session expired.");
     }
@@ -219,11 +250,18 @@ export async function getAdminAuditLog(
 
 export async function assignAdminRole(
     userId,
-    roleName) {
+    roleName,
+    request) {
+
+    if (!request) {
+        throw new Error(
+            "Reauthentication credentials are required.");
+    }
 
     return await mutateAdminJson(
         `/bff/admin/users/${requireIdentifier(userId, "User ID")}/roles/${requireIdentifier(roleName, "Role")}`,
-        "POST");
+        "POST",
+        request);
 }
 
 export async function removeAdminRole(

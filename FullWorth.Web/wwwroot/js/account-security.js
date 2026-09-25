@@ -55,6 +55,10 @@ function mapExpectedError(body, status, fallback) {
         return "That authenticator code isn’t valid. Try the current code from your authenticator app.";
     }
 
+    if (status === 409 && title === "two-factor authentication is already enabled.") {
+        return "Two-factor authentication is already enabled. Reload settings and choose New recovery codes if you need replacements.";
+    }
+
     if (title.includes("already in use")) {
         return "That email address is already in use.";
     }
@@ -494,8 +498,8 @@ export function updateProfile(displayName) {
         "FullWorth could not update your profile.");
 }
 
-export function changePassword(currentPassword, newPassword, twoFactorCode) {
-    return postJson(
+export async function changePassword(currentPassword, newPassword, twoFactorCode) {
+    await postJson(
         "/bff/account/security/password",
         {
             currentPassword,
@@ -503,6 +507,20 @@ export function changePassword(currentPassword, newPassword, twoFactorCode) {
             twoFactorCode: twoFactorCode || null
         },
         "We couldn’t update your password. Please try again.");
+
+    window.location.replace("/login");
+}
+
+export async function revokeAllSessions(currentPassword, twoFactorCode) {
+    await postJson(
+        "/bff/account/security/sessions/revoke-all",
+        {
+            currentPassword,
+            twoFactorCode: twoFactorCode || null
+        },
+        "We couldn’t sign out your other FullWorth sessions. Please try again.");
+
+    window.location.replace("/login");
 }
 
 export function requestEmailChange(currentPassword, newEmail, twoFactorCode) {

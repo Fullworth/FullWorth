@@ -2,6 +2,8 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
+using FullWorth.API.Services.Identity;
+using FullWorth.API.Services.Subscriptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +23,9 @@ public sealed class AdminUserManagementServiceTests
         await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
         await dbContext.SaveChangesAsync();
 
+        var originalSecurityStamp =
+            target.SecurityStamp;
+
         var result = await CreateService(dbContext).AssignRoleAsync(
             owner.Id,
             target.Id,
@@ -29,6 +34,40 @@ public sealed class AdminUserManagementServiceTests
         Assert.True(result.Succeeded);
         Assert.True(await HasRole(dbContext, target.Id, FullWorthRoles.Admin));
         Assert.Single(dbContext.AdminAuditLogs);
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                target.SecurityStamp));
+        Assert.NotEqual(
+            originalSecurityStamp,
+            target.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task AssignRoleAsync_ExistingRole_DoesNotRotateSecurityStamp()
+    {
+        await using var dbContext = CreateDbContext();
+        var owner = AddUser(dbContext, "owner@example.com");
+        var target = AddUser(dbContext, "target@example.com");
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
+        await AssignSeededRole(dbContext, target.Id, FullWorthRoles.Moderator);
+        await dbContext.SaveChangesAsync();
+
+        target.SecurityStamp =
+            "existing-security-stamp";
+
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).AssignRoleAsync(
+            owner.Id,
+            target.Id,
+            FullWorthRoles.Moderator);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            "existing-security-stamp",
+            target.SecurityStamp);
+        Assert.Empty(
+            dbContext.AdminAuditLogs);
     }
 
     [Fact]
@@ -47,6 +86,40 @@ public sealed class AdminUserManagementServiceTests
 
         Assert.False(result.Succeeded);
         Assert.False(await HasRole(dbContext, target.Id, FullWorthRoles.Owner));
+    }
+
+    [Fact]
+    public async Task RemoveRoleAsync_OwnerRemovesRoleAndRevokesTargetSessions()
+    {
+        await using var dbContext = CreateDbContext();
+        var owner = AddUser(dbContext, "owner@example.com");
+        var target = AddUser(dbContext, "target@example.com");
+        await AssignSeededRole(dbContext, owner.Id, FullWorthRoles.Owner);
+        await AssignSeededRole(dbContext, target.Id, FullWorthRoles.Moderator);
+        await dbContext.SaveChangesAsync();
+
+        var originalSecurityStamp =
+            target.SecurityStamp;
+
+        var result = await CreateService(dbContext).RemoveRoleAsync(
+            owner.Id,
+            target.Id,
+            FullWorthRoles.Moderator);
+
+        Assert.True(result.Succeeded);
+        Assert.False(
+            await HasRole(
+                dbContext,
+                target.Id,
+                FullWorthRoles.Moderator));
+        Assert.Single(
+            dbContext.AdminAuditLogs);
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                target.SecurityStamp));
+        Assert.NotEqual(
+            originalSecurityStamp,
+            target.SecurityStamp);
     }
 
     [Fact]
@@ -188,6 +261,9 @@ public sealed class AdminUserManagementServiceTests
     {
         return new AdminUserManagementService(
             dbContext,
+            new AdminIdentityMutationGateway(dbContext),
+            new AdminSubscriptionMutationGateway(dbContext),
+            new AdminAuditLogWriter(dbContext),
             new FixedTimeProvider(NowUtc));
     }
 

@@ -1,23 +1,27 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Accounts;
 
-public static class AccountDataExportBuilder
+public sealed class AccountDataExportBuilder(
+    FullWorthDbContext dbContext,
+    IAccountBankExportGateway bankExportGateway,
+    IAccountBillExportGateway billExportGateway,
+    IAccountStatementExportGateway statementExportGateway)
 {
     public const string CurrentSchemaVersion = "1.1";
 
-    public static async Task<AccountDataExportResult> CreateAsync(
-        FullWorthDbContext dbContext,
+    public async Task<AccountDataExportResult> CreateAsync(
         ApplicationUser user,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(user);
 
-        var userId = user.Id;
+        var userId =
+            user.Id;
 
         var displayName =
             await dbContext
@@ -25,256 +29,258 @@ public static class AccountDataExportBuilder
                 .AsNoTracking()
                 .Where(
                     claim =>
-                        claim.UserId == userId &&
-                        claim.ClaimType == ApplicationUser.DisplayNameClaimType)
-                .OrderBy(claim => claim.Id)
-                .Select(claim => claim.ClaimValue)
-                .FirstOrDefaultAsync(cancellationToken)
+                        claim.UserId ==
+                            userId &&
+                        claim.ClaimType ==
+                            ApplicationUser.DisplayNameClaimType)
+                .OrderBy(
+                    claim =>
+                        claim.Id)
+                .Select(
+                    claim =>
+                        claim.ClaimValue)
+                .FirstOrDefaultAsync(
+                    cancellationToken)
             ?? string.Empty;
 
-        var bankConnections =
-            await dbContext.BankConnections
-                .AsNoTracking()
-                .Where(connection => connection.UserId == userId)
-                .OrderBy(connection => connection.CreatedAtUtc)
-                .ThenBy(connection => connection.Id)
-                .ToListAsync(cancellationToken);
+        var bank =
+            await bankExportGateway.GetAsync(
+                userId,
+                cancellationToken);
 
-        var bankAccounts =
-            await dbContext.BankAccounts
-                .AsNoTracking()
-                .Where(account => account.UserId == userId)
-                .OrderBy(account => account.CreatedAtUtc)
-                .ThenBy(account => account.Id)
-                .ToListAsync(cancellationToken);
+        var bills =
+            await billExportGateway.GetAsync(
+                userId,
+                cancellationToken);
 
-        var bankTransactions =
-            await dbContext.BankTransactions
-                .AsNoTracking()
-                .Where(transaction => transaction.UserId == userId)
-                .OrderBy(transaction => transaction.PostedDate)
-                .ThenBy(transaction => transaction.Id)
-                .ToListAsync(cancellationToken);
+        var statements =
+            await statementExportGateway.GetAsync(
+                userId,
+                cancellationToken);
 
-        var billStreams =
-            await dbContext.BillStreams
-                .AsNoTracking()
-                .Where(stream => stream.UserId == userId)
-                .OrderBy(stream => stream.CreatedAtUtc)
-                .ThenBy(stream => stream.Id)
-                .ToListAsync(cancellationToken);
-
-        var billStatements =
-            await dbContext.BillStatements
-                .AsNoTracking()
-                .Where(statement => statement.UserId == userId)
-                .OrderBy(statement => statement.PeriodStart)
-                .ThenBy(statement => statement.Id)
-                .ToListAsync(cancellationToken);
-
-        var billLineItems =
-            await dbContext.BillLineItems
-                .AsNoTracking()
-                .Where(item => item.UserId == userId)
-                .OrderBy(item => item.BillStatementId)
-                .ThenBy(item => item.SortOrder)
-                .ThenBy(item => item.Id)
-                .ToListAsync(cancellationToken);
-
-        var billChanges =
-            await dbContext.BillChanges
-                .AsNoTracking()
-                .Where(change => change.UserId == userId)
-                .OrderBy(change => change.DetectedAtUtc)
-                .ThenBy(change => change.Id)
-                .ToListAsync(cancellationToken);
-
-        var billAlerts =
-            await dbContext.BillAlerts
-                .AsNoTracking()
-                .Where(alert => alert.UserId == userId)
-                .OrderBy(alert => alert.CreatedAtUtc)
-                .ThenBy(alert => alert.Id)
-                .ToListAsync(cancellationToken);
-
-        var statementUploads =
-            await dbContext.BillStatementUploads
-                .AsNoTracking()
-                .Where(upload => upload.UserId == userId)
-                .OrderBy(upload => upload.CreatedAtUtc)
-                .ThenBy(upload => upload.Id)
-                .ToListAsync(cancellationToken);
-
-        var aiEvaluations =
-            await dbContext.BillStatementAiEvaluations
-                .AsNoTracking()
-                .Where(evaluation => evaluation.UserId == userId)
-                .OrderBy(evaluation => evaluation.CreatedAtUtc)
-                .ThenBy(evaluation => evaluation.Id)
-                .ToListAsync(cancellationToken);
-
-        var plaidLinkSessions =
-            await dbContext.PlaidLinkSessions
-                .AsNoTracking()
-                .Where(session => session.UserId == userId)
-                .OrderBy(session => session.CreatedAtUtc)
-                .ThenBy(session => session.Id)
-                .ToListAsync(cancellationToken);
+        var billStreamIdByTransactionId =
+            bills.TransactionAssociations
+                .ToDictionary(
+                    association => association.BankTransactionId,
+                    association => association.BillStreamId);
 
         return new AccountDataExportResult(
-            SchemaVersion: CurrentSchemaVersion,
-            ExportedAtUtc: DateTimeOffset.UtcNow,
-            Profile: new AccountProfileExport(
-                DisplayName: displayName,
-                Email: user.Email ?? string.Empty,
-                CreatedAtUtc: user.CreatedAtUtc,
-                LastLoginAtUtc: user.LastLoginAtUtc,
-                IsActive: user.IsActive),
-            BankConnections: bankConnections
-                .Select(connection => new BankConnectionExport(
-                    connection.Id,
-                    connection.InstitutionName,
-                    connection.Status.ToString(),
-                    connection.LastSuccessfulSyncAtUtc,
-                    connection.CreatedAtUtc,
-                    connection.UpdatedAtUtc))
-                .ToArray(),
-            BankAccounts: bankAccounts
-                .Select(account => new BankAccountExport(
-                    account.Id,
-                    account.BankConnectionId,
-                    account.Name,
-                    account.OfficialName,
-                    account.Mask,
-                    account.AccountType.ToString(),
-                    account.AccountSubtype,
-                    account.IsActive,
-                    account.CreatedAtUtc,
-                    account.UpdatedAtUtc))
-                .ToArray(),
-            BankTransactions: bankTransactions
-                .Select(transaction => new BankTransactionExport(
-                    transaction.Id,
-                    transaction.BankAccountId,
-                    transaction.BillStreamId,
-                    transaction.Name,
-                    transaction.MerchantName,
-                    transaction.Amount,
-                    transaction.IsoCurrencyCode,
-                    transaction.PostedDate,
-                    transaction.AuthorizedDate,
-                    transaction.IsPending,
-                    transaction.IsRemoved,
-                    transaction.CategoryPrimary,
-                    transaction.CategoryDetailed,
-                    transaction.CreatedAtUtc,
-                    transaction.UpdatedAtUtc))
-                .ToArray(),
-            BillStreams: billStreams
-                .Select(stream => new BillStreamExport(
-                    stream.Id,
-                    stream.ProviderName,
-                    stream.Category.ToString(),
-                    stream.Source.ToString(),
-                    stream.IsActive,
-                    stream.CreatedAtUtc,
-                    stream.UpdatedAtUtc))
-                .ToArray(),
-            BillStatements: billStatements
-                .Select(statement => new BillStatementExport(
-                    statement.Id,
-                    statement.BillStreamId,
-                    statement.PeriodStart,
-                    statement.PeriodEnd,
-                    statement.StatementDate,
-                    statement.DueDate,
-                    statement.TotalAmount,
-                    statement.CurrencyCode,
-                    statement.ProviderStatementId,
-                    statement.RetrievedAtUtc,
-                    statement.CreatedAtUtc,
-                    statement.UpdatedAtUtc))
-                .ToArray(),
-            BillLineItems: billLineItems
-                .Select(item => new BillLineItemExport(
-                    item.Id,
-                    item.BillStatementId,
-                    item.Description,
-                    item.Amount,
-                    item.Category,
-                    item.SortOrder,
-                    item.CreatedAtUtc,
-                    item.UpdatedAtUtc))
-                .ToArray(),
-            BillChanges: billChanges
-                .Select(change => new BillChangeExport(
-                    change.Id,
-                    change.BillStreamId,
-                    change.PreviousStatementId,
-                    change.CurrentStatementId,
-                    change.ChangeType.ToString(),
-                    change.Confidence.ToString(),
-                    change.Description,
-                    change.PreviousAmount,
-                    change.CurrentAmount,
-                    change.AmountDifference,
-                    change.AnnualizedImpact,
-                    change.IsAcknowledged,
-                    change.DetectedAtUtc,
-                    change.CreatedAtUtc,
-                    change.UpdatedAtUtc))
-                .ToArray(),
-            BillAlerts: billAlerts
-                .Select(alert => new BillAlertExport(
-                    alert.Id,
-                    alert.BillStreamId,
-                    alert.BillChangeId,
-                    alert.AlertType.ToString(),
-                    alert.Severity.ToString(),
-                    alert.Title,
-                    alert.Message,
-                    alert.IsRead,
-                    alert.IsDismissed,
-                    alert.CreatedAtUtc,
-                    alert.UpdatedAtUtc))
-                .ToArray(),
-            StatementUploads: statementUploads
-                .Select(upload => new StatementUploadExport(
-                    upload.Id,
-                    upload.BillStreamId,
-                    upload.BillStatementId,
-                    upload.MediaType,
-                    upload.FileExtension,
-                    upload.SizeBytes,
-                    upload.Status.ToString(),
-                    $"/api/bill-streams/{upload.BillStreamId}/statement-uploads/{upload.Id}/file",
-                    upload.CreatedAtUtc,
-                    upload.UpdatedAtUtc))
-                .ToArray(),
-            AiEvaluations: aiEvaluations
-                .Select(evaluation => new AiEvaluationExport(
-                    evaluation.Id,
-                    evaluation.BillStatementUploadId,
-                    evaluation.Provider,
-                    evaluation.Model,
-                    evaluation.PromptVersion,
-                    evaluation.Status.ToString(),
-                    evaluation.AttemptCount,
-                    evaluation.CandidateReadyForValidation,
-                    evaluation.LastAttemptedAtUtc,
-                    evaluation.CompletedAtUtc,
-                    evaluation.CreatedAtUtc,
-                    evaluation.UpdatedAtUtc))
-                .ToArray(),
-            PlaidLinkSessions: plaidLinkSessions
-                .Select(session => new PlaidLinkSessionExport(
-                    session.Id,
-                    session.Status.ToString(),
-                    session.ExpiresAtUtc,
-                    session.CreatedAtUtc,
-                    session.UpdatedAtUtc,
-                    session.CompletedAtUtc))
-                .ToArray());
+            SchemaVersion:
+                CurrentSchemaVersion,
+
+            ExportedAtUtc:
+                DateTimeOffset.UtcNow,
+
+            Profile:
+                new AccountProfileExport(
+                    DisplayName:
+                        displayName,
+
+                    Email:
+                        user.Email ??
+                        string.Empty,
+
+                    CreatedAtUtc:
+                        user.CreatedAtUtc,
+
+                    LastLoginAtUtc:
+                        user.LastLoginAtUtc,
+
+                    IsActive:
+                        user.IsActive),
+
+            BankConnections:
+                bank.BankConnections
+                    .Select(
+                        item =>
+                            new BankConnectionExport(
+                                item.Id,
+                                item.InstitutionName,
+                                item.Status,
+                                item.LastSuccessfulSyncAtUtc,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BankAccounts:
+                bank.BankAccounts
+                    .Select(
+                        item =>
+                            new BankAccountExport(
+                                item.Id,
+                                item.BankConnectionId,
+                                item.Name,
+                                item.OfficialName,
+                                item.Mask,
+                                item.AccountType,
+                                item.AccountSubtype,
+                                item.IsActive,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BankTransactions:
+                bank.BankTransactions
+                    .Select(
+                        item =>
+                            new BankTransactionExport(
+                                item.Id,
+                                item.BankAccountId,
+                                billStreamIdByTransactionId.TryGetValue(
+                                    item.Id,
+                                    out var billStreamId)
+                                    ? billStreamId
+                                    : null,
+                                item.Name,
+                                item.MerchantName,
+                                item.Amount,
+                                item.IsoCurrencyCode,
+                                item.PostedDate,
+                                item.AuthorizedDate,
+                                item.IsPending,
+                                item.IsRemoved,
+                                item.CategoryPrimary,
+                                item.CategoryDetailed,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BillStreams:
+                bills.BillStreams
+                    .Select(
+                        item =>
+                            new BillStreamExport(
+                                item.Id,
+                                item.ProviderName,
+                                item.Category,
+                                item.Source,
+                                item.IsActive,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BillStatements:
+                statements.BillStatements
+                    .Select(
+                        item =>
+                            new BillStatementExport(
+                                item.Id,
+                                item.BillStreamId,
+                                item.PeriodStart,
+                                item.PeriodEnd,
+                                item.StatementDate,
+                                item.DueDate,
+                                item.TotalAmount,
+                                item.CurrencyCode,
+                                item.ProviderStatementId,
+                                item.RetrievedAtUtc,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BillLineItems:
+                statements.BillLineItems
+                    .Select(
+                        item =>
+                            new BillLineItemExport(
+                                item.Id,
+                                item.BillStatementId,
+                                item.Description,
+                                item.Amount,
+                                item.Category,
+                                item.SortOrder,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BillChanges:
+                statements.BillChanges
+                    .Select(
+                        item =>
+                            new BillChangeExport(
+                                item.Id,
+                                item.BillStreamId,
+                                item.PreviousStatementId,
+                                item.CurrentStatementId,
+                                item.ChangeType,
+                                item.Confidence,
+                                item.Description,
+                                item.PreviousAmount,
+                                item.CurrentAmount,
+                                item.AmountDifference,
+                                item.AnnualizedImpact,
+                                item.IsAcknowledged,
+                                item.DetectedAtUtc,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            BillAlerts:
+                bills.BillAlerts
+                    .Select(
+                        item =>
+                            new BillAlertExport(
+                                item.Id,
+                                item.BillStreamId,
+                                item.BillChangeId,
+                                item.AlertType,
+                                item.Severity,
+                                item.Title,
+                                item.Message,
+                                item.IsRead,
+                                item.IsDismissed,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            StatementUploads:
+                statements.StatementUploads
+                    .Select(
+                        item =>
+                            new StatementUploadExport(
+                                item.Id,
+                                item.BillStreamId,
+                                item.BillStatementId,
+                                item.MediaType,
+                                item.FileExtension,
+                                item.SizeBytes,
+                                item.Status,
+                                $"/api/bill-streams/{item.BillStreamId}/statement-uploads/{item.Id}/file",
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            AiEvaluations:
+                statements.AiEvaluations
+                    .Select(
+                        item =>
+                            new AiEvaluationExport(
+                                item.Id,
+                                item.BillStatementUploadId,
+                                item.Provider,
+                                item.Model,
+                                item.PromptVersion,
+                                item.Status,
+                                item.AttemptCount,
+                                item.CandidateReadyForValidation,
+                                item.LastAttemptedAtUtc,
+                                item.CompletedAtUtc,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc))
+                    .ToArray(),
+
+            PlaidLinkSessions:
+                bank.PlaidLinkSessions
+                    .Select(
+                        item =>
+                            new PlaidLinkSessionExport(
+                                item.Id,
+                                item.Status,
+                                item.ExpiresAtUtc,
+                                item.CreatedAtUtc,
+                                item.UpdatedAtUtc,
+                                item.CompletedAtUtc))
+                    .ToArray());
     }
 }
 

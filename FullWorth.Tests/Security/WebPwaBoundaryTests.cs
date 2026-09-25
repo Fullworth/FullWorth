@@ -336,6 +336,75 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public void AccountExportClient_UsesReauthenticatedPostWithoutMisclassifyingCredentialFailures()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        var exportStart =
+            bff.IndexOf(
+                "export async function downloadAccountExport(",
+                StringComparison.Ordinal);
+
+        var exportEnd =
+            bff.IndexOf(
+                "export async function deleteFullWorthAccount(",
+                exportStart,
+                StringComparison.Ordinal);
+
+        Assert.True(
+            exportStart >= 0 &&
+            exportEnd > exportStart);
+
+        var exportClient =
+            bff[exportStart..exportEnd];
+
+        Assert.Contains(
+            "getAntiforgeryToken()",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"POST\"",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "currentPassword",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"X-CSRF-TOKEN\"",
+            exportClient,
+            StringComparison.Ordinal);
+
+        var credentialFailureIndex =
+            exportClient.IndexOf(
+                "current password is incorrect",
+                StringComparison.Ordinal);
+
+        var redirectIndex =
+            exportClient.IndexOf(
+                "window.location.assign(",
+                StringComparison.Ordinal);
+
+        Assert.True(
+            credentialFailureIndex >= 0 &&
+            redirectIndex > credentialFailureIndex,
+            "Expected export credential failures to be handled before the expired-session redirect.");
+    }
+
+    [Fact]
     public void StatementUpload_RemainsBrowserFileBasedAndNoStore()
     {
         var repositoryRoot =
@@ -526,6 +595,92 @@ public sealed class WebPwaBoundaryTests
             body,
             StringComparison.OrdinalIgnoreCase);
     }
+    [Fact]
+    public void WhatsNewDialog_IsBoundToTheExactDeployedRelease()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var dialog =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "WhatsNewDialog.razor"));
+
+        var layout =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "Components",
+                    "Layout",
+                    "AppLayout.razor"));
+
+        var productionCompose =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "compose.production.yml"));
+
+        Assert.Contains(
+            "<WhatsNewDialog />",
+            layout,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "Configuration[\"BILLWATCH_RELEASE_ID\"]",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"fullworth.whats-new.seen-release\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"localStorage.getItem\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"localStorage.setItem\"",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "releaseId.Length != 40",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "character is >= '0' and <= '9' or",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            ">= 'a' and <= 'f'",
+            dialog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}",
+            productionCompose,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "/bff/",
+            dialog,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "/api/",
+            dialog,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task AuthenticatedVisualSystem_DoesNotUseTinyTextSizes()
     {

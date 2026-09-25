@@ -111,6 +111,7 @@ fi
 
 if [ -n "$recovery_code_file" ]; then
     require_secret_file "$recovery_code_file" "BILLWATCH_SMOKE_RECOVERY_CODE_FILE"
+    fail "The private-beta smoke includes account export strong reauthentication, which requires a current authenticator code. Use BILLWATCH_SMOKE_TWO_FACTOR_CODE_FILE instead of a recovery code." 64
 fi
 
 work_directory="$(mktemp -d)"
@@ -131,12 +132,17 @@ refresh_payload="$work_directory/refresh.json"
 refresh_response="$work_directory/refresh-response.json"
 auth_config="$work_directory/auth.curl"
 export_response="$work_directory/account-export.json"
+export_payload="$work_directory/account-export-request.json"
+reauth_password_file="$work_directory/reauth-password.txt"
 
 json_escape()
 {
     printf '%s' "$1" |
         sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g'
 }
+
+printf '%s' "$password" > "$reauth_password_file"
+chmod 600 "$reauth_password_file"
 
 printf '{"email":"%s","password":"%s"' \
     "$(json_escape "$email")" \
@@ -291,18 +297,41 @@ do
     probe_get "$api_base_url" "$protected_path" 200 "$auth_config"
 done
 
+IFS= read -r reauth_password < "$reauth_password_file" || true
+[ -n "${reauth_password:-}" ] ||
+    fail "Account export reauthentication password is unavailable." 70
+
+printf '{"currentPassword":"%s"' \
+    "$(json_escape "$reauth_password")" \
+    > "$export_payload"
+unset reauth_password
+
+if [ -n "$two_factor_code_file" ]; then
+    printf ',"twoFactorCode":"%s"' \
+        "$(json_escape "$(cat "$two_factor_code_file")")" \
+        >> "$export_payload"
+else
+    printf ',"twoFactorCode":null' >> "$export_payload"
+fi
+printf '}' >> "$export_payload"
+chmod 600 "$export_payload"
+
 export_code="$(
     curl \
         --silent \
         --show-error \
         --output "$export_response" \
         --write-out '%{http_code}' \
+        --request POST \
+        --header 'Content-Type: application/json' \
         --config "$auth_config" \
+        --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"
+rm -f "$export_payload" "$reauth_password_file"
 
 [ "$export_code" = "200" ] ||
-    fail "Account export smoke test failed with HTTP $export_code." 69
+    fail "Account export smoke test failed with HTTP $export_code. If this account uses two-factor authentication, supply a current authenticator-code file; recovery codes are not used for export reauthentication." 69
 
 if grep -Eiq \
     '"(accessToken|refreshToken|protectedAccessToken|encryptedAccessToken|plaidAccessToken|storagePath|storedFilePath|passwordHash|securityStamp)"[[:space:]]*:' \

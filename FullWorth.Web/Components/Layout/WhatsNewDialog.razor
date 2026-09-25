@@ -1,0 +1,206 @@
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
+
+@if (_isOpen)
+{
+    <div class="whats-new-backdrop"
+         role="presentation"
+         @onclick="DismissAsync">
+        <section class="whats-new-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="whats-new-title"
+                 aria-describedby="whats-new-summary"
+                 @onclick:stopPropagation="true"
+                 @onkeydown="HandleKeyDownAsync"
+                 tabindex="-1">
+
+            <div class="whats-new-glow"
+                 aria-hidden="true"></div>
+
+            <div class="whats-new-header">
+                <div class="whats-new-icon"
+                     aria-hidden="true">
+                    ✦
+                </div>
+
+                <div>
+                    <span class="whats-new-kicker">
+                        New release
+                    </span>
+
+                    <h2 id="whats-new-title">
+                        What’s new in FullWorth
+                    </h2>
+
+                    <p id="whats-new-summary">
+                        A cleaner, safer release focused on helping you understand
+                        what changed in your financial life and why it matters.
+                    </p>
+                </div>
+
+                <button type="button"
+                        class="whats-new-close"
+                        aria-label="Close What’s new"
+                        @onclick="DismissAsync">
+                    ×
+                </button>
+            </div>
+
+            <div class="whats-new-grid">
+                @foreach (var highlight in Highlights)
+                {
+                    <article class="whats-new-item">
+                        <span class="whats-new-item-icon"
+                              aria-hidden="true">
+                            @highlight.Icon
+                        </span>
+
+                        <div>
+                            <h3>@highlight.Title</h3>
+                            <p>@highlight.Description</p>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <div class="whats-new-footer">
+                <span class="whats-new-release">
+                    Release @_shortReleaseId
+                </span>
+
+                <button type="button"
+                        class="whats-new-primary"
+                        @onclick="DismissAsync">
+                    Explore FullWorth
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private const string SeenReleaseStorageKey =
+        "fullworth.whats-new.seen-release";
+
+    private static readonly ReleaseHighlight[] Highlights =
+    [
+        new(
+            "↗",
+            "Sharper bill intelligence",
+            "Recurring bills stay grounded in posted transactions so pending charges cannot distort your history."),
+
+        new(
+            "⌁",
+            "Stronger account security",
+            "Sensitive account and admin changes now use tighter reauthentication and session protections."),
+
+        new(
+            "◇",
+            "A more polished experience",
+            "FullWorth’s public and authenticated experiences have been refined for a cleaner, premium financial workspace."),
+
+        new(
+            "✓",
+            "Safer releases",
+            "Expanded automated security, recovery, container, and deployment checks help every release ship with stronger guardrails.")
+    ];
+
+    private bool _isOpen;
+    private string? _releaseId;
+    private string _shortReleaseId = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(
+        bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _releaseId =
+            Configuration["BILLWATCH_RELEASE_ID"];
+
+        if (!IsValidReleaseId(_releaseId))
+        {
+            return;
+        }
+
+        _shortReleaseId =
+            _releaseId[..8];
+
+        try
+        {
+            var seenRelease =
+                await JS.InvokeAsync<string?>(
+                    "localStorage.getItem",
+                    SeenReleaseStorageKey);
+
+            if (!string.Equals(
+                    seenRelease,
+                    _releaseId,
+                    StringComparison.Ordinal))
+            {
+                _isOpen = true;
+                StateHasChanged();
+            }
+        }
+        catch (JSException)
+        {
+            // Release notes are progressive enhancement. Browser storage
+            // failures must never block the authenticated application.
+        }
+    }
+
+    private async Task DismissAsync()
+    {
+        _isOpen = false;
+
+        if (IsValidReleaseId(_releaseId))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync(
+                    "localStorage.setItem",
+                    SeenReleaseStorageKey,
+                    _releaseId);
+            }
+            catch (JSException)
+            {
+                // If storage is unavailable, dismiss for the current session.
+            }
+        }
+    }
+
+    private async Task HandleKeyDownAsync(
+        KeyboardEventArgs args)
+    {
+        if (string.Equals(
+                args.Key,
+                "Escape",
+                StringComparison.Ordinal))
+        {
+            await DismissAsync();
+        }
+    }
+
+    private static bool IsValidReleaseId(
+        string? releaseId)
+    {
+        if (releaseId is null ||
+            releaseId.Length != 40)
+        {
+            return false;
+        }
+
+        return releaseId.All(
+            character =>
+                character is >= '0' and <= '9' or
+                >= 'a' and <= 'f');
+    }
+
+    private sealed record ReleaseHighlight(
+        string Icon,
+        string Title,
+        string Description);
+}

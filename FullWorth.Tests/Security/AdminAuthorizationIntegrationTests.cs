@@ -1,12 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
 using FullWorth.API.Authorization;
+using FullWorth.API.Data;
+using FullWorth.API.Data.Entities;
 using FullWorth.Tests.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FullWorth.Tests.Security;
 
 public sealed class AdminAuthorizationIntegrationTests
 {
+    private const string TestPassword =
+        "FullWorth!Tests123";
+
     [Theory]
     [InlineData(FullWorthRoles.Owner)]
     [InlineData(FullWorthRoles.Admin)]
@@ -146,13 +154,33 @@ public sealed class AdminAuthorizationIntegrationTests
             owner);
 
         using var promoteResponse =
-            await ownerClient.PostAsync(
+            await ownerClient.PostAsJsonAsync(
                 $"/api/admin/users/{targetUserId:D}/roles/Admin",
-                content: null);
+                CreateRoleAssignmentRequest());
 
         Assert.Equal(
             HttpStatusCode.NoContent,
             promoteResponse.StatusCode);
+
+        targetClient.DefaultRequestHeaders.Authorization =
+            null;
+
+        using var staleRefreshResponse =
+            await targetClient.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        target.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            staleRefreshResponse.StatusCode);
+
+        TestUserAuthentication.Authorize(
+            targetClient,
+            target);
 
         using var staleTokenResponse =
             await targetClient.GetAsync(
@@ -180,13 +208,41 @@ public sealed class AdminAuthorizationIntegrationTests
             freshTokenResponse.StatusCode);
 
         TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var demoteResponse =
+            await ownerClient.DeleteAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Admin");
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            demoteResponse.StatusCode);
+
+        targetClient.DefaultRequestHeaders.Authorization =
+            null;
+
+        using var staleAdminRefreshResponse =
+            await targetClient.PostAsJsonAsync(
+                "/api/auth/refresh",
+                new
+                {
+                    refreshToken =
+                        refreshedTarget.RefreshToken
+                });
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            staleAdminRefreshResponse.StatusCode);
+
+        TestUserAuthentication.Authorize(
             adminClient,
             admin);
 
         using var adminEscalationAttempt =
-            await adminClient.PostAsync(
+            await adminClient.PostAsJsonAsync(
                 $"/api/admin/users/{targetUserId:D}/roles/Admin",
-                content: null);
+                CreateRoleAssignmentRequest());
 
         Assert.Equal(
             HttpStatusCode.Forbidden,
@@ -195,16 +251,450 @@ public sealed class AdminAuthorizationIntegrationTests
         using var adminManageOwnerAttempt =
             await adminClient.PostAsJsonAsync(
                 $"/api/admin/users/{ownerUserId:D}/entitlements",
-                new
-                {
-                    tier = "Standard",
-                    durationDays = 30,
-                    grantsLifetimeAccess = false
-                });
+                CreateEntitlementGrantRequest());
 
         Assert.Equal(
             HttpStatusCode.Forbidden,
             adminManageOwnerAttempt.StatusCode);
+    }
+
+    [Fact]
+    public async Task AssignRole_WrongPassword_IsRejectedWithoutGrantingRole()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PostAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Moderator",
+                CreateRoleAssignmentRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        var roles =
+            await GetUserRolesAsync(
+                factory,
+                target.Email);
+
+        Assert.DoesNotContain(
+            FullWorthRoles.Moderator,
+            roles);
+    }
+
+    [Fact]
+    public async Task AssignRole_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var ownerUser =
+                await userManager.FindByEmailAsync(
+                    owner.Email);
+
+            Assert.NotNull(
+                ownerUser);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    ownerUser!,
+                    true);
+
+            Assert.True(
+                enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PostAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/roles/Moderator",
+                CreateRoleAssignmentRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        var roles =
+            await GetUserRolesAsync(
+                factory,
+                target.Email);
+
+        Assert.DoesNotContain(
+            FullWorthRoles.Moderator,
+            roles);
+    }
+
+    [Fact]
+    public async Task GrantEntitlement_WrongPassword_IsRejectedWithoutGrantingAccess()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PostAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/entitlements",
+                CreateEntitlementGrantRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        Assert.False(
+            await HasEntitlementAsync(
+                factory,
+                targetUserId));
+    }
+
+    [Fact]
+    public async Task EnableProgram_TwoFactorEnabledWithoutCode_IsRejectedWithoutMembership()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        await EnableTwoFactorWithoutAuthenticatorAsync(
+            factory,
+            owner.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var response =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        true));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+
+        Assert.False(
+            await HasActiveProgramMembershipAsync(
+                factory,
+                targetUserId,
+                UserProgramType.BetaTester));
+    }
+
+    [Fact]
+    public async Task DisableProgram_WithoutReauthentication_IsRejectedAndMembershipRemainsActive()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var enableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        true,
+                    currentPassword:
+                        TestPassword));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            enableResponse.StatusCode);
+
+        using var disableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        false));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            disableResponse.StatusCode);
+
+        Assert.True(
+            await HasActiveProgramMembershipAsync(
+                factory,
+                targetUserId,
+                UserProgramType.BetaTester));
+    }
+
+    [Fact]
+    public async Task DisableProgram_WithReauthentication_Succeeds()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var enableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        true,
+                    currentPassword:
+                        TestPassword));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            enableResponse.StatusCode);
+
+        using var disableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        false,
+                    currentPassword:
+                        TestPassword));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            disableResponse.StatusCode);
+
+        Assert.False(
+            await HasActiveProgramMembershipAsync(
+                factory,
+                targetUserId,
+                UserProgramType.BetaTester));
+    }
+
+    [Fact]
+    public async Task CreateAccessKey_WrongPassword_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                client,
+                FullWorthRoles.Owner);
+
+        TestUserAuthentication.Authorize(
+            client,
+            owner);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/admin/subscription/access-keys",
+                CreateAccessKeyRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAccessKey_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                client,
+                FullWorthRoles.Owner);
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    owner.Email);
+
+            Assert.NotNull(
+                user);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    user!,
+                    true);
+
+            Assert.True(
+                enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            client,
+            owner);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/admin/subscription/access-keys",
+                CreateAccessKeyRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 
     [Fact]
@@ -340,7 +830,137 @@ public sealed class AdminAuthorizationIntegrationTests
             revokedRedeemResponse.StatusCode);
     }
 
-    private static object CreateAccessKeyRequest() =>
+    private static async Task EnableTwoFactorWithoutAuthenticatorAsync(
+        FullWorthApiFactory factory,
+        string email)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var userManager =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
+
+        var user =
+            await userManager.FindByEmailAsync(
+                email);
+
+        Assert.NotNull(
+            user);
+
+        var enableResult =
+            await userManager.SetTwoFactorEnabledAsync(
+                user!,
+                true);
+
+        Assert.True(
+            enableResult.Succeeded);
+    }
+
+    private static async Task<bool> HasEntitlementAsync(
+        FullWorthApiFactory factory,
+        Guid userId)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        return await dbContext.SubscriptionEntitlements
+            .AsNoTracking()
+            .AnyAsync(
+                entitlement =>
+                    entitlement.UserId == userId);
+    }
+
+    private static async Task<bool> HasActiveProgramMembershipAsync(
+        FullWorthApiFactory factory,
+        Guid userId,
+        UserProgramType program)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var dbContext =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    FullWorthDbContext>();
+
+        return await dbContext.UserProgramMemberships
+            .AsNoTracking()
+            .AnyAsync(
+                membership =>
+                    membership.UserId == userId &&
+                    membership.Program == program &&
+                    membership.IsActive);
+    }
+
+    private static async Task<IReadOnlyList<string>>
+        GetUserRolesAsync(
+            FullWorthApiFactory factory,
+            string email)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var userManager =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
+
+        var user =
+            await userManager.FindByEmailAsync(
+                email);
+
+        Assert.NotNull(
+            user);
+
+        return (
+            await userManager.GetRolesAsync(
+                user!))
+            .ToArray();
+    }
+
+    private static object CreateEntitlementGrantRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
+        new
+        {
+            tier = "Standard",
+            durationDays = 30,
+            grantsLifetimeAccess = false,
+            currentPassword,
+            twoFactorCode
+        };
+
+    private static object CreateProgramMembershipRequest(
+        bool isActive,
+        string? currentPassword = null,
+        string? twoFactorCode = null) =>
+        new
+        {
+            isActive,
+            endsAtUtc = (DateTimeOffset?)null,
+            currentPassword,
+            twoFactorCode
+        };
+
+    private static object CreateRoleAssignmentRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
+        new
+        {
+            currentPassword,
+            twoFactorCode
+        };
+
+    private static object CreateAccessKeyRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
         new
         {
             purpose = "Beta",
@@ -349,6 +969,8 @@ public sealed class AdminAuthorizationIntegrationTests
             grantsLifetimeAccess = false,
             maxRedemptions = 1,
             expiresAtUtc = DateTimeOffset.UtcNow.AddDays(7),
+            currentPassword,
+            twoFactorCode,
             label = (string?)null
         };
 

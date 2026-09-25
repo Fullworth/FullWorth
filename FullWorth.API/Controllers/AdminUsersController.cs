@@ -2,7 +2,7 @@ using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
-using FullWorth.API.Services.Subscriptions;
+using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +17,7 @@ public sealed class AdminUsersController(
     FullWorthDbContext dbContext,
     UserManager<ApplicationUser> userManager,
     AdminUserManagementService managementService,
-    TimeProvider timeProvider)
+    IAdminSubscriptionReadGateway subscriptionReadGateway)
     : ControllerBase
 {
     [HttpGet]
@@ -53,26 +53,18 @@ public sealed class AdminUsersController(
             select new { userRole.UserId, role.Name })
             .ToListAsync(cancellationToken);
 
-        var nowUtc = timeProvider.GetUtcNow();
-        var entitlements = await dbContext.SubscriptionEntitlements
-            .AsNoTracking()
-            .Where(item => userIds.Contains(item.UserId) &&
-                !item.IsRevoked &&
-                item.StartsAtUtc <= nowUtc &&
-                (item.EndsAtUtc == null || item.EndsAtUtc > nowUtc))
-            .ToListAsync(cancellationToken);
-        var memberships = await dbContext.UserProgramMemberships
-            .AsNoTracking()
-            .Where(item => userIds.Contains(item.UserId) &&
-                item.IsActive &&
-                (item.EndsAtUtc == null || item.EndsAtUtc > nowUtc))
-            .ToListAsync(cancellationToken);
+        var subscriptions =
+            await subscriptionReadGateway
+                .GetUserSubscriptionsAsync(
+                    userIds,
+                    cancellationToken);
 
         return Ok(users.Select(user =>
         {
-            var effective = SubscriptionEntitlementRules.SelectEffectiveEntitlement(
-                entitlements.Where(item => item.UserId == user.Id),
-                nowUtc);
+            subscriptions.TryGetValue(
+                user.Id,
+                out var subscription);
+
             return new AdminUserSummary(
                 user.Id,
                 user.Email,
@@ -82,12 +74,10 @@ public sealed class AdminUsersController(
                     .Select(item => item.Name!)
                     .OrderByDescending(FullWorthRoleHierarchy.GetRank)
                     .ToArray(),
-                memberships.Where(item => item.UserId == user.Id)
-                    .Select(item => item.Program.ToString())
-                    .OrderBy(name => name)
-                    .ToArray(),
-                effective?.Tier.ToString(),
-                effective?.EndsAtUtc);
+                subscription?.Programs ??
+                    [],
+                subscription?.SubscriptionTier,
+                subscription?.SubscriptionEndsAtUtc);
         }).ToList());
     }
 
@@ -95,11 +85,32 @@ public sealed class AdminUsersController(
     public async Task<IActionResult> AssignRole(
         Guid targetUserId,
         string roleName,
+        AssignRoleRequest request,
         CancellationToken cancellationToken)
     {
         if (!TryGetActorUserId(out var actorUserId))
         {
             return Unauthorized();
+        }
+
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
+        {
+            return Unauthorized();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
         }
 
         var result = await managementService.AssignRoleAsync(
@@ -140,6 +151,26 @@ public sealed class AdminUsersController(
         if (!TryGetActorUserId(out var actorUserId))
         {
             return Unauthorized();
+        }
+
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
+        {
+            return Unauthorized();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
         }
 
         if (!Enum.TryParse<FullWorthSubscriptionTier>(
@@ -201,6 +232,26 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
+        {
+            return Unauthorized();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
+        }
+
         if (!Enum.TryParse<UserProgramType>(
                 programName,
                 ignoreCase: true,
@@ -232,22 +283,93 @@ public sealed class AdminUsersController(
         };
     }
 
+    private async Task<ActionResult?> ValidateSensitiveCredentialsAsync(
+        ApplicationUser user,
+        string? currentPassword,
+        string? twoFactorCode)
+    {
+        if (string.IsNullOrWhiteSpace(currentPassword) ||
+            !await userManager.CheckPasswordAsync(
+                user,
+                currentPassword))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "Current password is incorrect.");
+        }
+
+        if (!await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(twoFactorCode))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "A current authenticator code is required.");
+        }
+
+        var validTwoFactorCode =
+            await userManager.VerifyTwoFactorTokenAsync(
+                user,
+                userManager.Options.Tokens.AuthenticatorTokenProvider,
+                NormalizeAuthenticatorCode(twoFactorCode));
+
+        if (!validTwoFactorCode)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status401Unauthorized,
+                title:
+                    "The authenticator code is invalid.");
+        }
+
+        return null;
+    }
+
     private bool TryGetActorUserId(out Guid actorUserId)
     {
         return Guid.TryParse(
             userManager.GetUserId(User),
             out actorUserId);
     }
+
+    private static string NormalizeAuthenticatorCode(
+        string code)
+    {
+        return code
+            .Replace(
+                " ",
+                string.Empty,
+                StringComparison.Ordinal)
+            .Replace(
+                "-",
+                string.Empty,
+                StringComparison.Ordinal);
+    }
 }
+
+public sealed record AssignRoleRequest(
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record GrantEntitlementRequest(
     string Tier,
     int? DurationDays,
-    bool GrantsLifetimeAccess);
+    bool GrantsLifetimeAccess,
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record SetProgramMembershipRequest(
     bool IsActive,
-    DateTimeOffset? EndsAtUtc);
+    DateTimeOffset? EndsAtUtc,
+    string? CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminUserSummary(
     Guid Id,

@@ -42,7 +42,7 @@ public sealed class AnonymousFinancialEndpointAuthorizationTests
         yield return ["POST", "/api/plaid/transactions/sync"];
         yield return ["GET", "/api/account/preferences"];
         yield return ["PUT", "/api/account/preferences"];
-        yield return ["GET", "/api/account/export"];
+        yield return ["POST", "/api/account/export"];
         yield return ["DELETE", "/api/account"];
         yield return ["GET", "/api/subscription"];
         yield return ["GET", "/api/subscription/plans"];

@@ -274,6 +274,26 @@
                     </div>
                 }
 
+                <div class="admin-field">
+                    <label for="key-current-password">@L["Current password"]</label>
+                    <input id="key-current-password"
+                           type="password"
+                           autocomplete="current-password"
+                           disabled="@_isMutating"
+                           @bind="_newKeyCurrentPassword" />
+                </div>
+
+                <div class="admin-field">
+                    <label for="key-two-factor-code">@L["Authenticator code (if enabled)"]</label>
+                    <input id="key-two-factor-code"
+                           type="text"
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           maxlength="12"
+                           disabled="@_isMutating"
+                           @bind="_newKeyTwoFactorCode" />
+                </div>
+
                 <div class="admin-key-builder-action">
                     <button type="button"
                             class="admin-primary-button"
@@ -468,6 +488,8 @@
     private int _newKeyDurationDays = 30;
     private bool _expireNewKey;
     private int _newKeyExpirationDays = 7;
+    private string _newKeyCurrentPassword = string.Empty;
+    private string _newKeyTwoFactorCode = string.Empty;
 
     private int ActiveAccessKeyCount =>
         _accessKeys?.Items.Count(item => string.Equals(
@@ -605,7 +627,11 @@
                 MaxRedemptions = _newKeyMaxRedemptions,
                 ExpiresAtUtc = _expireNewKey
                     ? DateTimeOffset.UtcNow.AddDays(_newKeyExpirationDays)
-                    : null
+                    : null,
+                CurrentPassword = _newKeyCurrentPassword,
+                TwoFactorCode = string.IsNullOrWhiteSpace(_newKeyTwoFactorCode)
+                    ? null
+                    : _newKeyTwoFactorCode.Trim()
             };
 
             var result = await module.InvokeAsync<AdminFetchResult<CreatedAccessKeyViewModel>>(
@@ -628,12 +654,16 @@
             _newKeyRevealed = false;
             _copyStatus = null;
             _newKeyLabel = string.Empty;
+            _newKeyCurrentPassword = string.Empty;
+            _newKeyTwoFactorCode = string.Empty;
 
             await LoadAsync(clearTransientKey: false);
         }
-        catch (JSException)
+        catch (JSException exception)
         {
-            _mutationError = L["FullWorth could not create the access key."];
+            _mutationError =
+                GetSafeCreateAccessKeyError(
+                    exception.Message);
         }
         catch (Exception)
         {
@@ -648,6 +678,11 @@
 
     private string? ValidateNewAccessKey()
     {
+        if (string.IsNullOrWhiteSpace(_newKeyCurrentPassword))
+        {
+            return L["Enter your current password before creating an access key."];
+        }
+
         if (_newKeyMaxRedemptions is < 1 or > 10000)
         {
             return L["Maximum redemptions must be between 1 and 10,000."];
@@ -669,6 +704,29 @@
         }
 
         return null;
+    }
+
+    private string GetSafeCreateAccessKeyError(
+        string? technicalMessage)
+    {
+        if (!string.IsNullOrWhiteSpace(technicalMessage))
+        {
+            if (technicalMessage.Contains(
+                    "current password is incorrect",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Your current password is incorrect."];
+            }
+
+            if (technicalMessage.Contains(
+                    "authenticator code",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Enter a valid current authenticator code if two-factor authentication is enabled."];
+            }
+        }
+
+        return L["FullWorth could not create the access key."];
     }
 
     private void BeginKeyRevocation(Guid keyId)
@@ -1013,6 +1071,8 @@
         public string? Label { get; set; }
         public int MaxRedemptions { get; set; }
         public DateTimeOffset? ExpiresAtUtc { get; set; }
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string? TwoFactorCode { get; set; }
     }
 
     private sealed class CreatedAccessKeyViewModel

@@ -23,6 +23,13 @@ public static class ExternalWebSignInFlow
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before signing in to another account.");
+        }
+
         provider = provider.Trim().ToLowerInvariant();
         providerSubject = providerSubject.Trim();
         email = string.IsNullOrWhiteSpace(email)
@@ -162,6 +169,13 @@ public static class ExternalWebSignInFlow
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            return new AuthOperationResult(
+                false,
+                "Sign out before creating another account.");
+        }
 
         provider =
             provider.Trim().ToLowerInvariant();
