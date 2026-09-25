@@ -908,6 +908,7 @@
         if (technicalMessage.Contains("authenticator code", StringComparison.OrdinalIgnoreCase) &&
             (technicalMessage.Contains("isn’t valid", StringComparison.OrdinalIgnoreCase) || technicalMessage.Contains("isn't valid", StringComparison.OrdinalIgnoreCase) || technicalMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase)))
             return L["That authenticator code isn’t valid. Try the current code from your authenticator app."].Value;
+        if (technicalMessage.Contains("two-factor authentication is already enabled", StringComparison.OrdinalIgnoreCase)) return L["Two-factor authentication is already enabled. Reload settings and choose New recovery codes if you need replacements."].Value;
         if (technicalMessage.Contains("email address is already in use", StringComparison.OrdinalIgnoreCase)) return L["That email address is already in use."].Value;
         if (technicalMessage.Contains("password requirements", StringComparison.OrdinalIgnoreCase)) return L["Your new password doesn’t meet FullWorth’s password requirements."].Value;
         if (technicalMessage.Contains("too many attempts", StringComparison.OrdinalIgnoreCase)) return L["Too many attempts. Please wait a little while and try again."].Value;
