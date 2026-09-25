@@ -51,4 +51,13 @@
   <data name="FullWorth could not safely complete this request." xml:space="preserve"><value>FullWorth no pudo completar esta solicitud de forma segura.</value></data>
   <data name="FullWorth could not safely revoke a connected bank, so your account was not deleted. Try again shortly." xml:space="preserve"><value>FullWorth no pudo revocar de forma segura un banco conectado, por lo que tu cuenta no fue eliminada. Inténtalo de nuevo en breve.</value></data>
   <data name="FullWorth could not securely remove all stored statement files, so your account was not deleted." xml:space="preserve"><value>FullWorth no pudo eliminar de forma segura todos los archivos de estados de cuenta almacenados, por lo que tu cuenta no fue eliminada.</value></data>
+
+  <data name="Confirm this sensitive export" xml:space="preserve"><value>Confirma esta exportación confidencial</value></data>
+  <data name="Re-enter your current credentials before FullWorth prepares a copy of your financial data." xml:space="preserve"><value>Vuelve a introducir tus credenciales actuales antes de que FullWorth prepare una copia de tus datos financieros.</value></data>
+  <data name="Current password" xml:space="preserve"><value>Contraseña actual</value></data>
+  <data name="Authenticator code (if two-factor authentication is enabled)" xml:space="preserve"><value>Código del autenticador (si la autenticación en dos pasos está activada)</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Download securely" xml:space="preserve"><value>Descargar de forma segura</value></data>
+  <data name="Your current password is incorrect." xml:space="preserve"><value>Tu contraseña actual es incorrecta.</value></data>
+  <data name="Enter a valid current authenticator code to export your data." xml:space="preserve"><value>Introduce un código actual válido del autenticador para exportar tus datos.</value></data>
 </root>
