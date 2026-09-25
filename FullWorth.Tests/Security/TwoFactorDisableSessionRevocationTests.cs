@@ -168,7 +168,7 @@ public sealed class TwoFactorDisableSessionRevocationTests
                         Password,
 
                     twoFactorCode =
-                        "000000"
+                        "invalid"
                 });
 
         Assert.Equal(
