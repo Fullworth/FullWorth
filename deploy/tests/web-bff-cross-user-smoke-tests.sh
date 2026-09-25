@@ -20,6 +20,12 @@ grep -Fq 'BILLWATCH_WEB_OWNERSHIP_FOREIGN_PASSWORD_FILE' "$source_script" ||
     fail "ownership harness must require a protected foreign-account password file."
 grep -Fq '/bff/account/export' "$source_script" ||
     fail "ownership harness must derive ownership from the foreign account export."
+grep -Fq '/bff/antiforgery' "$source_script" ||
+    fail "ownership export must obtain an authenticated antiforgery token."
+grep -Fq '"currentPassword":"%s"' "$source_script" ||
+    fail "ownership export must include current-password reauthentication."
+grep -Fq 'bff_security_config' "$source_script" ||
+    fail "ownership export must keep antiforgery values out of curl argv."
 grep -Fq 'BILLWATCH_WEB_SMOKE_FOREIGN_BILL_STREAM_ID' "$source_script" ||
     fail "ownership harness must pass the proven foreign bill-stream ID to the primary smoke."
 grep -Fq 'BILLWATCH_WEB_SMOKE_FOREIGN_STATEMENT_UPLOAD_ID' "$source_script" ||
@@ -59,6 +65,8 @@ headers=''
 request='GET'
 url=''
 has_two_factor=false
+data_binary_file=''
+curl_config_file=''
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
 while [ "$#" -gt 0 ]
@@ -71,6 +79,8 @@ do
             case "$2" in twoFactor=true) has_two_factor=true ;; esac
             shift 2
             ;;
+        --data-binary) data_binary_file="${2#@}"; shift 2 ;;
+        --config) curl_config_file="$2"; shift 2 ;;
         --write-out|--cookie|--cookie-jar|--header) shift 2 ;;
         --silent|--show-error) shift ;;
         https://*) url="$1"; shift ;;
@@ -96,7 +106,15 @@ case "$url" in
     */login|*/login\?twoFactor=true)
         body='<form><input type="hidden" name="__RequestVerificationToken" value="FOREIGN-CSRF" /></form>'
         ;;
+    */bff/antiforgery)
+        body='{"requestToken":"FOREIGN-BFF-CSRF"}'
+        ;;
     */bff/account/export)
+        [ "$request" = 'POST' ] || exit 92
+        [ -f "$data_binary_file" ] || exit 93
+        grep -Fq '"currentPassword":"ForeignPassword!123456"' "$data_binary_file" || exit 94
+        [ -f "$curl_config_file" ] || exit 95
+        grep -Fq 'X-CSRF-TOKEN: FOREIGN-BFF-CSRF' "$curl_config_file" || exit 96
         if [ "${FAKE_EXPORT_SECRET:-false}" = 'true' ]; then
             body='{"protectedAccessToken":"never-export","statementUploads":[{"id":"22222222-2222-4222-8222-222222222222","billStreamId":"11111111-1111-4111-8111-111111111111"}]}'
         elif [ "${FAKE_NO_STATEMENT:-false}" = 'true' ]; then
@@ -123,10 +141,12 @@ chmod 700 "$fixture_root/bin/curl"
 primary_password="$temp_dir/primary-password"
 foreign_password="$temp_dir/foreign-password"
 foreign_two_factor="$temp_dir/foreign-two-factor"
+foreign_recovery="$temp_dir/foreign-recovery"
 printf '%s\n' 'PrimaryPassword!123456' > "$primary_password"
 printf '%s\n' 'ForeignPassword!123456' > "$foreign_password"
 printf '%s\n' '123456' > "$foreign_two_factor"
-chmod 600 "$primary_password" "$foreign_password" "$foreign_two_factor"
+printf '%s\n' 'recovery-code' > "$foreign_recovery"
+chmod 600 "$primary_password" "$foreign_password" "$foreign_two_factor" "$foreign_recovery"
 
 run_ownership()
 {
@@ -144,6 +164,15 @@ run_ownership()
 }
 
 : > "$curl_log"
+if run_ownership \
+    BILLWATCH_WEB_OWNERSHIP_FOREIGN_RECOVERY_CODE_FILE="$foreign_recovery" \
+    > /dev/null 2>&1; then
+    fail "ownership harness accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "ownership harness made a request before rejecting recovery-only mode."
+
+: > "$curl_log"
 run_ownership > "$temp_dir/happy.out"
 grep -Fq 'PASS foreign account authenticated and supplied an objectively owned statement fixture' "$temp_dir/happy.out" ||
     fail "foreign ownership fixture was not proven."
@@ -154,7 +183,7 @@ grep -Fq 'FullWorth cross-user Web/BFF ownership smoke harness passed.' "$temp_d
 [ "$(cat "$delegated_log")" = "$foreign_stream_id|$foreign_upload_id|https://web.example.test" ] ||
     fail "ownership IDs were not delegated exactly to the primary Web/BFF smoke."
 
-for secret in 'ForeignPassword!123456' 'FOREIGN-CSRF'; do
+for secret in 'ForeignPassword!123456' 'FOREIGN-CSRF' 'FOREIGN-BFF-CSRF'; do
     if grep -Fq "$secret" "$curl_log"; then
         fail "foreign secret or antiforgery token appeared in curl process arguments: $secret"
     fi

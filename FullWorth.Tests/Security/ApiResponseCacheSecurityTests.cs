@@ -12,7 +12,6 @@ public sealed class ApiResponseCacheSecurityTests
     [InlineData("/api/bill-streams")]
     [InlineData("/api/alerts")]
     [InlineData("/api/account/preferences")]
-    [InlineData("/api/account/export")]
     [InlineData("/api/subscription")]
     public async Task ProtectedApiResponses_AreNoStore(string route)
     {
@@ -28,6 +27,7 @@ public sealed class ApiResponseCacheSecurityTests
     [InlineData("/api/bill-discovery/run")]
     [InlineData("/api/bill-monitoring/refresh")]
     [InlineData("/api/plaid/link-token")]
+    [InlineData("/api/account/export")]
     public async Task ProtectedMutationResponses_AreNoStore(string route)
     {
         using var factory = new FullWorthApiFactory();

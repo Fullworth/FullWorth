@@ -631,27 +631,69 @@ export async function dismissAlert(
         "POST");
 }
 
-export async function downloadAccountExport() {
+export async function downloadAccountExport(
+    currentPassword,
+    twoFactorCode) {
+
+    if (typeof currentPassword !== "string" ||
+        !currentPassword.trim()) {
+        throw new Error(
+            "Enter your current password to export your account data.");
+    }
+
+    const requestToken =
+        await getAntiforgeryToken();
+
     const response =
         await fetch(
             "/bff/account/export",
             {
                 method:
-                    "GET",
+                    "POST",
 
                 credentials:
                     "same-origin",
 
                 headers: {
                     "Accept":
-                        "application/json"
+                        "application/json",
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRF-TOKEN":
+                        requestToken
                 },
+
+                body:
+                    JSON.stringify({
+                        currentPassword,
+                        twoFactorCode:
+                            typeof twoFactorCode === "string" &&
+                            twoFactorCode.trim()
+                                ? twoFactorCode.trim()
+                                : null
+                    }),
 
                 cache:
                     "no-store"
             });
 
     if (response.status === 401) {
+        const message =
+            await getSafeErrorMessage(
+                response);
+
+        const normalized =
+            message.toLowerCase();
+
+        if (normalized.includes(
+                "current password is incorrect") ||
+            normalized.includes(
+                "authenticator code")) {
+            throw new Error(message);
+        }
+
         window.location.assign(
             "/login");
 
