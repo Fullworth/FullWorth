@@ -62,7 +62,7 @@ done
 [ -n "$body" ] || exit 2
 
 case "$url:$method" in
-    https://api.fullworth.test/api/account/export:GET)
+    https://api.fullworth.test/api/account/export:POST)
         cat > "$headers" <<EOF_HEADERS
 HTTP/2 401
 Strict-Transport-Security: max-age=31536000
