@@ -16,6 +16,7 @@ namespace FullWorth.API.Controllers;
 [Authorize]
 public sealed class AccountSecurityController(
     UserManager<ApplicationUser> userManager,
+    IUserStore<ApplicationUser> userStore,
     IEmailSender<ApplicationUser> emailSender,
     IOptions<IdentityEmailOptions> emailOptions)
     : ControllerBase
@@ -339,10 +340,22 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
-        await userManager.SetTwoFactorEnabledAsync(
-            user,
-            false);
+        if (await userManager.GetTwoFactorEnabledAsync(
+                user))
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status409Conflict,
+                title:
+                    "Two-factor authentication is already enabled. Use authenticator replacement instead.");
+        }
 
+        /*
+         * Initial setup starts from an MFA-disabled account. Resetting the
+         * authenticator key already rotates SecurityStamp and persists the
+         * new key in one Identity update; a separate false->false 2FA write
+         * would only add another stamp rotation and another persistence step.
+         */
         var resetResult =
             await userManager.ResetAuthenticatorKeyAsync(user);
 
@@ -552,26 +565,67 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
-        await userManager.SetTwoFactorEnabledAsync(
+        if (!await userManager.GetTwoFactorEnabledAsync(
+                user))
+        {
+            return ValidationProblem(
+                "Two-factor authentication is not enabled.");
+        }
+
+        if (userStore is not
+                IUserTwoFactorStore<ApplicationUser>
+                twoFactorStore ||
+            userStore is not
+                IUserAuthenticatorKeyStore<ApplicationUser>
+                authenticatorKeyStore ||
+            userStore is not
+                IUserSecurityStampStore<ApplicationUser>
+                securityStampStore)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status500InternalServerError,
+                title:
+                    "FullWorth could not replace the authenticator safely.");
+        }
+
+        /*
+         * Authenticator replacement changes three pieces of authentication
+         * state together: MFA becomes disabled until the new authenticator is
+         * confirmed, the old authenticator key is replaced, and refresh
+         * sessions are revoked through SecurityStamp.
+         *
+         * Stage all three values through the configured Identity store, then
+         * persist them with one UserManager.UpdateAsync call. The EF Identity
+         * store tracks the authenticator token without saving it immediately,
+         * so the user row and token row commit in the same SaveChanges call.
+         */
+        var sharedKey =
+            userManager.GenerateNewAuthenticatorKey();
+
+        await twoFactorStore.SetTwoFactorEnabledAsync(
             user,
-            false);
+            false,
+            HttpContext.RequestAborted);
+
+        await authenticatorKeyStore.SetAuthenticatorKeyAsync(
+            user,
+            sharedKey,
+            HttpContext.RequestAborted);
+
+        await securityStampStore.SetSecurityStampAsync(
+            user,
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(32))
+                .ToLowerInvariant(),
+            HttpContext.RequestAborted);
 
         var resetResult =
-            await userManager.ResetAuthenticatorKeyAsync(user);
+            await userManager.UpdateAsync(user);
 
         if (!resetResult.Succeeded)
         {
             return IdentityValidationProblem(resetResult);
-        }
-
-        var sharedKey =
-            await userManager.GetAuthenticatorKeyAsync(user);
-
-        if (string.IsNullOrWhiteSpace(sharedKey))
-        {
-            return Problem(
-                statusCode: StatusCodes.Status500InternalServerError,
-                title: "FullWorth could not reset the authenticator key.");
         }
 
         return Ok(
