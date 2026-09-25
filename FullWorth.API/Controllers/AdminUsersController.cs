@@ -232,27 +232,24 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
-        if (request.IsActive)
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
         {
-            var actor =
-                await userManager.FindByIdAsync(
-                    actorUserId.ToString());
+            return Unauthorized();
+        }
 
-            if (actor is null)
-            {
-                return Unauthorized();
-            }
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
 
-            var credentialError =
-                await ValidateSensitiveCredentialsAsync(
-                    actor,
-                    request.CurrentPassword,
-                    request.TwoFactorCode);
-
-            if (credentialError is not null)
-            {
-                return credentialError;
-            }
+        if (credentialError is not null)
+        {
+            return credentialError;
         }
 
         if (!Enum.TryParse<UserProgramType>(

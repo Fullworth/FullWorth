@@ -487,7 +487,7 @@ public sealed class AdminAuthorizationIntegrationTests
     }
 
     [Fact]
-    public async Task DisableProgram_DoesNotRequireReauthentication()
+    public async Task DisableProgram_WithoutReauthentication_IsRejectedAndMembershipRemainsActive()
     {
         using var factory =
             new FullWorthApiFactory();
@@ -533,11 +533,73 @@ public sealed class AdminAuthorizationIntegrationTests
         using var disableResponse =
             await ownerClient.PutAsJsonAsync(
                 $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
-                new
-                {
-                    isActive = false,
-                    endsAtUtc = (DateTimeOffset?)null
-                });
+                CreateProgramMembershipRequest(
+                    isActive:
+                        false));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            disableResponse.StatusCode);
+
+        Assert.True(
+            await HasActiveProgramMembershipAsync(
+                factory,
+                targetUserId,
+                UserProgramType.BetaTester));
+    }
+
+    [Fact]
+    public async Task DisableProgram_WithReauthentication_Succeeds()
+    {
+        using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var targetClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterWithRoleAndLoginAsync(
+                factory,
+                ownerClient,
+                FullWorthRoles.Owner);
+
+        var target =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                targetClient);
+
+        var targetUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                target.Email);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var enableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        true,
+                    currentPassword:
+                        TestPassword));
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            enableResponse.StatusCode);
+
+        using var disableResponse =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/admin/users/{targetUserId:D}/programs/BetaTester",
+                CreateProgramMembershipRequest(
+                    isActive:
+                        false,
+                    currentPassword:
+                        TestPassword));
 
         Assert.Equal(
             HttpStatusCode.NoContent,
