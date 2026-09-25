@@ -2,6 +2,14 @@
 
 Last updated: 2026-09-24
 
+## MFA recovery/enumeration checkpoint — 2026-09-25
+
+PR #335 completed the remaining MFA recovery/enumeration slice without changing production code. The audit confirmed that the ASP.NET Core Identity-backed password-login path redeems a recovery code once, decrements the remaining-code set, and rejects replay. The forgot-password endpoint returns the same public success for a known confirmed account and an unknown email, and invalid reset-password requests return the same public error fingerprint for a known confirmed account and an unknown email.
+
+The first exact-head CI attempt exposed a test-fixture defect: it had set the 2FA flag without configuring an authenticator key, allowing password login to bypass the recovery-code path. The corrected test configures an authenticator-backed MFA state before login. Corrected exact head `02453b745eac4dfce8dbeb5f86d74902fde2cc60` passed dependency security #82 and full CI #970; PR #335 then squash-merged as `67317a10ec554890cfebc834ac49882cd2191633`.
+
+Issue #291's MFA enrollment/disable/recovery-code replay/enumeration item is complete through PRs #327, #328/#331, #333, and #335. This does not claim globally single-use TOTP verification or a complete MFA concurrency proof. The next unchecked security slice is Web/BFF cookie hardening: review prefixes, Secure/HttpOnly/SameSite, lifetime, fixation, and renewal behavior before changing code.
+
 ## MFA setup/reset atomicity checkpoint — 2026-09-25
 
 PR #333 completed the setup/reset atomicity slice. Initial `two-factor/setup` now rejects an already-enabled account with 409 so setup cannot silently disable an active factor; on an MFA-disabled account it uses the framework `ResetAuthenticatorKeyAsync` transition directly instead of performing a redundant false-to-false `SetTwoFactorEnabledAsync` write first.
@@ -64,7 +72,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `93e0d72b10b9b1b128a3dcd90b19ac6f834da13c` after PR #333 made MFA setup/authenticator replacement transitions atomic.
+- Current `development`: `67317a10ec554890cfebc834ac49882cd2191633` after PR #335 completed the MFA recovery/enumeration regression proof.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -345,7 +353,7 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. MFA enrollment replay is covered by PR #327; MFA-disable revocation/Web signout by #328/#331; and setup/reset atomicity by #333. Continue the remaining MFA review with recovery semantics and enumeration/error behavior. Preserve one-time recovery-code redemption and #308 regeneration/session-revocation behavior; inspect current source and patch only confirmed gaps.
+3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. Next inspect Web/BFF cookie prefixes, Secure/HttpOnly/SameSite, lifetime, fixation, and renewal behavior. Patch only confirmed gaps; do not replace the Data Protection-protected Redis ticket-store design from PR #299 without new evidence.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
