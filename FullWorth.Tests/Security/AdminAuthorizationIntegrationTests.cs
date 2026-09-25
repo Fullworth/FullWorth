@@ -483,7 +483,7 @@ public sealed class AdminAuthorizationIntegrationTests
             await HasActiveProgramMembershipAsync(
                 factory,
                 targetUserId,
-                "BetaTester"));
+                UserProgramType.BetaTester));
     }
 
     [Fact]
@@ -547,7 +547,7 @@ public sealed class AdminAuthorizationIntegrationTests
             await HasActiveProgramMembershipAsync(
                 factory,
                 targetUserId,
-                "BetaTester"));
+                UserProgramType.BetaTester));
     }
 
     [Fact]
@@ -818,7 +818,7 @@ public sealed class AdminAuthorizationIntegrationTests
     private static async Task<bool> HasActiveProgramMembershipAsync(
         FullWorthApiFactory factory,
         Guid userId,
-        string programName)
+        UserProgramType program)
     {
         await using var scope =
             factory.Services.CreateAsyncScope();
@@ -833,7 +833,7 @@ public sealed class AdminAuthorizationIntegrationTests
             .AnyAsync(
                 membership =>
                     membership.UserId == userId &&
-                    membership.Program == programName &&
+                    membership.Program == program &&
                     membership.IsActive);
     }
 
