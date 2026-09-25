@@ -142,6 +142,7 @@ fi
 
 if [ -n "$recovery_code_file" ]; then
     require_secret_file "$recovery_code_file" "BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE"
+    fail "The Web/BFF smoke includes account export strong reauthentication, which requires a current authenticator code. Use BILLWATCH_WEB_SMOKE_TWO_FACTOR_CODE_FILE instead of a recovery code." 64
 fi
 
 work_directory="$(mktemp -d)"
