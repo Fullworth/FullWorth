@@ -12,6 +12,16 @@ Exact PR #337 head `ad3ec5d5871353266f7b0b147457920435d2da51` passed dependency 
 
 Continue the Web/BFF cookie-hardening review with lifetime and renewal alignment. In particular, verify the durable Web session upper bound against the actual refresh-token-family lifetime before changing code; do not assume the 30-day remember-me ticket is justified merely because it is already configured.
 
+## Web/BFF cookie lifetime/renewal checkpoint — 2026-09-25
+
+PR #339 completed the remaining lifetime/renewal proof for the Web/BFF cookie-hardening review without changing production behavior. The primary Web authentication cookie remains host-only `__Host-`, `HttpOnly`, `Secure=Always`, `SameSite=Lax`, root-scoped, bound to the protected distributed server-side ticket store, and non-sliding. Password/external sign-in and registration fixation was already closed by PR #337.
+
+The Web authentication ticket has a fixed absolute expiry of 12 hours for ordinary sessions or 30 days when Remember me is selected. API access tokens remain 15 minutes and refresh tokens 14 days. Successful refresh rotation may issue another 14-day refresh credential, but BFF refresh reuses the existing `AuthenticationProperties` and therefore does not extend the Web ticket's fixed absolute upper bound. PR #339 adds regression proof that the original Web-session expiry survives a server-side token refresh unchanged at cookie timestamp precision.
+
+The first PR #339 CI attempt failed only because the test compared sub-second `DateTimeOffset` precision even though authentication-cookie serialization normalizes expiry to whole seconds. The corrected exact head `df29de1540b3102a05472c01411d98eb814cf946` compares Unix-second precision, passed dependency security #87 and full CI #975, then squash-merged as `c8514750893204bdd585cb5feb3a766cdfefb127`.
+
+Issue #291's cookie-prefix/Secure/HttpOnly/SameSite/lifetime/fixation/renewal item is complete through PRs #337 and #339. The next unchecked identity/security slice is the broader email/recovery account-enumeration review. Do not reopen the completed cookie slice without new evidence.
+
 ## MFA recovery/enumeration checkpoint — 2026-09-25
 
 PR #335 completed the remaining MFA recovery/enumeration slice without changing production code. The audit confirmed that the ASP.NET Core Identity-backed password-login path redeems a recovery code once, decrements the remaining-code set, and rejects replay. The forgot-password endpoint returns the same public success for a known confirmed account and an unknown email, and invalid reset-password requests return the same public error fingerprint for a known confirmed account and an unknown email.
@@ -82,7 +92,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `c2bd58c4559fd25277874325ba86a67eb7d5bbfe` after PR #337 completed the Web/BFF session-fixation hardening slice.
+- Current `development`: `c8514750893204bdd585cb5feb3a766cdfefb127` after PR #339 completed the Web/BFF fixed-lifetime renewal proof.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
