@@ -36,7 +36,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `8984145aded753af228a8a6783128ac22080a9bc` after PR #322 added strong reauthentication for subscription entitlement grants and program-membership activation.
+- Current `development`: `3d8187b4f81a44f2248bbeda66914260a5d0a721` after PR #324 completed the current strong-reauthentication audit by hardening sensitive account export.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -316,7 +316,7 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. Strong reauthentication remains an active operation-by-operation audit: PR #316 hardened privileged access-key creation, PR #320 hardened staff-role assignment, and PR #322 hardened entitlement grants/program activation. Next inspect sensitive account export for a confirmed strong-reauthentication gap; if that path is already sufficiently protected, record the evidence instead of rewriting it.
+3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. The next identity-security checkpoint is MFA enrollment, disable, and recovery-code behavior: inspect replay resistance, one-time recovery semantics, enrollment/reset transitions, enumeration/error behavior, and current regression coverage before changing code.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
