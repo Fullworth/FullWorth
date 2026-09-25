@@ -165,16 +165,24 @@ public sealed class ResendIdentityEmailSender(
                     html
                 });
 
-        using var response =
-            await httpClient.SendAsync(
-                request);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            throw new HttpRequestException(
-                "The identity email provider rejected the request.",
-                inner: null,
-                response.StatusCode);
+            using var response = await httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new IdentityEmailDeliveryException();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Do not retain provider exceptions: they may contain sensitive URLs.
+            throw new IdentityEmailDeliveryException();
+        }
+        catch (OperationCanceledException)
+        {
+            // IEmailSender has no cancellation parameter; HttpClient timeouts
+            // are delivery failures. The endpoint filter preserves request aborts.
+            throw new IdentityEmailDeliveryException();
         }
     }
 
