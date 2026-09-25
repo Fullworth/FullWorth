@@ -36,7 +36,7 @@ sh deploy/smoke-web-bff.sh \
     'https://billbeacon.net'
 ```
 
-If the controlled account requires two-factor authentication, supply exactly one fresh mode-`600` second-factor file through `BILLWATCH_WEB_SMOKE_TWO_FACTOR_CODE_FILE` or `BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE`. An authenticator-code file can be reused only while that TOTP is current; a recovery-code file consumes that recovery code when login succeeds.
+If the controlled account requires two-factor authentication, this export-bearing Web/BFF smoke requires a fresh mode-`600` authenticator-code file through `BILLWATCH_WEB_SMOKE_TWO_FACTOR_CODE_FILE`. Do not use `BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE` for this harness: account-export strong reauthentication intentionally accepts a current authenticator code, not a recovery code, and the harness rejects recovery-only mode before making a request.
 
 Optional known foreign Bill Stream/statement IDs can be supplied through `BILLWATCH_WEB_SMOKE_FOREIGN_BILL_STREAM_ID` and `BILLWATCH_WEB_SMOKE_FOREIGN_STATEMENT_UPLOAD_ID` to prove cross-user 404 behavior through the BFF itself. The Web/BFF harness performs no financial-data mutation; its only write is logout of its own isolated cookie session.
 
