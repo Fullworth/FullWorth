@@ -390,6 +390,15 @@ public sealed class AccountSecurityController(
                 "Current password is incorrect.");
         }
 
+        // Enrollment is a state transition, not a recovery-code replacement API.
+        // A retried enable request must not invalidate codes already issued.
+        if (await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Two-factor authentication is already enabled.");
+        }
+
         if (string.IsNullOrWhiteSpace(request.AuthenticatorCode) ||
             !await userManager.VerifyTwoFactorTokenAsync(
                 user,

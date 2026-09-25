@@ -2,6 +2,14 @@
 
 Last updated: 2026-09-24
 
+## MFA enrollment replay checkpoint — 2026-09-25
+
+The enrollment audit reproduced a confirmed defect: replaying a successful `two-factor/enable` request silently replaced the recovery codes just issued and rotated revocation state again. The enable endpoint now rejects an already-enabled account with 409 after password verification and before further mutation. Intentional recovery-code replacement remains on the strongly reauthenticated regeneration endpoint. The Web explains how to obtain replacement codes, with Spanish localization.
+
+Regression coverage checks that the original ten codes remain usable after a rejected replay, each is redeemable only once, the security stamp stays unchanged, and invalid enrollment proof neither enables MFA nor issues codes. This protects the completed enrollment transition; it does not claim globally single-use TOTP verification across operations or resolve every concurrent enrollment/reset transition.
+
+Read the associated PR and exact-head CI for merge/validation evidence. Continue #291 with setup/reset failure atomicity, disabling behavior, and recovery/enumeration boundaries. No production deployment or complete MFA-audit claim is made.
+
 ## Architecture modularization checkpoint — 2026-09-24
 
 FullWorth is a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.
@@ -317,7 +325,7 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. The next identity-security checkpoint is MFA enrollment, disable, and recovery-code behavior: inspect replay resistance, one-time recovery semantics, enrollment/reset transitions, enumeration/error behavior, and current regression coverage before changing code.
+3. Continue security issue #291 in small reviewable slices. The current strong-reauthentication audit is complete through PR #324. MFA enrollment replay is covered by the newer checkpoint above. Continue the remaining MFA review with setup/reset failure atomicity, disabling behavior, recovery semantics, and enumeration/error behavior before changing code.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.

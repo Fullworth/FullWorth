@@ -55,6 +55,10 @@ function mapExpectedError(body, status, fallback) {
         return "That authenticator code isn’t valid. Try the current code from your authenticator app.";
     }
 
+    if (status === 409 && title === "two-factor authentication is already enabled.") {
+        return "Two-factor authentication is already enabled. Reload settings and choose New recovery codes if you need replacements.";
+    }
+
     if (title.includes("already in use")) {
         return "That email address is already in use.";
     }

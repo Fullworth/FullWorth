@@ -93,4 +93,7 @@
   <data name="Sign out everywhere?" xml:space="preserve"><value>¿Cerrar sesión en todos los dispositivos?</value></data>
   <data name="Revoke the ability of every current FullWorth session to renew access, then sign out this device." xml:space="preserve"><value>Revoca la capacidad de todas las sesiones actuales de FullWorth para renovar el acceso y, después, cierra la sesión de este dispositivo.</value></data>
   <data name="We couldn’t sign out your other FullWorth sessions. Please try again." xml:space="preserve"><value>No pudimos cerrar tus otras sesiones de FullWorth. Inténtalo de nuevo.</value></data>
+  <data name="Two-factor authentication is already enabled. Reload settings and choose New recovery codes if you need replacements." xml:space="preserve">
+    <value>La autenticación de dos factores ya está habilitada. Vuelve a cargar Configuración y elige Nuevos códigos de recuperación si necesitas reemplazarlos.</value>
+  </data>
 </root>
