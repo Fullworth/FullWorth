@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-24
 
+## Web/BFF cookie fixation checkpoint — 2026-09-25
+
+PR #337 completed the session-fixation slice of the Web/BFF cookie-hardening review. The audit confirmed that the primary Web authentication cookie is a `__Host-` cookie with `HttpOnly`, `Secure=Always`, `SameSite=Lax`, root path, and sliding expiration disabled; the antiforgery cookie is also `__Host-`, `HttpOnly`, `Secure=Always`, root-scoped, and `SameSite=Strict`. The production Web session store keeps only an opaque protected browser reference, uses a cryptographically random 256-bit server key, Data-Protection-protects the serialized authentication ticket, applies the ticket's absolute expiration to the distributed cache, removes expired/tampered tickets, and removes the stored ticket on normal sign-out.
+
+A concrete fixation boundary remained because ASP.NET Core cookie authentication with a custom `SessionStore` can renew an existing server-side session identifier when application code signs in during an already-authenticated request. FullWorth now rejects password login, password registration, external login, and external registration when the Web request is already authenticated, preventing an existing session reference from being repurposed across an account/identity change while preserving intentional same-session token refresh. Focused regression tests prove those flows fail before creating an API client.
+
+Exact PR #337 head `ad3ec5d5871353266f7b0b147457920435d2da51` passed dependency security #84 and full CI #972 before squash merge as `c2bd58c4559fd25277874325ba86a67eb7d5bbfe`. Production was not changed.
+
+Continue the Web/BFF cookie-hardening review with lifetime and renewal alignment. In particular, verify the durable Web session upper bound against the actual refresh-token-family lifetime before changing code; do not assume the 30-day remember-me ticket is justified merely because it is already configured.
+
 ## MFA recovery/enumeration checkpoint — 2026-09-25
 
 PR #335 completed the remaining MFA recovery/enumeration slice without changing production code. The audit confirmed that the ASP.NET Core Identity-backed password-login path redeems a recovery code once, decrements the remaining-code set, and rejects replay. The forgot-password endpoint returns the same public success for a known confirmed account and an unknown email, and invalid reset-password requests return the same public error fingerprint for a known confirmed account and an unknown email.
@@ -72,7 +82,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `67317a10ec554890cfebc834ac49882cd2191633` after PR #335 completed the MFA recovery/enumeration regression proof.
+- Current `development`: `c2bd58c4559fd25277874325ba86a67eb7d5bbfe` after PR #337 completed the Web/BFF session-fixation hardening slice.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -83,6 +93,7 @@ Security program:
 - PR #297 split production networking into least-connectivity edge/API/Web/data/egress networks, made the data path internal-only, and proved read-only API/Web roots, bounded noexec/nosuid/nodev temporary storage, PID ceilings, HTTPS, statement handling, encrypted backup, isolated restore, and recovery.
 - PR #298 confined the Caddy edge with a read-only root, `no-new-privileges`, all Linux capabilities dropped except `NET_BIND_SERVICE`, a 128-PID ceiling, and bounded noexec/nosuid/nodev temporary storage.
 - PR #299 moved Web authentication tickets into a Data-Protection-protected distributed server-side store backed in production by an isolated, password-protected, non-persistent Redis service. The browser auth cookie now carries an opaque protected session reference rather than API access/refresh tokens.
+- PR #337 prevents authenticated Web requests from switching to a different password/external identity or creating another account in-place, closing the confirmed session-fixation boundary while preserving intentional same-session token refresh. Exact head `ad3ec5d5871353266f7b0b147457920435d2da51` passed dependency security #84 and full CI #972 before squash merge as `c2bd58c4559fd25277874325ba86a67eb7d5bbfe`.
 - PR #300 explicitly set Identity bearer access-token lifetime to 15 minutes and refresh-token lifetime to 14 days, and added regression coverage for password security-stamp rotation.
 - PR #302 ends the current server-side Web session immediately after a successful password change, preserves the session on rejected password changes, and returns the browser to sign-in.
 - PR #305 locks the existing external OIDC security invariants with regression coverage for authorization-code flow, PKCE, HTTPS metadata, issuer/audience validation, provider-token non-persistence, response modes, and hardened nonce/correlation cookies.
