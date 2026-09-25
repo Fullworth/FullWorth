@@ -175,6 +175,11 @@ printf 'header = "Authorization: Bearer %s"\n' "$access_token" > "$auth_config"
 chmod 600 "$auth_config"
 unset access_token
 
+export_payload="$work_directory/export-request.json"
+: > "$export_payload"
+chmod 600 "$export_payload"
+printf '{"currentPassword":"%s"}' "$(json_escape "$password")" > "$export_payload"
+
 predelete_export_code="$(
     curl \
         --silent \
@@ -182,6 +187,9 @@ predelete_export_code="$(
         --output /dev/null \
         --write-out '%{http_code}' \
         --config "$auth_config" \
+        --request POST \
+        --header 'Content-Type: application/json' \
+        --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"
 [ "$predelete_export_code" = "200" ] ||
@@ -216,8 +224,12 @@ postdelete_export_code="$(
         --output /dev/null \
         --write-out '%{http_code}' \
         --config "$auth_config" \
+        --request POST \
+        --header 'Content-Type: application/json' \
+        --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"
+rm -f "$export_payload"
 [ "$postdelete_export_code" = "404" ] ||
     fail "Deleted identity still resolved through the account export surface (HTTP $postdelete_export_code)." 70
 

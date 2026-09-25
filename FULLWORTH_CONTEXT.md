@@ -2,6 +2,14 @@
 
 Last updated: 2026-09-24
 
+## Account export strong reauthentication — implementation checkpoint
+
+The current export audit found that authenticated GET exports did not require fresh credentials. This change replaces API/BFF export GETs with POSTs requiring the current password and a current authenticator code when 2FA is enabled. The BFF also requires antiforgery proof. Rejected step-up credentials return 403 without refreshing or ending an otherwise valid Web session; the privacy form clears export credentials after every attempt. Existing owner projections, secret exclusions, subscription exemption, no-store responses, and the five-per-hour per-user export limit remain intact.
+
+Smoke callers now submit protected JSON files. For 2FA accounts, export requires a current authenticator code even if login used a recovery code. Optional dedicated mode-600 code-file inputs are `BILLWATCH_SMOKE_EXPORT_TWO_FACTOR_CODE_FILE`, `BILLWATCH_WEB_SMOKE_EXPORT_TWO_FACTOR_CODE_FILE`, and `BILLWATCH_WEB_OWNERSHIP_FOREIGN_EXPORT_TWO_FACTOR_CODE_FILE`; otherwise each harness uses its existing authenticator-code file. Recovery codes are not export proof. Expired codes fail closed and must be refreshed by the operator.
+
+Validation and merge status must be read from this change's PR and exact-head CI. No production deployment is claimed. After this slice passes the required gate, continue issue #291 with the remaining MFA enrollment/disable/recovery audit.
+
 ## Architecture modularization checkpoint — 2026-09-24
 
 FullWorth is a modular monolith with deny-by-default ownership boundaries and explicit contracts between modules.

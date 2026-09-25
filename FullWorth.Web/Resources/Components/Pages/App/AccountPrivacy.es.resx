@@ -51,4 +51,13 @@
   <data name="FullWorth could not safely complete this request." xml:space="preserve"><value>FullWorth no pudo completar esta solicitud de forma segura.</value></data>
   <data name="FullWorth could not safely revoke a connected bank, so your account was not deleted. Try again shortly." xml:space="preserve"><value>FullWorth no pudo revocar de forma segura un banco conectado, por lo que tu cuenta no fue eliminada. Inténtalo de nuevo en breve.</value></data>
   <data name="FullWorth could not securely remove all stored statement files, so your account was not deleted." xml:space="preserve"><value>FullWorth no pudo eliminar de forma segura todos los archivos de estados de cuenta almacenados, por lo que tu cuenta no fue eliminada.</value></data>
+  <data name="Re-enter your current password and, if enabled, your authenticator code to download your financial data." xml:space="preserve">
+    <value>Vuelve a introducir tu contraseña actual y, si está habilitado, tu código de autenticación para descargar tus datos financieros.</value>
+  </data>
+  <data name="Check your current password and authenticator code." xml:space="preserve">
+    <value>Comprueba tu contraseña actual y tu código de autenticación.</value>
+  </data>
+  <data name="Too many export attempts. Please try again later." xml:space="preserve">
+    <value>Demasiados intentos de exportación. Inténtalo de nuevo más tarde.</value>
+  </data>
 </root>

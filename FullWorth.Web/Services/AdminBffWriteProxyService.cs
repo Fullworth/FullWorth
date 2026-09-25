@@ -518,7 +518,8 @@ public sealed class AdminBffWriteProxyService(
             !isAccountSecurityPath &&
             !isExternalIdentityLinkPath &&
             !isExternalIdentityUnlinkPath &&
-            !isAccountDeletionPath)
+            !isAccountDeletionPath &&
+            !string.Equals(requestUri, "/api/account/export", StringComparison.Ordinal))
         {
             return false;
         }

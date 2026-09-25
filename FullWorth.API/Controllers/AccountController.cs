@@ -46,9 +46,10 @@ public sealed class AccountController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("export")]
+    [HttpPost("export")]
     [EnableRateLimiting("account-export")]
     public async Task<ActionResult<AccountDataExportResult>> ExportAccountData(
+        SensitiveCredentialRequest request,
         CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId))
@@ -61,6 +62,33 @@ public sealed class AccountController : ControllerBase
         if (user is null)
         {
             return NotFound();
+        }
+
+        // A session alone must not authorize a bulk financial-data download.
+        // Return 403 for rejected step-up proof: the session is authenticated.
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            !await _userManager.CheckPasswordAsync(user, request.CurrentPassword))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Current password is incorrect.");
+        }
+
+        if (await _userManager.GetTwoFactorEnabledAsync(user))
+        {
+            if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
+            {
+                return Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "A current authenticator code is required.");
+            }
+
+            if (!await _userManager.VerifyTwoFactorTokenAsync(
+                    user,
+                    _userManager.Options.Tokens.AuthenticatorTokenProvider,
+                    NormalizeAuthenticatorCode(request.TwoFactorCode)))
+            {
+                return Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "The authenticator code is invalid.");
+            }
         }
 
         var export = await _accountDataExportBuilder.CreateAsync(

@@ -52,6 +52,7 @@ printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 while [ "$#" -gt 0 ]
 do
     case "$1" in
+        --data-binary) export_body_file="${2#@}"; shift 2 ;;
         --output)
             output="$2"
             shift 2
@@ -151,6 +152,10 @@ case "$url" in
         code=200
         ;;
     */bff/account/export)
+        [ "$request" = "POST" ] || exit 91
+        [ -f "${export_body_file:-}" ] || exit 92
+        [ "$(stat -c '%a' "$export_body_file")" = "600" ] || exit 93
+        grep -q '"currentPassword"' "$export_body_file" || exit 94
         if [ "${FAKE_EXPORT_SECRET:-false}" = "true" ]; then
             body='{"protectedAccessToken":"must-never-export"}'
         else

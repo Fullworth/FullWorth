@@ -66,8 +66,9 @@ public sealed class SensitiveRateLimitTests
         for (var attempt = 1; attempt <= 5; attempt++)
         {
             using var response =
-                await firstClient.GetAsync(
-                    "/api/account/export");
+                await firstClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
             Assert.Equal(
                 HttpStatusCode.OK,
@@ -75,14 +76,16 @@ public sealed class SensitiveRateLimitTests
         }
 
         using var limitedResponse =
-            await firstClient.GetAsync(
-                "/api/account/export");
+            await firstClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         AssertRateLimited(limitedResponse);
 
         using var otherUserResponse =
-            await secondClient.GetAsync(
-                "/api/account/export");
+            await secondClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         Assert.Equal(
             HttpStatusCode.OK,

@@ -64,6 +64,7 @@ printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 while [ "$#" -gt 0 ]
 do
     case "$1" in
+        --data-binary) export_body_file="${2#@}"; shift 2 ;;
         --output) output="$2"; shift 2 ;;
         --dump-header) headers="$2"; shift 2 ;;
         --request) request="$2"; shift 2 ;;
@@ -96,7 +97,14 @@ case "$url" in
     */login|*/login\?twoFactor=true)
         body='<form><input type="hidden" name="__RequestVerificationToken" value="FOREIGN-CSRF" /></form>'
         ;;
+    */bff/antiforgery)
+        body='{"requestToken":"FOREIGN-EXPORT-CSRF"}'
+        ;;
     */bff/account/export)
+        [ "$request" = "POST" ] || exit 91
+        [ -f "${export_body_file:-}" ] || exit 92
+        [ "$(stat -c '%a' "$export_body_file")" = "600" ] || exit 93
+        grep -q '"currentPassword"' "$export_body_file" || exit 94
         if [ "${FAKE_EXPORT_SECRET:-false}" = 'true' ]; then
             body='{"protectedAccessToken":"never-export","statementUploads":[{"id":"22222222-2222-4222-8222-222222222222","billStreamId":"11111111-1111-4111-8111-111111111111"}]}'
         elif [ "${FAKE_NO_STATEMENT:-false}" = 'true' ]; then

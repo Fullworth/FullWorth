@@ -142,6 +142,10 @@ printf '{"email":"%s","password":"%s"' \
     "$(json_escape "$email")" \
     "$(json_escape "$password")" \
     > "$login_payload"
+export_payload="$work_directory/export-request.json"
+: > "$export_payload"
+chmod 600 "$export_payload"
+printf '{"currentPassword":"%s"' "$(json_escape "$password")" > "$export_payload"
 unset password
 
 if [ -n "$two_factor_code_file" ]; then
@@ -291,6 +295,13 @@ do
     probe_get "$api_base_url" "$protected_path" 200 "$auth_config"
 done
 
+export_two_factor_file="${BILLWATCH_SMOKE_EXPORT_TWO_FACTOR_CODE_FILE:-$two_factor_code_file}"
+if [ -n "$export_two_factor_file" ]; then
+    require_secret_file "$export_two_factor_file" "Export authenticator code"
+    printf ',"twoFactorCode":"%s"' "$(json_escape "$(cat "$export_two_factor_file")")" >> "$export_payload"
+fi
+printf '}' >> "$export_payload"
+
 export_code="$(
     curl \
         --silent \
@@ -298,9 +309,14 @@ export_code="$(
         --output "$export_response" \
         --write-out '%{http_code}' \
         --config "$auth_config" \
+        --request POST \
+        --header 'Content-Type: application/json' \
+        --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"
 
+rm -f "$export_payload"
+[ "$export_code" != "403" ] || fail "Export requires the current password and a current authenticator code when 2FA is enabled; recovery-code login does not authorize export." 69
 [ "$export_code" = "200" ] ||
     fail "Account export smoke test failed with HTTP $export_code." 69
 

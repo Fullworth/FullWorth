@@ -1,4 +1,4 @@
-﻿let antiforgeryToken = null;
+let antiforgeryToken = null;
 
 const statementFileSizeLimit =
     15 * 1024 * 1024;
@@ -631,38 +631,33 @@ export async function dismissAlert(
         "POST");
 }
 
-export async function downloadAccountExport() {
-    const response =
-        await fetch(
-            "/bff/account/export",
-            {
-                method:
-                    "GET",
-
-                credentials:
-                    "same-origin",
-
-                headers: {
-                    "Accept":
-                        "application/json"
-                },
-
-                cache:
-                    "no-store"
-            });
+export async function downloadAccountExport(currentPassword, twoFactorCode) {
+    const requestToken = await getAntiforgeryToken();
+    const response = await fetch("/bff/account/export", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": requestToken
+        },
+        body: JSON.stringify({ currentPassword, twoFactorCode }),
+        cache: "no-store"
+    });
 
     if (response.status === 401) {
-        window.location.assign(
-            "/login");
-
-        throw new Error(
-            "FullWorth session expired.");
+        window.location.assign("/login");
+        throw new Error("FullWorth session expired.");
     }
 
     if (!response.ok) {
-        throw new Error(
-            await getSafeErrorMessage(
-                response));
+        if (response.status === 403) {
+            throw new Error("Check your current password and authenticator code.");
+        }
+        if (response.status === 429) {
+            throw new Error("Too many export attempts. Please try again later.");
+        }
+        throw new Error("FullWorth could not prepare your data export.");
     }
 
     const blob =

@@ -83,8 +83,14 @@ public static class BffEndpointMappings
             return alertId == Guid.Empty ? Results.NotFound() : await proxy.ForwardPostAsync(context, $"/api/alerts/{alertId}/dismiss", false, context.RequestAborted);
         });
 
-        bff.MapGet("/account/export", async (HttpContext context, FullWorthBffProxyService proxy) =>
-            await proxy.ForwardDownloadAsync(context, "/api/account/export", "fullworth-data-export.json", "application/json; charset=utf-8", context.RequestAborted));
+        bff.MapPost("/account/export", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy, SensitiveCredentialBffRequest request) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+            var result = await proxy.ForwardJsonAsync(context, HttpMethod.Post, "/api/account/export", request, context.RequestAborted);
+            if (result is IStatusCodeHttpResult { StatusCode: >= 200 and < 300 })
+                context.Response.Headers.ContentDisposition = "attachment; filename=\"fullworth-data-export.json\"";
+            return result;
+        });
         bff.MapDelete("/account", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy) =>
         {
             await antiforgery.ValidateRequestAsync(context);

@@ -1,4 +1,4 @@
-﻿.privacy-back-link {
+.privacy-back-link {
     width: fit-content;
     color: var(--bw-text-muted);
     font-size: 0.62rem;
@@ -614,4 +614,35 @@
     .app-shell .fw-privacy-danger {
         padding: 19px;
     }
+}
+
+.app-shell .fw-privacy-export-card .export-confirmation {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0;
+    border-color: var(--fw-line);
+    background: var(--fw-panel-muted);
+}
+
+.app-shell .export-confirmation label {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    color: var(--fw-ink-soft);
+    font-size: 0.59rem;
+    font-weight: 710;
+}
+
+.app-shell .export-confirmation .delete-confirmation-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 41px;
+    border-color: var(--fw-line);
+    border-radius: 11px;
+    background: var(--fw-panel);
+    color: var(--fw-ink);
+    font-size: 0.64rem;
 }

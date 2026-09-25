@@ -1,4 +1,8 @@
 using System.Net;
+using System.Buffers.Binary;
+using System.Globalization;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
 using System.Net.Http.Json;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
@@ -55,8 +59,9 @@ public sealed class AccountDataExportTests
             _factory.CreateHttpsClient();
 
         using var response =
-            await client.GetAsync(
-                "/api/account/export");
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
@@ -93,8 +98,9 @@ public sealed class AccountDataExportTests
              attempt++)
         {
             using var allowedResponse =
-                await limitedClient.GetAsync(
-                    "/api/account/export");
+                await limitedClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
             Assert.Equal(
                 HttpStatusCode.OK,
@@ -102,16 +108,18 @@ public sealed class AccountDataExportTests
         }
 
         using var rejectedResponse =
-            await limitedClient.GetAsync(
-                "/api/account/export");
+            await limitedClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
             rejectedResponse.StatusCode);
 
         using var otherUserResponse =
-            await otherClient.GetAsync(
-                "/api/account/export");
+            await otherClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -387,8 +395,9 @@ PlaidTransactionId = PlaidTransactionId,
         }
 
         using var response =
-            await exportingClient.GetAsync(
-                "/api/account/export");
+            await exportingClient.PostAsJsonAsync(
+                "/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -514,6 +523,103 @@ PlaidTransactionId = PlaidTransactionId,
             "storageKey",
             rawJson,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("WrongPassword!123")]
+    public async Task ExportAccountData_RejectsMissingOrIncorrectPassword(string password)
+    {
+        using var client = _factory.CreateHttpsClient();
+        var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        TestUserAuthentication.Authorize(client, session);
+        using var response = await client.PostAsJsonAsync("/api/account/export",
+            new { currentPassword = password });
+        Assert.True(response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Forbidden);
+        Assert.DoesNotContain(session.Email, await response.Content.ReadAsStringAsync());
+        Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
+    }
+
+    [Fact]
+    public async Task ExportAccountData_GetCannotBypassReauthentication()
+    {
+        using var client = _factory.CreateHttpsClient();
+        var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        TestUserAuthentication.Authorize(client, session);
+        using var response = await client.GetAsync("/api/account/export");
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_TwoFactorRequiresCurrentAuthenticatorProof()
+    {
+        using var client = _factory.CreateHttpsClient();
+        var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        TestUserAuthentication.Authorize(client, session);
+        string key;
+        string recoveryCode;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = (await manager.FindByEmailAsync(session.Email))!;
+            Assert.True((await manager.ResetAuthenticatorKeyAsync(user)).Succeeded);
+            key = (await manager.GetAuthenticatorKeyAsync(user))!;
+            Assert.True((await manager.SetTwoFactorEnabledAsync(user, true)).Succeeded);
+            recoveryCode = (await manager.GenerateNewTwoFactorRecoveryCodesAsync(user, 1))!.Single();
+        }
+
+        foreach (var code in new string?[] { null, "not-a-code", recoveryCode })
+        {
+            using var denied = await client.PostAsJsonAsync("/api/account/export",
+                new { currentPassword = "FullWorth!Tests123", twoFactorCode = code });
+            Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+            Assert.DoesNotContain(session.Email, await denied.Content.ReadAsStringAsync());
+        }
+
+        var currentCode = CreateAuthenticatorCode(key);
+        using var allowed = await client.PostAsJsonAsync("/api/account/export",
+            new { currentPassword = "FullWorth!Tests123", twoFactorCode = currentCode.Insert(3, " - ") });
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+        Assert.Contains(session.Email, await allowed.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ExportAccountData_RejectedProofIsRateLimited()
+    {
+        using var client = _factory.CreateHttpsClient();
+        var session = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        TestUserAuthentication.Authorize(client, session);
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync("/api/account/export",
+                new { currentPassword = "WrongPassword!123" });
+            Assert.Equal(attempt < 5 ? HttpStatusCode.Forbidden : HttpStatusCode.TooManyRequests,
+                response.StatusCode);
+        }
+    }
+
+    private static string CreateAuthenticatorCode(string key)
+    {
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var bytes = new List<byte>();
+        var buffer = 0;
+        var bits = 0;
+        foreach (var character in key)
+        {
+            buffer = (buffer << 5) | alphabet.IndexOf(character);
+            bits += 5;
+            if (bits >= 8)
+            {
+                bits -= 8;
+                bytes.Add((byte)(buffer >> bits));
+            }
+        }
+        Span<byte> counter = stackalloc byte[8];
+        BinaryPrimitives.WriteInt64BigEndian(counter, DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30);
+        var hash = HMACSHA1.HashData(bytes.ToArray(), counter);
+        var offset = hash[^1] & 15;
+        var value = BinaryPrimitives.ReadInt32BigEndian(hash.AsSpan(offset, 4)) & int.MaxValue;
+        return (value % 1000000).ToString("D6", CultureInfo.InvariantCulture);
     }
 
     private static Task<Guid> GetUserIdAsync(

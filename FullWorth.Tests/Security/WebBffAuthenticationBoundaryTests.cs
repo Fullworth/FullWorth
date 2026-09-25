@@ -19,7 +19,6 @@ public sealed class WebBffAuthenticationBoundaryTests
     [InlineData("/bff/bank-connections")]
     [InlineData("/bff/bank-transactions")]
     [InlineData("/bff/alerts")]
-    [InlineData("/bff/account/export")]
     public async Task BffReads_RequireAuthenticatedSession(string route)
     {
         using var factory = new FullWorthWebFactory();
@@ -29,6 +28,25 @@ public sealed class WebBffAuthenticationBoundaryTests
         using var response = await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AccountExport_RequiresAuthenticatedSession()
+    {
+        using var factory = new FullWorthWebFactory();
+        using var client = factory.CreateHttpsClient();
+        client.DefaultRequestHeaders.Add("X-FullWorth-Test-Anonymous", "true");
+        using var response = await client.PostAsync("/bff/account/export", content: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AccountExport_GetCannotBypassReauthentication()
+    {
+        using var factory = new FullWorthWebFactory();
+        using var client = factory.CreateHttpsClient();
+        using var response = await client.GetAsync("/bff/account/export");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

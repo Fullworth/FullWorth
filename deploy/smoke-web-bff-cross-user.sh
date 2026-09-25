@@ -195,6 +195,32 @@ case "$location" in
     *) fail "Foreign-account login did not redirect to /app or the two-factor step." 69 ;;
 esac
 
+json_escape()
+{
+    printf '%s' "$1" |
+        sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g'
+}
+
+export_payload="$work_directory/export-request.json"
+export_headers="$work_directory/export-headers.txt"
+export_csrf_response="$work_directory/export-csrf.json"
+: > "$export_payload"
+: > "$export_headers"
+chmod 600 "$export_payload" "$export_headers"
+export_csrf_code="$(curl --silent --show-error --output "$export_csrf_response" --write-out '%{http_code}' --cookie "$cookie_jar" --cookie-jar "$cookie_jar" "$web_base_url/bff/antiforgery")"
+[ "$export_csrf_code" = "200" ] || fail "Foreign export antiforgery issuance failed." 69
+export_csrf_token="$(sed -n 's/.*"requestToken"[[:space:]]*:[[:space:]]*"\([^" ]*\)".*/\1/p' "$export_csrf_response")"
+[ -n "$export_csrf_token" ] || fail "Foreign export antiforgery token missing." 70
+printf 'Content-Type: application/json\nX-CSRF-TOKEN: %s\n' "$export_csrf_token" > "$export_headers"
+unset export_csrf_token
+printf '{"currentPassword":"%s"' "$(json_escape "$(cat "$foreign_password_file" | tr -d '\r')")" > "$export_payload"
+export_two_factor_file="${BILLWATCH_WEB_OWNERSHIP_FOREIGN_EXPORT_TWO_FACTOR_CODE_FILE:-$foreign_two_factor_code_file}"
+if [ -n "$export_two_factor_file" ]; then
+    require_secret_file "$export_two_factor_file" "Foreign export authenticator code"
+    printf ',"twoFactorCode":"%s"' "$(json_escape "$(cat "$export_two_factor_file" | tr -d '\r')")" >> "$export_payload"
+fi
+printf '}' >> "$export_payload"
+
 export_code="$(
     curl \
         --silent \
@@ -203,8 +229,13 @@ export_code="$(
         --write-out '%{http_code}' \
         --cookie "$cookie_jar" \
         --cookie-jar "$cookie_jar" \
+        --request POST \
+        --header "@$export_headers" \
+        --data-binary "@$export_payload" \
         "$web_base_url/bff/account/export"
 )"
+rm -f "$export_payload" "$export_headers" "$export_csrf_response"
+[ "$export_code" != "403" ] || fail "Foreign export requires a current password and current authenticator code when 2FA is enabled." 69
 [ "$export_code" = "200" ] || fail "Foreign-account BFF export returned HTTP $export_code." 69
 
 foreign_statement_upload_id="$(

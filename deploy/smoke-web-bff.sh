@@ -366,36 +366,6 @@ do
     probe_bff_get "$protected_path" 200
 done
 
-export_code="$(
-    curl \
-        --silent \
-        --show-error \
-        --output "$export_response" \
-        --write-out '%{http_code}' \
-        --cookie "$cookie_jar" \
-        --cookie-jar "$cookie_jar" \
-        "$web_base_url/bff/account/export"
-)"
-[ "$export_code" = "200" ] || fail "BFF account export returned HTTP $export_code." 69
-
-if grep -Eiq \
-    '"(accessToken|refreshToken|protectedAccessToken|encryptedAccessToken|plaidAccessToken|storagePath|storedFilePath|passwordHash|securityStamp)"[[:space:]]*:' \
-    "$export_response"; then
-    fail "BFF account export contained a forbidden secret or internal-storage field." 70
-fi
-rm -f "$export_response"
-printf '%s\n' 'PASS BFF account export secret/storage boundary'
-
-if [ -n "$foreign_bill_stream_id" ]; then
-    probe_bff_get "/bff/bill-streams/$foreign_bill_stream_id" 404
-fi
-
-if [ -n "$foreign_bill_stream_id" ] && [ -n "$foreign_statement_upload_id" ]; then
-    probe_bff_get \
-        "/bff/bill-streams/$foreign_bill_stream_id/statement-uploads/$foreign_statement_upload_id" \
-        404
-fi
-
 antiforgery_code="$(
     curl \
         --silent \
@@ -418,6 +388,63 @@ printf '%s' "$bff_token" > "$antiforgery_token_file"
 chmod 600 "$antiforgery_token_file"
 unset bff_token
 printf '%s\n' 'PASS authenticated BFF antiforgery token issuance'
+
+json_escape()
+{
+    printf '%s' "$1" |
+        sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g'
+}
+
+export_payload="$work_directory/export-request.json"
+export_headers="$work_directory/export-headers.txt"
+: > "$export_payload"
+: > "$export_headers"
+chmod 600 "$export_payload" "$export_headers"
+printf 'Content-Type: application/json\nX-CSRF-TOKEN: %s\n' "$(cat "$antiforgery_token_file")" > "$export_headers"
+printf '{"currentPassword":"%s"' "$(json_escape "$(cat "$login_password_file")")" > "$export_payload"
+export_two_factor_file="${BILLWATCH_WEB_SMOKE_EXPORT_TWO_FACTOR_CODE_FILE:-$two_factor_code_file}"
+if [ -n "$export_two_factor_file" ]; then
+    require_secret_file "$export_two_factor_file" "Export authenticator code"
+    normalized_export_code="$work_directory/export-code.txt"
+    normalize_secret_file "$export_two_factor_file" "$normalized_export_code" "Export authenticator code"
+    printf ',"twoFactorCode":"%s"' "$(json_escape "$(cat "$normalized_export_code")")" >> "$export_payload"
+fi
+printf '}' >> "$export_payload"
+
+export_code="$(
+    curl \
+        --silent \
+        --show-error \
+        --output "$export_response" \
+        --write-out '%{http_code}' \
+        --cookie "$cookie_jar" \
+        --cookie-jar "$cookie_jar" \
+        --request POST \
+        --header "@$export_headers" \
+        --data-binary "@$export_payload" \
+        "$web_base_url/bff/account/export"
+)"
+rm -f "$export_payload" "$export_headers"
+[ "$export_code" != "403" ] || fail "Export requires a current password and current authenticator code when 2FA is enabled; recovery-code login does not authorize export." 69
+[ "$export_code" = "200" ] || fail "BFF account export returned HTTP $export_code." 69
+
+if grep -Eiq \
+    '"(accessToken|refreshToken|protectedAccessToken|encryptedAccessToken|plaidAccessToken|storagePath|storedFilePath|passwordHash|securityStamp)"[[:space:]]*:' \
+    "$export_response"; then
+    fail "BFF account export contained a forbidden secret or internal-storage field." 70
+fi
+rm -f "$export_response"
+printf '%s\n' 'PASS BFF account export secret/storage boundary'
+
+if [ -n "$foreign_bill_stream_id" ]; then
+    probe_bff_get "/bff/bill-streams/$foreign_bill_stream_id" 404
+fi
+
+if [ -n "$foreign_bill_stream_id" ] && [ -n "$foreign_statement_upload_id" ]; then
+    probe_bff_get \
+        "/bff/bill-streams/$foreign_bill_stream_id/statement-uploads/$foreign_statement_upload_id" \
+        404
+fi
 
 logout_headers="$work_directory/logout-headers.txt"
 logout_code="$(

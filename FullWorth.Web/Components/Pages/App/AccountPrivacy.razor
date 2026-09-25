@@ -95,9 +95,25 @@
                 </div>
             </div>
 
+            <div class="delete-confirmation export-confirmation">
+                <p>@L["Re-enter your current password and, if enabled, your authenticator code to download your financial data."]</p>
+                <label>
+                    <span>@L["Current password"]</span>
+                    <InputText class="delete-confirmation-input" type="password"
+                               autocomplete="current-password" disabled="@_isExporting"
+                               @bind-Value="_exportPassword" />
+                </label>
+                <label>
+                    <span>@L["Authenticator code (if two-factor authentication is enabled)"]</span>
+                    <InputText class="delete-confirmation-input" inputmode="numeric"
+                               autocomplete="one-time-code" disabled="@_isExporting"
+                               @bind-Value="_exportTwoFactorCode" />
+                </label>
+            </div>
+
             <button type="button"
                     class="privacy-primary-button"
-                    disabled="@_isExporting"
+                    disabled="@(_isExporting || _isDeleting || string.IsNullOrWhiteSpace(_exportPassword))"
                     @onclick="ExportDataAsync">
                 @(_isExporting ? L["Preparing export…"] : L["Download data"])
             </button>
@@ -196,6 +212,8 @@
     private IJSObjectReference? _bffModule;
     private IJSObjectReference? _deleteModule;
     private bool _isExporting;
+    private string _exportPassword = string.Empty;
+    private string _exportTwoFactorCode = string.Empty;
     private bool _isDeleting;
     private bool _showDeleteConfirmation;
     private bool _messageSucceeded;
@@ -243,15 +261,19 @@
         try
         {
             var module = await GetBffModuleAsync();
-            await module.InvokeAsync<bool>("downloadAccountExport");
+            await module.InvokeAsync<bool>("downloadAccountExport", _exportPassword, _exportTwoFactorCode);
 
             _messageSucceeded = true;
             _message = L["Your FullWorth data export was prepared securely."];
         }
-        catch (JSException)
+        catch (JSException ex)
         {
             _messageSucceeded = false;
-            _message = L["FullWorth could not prepare your data export."];
+            _message = ex.Message.StartsWith("Check your current password", StringComparison.Ordinal)
+                ? L["Check your current password and authenticator code."]
+                : ex.Message.StartsWith("Too many export attempts", StringComparison.Ordinal)
+                    ? L["Too many export attempts. Please try again later."]
+                    : L["FullWorth could not prepare your data export."];
         }
         catch (Exception)
         {
@@ -260,6 +282,8 @@
         }
         finally
         {
+            _exportPassword = string.Empty;
+            _exportTwoFactorCode = string.Empty;
             _isExporting = false;
             StateHasChanged();
         }
