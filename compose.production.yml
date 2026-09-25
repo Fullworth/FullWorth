@@ -92,6 +92,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
       AllowedHosts: ${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
+      BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
       FullWorthApi__BaseUrl: http://api:8080
       FullWorthApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ExternalIdentity__Google__ClientId: ${FULLWORTH_GOOGLE_CLIENT_ID:-}
