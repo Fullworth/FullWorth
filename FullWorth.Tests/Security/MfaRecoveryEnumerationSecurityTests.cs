@@ -43,6 +43,12 @@ public sealed class MfaRecoveryEnumerationSecurityTests
 
             Assert.NotNull(user);
 
+            var resetKeyResult =
+                await userManager.ResetAuthenticatorKeyAsync(
+                    user!);
+
+            Assert.True(resetKeyResult.Succeeded);
+
             var enableResult =
                 await userManager.SetTwoFactorEnabledAsync(
                     user!,
