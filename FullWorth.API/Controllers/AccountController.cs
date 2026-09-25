@@ -46,9 +46,10 @@ public sealed class AccountController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("export")]
+    [HttpPost("export")]
     [EnableRateLimiting("account-export")]
     public async Task<ActionResult<AccountDataExportResult>> ExportAccountData(
+        AccountDataExportRequest request,
         CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId))
@@ -61,6 +62,39 @@ public sealed class AccountController : ControllerBase
         if (user is null)
         {
             return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            !await _userManager.CheckPasswordAsync(
+                user,
+                request.CurrentPassword))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Current password is incorrect.");
+        }
+
+        if (await _userManager.GetTwoFactorEnabledAsync(user))
+        {
+            if (string.IsNullOrWhiteSpace(request.TwoFactorCode))
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "A current authenticator code is required.");
+            }
+
+            var validTwoFactorCode =
+                await _userManager.VerifyTwoFactorTokenAsync(
+                    user,
+                    _userManager.Options.Tokens.AuthenticatorTokenProvider,
+                    NormalizeAuthenticatorCode(request.TwoFactorCode));
+
+            if (!validTwoFactorCode)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "The authenticator code is invalid.");
+            }
         }
 
         var export = await _accountDataExportBuilder.CreateAsync(
@@ -398,6 +432,10 @@ public sealed class AccountController : ControllerBase
             .Replace("-", string.Empty, StringComparison.Ordinal);
     }
 }
+
+public sealed record AccountDataExportRequest(
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record DeleteAccountRequest(
     string Confirmation,
