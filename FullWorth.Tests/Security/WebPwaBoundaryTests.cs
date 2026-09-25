@@ -336,6 +336,75 @@ public sealed class WebPwaBoundaryTests
     }
 
     [Fact]
+    public void AccountExportClient_UsesReauthenticatedPostWithoutMisclassifyingCredentialFailures()
+    {
+        var repositoryRoot =
+            FindRepositoryRoot();
+
+        var bff =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "FullWorth.Web",
+                    "wwwroot",
+                    "js",
+                    "bff.js"));
+
+        var exportStart =
+            bff.IndexOf(
+                "export async function downloadAccountExport(",
+                StringComparison.Ordinal);
+
+        var exportEnd =
+            bff.IndexOf(
+                "export async function deleteFullWorthAccount(",
+                exportStart,
+                StringComparison.Ordinal);
+
+        Assert.True(
+            exportStart >= 0 &&
+            exportEnd > exportStart);
+
+        var exportClient =
+            bff[exportStart..exportEnd];
+
+        Assert.Contains(
+            "getAntiforgeryToken()",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"POST\"",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "currentPassword",
+            exportClient,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "\"X-CSRF-TOKEN\"",
+            exportClient,
+            StringComparison.Ordinal);
+
+        var credentialFailureIndex =
+            exportClient.IndexOf(
+                "current password is incorrect",
+                StringComparison.Ordinal);
+
+        var redirectIndex =
+            exportClient.IndexOf(
+                "window.location.assign(",
+                StringComparison.Ordinal);
+
+        Assert.True(
+            credentialFailureIndex >= 0 &&
+            redirectIndex > credentialFailureIndex,
+            "Expected export credential failures to be handled before the expired-session redirect.");
+    }
+
+    [Fact]
     public void StatementUpload_RemainsBrowserFileBasedAndNoStore()
     {
         var repositoryRoot =
