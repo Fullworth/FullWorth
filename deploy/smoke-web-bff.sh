@@ -187,6 +187,7 @@ login_page="$work_directory/login.html"
 login_headers="$work_directory/login-headers.txt"
 antiforgery_token_file="$work_directory/antiforgery-token.txt"
 bff_antiforgery_response="$work_directory/bff-antiforgery.json"
+bff_security_config="$work_directory/bff-security.curl"
 export_response="$work_directory/account-export.json"
 export_payload="$work_directory/account-export-request.json"
 
@@ -393,6 +394,8 @@ rm -f "$bff_antiforgery_response"
 [ -n "$bff_token" ] || fail "BFF antiforgery endpoint did not return a request token." 70
 printf '%s' "$bff_token" > "$antiforgery_token_file"
 chmod 600 "$antiforgery_token_file"
+printf 'header = "X-CSRF-TOKEN: %s"\n' "$bff_token" > "$bff_security_config"
+chmod 600 "$bff_security_config"
 unset bff_token
 printf '%s\n' 'PASS authenticated BFF antiforgery token issuance'
 
@@ -420,7 +423,7 @@ export_code="$(
         --cookie "$cookie_jar" \
         --cookie-jar "$cookie_jar" \
         --header 'Content-Type: application/json' \
-        --header "X-CSRF-TOKEN: $(cat "$antiforgery_token_file")" \
+        --config "$bff_security_config" \
         --data-binary "@$export_payload" \
         "$web_base_url/bff/account/export"
 )"
