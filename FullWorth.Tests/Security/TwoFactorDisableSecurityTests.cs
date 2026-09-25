@@ -216,6 +216,18 @@ public sealed class TwoFactorDisableSecurityTests
                 factory,
                 session.Email);
 
+        var currentCode =
+            CreateAuthenticatorCode(
+                setup.SharedKey);
+
+        var invalidCode =
+            string.Equals(
+                currentCode,
+                "000000",
+                StringComparison.Ordinal)
+                ? "000001"
+                : "000000";
+
         using var disableResponse =
             await client.PostAsJsonAsync(
                 "/api/account/security/two-factor/disable",
@@ -225,7 +237,7 @@ public sealed class TwoFactorDisableSecurityTests
                         Password,
 
                     twoFactorCode =
-                        "000000"
+                        invalidCode
                 });
 
         Assert.Equal(
