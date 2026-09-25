@@ -626,8 +626,10 @@ public sealed class AdminAuthorizationIntegrationTests
         Assert.NotNull(
             user);
 
-        return await userManager.GetRolesAsync(
-            user!);
+        return (
+            await userManager.GetRolesAsync(
+                user!))
+            .ToArray();
     }
 
     private static object CreateRoleAssignmentRequest(
