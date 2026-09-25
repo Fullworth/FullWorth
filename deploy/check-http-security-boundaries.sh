@@ -74,6 +74,7 @@ api_status=$(curl_request \
     --dump-header "$api_headers" \
     --output "$api_body" \
     --write-out '%{http_code}' \
+    --request POST \
     "$api_base_url/api/account/export")
 
 [ "$api_status" = 401 ] ||
