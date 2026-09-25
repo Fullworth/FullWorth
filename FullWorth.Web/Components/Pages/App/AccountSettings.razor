@@ -8,6 +8,7 @@
 @implements IAsyncDisposable
 
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject Microsoft.Extensions.Localization.IStringLocalizer<AccountSettings> L
 
@@ -821,10 +822,15 @@
         if (_securityModule is null || _isBusy || !HasSensitiveTwoFactorCredentials()) return;
         await RunActionAsync(async () =>
         {
-            await _securityModule.InvokeVoidAsync("disableTwoFactor", _twoFactorCurrentPassword, _twoFactorCurrentCode);
-            await RefreshSecurityAsync();
-            SetSuccess(L["Two-factor authentication is disabled."].Value);
-            await CloseDialogAsync();
+            await _securityModule.InvokeVoidAsync(
+                "disableTwoFactor",
+                _twoFactorCurrentPassword,
+                _twoFactorCurrentCode);
+
+            ResetSensitiveDialogState();
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
         }, L["We couldn’t disable two-factor authentication. Please try again."].Value);
     }
 
