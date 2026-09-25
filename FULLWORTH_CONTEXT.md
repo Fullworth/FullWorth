@@ -1,6 +1,32 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
+
+## Release preparation / email delivery checkpoint — 2026-09-25
+
+PR #351 passed exact-head FullWorth CI #996 and dependency security #105 on `d021c32f7623528dccaa75cf1b22cfca27e46fbc`, then squash-merged into development as `9a1a867ce55ce9e28532d41da833f65105f6e050`. Anonymous registration, forgot-password and confirmation resend now keep the same public response during email-provider rejection, transport failure and timeout. Generic event 4101 records delivery failure without recipient/token/provider details. Thirteen regression cases cover provider failures, state preservation, sanitized exceptions and propagation boundaries. Delivery is not guaranteed by the public acknowledgement; no retry queue was added.
+
+Release preparation combines that development head with master `d798e29ac916a9ab7b23b1f987c6cdbc09826cd1`. A three-way merge is conflict-free; master's `SECURITY.md` is retained unchanged. The promotion needs its own exact-head CI before merging to master. This checkpoint does not claim the promotion has passed, been merged or been deployed.
+
+The broader enumeration audit remains open for external registration/linking and timing behavior. Existing private-beta real-environment acceptance gates remain open. Production deployment must use the guarded workflow against the final approved master SHA, followed by release/readiness verification.
+
+## Direct registration/confirmation response checkpoint — 2026-09-25
+
+PR #350 closes the direct API duplicate-registration disclosure. A narrowly scoped endpoint filter unwraps Identity's registration result and maps duplicate-only email/username errors to the same empty 200 response as successful registration. Other validation failures remain failures. Framework registration, legal acceptance, password validation, rate limiting, and existing account state remain intact.
+
+Seven integration cases cover case-normalized duplicate registration with a different password, preservation of the existing password/account/security stamp, invalid-password error equivalence, malformed and invalid confirmation/change-email proofs for known versus unknown user IDs, and successful valid email confirmation.
+
+Exact head `a3813ea57c9b9aa56633a9ea8fe16ac3f7a15571` passed FullWorth CI #995 and dependency security #104 before squash merge as `1b442a00b828efd3c1ca665f627aa4686b605441`. Backend build/tests, migration verification, transaction-stream regression, API/Web production-container build/readiness/HTTP security, encrypted backup, isolated restore, and API recovery ran successfully. MAUI execution and visual acceptance were skipped by existing change detection. Production was not deployed.
+
+Issue #291's broader enumeration review remains open. Next inspect mail-provider failure responses and external registration/linking for existence disclosure. The current email sender throws on provider rejection; determine and test the public response behavior for known versus unknown accounts before selecting a bounded fix. Timing-side-channel resistance is not established. Do not reopen the response-equivalence cases already covered by PRs #349/#350 without new evidence.
+
+## Email/recovery response checkpoint — 2026-09-25
+
+PR #349 adds six integration cases for anonymous email/recovery responses. Confirmation resend and forgot-password now have response-equivalence coverage for both confirmed and unconfirmed existing accounts versus unknown email addresses. Invalid password-reset proof has error-equivalence coverage for both states, plus assertions that rejected reset attempts preserve the existing password. Users are arranged directly through Identity, without relying on registration/login response behavior.
+
+Exact head `17440d34290914a97f945e20034c2126e14f80ed` passed FullWorth CI #994 and dependency security #103, then squash-merged into development as `769cdcc0d2734d27a4d5f4d093b60b02bf6bae88`. Backend build/tests, migration/model verification, and transaction-stream regression ran successfully. Existing change detection skipped the unrelated MAUI and production-container execution steps; this is not new production/container acceptance evidence.
+
+Issue #291's broader email/recovery enumeration item remains open. These tests cover public status/content-type/payload equivalence, not timing side channels or mail-provider failure behavior. Continue by inspecting direct API registration and invalid confirmation-link responses; the existing Web registration test alone does not establish direct API enumeration resistance. Production remains unchanged.
 
 ## Web/BFF cookie fixation checkpoint — 2026-09-25
 
@@ -92,7 +118,7 @@ Production remains unchanged by architecture/security merges unless a separate g
 This checkpoint supersedes older branch/domain summaries below. Current GitHub source and exact-head CI remain authoritative.
 
 - Repository: `Fullworth/FullWorth`; release branch: `master`; integration branch: `development`.
-- Current `development`: `c8514750893204bdd585cb5feb3a766cdfefb127` after PR #339 completed the Web/BFF fixed-lifetime renewal proof.
+- Latest verified code checkpoint on `development`: `1b442a00b828efd3c1ca665f627aa4686b605441` after PR #350 closed direct registration disclosure and verified confirmation responses. Later handoff-only commits may advance the branch.
 - Current `master`: `a4d60bc25d680dfc3b786fb476e4e7f42f84eba1`. A GitHub branch head is not evidence of a production deployment.
 - The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. No later architecture/security merge is being claimed as deployed.
 - Production remains untouched unless a guarded deployment is separately and explicitly approved.
@@ -374,7 +400,7 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. Next inspect Web/BFF cookie prefixes, Secure/HttpOnly/SameSite, lifetime, fixation, and renewal behavior. Patch only confirmed gaps; do not replace the Data Protection-protected Redis ticket-store design from PR #299 without new evidence.
+3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. The cookie review is complete through PRs #337/#339. PR #349 adds confirmed/unconfirmed email-recovery response coverage. PR #350 closes direct registration disclosure and verifies confirmation responses. Continue with mail-provider failure behavior and external registration/linking under the still-open enumeration item; patch only confirmed gaps.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
 6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
