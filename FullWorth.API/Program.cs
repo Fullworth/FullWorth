@@ -984,6 +984,9 @@ authenticationGroup
     .MapIdentityApi<ApplicationUser>()
     .AddEndpointFilter<
         IEndpointConventionBuilder,
+        RegistrationEnumerationEndpointFilter>()
+    .AddEndpointFilter<
+        IEndpointConventionBuilder,
         RefreshTokenReplayEndpointFilter>();
 
 app.Run();
