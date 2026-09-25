@@ -24,6 +24,10 @@ grep -Fq 'BILLWATCH_SMOKE_ALLOW_MUTATIONS:-false' "$smoke_script" ||
     fail "smoke harness mutations must be disabled by default."
 grep -Fq 'Account export contained a forbidden secret or internal-storage field.' "$smoke_script" ||
     fail "smoke harness must inspect account export for forbidden fields."
+grep -Fq '"currentPassword":"%s"' "$smoke_script" ||
+    fail "account export smoke must use current-password reauthentication."
+grep -Fq -- '--request POST' "$smoke_script" ||
+    fail "account export smoke must use POST."
 
 if grep -E -- '--header[ =]+["'\'']?Authorization: Bearer' "$smoke_script" >/dev/null; then
     fail "smoke harness must not place bearer tokens directly in curl argv."
@@ -40,13 +44,13 @@ set -eu
 output=""
 url=""
 request="GET"
+data_binary_file=""
 
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
 while [ "$#" -gt 0 ]
 do
     case "$1" in
-        --data-binary) export_body_file="${2#@}"; shift 2 ;;
         --output)
             output="$2"
             shift 2
@@ -55,7 +59,11 @@ do
             request="$2"
             shift 2
             ;;
-        --write-out|--header|--data-binary|--config)
+        --data-binary)
+            data_binary_file="${2#@}"
+            shift 2
+            ;;
+        --write-out|--header|--config)
             shift 2
             ;;
         --silent|--show-error)
@@ -84,10 +92,9 @@ case "$url" in
         body='{"accessToken":"SECRET-REFRESHED-ACCESS-TOKEN","refreshToken":"SECRET-ROTATED-REFRESH-TOKEN"}'
         ;;
     */api/account/export)
-        [ "$request" = "POST" ] || exit 91
-        [ -f "${export_body_file:-}" ] || exit 92
-        [ "$(stat -c '%a' "$export_body_file")" = "600" ] || exit 93
-        grep -q '"currentPassword"' "$export_body_file" || exit 94
+        [ "$request" = "POST" ] || exit 92
+        [ -f "$data_binary_file" ] || exit 93
+        grep -Fq '"currentPassword":"SmokePassword!123456"' "$data_binary_file" || exit 94
         if [ "${FAKE_EXPORT_SECRET:-false}" = "true" ]; then
             body='{"email":"smoke@example.test","protectedAccessToken":"must-never-export"}'
         else
@@ -121,6 +128,10 @@ password_file="$temp_dir/password"
 printf '%s\n' 'SmokePassword!123456' > "$password_file"
 chmod 600 "$password_file"
 
+recovery_file="$temp_dir/recovery"
+printf '%s\n' 'recovery-code' > "$recovery_file"
+chmod 600 "$recovery_file"
+
 run_smoke()
 {
     env \
@@ -133,6 +144,15 @@ run_smoke()
             'https://api.example.test' \
             'https://web.example.test'
 }
+
+: > "$curl_log"
+if run_smoke \
+    BILLWATCH_SMOKE_RECOVERY_CODE_FILE="$recovery_file" \
+    > /dev/null 2>&1; then
+    fail "private-beta smoke accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "private-beta smoke made a request before rejecting recovery-only mode."
 
 : > "$curl_log"
 run_smoke \

@@ -1,4 +1,4 @@
-let antiforgeryToken = null;
+﻿let antiforgeryToken = null;
 
 const statementFileSizeLimit =
     15 * 1024 * 1024;
@@ -631,33 +631,80 @@ export async function dismissAlert(
         "POST");
 }
 
-export async function downloadAccountExport(currentPassword, twoFactorCode) {
-    const requestToken = await getAntiforgeryToken();
-    const response = await fetch("/bff/account/export", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": requestToken
-        },
-        body: JSON.stringify({ currentPassword, twoFactorCode }),
-        cache: "no-store"
-    });
+export async function downloadAccountExport(
+    currentPassword,
+    twoFactorCode) {
+
+    if (typeof currentPassword !== "string" ||
+        !currentPassword.trim()) {
+        throw new Error(
+            "Enter your current password to export your account data.");
+    }
+
+    const requestToken =
+        await getAntiforgeryToken();
+
+    const response =
+        await fetch(
+            "/bff/account/export",
+            {
+                method:
+                    "POST",
+
+                credentials:
+                    "same-origin",
+
+                headers: {
+                    "Accept":
+                        "application/json",
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRF-TOKEN":
+                        requestToken
+                },
+
+                body:
+                    JSON.stringify({
+                        currentPassword,
+                        twoFactorCode:
+                            typeof twoFactorCode === "string" &&
+                            twoFactorCode.trim()
+                                ? twoFactorCode.trim()
+                                : null
+                    }),
+
+                cache:
+                    "no-store"
+            });
 
     if (response.status === 401) {
-        window.location.assign("/login");
-        throw new Error("FullWorth session expired.");
+        const message =
+            await getSafeErrorMessage(
+                response);
+
+        const normalized =
+            message.toLowerCase();
+
+        if (normalized.includes(
+                "current password is incorrect") ||
+            normalized.includes(
+                "authenticator code")) {
+            throw new Error(message);
+        }
+
+        window.location.assign(
+            "/login");
+
+        throw new Error(
+            "FullWorth session expired.");
     }
 
     if (!response.ok) {
-        if (response.status === 403) {
-            throw new Error("Check your current password and authenticator code.");
-        }
-        if (response.status === 429) {
-            throw new Error("Too many export attempts. Please try again later.");
-        }
-        throw new Error("FullWorth could not prepare your data export.");
+        throw new Error(
+            await getSafeErrorMessage(
+                response));
     }
 
     const blob =

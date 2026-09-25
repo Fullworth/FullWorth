@@ -36,6 +36,9 @@ public sealed class AdminBffWriteProxyService(
     private const string AccountDeletionPath =
         "/api/account";
 
+    private const string AccountExportPath =
+        "/api/account/export";
+
     private static readonly TimeSpan RefreshBuffer =
         TimeSpan.FromMinutes(1);
 
@@ -86,6 +89,93 @@ public sealed class AdminBffWriteProxyService(
                 isAccountDeletion ||
                 isPasswordChange,
             cancellationToken);
+    }
+
+    public async Task<IResult> ForwardJsonDownloadAsync<T>(
+        HttpContext httpContext,
+        HttpMethod method,
+        string requestUri,
+        T body,
+        string downloadFileName,
+        string contentType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(method);
+        ArgumentException.ThrowIfNullOrWhiteSpace(downloadFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+
+        if (method != HttpMethod.Post ||
+            !string.Equals(
+                requestUri,
+                AccountExportPath,
+                StringComparison.Ordinal) ||
+            !IsAllowedApiPath(requestUri))
+        {
+            return Results.BadRequest();
+        }
+
+        var session =
+            await GetValidSessionAsync(
+                httpContext,
+                cancellationToken);
+
+        if (session is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var response =
+            await SendAuthorizedJsonAsync(
+                method,
+                requestUri,
+                session.AccessToken,
+                body,
+                cancellationToken);
+
+        if (response.StatusCode ==
+            HttpStatusCode.Unauthorized)
+        {
+            response.Dispose();
+
+            session =
+                await TryRefreshAsync(
+                    httpContext,
+                    session,
+                    cancellationToken);
+
+            if (session is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            response =
+                await SendAuthorizedJsonAsync(
+                    method,
+                    requestUri,
+                    session.AccessToken,
+                    body,
+                    cancellationToken);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                return await ToResultAsync(
+                    response,
+                    cancellationToken);
+            }
+
+            var bytes =
+                await response.Content.ReadAsByteArrayAsync(
+                    cancellationToken);
+
+            return Results.File(
+                bytes,
+                contentType,
+                Path.GetFileName(downloadFileName));
+        }
     }
 
     public Task<IResult> ForwardJsonAndSignOutOnSuccessAsync<T>(
@@ -511,6 +601,12 @@ public sealed class AdminBffWriteProxyService(
                 AccountDeletionPath,
                 StringComparison.Ordinal);
 
+        var isAccountExportPath =
+            string.Equals(
+                requestUri,
+                AccountExportPath,
+                StringComparison.Ordinal);
+
         if (!isAdminPath &&
             !isSubscriptionCheckoutPath &&
             !isSubscriptionRedemptionPath &&
@@ -519,7 +615,7 @@ public sealed class AdminBffWriteProxyService(
             !isExternalIdentityLinkPath &&
             !isExternalIdentityUnlinkPath &&
             !isAccountDeletionPath &&
-            !string.Equals(requestUri, "/api/account/export", StringComparison.Ordinal))
+            !isAccountExportPath)
         {
             return false;
         }

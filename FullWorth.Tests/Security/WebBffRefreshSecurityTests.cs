@@ -396,7 +396,7 @@ public sealed class WebBffRefreshSecurityTests
         var result =
             await service.ForwardGetAsync(
                 context,
-                "/api/account/preferences");
+                "/api/subscription");
 
         Assert.False(
             authentication.SignedOut);
@@ -443,7 +443,7 @@ public sealed class WebBffRefreshSecurityTests
         var result =
             await service.ForwardGetAsync(
                 context,
-                "/api/account/preferences");
+                "/api/subscription");
 
         var refresh =
             Assert.Single(

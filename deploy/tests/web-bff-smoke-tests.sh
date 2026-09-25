@@ -24,6 +24,12 @@ grep -Fq '/auth/logout' "$smoke_script" ||
     fail "Web/BFF smoke harness must prove logout invalidates the cookie session."
 grep -Fq 'BFF account export contained a forbidden secret or internal-storage field.' "$smoke_script" ||
     fail "Web/BFF smoke harness must inspect account export boundaries."
+grep -Fq '"currentPassword":"%s"' "$smoke_script" ||
+    fail "Web/BFF account export must carry current-password reauthentication."
+grep -Fq -- '--request POST' "$smoke_script" ||
+    fail "Web/BFF account export must use POST."
+grep -Fq 'bff_security_config' "$smoke_script" ||
+    fail "Web/BFF account export must keep its antiforgery header out of curl argv."
 grep -Fq 'Verify the current authenticator or recovery code and the account' "$smoke_script" ||
     fail "Web/BFF smoke harness must distinguish rejected second-factor authentication."
 
@@ -46,13 +52,14 @@ url=""
 has_two_factor=false
 password_secret_file=""
 second_factor_secret_file=""
+data_binary_file=""
+curl_config_file=""
 
 printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 
 while [ "$#" -gt 0 ]
 do
     case "$1" in
-        --data-binary) export_body_file="${2#@}"; shift 2 ;;
         --output)
             output="$2"
             shift 2
@@ -77,6 +84,14 @@ do
                     second_factor_secret_file="${2#*@}"
                     ;;
             esac
+            shift 2
+            ;;
+        --data-binary)
+            data_binary_file="${2#@}"
+            shift 2
+            ;;
+        --config)
+            curl_config_file="$2"
             shift 2
             ;;
         --write-out|--cookie|--cookie-jar|--header)
@@ -152,10 +167,11 @@ case "$url" in
         code=200
         ;;
     */bff/account/export)
-        [ "$request" = "POST" ] || exit 91
-        [ -f "${export_body_file:-}" ] || exit 92
-        [ "$(stat -c '%a' "$export_body_file")" = "600" ] || exit 93
-        grep -q '"currentPassword"' "$export_body_file" || exit 94
+        [ "$request" = "POST" ] || exit 96
+        [ -f "$data_binary_file" ] || exit 97
+        grep -Fq '"currentPassword":"WebSmokePassword!123456"' "$data_binary_file" || exit 98
+        [ -f "$curl_config_file" ] || exit 99
+        grep -Fq 'X-CSRF-TOKEN: FAKE-BFF-CSRF-TOKEN' "$curl_config_file" || exit 100
         if [ "${FAKE_EXPORT_SECRET:-false}" = "true" ]; then
             body='{"protectedAccessToken":"must-never-export"}'
         else
@@ -208,6 +224,10 @@ two_factor_file="$temp_dir/two-factor"
 printf '%s\n' '123456' > "$two_factor_file"
 chmod 600 "$two_factor_file"
 
+recovery_file="$temp_dir/recovery"
+printf '%s\n' 'recovery-code' > "$recovery_file"
+chmod 600 "$recovery_file"
+
 run_smoke()
 {
     rm -f "$logged_out"
@@ -221,6 +241,15 @@ run_smoke()
         sh "$smoke_script" \
             'https://web.example.test'
 }
+
+: > "$curl_log"
+if run_smoke \
+    BILLWATCH_WEB_SMOKE_RECOVERY_CODE_FILE="$recovery_file" \
+    > /dev/null 2>&1; then
+    fail "Web/BFF smoke harness accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "Web/BFF smoke made a request before rejecting recovery-only mode."
 
 : > "$curl_log"
 run_smoke \

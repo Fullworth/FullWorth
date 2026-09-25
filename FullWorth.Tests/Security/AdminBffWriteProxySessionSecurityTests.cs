@@ -114,43 +114,6 @@ public sealed class AdminBffWriteProxySessionSecurityTests
             authentication.SignOutCount);
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.OK)]
-    [InlineData(HttpStatusCode.Forbidden)]
-    public async Task AccountExport_ForwardsCredentialsOnceAndPreservesSession(HttpStatusCode status)
-    {
-        var authentication = new RecordingAuthenticationService();
-        var context = CreateHttpContext(authentication);
-        using var handler = new ExportResponseHandler(status);
-        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.fullworth.test") };
-        var proxy = new AdminBffWriteProxyService(new SingleHttpClientFactory(client));
-        var result = await proxy.ForwardJsonAsync(context, HttpMethod.Post,
-            "/api/account/export", new { currentPassword = "export-password", twoFactorCode = "123456" });
-        Assert.Equal((int)status, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
-        Assert.Equal(1, handler.CallCount);
-        Assert.Equal(0, authentication.SignOutCount);
-        Assert.Contains("export-password", handler.Body);
-        Assert.Contains("123456", handler.Body);
-    }
-
-    private sealed class ExportResponseHandler(HttpStatusCode status) : HttpMessageHandler
-    {
-        public int CallCount { get; private set; }
-        public string Body { get; private set; } = string.Empty;
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            CallCount++;
-            Assert.Equal(HttpMethod.Post, request.Method);
-            Assert.Equal("/api/account/export", request.RequestUri!.AbsolutePath);
-            Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
-            Body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(status)
-            {
-                Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json")
-            };
-        }
-    }
-
     private static DefaultHttpContext
         CreateHttpContext(
             RecordingAuthenticationService

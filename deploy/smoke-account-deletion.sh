@@ -133,6 +133,7 @@ trap cleanup EXIT HUP INT TERM
 login_payload="$work_directory/login.json"
 login_response="$work_directory/login-response.json"
 delete_payload="$work_directory/delete.json"
+export_payload="$work_directory/export.json"
 auth_config="$work_directory/auth.curl"
 
 json_escape()
@@ -175,10 +176,10 @@ printf 'header = "Authorization: Bearer %s"\n' "$access_token" > "$auth_config"
 chmod 600 "$auth_config"
 unset access_token
 
-export_payload="$work_directory/export-request.json"
-: > "$export_payload"
+printf '{"currentPassword":"%s","twoFactorCode":null}' \
+    "$(json_escape "$password")" \
+    > "$export_payload"
 chmod 600 "$export_payload"
-printf '{"currentPassword":"%s"}' "$(json_escape "$password")" > "$export_payload"
 
 predelete_export_code="$(
     curl \
@@ -186,9 +187,9 @@ predelete_export_code="$(
         --show-error \
         --output /dev/null \
         --write-out '%{http_code}' \
-        --config "$auth_config" \
         --request POST \
         --header 'Content-Type: application/json' \
+        --config "$auth_config" \
         --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"
@@ -223,9 +224,9 @@ postdelete_export_code="$(
         --show-error \
         --output /dev/null \
         --write-out '%{http_code}' \
-        --config "$auth_config" \
         --request POST \
         --header 'Content-Type: application/json' \
+        --config "$auth_config" \
         --data-binary "@$export_payload" \
         "$api_base_url/api/account/export"
 )"

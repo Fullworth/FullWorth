@@ -15,6 +15,10 @@ fail()
 smoke="$root_dir/deploy/smoke-account-deletion.sh"
 [ -f "$smoke" ] || fail "smoke script is missing."
 sh -n "$smoke" || fail "smoke script has invalid POSIX shell syntax."
+grep -Fq '"currentPassword":"%s","twoFactorCode":null' "$smoke" ||
+    fail "account-deletion export proof must use current-password reauthentication."
+grep -Fq -- '--request POST' "$smoke" ||
+    fail "account-deletion export proof must use the POST export contract."
 
 deployment="$temp_dir/deployment"
 mkdir -p "$deployment"

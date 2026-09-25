@@ -31,8 +31,8 @@ public sealed class WebAntiforgeryBoundaryTests
 
         yield return ["POST", $"/bff/alerts/{id:D}/read"];
         yield return ["POST", $"/bff/alerts/{id:D}/dismiss"];
-        yield return ["DELETE", "/bff/account"];
         yield return ["POST", "/bff/account/export"];
+        yield return ["DELETE", "/bff/account"];
         yield return ["POST", "/bff/plaid/link-session"];
         yield return ["POST", $"/bff/plaid/connections/{id:D}/update-link-session"];
         yield return ["POST", $"/bff/plaid/link-session/{id:D}/complete"];

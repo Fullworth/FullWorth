@@ -67,8 +67,8 @@ public sealed class SensitiveRateLimitTests
         {
             using var response =
                 await firstClient.PostAsJsonAsync(
-                "/api/account/export",
-                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
+                    "/api/account/export",
+                    CreateExportRequest());
 
             Assert.Equal(
                 HttpStatusCode.OK,
@@ -78,14 +78,14 @@ public sealed class SensitiveRateLimitTests
         using var limitedResponse =
             await firstClient.PostAsJsonAsync(
                 "/api/account/export",
-                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
+                CreateExportRequest());
 
         AssertRateLimited(limitedResponse);
 
         using var otherUserResponse =
             await secondClient.PostAsJsonAsync(
                 "/api/account/export",
-                new { currentPassword = "FullWorth!Tests123", twoFactorCode = (string?)null });
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -218,6 +218,15 @@ public sealed class SensitiveRateLimitTests
 
         AssertRateLimited(limitedResponse);
     }
+
+    private static object CreateExportRequest() =>
+        new
+        {
+            currentPassword =
+                "FullWorth!Tests123",
+            twoFactorCode =
+                (string?)null
+        };
 
     private static async Task<HttpResponseMessage> SendInvalidLoginAsync(
         HttpClient client,

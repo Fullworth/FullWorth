@@ -83,13 +83,19 @@ public static class BffEndpointMappings
             return alertId == Guid.Empty ? Results.NotFound() : await proxy.ForwardPostAsync(context, $"/api/alerts/{alertId}/dismiss", false, context.RequestAborted);
         });
 
-        bff.MapPost("/account/export", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy, SensitiveCredentialBffRequest request) =>
+        bff.MapPost("/account/export", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy, AccountExportBffRequest request) =>
         {
             await antiforgery.ValidateRequestAsync(context);
-            var result = await proxy.ForwardJsonAsync(context, HttpMethod.Post, "/api/account/export", request, context.RequestAborted);
-            if (result is IStatusCodeHttpResult { StatusCode: >= 200 and < 300 })
-                context.Response.Headers.ContentDisposition = "attachment; filename=\"fullworth-data-export.json\"";
-            return result;
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                return Results.BadRequest(new { message = "Enter your current password to export your account data." });
+            return await proxy.ForwardJsonDownloadAsync(
+                context,
+                HttpMethod.Post,
+                "/api/account/export",
+                request,
+                "fullworth-data-export.json",
+                "application/json; charset=utf-8",
+                context.RequestAborted);
         });
         bff.MapDelete("/account", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy) =>
         {
@@ -174,4 +180,5 @@ public static class BffEndpointMappings
 
 public sealed record SubscriptionCheckoutRequest(string BillingInterval);
 public sealed record SubscriptionRedemptionRequest(string AccessKey);
+public sealed record AccountExportBffRequest(string CurrentPassword, string? TwoFactorCode);
 public sealed record DeleteAccountBffRequest(string Confirmation, string CurrentPassword, string? TwoFactorCode);

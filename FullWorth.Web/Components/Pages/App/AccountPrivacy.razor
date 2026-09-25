@@ -95,28 +95,56 @@
                 </div>
             </div>
 
-            <div class="delete-confirmation export-confirmation">
-                <p>@L["Re-enter your current password and, if enabled, your authenticator code to download your financial data."]</p>
-                <label>
-                    <span>@L["Current password"]</span>
-                    <InputText class="delete-confirmation-input" type="password"
-                               autocomplete="current-password" disabled="@_isExporting"
-                               @bind-Value="_exportPassword" />
-                </label>
-                <label>
-                    <span>@L["Authenticator code (if two-factor authentication is enabled)"]</span>
-                    <InputText class="delete-confirmation-input" inputmode="numeric"
-                               autocomplete="one-time-code" disabled="@_isExporting"
-                               @bind-Value="_exportTwoFactorCode" />
-                </label>
-            </div>
+            @if (!_showExportConfirmation)
+            {
+                <button type="button"
+                        class="privacy-primary-button"
+                        disabled="@(_isExporting || _isDeleting)"
+                        @onclick="ShowExportConfirmation">
+                    @L["Download data"]
+                </button>
+            }
+            else
+            {
+                <div class="export-confirmation">
+                    <strong>@L["Confirm this sensitive export"]</strong>
+                    <p>@L["Re-enter your current credentials before FullWorth prepares a copy of your financial data."]</p>
 
-            <button type="button"
-                    class="privacy-primary-button"
-                    disabled="@(_isExporting || _isDeleting || string.IsNullOrWhiteSpace(_exportPassword))"
-                    @onclick="ExportDataAsync">
-                @(_isExporting ? L["Preparing export…"] : L["Download data"])
-            </button>
+                    <label>
+                        <span>@L["Current password"]</span>
+                        <InputText class="export-confirmation-input"
+                                   type="password"
+                                   autocomplete="current-password"
+                                   disabled="@_isExporting"
+                                   @bind-Value="_exportCurrentPassword" />
+                    </label>
+
+                    <label>
+                        <span>@L["Authenticator code (if two-factor authentication is enabled)"]</span>
+                        <InputText class="export-confirmation-input"
+                                   inputmode="numeric"
+                                   autocomplete="one-time-code"
+                                   disabled="@_isExporting"
+                                   @bind-Value="_exportTwoFactorCode" />
+                    </label>
+
+                    <div class="export-confirmation-actions">
+                        <button type="button"
+                                class="privacy-secondary-button"
+                                disabled="@_isExporting"
+                                @onclick="CancelExport">
+                            @L["Cancel"]
+                        </button>
+
+                        <button type="button"
+                                class="privacy-primary-button"
+                                disabled="@(!CanExport)"
+                                @onclick="ExportDataAsync">
+                            @(_isExporting ? L["Preparing export…"] : L["Download securely"])
+                        </button>
+                    </div>
+                </div>
+            }
         </article>
 
         <article class="privacy-explanation-card fw-privacy-explanation">
@@ -212,15 +240,22 @@
     private IJSObjectReference? _bffModule;
     private IJSObjectReference? _deleteModule;
     private bool _isExporting;
-    private string _exportPassword = string.Empty;
-    private string _exportTwoFactorCode = string.Empty;
     private bool _isDeleting;
+    private bool _showExportConfirmation;
     private bool _showDeleteConfirmation;
     private bool _messageSucceeded;
+    private string _exportCurrentPassword = string.Empty;
+    private string _exportTwoFactorCode = string.Empty;
     private string _deleteConfirmation = string.Empty;
     private string _currentPassword = string.Empty;
     private string _twoFactorCode = string.Empty;
     private string? _message;
+
+    private bool CanExport =>
+        !_isExporting &&
+        !_isDeleting &&
+        !string.IsNullOrWhiteSpace(
+            _exportCurrentPassword);
 
     private bool CanDelete =>
         !_isDeleting &&
@@ -248,9 +283,33 @@
         return _deleteModule;
     }
 
-    private async Task ExportDataAsync()
+    private void ShowExportConfirmation()
     {
         if (_isExporting || _isDeleting)
+        {
+            return;
+        }
+
+        _showExportConfirmation = true;
+        ClearExportCredentials();
+        _message = null;
+    }
+
+    private void CancelExport()
+    {
+        if (_isExporting)
+        {
+            return;
+        }
+
+        _showExportConfirmation = false;
+        ClearExportCredentials();
+        _message = null;
+    }
+
+    private async Task ExportDataAsync()
+    {
+        if (!CanExport)
         {
             return;
         }
@@ -261,19 +320,21 @@
         try
         {
             var module = await GetBffModuleAsync();
-            await module.InvokeAsync<bool>("downloadAccountExport", _exportPassword, _exportTwoFactorCode);
+            await module.InvokeAsync<bool>(
+                "downloadAccountExport",
+                _exportCurrentPassword,
+                _exportTwoFactorCode);
 
+            _showExportConfirmation = false;
             _messageSucceeded = true;
             _message = L["Your FullWorth data export was prepared securely."];
         }
-        catch (JSException ex)
+        catch (JSException exception)
         {
             _messageSucceeded = false;
-            _message = ex.Message.StartsWith("Check your current password", StringComparison.Ordinal)
-                ? L["Check your current password and authenticator code."]
-                : ex.Message.StartsWith("Too many export attempts", StringComparison.Ordinal)
-                    ? L["Too many export attempts. Please try again later."]
-                    : L["FullWorth could not prepare your data export."];
+            _message =
+                GetSafeExportErrorMessage(
+                    exception);
         }
         catch (Exception)
         {
@@ -282,8 +343,7 @@
         }
         finally
         {
-            _exportPassword = string.Empty;
-            _exportTwoFactorCode = string.Empty;
+            ClearExportCredentials();
             _isExporting = false;
             StateHasChanged();
         }
@@ -355,6 +415,12 @@
         }
     }
 
+    private void ClearExportCredentials()
+    {
+        _exportCurrentPassword = string.Empty;
+        _exportTwoFactorCode = string.Empty;
+    }
+
     private void ClearDeletionCredentials()
     {
         _deleteConfirmation = string.Empty;
@@ -367,6 +433,38 @@
         return _messageSucceeded
             ? "privacy-message success"
             : "privacy-message error";
+    }
+
+    private string GetSafeExportErrorMessage(
+        JSException exception)
+    {
+        var message = exception.Message?
+            .Split(
+                '\n',
+                StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?
+            .Trim();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return L["FullWorth could not prepare your data export."];
+        }
+
+        if (message.Contains(
+                "Current password is incorrect",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return L["Your current password is incorrect."];
+        }
+
+        if (message.Contains(
+                "authenticator code",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return L["Enter a valid current authenticator code to export your data."];
+        }
+
+        return L["FullWorth could not prepare your data export."];
     }
 
     private string GetSafeErrorMessage(JSException exception)
