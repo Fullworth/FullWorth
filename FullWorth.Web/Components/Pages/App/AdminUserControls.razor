@@ -16,6 +16,27 @@
         <div class="admin-user-confirm">
             <span>@L["Confirm: {0}", _pending.Label]</span>
 
+            @if (RequiresRoleAssignmentReauthentication)
+            {
+                <label class="admin-user-reauth-field">
+                    <span>@L["Current password"]</span>
+                    <input type="password"
+                           autocomplete="current-password"
+                           disabled="@_isBusy"
+                           @bind="_roleCurrentPassword" />
+                </label>
+
+                <label class="admin-user-reauth-field">
+                    <span>@L["Authenticator code (if enabled)"]</span>
+                    <input type="text"
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           maxlength="12"
+                           disabled="@_isBusy"
+                           @bind="_roleTwoFactorCode" />
+                </label>
+            }
+
             <button type="button"
                     class="admin-user-control danger"
                     disabled="@_isBusy"
@@ -104,8 +125,19 @@
     private PendingMutation? _pending;
     private bool _isBusy;
     private string? _errorMessage;
+    private string _roleCurrentPassword = string.Empty;
+    private string _roleTwoFactorCode = string.Empty;
 
     private bool IsOwner => HasRole(OwnerRole);
+
+    private bool RequiresRoleAssignmentReauthentication =>
+        _pending is
+        {
+            Kind:
+                AdminMutationKind.Role,
+            MakeActive:
+                true
+        };
 
     private void QueueAdminRole() =>
         QueueRole(AdminRole, !HasRole(AdminRole));
@@ -177,6 +209,7 @@
         {
             _pending = null;
             _errorMessage = null;
+            ClearRoleReauthentication();
         }
     }
 
@@ -184,6 +217,15 @@
     {
         if (_isBusy || _pending is null || UserId == Guid.Empty)
         {
+            return;
+        }
+
+        if (RequiresRoleAssignmentReauthentication &&
+            string.IsNullOrWhiteSpace(
+                _roleCurrentPassword))
+        {
+            _errorMessage =
+                L["Enter your current password before assigning a staff role."];
             return;
         }
 
@@ -208,11 +250,14 @@
             }
 
             _pending = null;
+            ClearRoleReauthentication();
             Navigation.NavigateTo("/app/admin", forceLoad: true);
         }
-        catch (JSException)
+        catch (JSException exception)
         {
-            _errorMessage = L["FullWorth could not complete that administrative change."];
+            _errorMessage =
+                GetSafeMutationError(
+                    exception.Message);
         }
         catch (Exception)
         {
@@ -232,10 +277,28 @@
             ? "assignAdminRole"
             : "removeAdminRole";
 
+        if (!mutation.MakeActive)
+        {
+            return await module.InvokeAsync<AdminFetchResult<object>>(
+                functionName,
+                UserId.ToString("D"),
+                mutation.Name);
+        }
+
         return await module.InvokeAsync<AdminFetchResult<object>>(
             functionName,
             UserId.ToString("D"),
-            mutation.Name);
+            mutation.Name,
+            new AdminAssignRoleRequest
+            {
+                CurrentPassword =
+                    _roleCurrentPassword,
+                TwoFactorCode =
+                    string.IsNullOrWhiteSpace(
+                        _roleTwoFactorCode)
+                        ? null
+                        : _roleTwoFactorCode.Trim()
+            });
     }
 
     private async Task<AdminFetchResult<object>> MutateProgramAsync(
@@ -266,6 +329,39 @@
                 DurationDays = mutation.DurationDays,
                 GrantsLifetimeAccess = mutation.GrantsLifetimeAccess
             });
+    }
+
+    private string GetSafeMutationError(
+        string? technicalMessage)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                technicalMessage))
+        {
+            if (technicalMessage.Contains(
+                    "current password is incorrect",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Your current password is incorrect."];
+            }
+
+            if (technicalMessage.Contains(
+                    "authenticator code",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return L["Enter a valid current authenticator code if two-factor authentication is enabled."];
+            }
+        }
+
+        return L["FullWorth could not complete that administrative change."];
+    }
+
+    private void ClearRoleReauthentication()
+    {
+        _roleCurrentPassword =
+            string.Empty;
+
+        _roleTwoFactorCode =
+            string.Empty;
     }
 
     private async Task<IJSObjectReference> GetAdminModuleAsync()
@@ -341,6 +437,14 @@
     {
         public bool AccessDenied { get; set; }
         public T? Value { get; set; }
+    }
+
+    private sealed class AdminAssignRoleRequest
+    {
+        public string CurrentPassword { get; set; } =
+            string.Empty;
+
+        public string? TwoFactorCode { get; set; }
     }
 
     private sealed class AdminProgramRequest
