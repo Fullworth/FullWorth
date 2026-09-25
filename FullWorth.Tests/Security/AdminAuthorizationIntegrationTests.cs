@@ -303,22 +303,14 @@ public sealed class AdminAuthorizationIntegrationTests
             HttpStatusCode.Unauthorized,
             response.StatusCode);
 
-        var targetAfter =
-            await TestUserAuthentication.LoginAsync(
-                targetClient,
+        var roles =
+            await GetUserRolesAsync(
+                factory,
                 target.Email);
 
-        TestUserAuthentication.Authorize(
-            targetClient,
-            targetAfter);
-
-        using var adminResponse =
-            await targetClient.GetAsync(
-                "/api/admin/users");
-
-        Assert.Equal(
-            HttpStatusCode.Forbidden,
-            adminResponse.StatusCode);
+        Assert.DoesNotContain(
+            FullWorthRoles.Moderator,
+            roles);
     }
 
     [Fact]
@@ -385,6 +377,15 @@ public sealed class AdminAuthorizationIntegrationTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             response.StatusCode);
+
+        var roles =
+            await GetUserRolesAsync(
+                factory,
+                target.Email);
+
+        Assert.DoesNotContain(
+            FullWorthRoles.Moderator,
+            roles);
     }
 
     [Fact]
@@ -603,6 +604,30 @@ public sealed class AdminAuthorizationIntegrationTests
         Assert.Equal(
             HttpStatusCode.BadRequest,
             revokedRedeemResponse.StatusCode);
+    }
+
+    private static async Task<IReadOnlyList<string>>
+        GetUserRolesAsync(
+            FullWorthApiFactory factory,
+            string email)
+    {
+        await using var scope =
+            factory.Services.CreateAsyncScope();
+
+        var userManager =
+            scope.ServiceProvider
+                .GetRequiredService<
+                    UserManager<ApplicationUser>>();
+
+        var user =
+            await userManager.FindByEmailAsync(
+                email);
+
+        Assert.NotNull(
+            user);
+
+        return await userManager.GetRolesAsync(
+            user!);
     }
 
     private static object CreateRoleAssignmentRequest(
