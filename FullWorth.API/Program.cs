@@ -984,6 +984,9 @@ authenticationGroup
     .MapIdentityApi<ApplicationUser>()
     .AddEndpointFilter<
         IEndpointConventionBuilder,
+        AnonymousIdentityEmailDeliveryEndpointFilter>()
+    .AddEndpointFilter<
+        IEndpointConventionBuilder,
         RegistrationEnumerationEndpointFilter>()
     .AddEndpointFilter<
         IEndpointConventionBuilder,
