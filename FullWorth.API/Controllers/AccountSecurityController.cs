@@ -510,6 +510,28 @@ public sealed class AccountSecurityController(
             return credentialError;
         }
 
+        /*
+         * Disabling MFA weakens the account's authentication boundary.
+         * Revoke every existing refresh family before applying that weaker
+         * state. Existing self-contained access tokens remain bounded by the
+         * normal 15-minute access-token lifetime.
+         *
+         * The ordering is intentional: if the later disable write fails, the
+         * account remains MFA-protected even though sessions were revoked.
+         */
+        var revokeResult =
+            await userManager.UpdateSecurityStampAsync(
+                user);
+
+        if (!revokeResult.Succeeded)
+        {
+            return Problem(
+                statusCode:
+                    StatusCodes.Status503ServiceUnavailable,
+                title:
+                    "FullWorth could not disable two-factor authentication safely.");
+        }
+
         var result =
             await userManager.SetTwoFactorEnabledAsync(
                 user,
