@@ -312,11 +312,15 @@ public sealed record AdminAssignRoleRequest(
 public sealed record AdminGrantEntitlementRequest(
     string Tier,
     int? DurationDays,
-    bool GrantsLifetimeAccess);
+    bool GrantsLifetimeAccess,
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminProgramMembershipRequest(
     bool IsActive,
-    DateTimeOffset? EndsAtUtc);
+    DateTimeOffset? EndsAtUtc,
+    string? CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminCreateAccessKeyRequest(
     string Purpose,
