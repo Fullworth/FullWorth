@@ -16,7 +16,8 @@ jobs:
       github.event.issue.number == 245 &&
       github.event.issue.pull_request == null &&
       github.event.comment.body == '/cleanup-merged-branches' &&
-      github.actor == github.repository_owner
+      github.repository == 'Fullworth/FullWorth' &&
+      github.actor == 'RealizmModz'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
