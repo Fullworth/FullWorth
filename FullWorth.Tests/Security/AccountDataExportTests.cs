@@ -6,6 +6,7 @@ using FullWorth.API.Services.Accounts;
 using FullWorth.Core.Models;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FullWorth.Tests.Security;
@@ -13,6 +14,9 @@ namespace FullWorth.Tests.Security;
 public sealed class AccountDataExportTests
     : IClassFixture<FullWorthApiFactory>
 {
+    private const string TestPassword =
+        "FullWorth!Tests123";
+
     private const string ProtectedAccessToken =
         "PROTECTED_ACCESS_TOKEN_MUST_NOT_EXPORT";
 
@@ -55,8 +59,82 @@ public sealed class AccountDataExportTests
             _factory.CreateHttpsClient();
 
         using var response =
-            await client.GetAsync(
-                "/api/account/export");
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_WrongPassword_IsRejected()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest(
+                    currentPassword:
+                        "FullWorth!Wrong123"));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportAccountData_TwoFactorEnabledWithoutCode_IsRejected()
+    {
+        using var client =
+            _factory.CreateHttpsClient();
+
+        var session =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client);
+
+        await using (
+            var scope =
+                _factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    session.Email);
+
+            Assert.NotNull(user);
+
+            var enableResult =
+                await userManager.SetTwoFactorEnabledAsync(
+                    user!,
+                    true);
+
+            Assert.True(enableResult.Succeeded);
+        }
+
+        TestUserAuthentication.Authorize(
+            client,
+            session);
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
@@ -93,8 +171,9 @@ public sealed class AccountDataExportTests
              attempt++)
         {
             using var allowedResponse =
-                await limitedClient.GetAsync(
-                    "/api/account/export");
+                await limitedClient.PostAsJsonAsync(
+                    "/api/account/export",
+                    CreateExportRequest());
 
             Assert.Equal(
                 HttpStatusCode.OK,
@@ -102,16 +181,18 @@ public sealed class AccountDataExportTests
         }
 
         using var rejectedResponse =
-            await limitedClient.GetAsync(
-                "/api/account/export");
+            await limitedClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
             rejectedResponse.StatusCode);
 
         using var otherUserResponse =
-            await otherClient.GetAsync(
-                "/api/account/export");
+            await otherClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -387,8 +468,9 @@ PlaidTransactionId = PlaidTransactionId,
         }
 
         using var response =
-            await exportingClient.GetAsync(
-                "/api/account/export");
+            await exportingClient.PostAsJsonAsync(
+                "/api/account/export",
+                CreateExportRequest());
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -515,6 +597,15 @@ PlaidTransactionId = PlaidTransactionId,
             rawJson,
             StringComparison.OrdinalIgnoreCase);
     }
+
+    private static object CreateExportRequest(
+        string currentPassword = TestPassword,
+        string? twoFactorCode = null) =>
+        new
+        {
+            currentPassword,
+            twoFactorCode
+        };
 
     private static Task<Guid> GetUserIdAsync(
         FullWorthDbContext dbContext,
