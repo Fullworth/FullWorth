@@ -153,6 +153,26 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
+        var actor =
+            await userManager.FindByIdAsync(
+                actorUserId.ToString());
+
+        if (actor is null)
+        {
+            return Unauthorized();
+        }
+
+        var credentialError =
+            await ValidateSensitiveCredentialsAsync(
+                actor,
+                request.CurrentPassword,
+                request.TwoFactorCode);
+
+        if (credentialError is not null)
+        {
+            return credentialError;
+        }
+
         if (!Enum.TryParse<FullWorthSubscriptionTier>(
                 request.Tier,
                 ignoreCase: true,
@@ -212,6 +232,29 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
+        if (request.IsActive)
+        {
+            var actor =
+                await userManager.FindByIdAsync(
+                    actorUserId.ToString());
+
+            if (actor is null)
+            {
+                return Unauthorized();
+            }
+
+            var credentialError =
+                await ValidateSensitiveCredentialsAsync(
+                    actor,
+                    request.CurrentPassword,
+                    request.TwoFactorCode);
+
+            if (credentialError is not null)
+            {
+                return credentialError;
+            }
+        }
+
         if (!Enum.TryParse<UserProgramType>(
                 programName,
                 ignoreCase: true,
@@ -245,7 +288,7 @@ public sealed class AdminUsersController(
 
     private async Task<ActionResult?> ValidateSensitiveCredentialsAsync(
         ApplicationUser user,
-        string currentPassword,
+        string? currentPassword,
         string? twoFactorCode)
     {
         if (string.IsNullOrWhiteSpace(currentPassword) ||
@@ -321,11 +364,15 @@ public sealed record AssignRoleRequest(
 public sealed record GrantEntitlementRequest(
     string Tier,
     int? DurationDays,
-    bool GrantsLifetimeAccess);
+    bool GrantsLifetimeAccess,
+    string CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record SetProgramMembershipRequest(
     bool IsActive,
-    DateTimeOffset? EndsAtUtc);
+    DateTimeOffset? EndsAtUtc,
+    string? CurrentPassword,
+    string? TwoFactorCode);
 
 public sealed record AdminUserSummary(
     Guid Id,
