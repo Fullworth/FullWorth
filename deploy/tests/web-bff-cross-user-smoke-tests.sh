@@ -141,10 +141,12 @@ chmod 700 "$fixture_root/bin/curl"
 primary_password="$temp_dir/primary-password"
 foreign_password="$temp_dir/foreign-password"
 foreign_two_factor="$temp_dir/foreign-two-factor"
+foreign_recovery="$temp_dir/foreign-recovery"
 printf '%s\n' 'PrimaryPassword!123456' > "$primary_password"
 printf '%s\n' 'ForeignPassword!123456' > "$foreign_password"
 printf '%s\n' '123456' > "$foreign_two_factor"
-chmod 600 "$primary_password" "$foreign_password" "$foreign_two_factor"
+printf '%s\n' 'recovery-code' > "$foreign_recovery"
+chmod 600 "$primary_password" "$foreign_password" "$foreign_two_factor" "$foreign_recovery"
 
 run_ownership()
 {
@@ -160,6 +162,15 @@ run_ownership()
         "$@" \
         sh "$fixture_root/deploy/smoke-web-bff-cross-user.sh" 'https://web.example.test'
 }
+
+: > "$curl_log"
+if run_ownership \
+    BILLWATCH_WEB_OWNERSHIP_FOREIGN_RECOVERY_CODE_FILE="$foreign_recovery" \
+    > /dev/null 2>&1; then
+    fail "ownership harness accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "ownership harness made a request before rejecting recovery-only mode."
 
 : > "$curl_log"
 run_ownership > "$temp_dir/happy.out"
