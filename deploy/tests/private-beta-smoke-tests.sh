@@ -128,6 +128,10 @@ password_file="$temp_dir/password"
 printf '%s\n' 'SmokePassword!123456' > "$password_file"
 chmod 600 "$password_file"
 
+recovery_file="$temp_dir/recovery"
+printf '%s\n' 'recovery-code' > "$recovery_file"
+chmod 600 "$recovery_file"
+
 run_smoke()
 {
     env \
@@ -140,6 +144,15 @@ run_smoke()
             'https://api.example.test' \
             'https://web.example.test'
 }
+
+: > "$curl_log"
+if run_smoke \
+    BILLWATCH_SMOKE_RECOVERY_CODE_FILE="$recovery_file" \
+    > /dev/null 2>&1; then
+    fail "private-beta smoke accepted recovery-only mode even though export reauthentication requires an authenticator code."
+fi
+[ ! -s "$curl_log" ] ||
+    fail "private-beta smoke made a request before rejecting recovery-only mode."
 
 : > "$curl_log"
 run_smoke \
