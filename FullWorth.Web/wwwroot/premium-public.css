@@ -553,3 +553,156 @@ html[data-theme="dark"] .site-shell .product-window {
 .site-shell .brand-mark-small {
     filter: drop-shadow(0 7px 14px rgba(37, 82, 221, 0.16));
 }
+
+
+/* 2026 premium public refresh */
+
+.site-shell {
+    background:
+        radial-gradient(circle at 50% -12%, rgba(91, 109, 248, 0.16), transparent 34rem),
+        radial-gradient(circle at 90% 18%, rgba(95, 162, 255, 0.08), transparent 28rem),
+        radial-gradient(circle at 7% 42%, rgba(139, 104, 255, 0.055), transparent 25rem),
+        var(--bw-bg);
+}
+
+.site-shell .site-header {
+    border-bottom-color: color-mix(in srgb, var(--bw-border) 76%, transparent);
+    background: color-mix(in srgb, var(--bw-header-bg) 86%, transparent);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.site-shell .header-inner {
+    height: 78px;
+}
+
+.site-shell .brand-name {
+    font-size: 1.23rem;
+    font-weight: 820;
+    letter-spacing: -0.052em;
+}
+
+.site-shell .desktop-nav {
+    padding: 5px;
+    gap: 5px;
+    border: 1px solid var(--bw-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bw-surface-soft) 72%, transparent);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.site-shell .desktop-nav a {
+    padding: 8px 13px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.site-shell .desktop-nav a:hover {
+    background: var(--bw-surface-hover);
+}
+
+.site-shell .header-action {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 14px;
+}
+
+.site-shell .header-action:last-child {
+    border-color: rgba(91, 109, 248, 0.22);
+    background: linear-gradient(145deg, #465ff1, #687aff);
+    color: #fff;
+    box-shadow: 0 11px 28px rgba(70, 96, 242, 0.22);
+}
+
+.site-shell .header-action:last-child:hover {
+    color: #fff;
+    box-shadow: 0 16px 34px rgba(70, 96, 242, 0.3);
+}
+
+.site-shell .auth-page {
+    position: relative;
+    isolation: isolate;
+}
+
+.site-shell .auth-page::before {
+    content: "";
+    position: absolute;
+    inset: 36px max(20px, calc((100vw - 1220px) / 2)) 72px;
+    z-index: -2;
+    border-radius: 46px;
+    background:
+        radial-gradient(circle at 12% 10%, rgba(91, 109, 248, 0.11), transparent 24rem),
+        radial-gradient(circle at 92% 80%, rgba(117, 90, 255, 0.085), transparent 28rem);
+    pointer-events: none;
+}
+
+.site-shell .auth-card {
+    border-color: color-mix(in srgb, var(--bw-border) 90%, transparent);
+    background:
+        linear-gradient(150deg, rgba(255, 255, 255, 0.055), transparent 42%),
+        color-mix(in srgb, var(--bw-surface-soft) 94%, transparent);
+    box-shadow:
+        0 34px 90px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html:not([data-theme="light"]) .site-shell .auth-card,
+html[data-theme="dark"] .site-shell .auth-card {
+    box-shadow:
+        0 38px 100px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.site-shell .field input {
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.site-shell .field input:hover {
+    border-color: var(--bw-border-strong);
+}
+
+.site-shell .auth-submit {
+    background: linear-gradient(145deg, #4059ef, #6678ff 62%, #7f8cff);
+}
+
+.site-shell .site-footer {
+    position: relative;
+    overflow: hidden;
+}
+
+.site-shell .site-footer::before {
+    content: "";
+    position: absolute;
+    width: 420px;
+    height: 220px;
+    right: -130px;
+    bottom: -150px;
+    border-radius: 50%;
+    background: rgba(91, 109, 248, 0.08);
+    filter: blur(28px);
+    pointer-events: none;
+}
+
+.site-shell .footer-inner {
+    min-height: 172px;
+}
+
+.site-shell .footer-brand p {
+    max-width: 320px;
+    line-height: 1.6;
+}
+
+@media (max-width: 820px) {
+    .site-shell .desktop-nav {
+        display: none;
+    }
+
+    .site-shell .header-inner {
+        height: 70px;
+    }
+
+    .site-shell .auth-page::before {
+        inset: 20px 12px 40px;
+        border-radius: 28px;
+    }
+}
