@@ -35,11 +35,16 @@ public sealed class WebBffRefreshSecurityTests
             new SingleClientFactory(
                 handler);
 
+        var webSessionExpiresAtUtc =
+            DateTimeOffset.UtcNow.AddHours(6);
+
         var authentication =
             CreateAuthentication(
                 oldAccessToken,
                 oldRefreshToken,
-                DateTimeOffset.UtcNow.AddSeconds(10));
+                DateTimeOffset.UtcNow.AddSeconds(10),
+                webSessionExpiresAtUtc:
+                    webSessionExpiresAtUtc);
 
         var context =
             CreateHttpContext(
@@ -106,6 +111,11 @@ public sealed class WebBffRefreshSecurityTests
             authentication.LastSignInProperties
                 .GetTokenValue(
                     "refresh_token"));
+
+        Assert.Equal(
+            webSessionExpiresAtUtc,
+            authentication.LastSignInProperties
+                .ExpiresUtc);
 
         var body =
             await ExecuteResultAsync(
@@ -489,7 +499,8 @@ public sealed class WebBffRefreshSecurityTests
             string accessToken,
             string refreshToken,
             DateTimeOffset expiresAtUtc,
-            string? sessionStoreKey = null)
+            string? sessionStoreKey = null,
+            DateTimeOffset? webSessionExpiresAtUtc = null)
     {
         var identity =
             new ClaimsIdentity(
@@ -514,6 +525,9 @@ public sealed class WebBffRefreshSecurityTests
                 accessToken,
                 refreshToken,
                 expiresAtUtc);
+
+        properties.ExpiresUtc =
+            webSessionExpiresAtUtc;
 
         if (!string.IsNullOrWhiteSpace(
                 sessionStoreKey))
