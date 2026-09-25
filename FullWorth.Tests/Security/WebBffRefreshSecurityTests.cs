@@ -113,9 +113,11 @@ public sealed class WebBffRefreshSecurityTests
                     "refresh_token"));
 
         Assert.Equal(
-            webSessionExpiresAtUtc,
+            webSessionExpiresAtUtc
+                .ToUnixTimeSeconds(),
             authentication.LastSignInProperties
-                .ExpiresUtc);
+                .ExpiresUtc?
+                .ToUnixTimeSeconds());
 
         var body =
             await ExecuteResultAsync(
