@@ -16,14 +16,14 @@
         <div class="admin-user-confirm">
             <span>@L["Confirm: {0}", _pending.Label]</span>
 
-            @if (RequiresRoleAssignmentReauthentication)
+            @if (RequiresPrivilegeGrantReauthentication)
             {
                 <label class="admin-user-reauth-field">
                     <span>@L["Current password"]</span>
                     <input type="password"
                            autocomplete="current-password"
                            disabled="@_isBusy"
-                           @bind="_roleCurrentPassword" />
+                           @bind="_reauthCurrentPassword" />
                 </label>
 
                 <label class="admin-user-reauth-field">
@@ -33,7 +33,7 @@
                            autocomplete="one-time-code"
                            maxlength="12"
                            disabled="@_isBusy"
-                           @bind="_roleTwoFactorCode" />
+                           @bind="_reauthTwoFactorCode" />
                 </label>
             }
 
@@ -125,19 +125,13 @@
     private PendingMutation? _pending;
     private bool _isBusy;
     private string? _errorMessage;
-    private string _roleCurrentPassword = string.Empty;
-    private string _roleTwoFactorCode = string.Empty;
+    private string _reauthCurrentPassword = string.Empty;
+    private string _reauthTwoFactorCode = string.Empty;
 
     private bool IsOwner => HasRole(OwnerRole);
 
-    private bool RequiresRoleAssignmentReauthentication =>
-        _pending is
-        {
-            Kind:
-                AdminMutationKind.Role,
-            MakeActive:
-                true
-        };
+    private bool RequiresPrivilegeGrantReauthentication =>
+        _pending?.MakeActive == true;
 
     private void QueueAdminRole() =>
         QueueRole(AdminRole, !HasRole(AdminRole));
@@ -209,7 +203,7 @@
         {
             _pending = null;
             _errorMessage = null;
-            ClearRoleReauthentication();
+            ClearPrivilegeGrantReauthentication();
         }
     }
 
@@ -220,12 +214,12 @@
             return;
         }
 
-        if (RequiresRoleAssignmentReauthentication &&
+        if (RequiresPrivilegeGrantReauthentication &&
             string.IsNullOrWhiteSpace(
-                _roleCurrentPassword))
+                _reauthCurrentPassword))
         {
             _errorMessage =
-                L["Enter your current password before assigning a staff role."];
+                L["Enter your current password before granting access."];
             return;
         }
 
@@ -250,7 +244,6 @@
             }
 
             _pending = null;
-            ClearRoleReauthentication();
             Navigation.NavigateTo("/app/admin", forceLoad: true);
         }
         catch (JSException exception)
@@ -265,6 +258,7 @@
         }
         finally
         {
+            ClearPrivilegeGrantReauthentication();
             _isBusy = false;
         }
     }
@@ -292,12 +286,12 @@
             new AdminAssignRoleRequest
             {
                 CurrentPassword =
-                    _roleCurrentPassword,
+                    _reauthCurrentPassword,
                 TwoFactorCode =
                     string.IsNullOrWhiteSpace(
-                        _roleTwoFactorCode)
+                        _reauthTwoFactorCode)
                         ? null
-                        : _roleTwoFactorCode.Trim()
+                        : _reauthTwoFactorCode.Trim()
             });
     }
 
@@ -312,7 +306,17 @@
             new AdminProgramRequest
             {
                 IsActive = mutation.MakeActive,
-                EndsAtUtc = null
+                EndsAtUtc = null,
+                CurrentPassword =
+                    mutation.MakeActive
+                        ? _reauthCurrentPassword
+                        : null,
+                TwoFactorCode =
+                    mutation.MakeActive &&
+                    !string.IsNullOrWhiteSpace(
+                        _reauthTwoFactorCode)
+                        ? _reauthTwoFactorCode.Trim()
+                        : null
             });
     }
 
@@ -327,7 +331,14 @@
             {
                 Tier = "Standard",
                 DurationDays = mutation.DurationDays,
-                GrantsLifetimeAccess = mutation.GrantsLifetimeAccess
+                GrantsLifetimeAccess = mutation.GrantsLifetimeAccess,
+                CurrentPassword =
+                    _reauthCurrentPassword,
+                TwoFactorCode =
+                    string.IsNullOrWhiteSpace(
+                        _reauthTwoFactorCode)
+                        ? null
+                        : _reauthTwoFactorCode.Trim()
             });
     }
 
@@ -355,12 +366,12 @@
         return L["FullWorth could not complete that administrative change."];
     }
 
-    private void ClearRoleReauthentication()
+    private void ClearPrivilegeGrantReauthentication()
     {
-        _roleCurrentPassword =
+        _reauthCurrentPassword =
             string.Empty;
 
-        _roleTwoFactorCode =
+        _reauthTwoFactorCode =
             string.Empty;
     }
 
@@ -451,6 +462,8 @@
     {
         public bool IsActive { get; set; }
         public DateTimeOffset? EndsAtUtc { get; set; }
+        public string? CurrentPassword { get; set; }
+        public string? TwoFactorCode { get; set; }
     }
 
     private sealed class AdminEntitlementRequest
@@ -458,5 +471,7 @@
         public string Tier { get; set; } = string.Empty;
         public int? DurationDays { get; set; }
         public bool GrantsLifetimeAccess { get; set; }
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string? TwoFactorCode { get; set; }
     }
 }
