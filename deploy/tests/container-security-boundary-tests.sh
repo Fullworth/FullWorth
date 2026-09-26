@@ -221,10 +221,10 @@ if len(edge_ports) != 3:
 
 api_environment = services["api"].get("environment", {})
 
-if api_environment.get("ReverseProxy__KnownProxies__0") != "172.28.0.10":
+if api_environment.get("ReverseProxy__KnownProxies__0") != "172.30.0.10":
     fail("API trusted proxy must be pinned to the API-edge Caddy address.")
 
-if web_environment.get("ReverseProxy__KnownProxies__0") != "172.29.0.10":
+if web_environment.get("ReverseProxy__KnownProxies__0") != "172.31.0.10":
     fail("Web trusted proxy must be pinned to the Web-edge Caddy address.")
 
 print("Container security boundary tests passed.")

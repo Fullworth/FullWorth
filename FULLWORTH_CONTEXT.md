@@ -27,6 +27,14 @@ This deployment supersedes the prior live release `9d156f4c88d3929cc3873983a66e0
 
 This checkpoint does not prove the remaining real-environment beta gates such as controlled cross-user fixture evidence, Plaid provider observation/Hosted Link human completion, representative statement/OCR review, controlled reboot, provider-enforced backup immutability, or qualified legal review.
 
+## Release preparation / email delivery checkpoint — 2026-09-25
+
+PR #351 passed exact-head FullWorth CI #996 and dependency security #105 on `d021c32f7623528dccaa75cf1b22cfca27e46fbc`, then squash-merged into development as `9a1a867ce55ce9e28532d41da833f65105f6e050`. Anonymous registration, forgot-password and confirmation resend now keep the same public response during email-provider rejection, transport failure and timeout. Generic event 4101 records delivery failure without recipient/token/provider details. Thirteen regression cases cover provider failures, state preservation, sanitized exceptions and propagation boundaries. Delivery is not guaranteed by the public acknowledgement; no retry queue was added.
+
+Release preparation combines that development head with master `d798e29ac916a9ab7b23b1f987c6cdbc09826cd1`. A three-way merge is conflict-free; master's `SECURITY.md` is retained unchanged. The promotion needs its own exact-head CI before merging to master. This checkpoint does not claim the promotion has passed, been merged or been deployed.
+
+The broader enumeration audit remains open for external registration/linking and timing behavior. Existing private-beta real-environment acceptance gates remain open. Production deployment must use the guarded workflow against the final approved master SHA, followed by release/readiness verification.
+
 ## Direct registration/confirmation response checkpoint — 2026-09-25
 
 PR #350 closes the direct API duplicate-registration disclosure. A narrowly scoped endpoint filter unwraps Identity's registration result and maps duplicate-only email/username errors to the same empty 200 response as successful registration. Other validation failures remain failures. Framework registration, legal acceptance, password validation, rate limiting, and existing account state remain intact.

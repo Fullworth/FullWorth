@@ -78,6 +78,51 @@ grep -Fq \
     "$root_dir/compose.production.yml" ||
     fail "production Web is not wired to the Apple external identity secret."
 
+grep -Fq \
+    'ReverseProxy__KnownProxies__0: 172.30.0.10' \
+    "$root_dir/compose.production.yml" ||
+    fail "production API trusted proxy does not match the transition-safe API edge subnet."
+
+grep -Fq \
+    'ReverseProxy__KnownProxies__0: 172.31.0.10' \
+    "$root_dir/compose.production.yml" ||
+    fail "production Web trusted proxy does not match the transition-safe Web edge subnet."
+
+grep -Fq \
+    'subnet: 172.30.0.0/24' \
+    "$root_dir/compose.production.yml" ||
+    fail "production API edge subnet can collide with the legacy public edge."
+
+grep -Fq \
+    'subnet: 172.31.0.0/24' \
+    "$root_dir/compose.production.yml" ||
+    fail "production Web edge subnet is not pinned to the transition-safe range."
+
+grep -Fq -- \
+    '--requirepass "$$REDIS_PASSWORD"' \
+    "$root_dir/compose.production.yml" ||
+    fail "Redis password interpolation is consumed by Compose instead of the container."
+
+grep -Fq \
+    'REDISCLI_AUTH="$$REDIS_PASSWORD"' \
+    "$root_dir/compose.production.yml" ||
+    fail "Redis healthcheck password interpolation is consumed by Compose instead of the container."
+
+grep -Fq \
+    'aliases:' \
+    "$root_dir/compose.production.yml" ||
+    fail "production database network alias is missing."
+
+grep -Fq \
+    'compose up \' \
+    "$root_dir/deploy/run-backup.sh" ||
+    fail "backup wrapper does not reconcile the database service before capture."
+
+grep -Fq \
+    'previous_verified_release=$(cat "$release_file")' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "stopped-runtime recovery does not preserve the pre-deploy backup gate."
+
 grep -qx \
     'User=deploy' \
     "$backup_service" ||
@@ -344,6 +389,7 @@ if grep -q 'stop api web web-session-cache edge' "$command_log"; then fail "pre-
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_SECURITY=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "HTTP security failure changed the last verified release marker."
+grep -qx 'backup' "$command_log" || fail "stopped-runtime recovery did not create a pre-deploy recovery point."
 grep -q 'stop api web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."

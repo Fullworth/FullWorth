@@ -171,9 +171,33 @@ do
         fail "the built $image_name image revision does not match BILLWATCH_RELEASE_ID."
 done
 
+backup_required=false
+
 if [ "$running_public_count" -eq 3 ]; then
+    backup_required=true
+elif [ "$running_public_count" -eq 0 ] &&
+     [ -f "$release_file" ] &&
+     [ ! -L "$release_file" ]; then
+    previous_verified_release=$(cat "$release_file")
+
+    case "$previous_verified_release" in
+        *[!0-9a-f]*|'')
+            fail "the existing verified release marker is invalid."
+            ;;
+    esac
+
+    [ "${#previous_verified_release}" -eq 40 ] ||
+        fail "the existing verified release marker is invalid."
+
+    # A previous failed deployment can leave the public stack intentionally
+    # stopped while PostgreSQL remains healthy. Preserve the same pre-change
+    # recovery guarantee before attempting the repaired candidate.
+    backup_required=true
+fi
+
+if [ "$backup_required" = true ]; then
     printf '%s\n' \
-        "Creating a verified encrypted recovery point before replacing the running FullWorth release."
+        "Creating a verified encrypted recovery point before replacing the last verified FullWorth release."
 
     "$root_dir/deploy/run-backup.sh" \
         "$root_dir"

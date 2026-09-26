@@ -123,6 +123,16 @@ if [ "$api_was_running" = true ]; then
         api
 fi
 
+# Reconcile the database service onto the current Compose data network before
+# starting the one-shot backup container. This restores the service-level
+# "database" DNS alias after a guarded network-topology transition.
+compose up \
+    --detach \
+    --wait \
+    --wait-timeout 120 \
+    --no-build \
+    database
+
 compose --profile operations run \
     --rm \
     backup \

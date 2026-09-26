@@ -57,6 +57,7 @@ case "$*" in
             '0.0.0.0:443->443/udp'
         ;;
     *".NetworkSettings.Networks"*api-id)
+        printf '\n'
         if [ "${BILLWATCH_TEST_BAD_API_NETWORKS:-false}" = true ]; then
             printf '%s\n' \
                 billwatch_api_edge \
@@ -72,6 +73,7 @@ case "$*" in
         fi
         ;;
     *".NetworkSettings.Networks"*web-id)
+        printf '\n'
         printf '%s\n' \
             billwatch_web_api \
             billwatch_web_edge \
@@ -79,12 +81,15 @@ case "$*" in
             billwatch_web_session
         ;;
     *".NetworkSettings.Networks"*web-session-cache-id)
+        printf '\n'
         printf '%s\n' billwatch_web_session
         ;;
     *".NetworkSettings.Networks"*database-id)
+        printf '\n'
         printf '%s\n' billwatch_data
         ;;
     *".NetworkSettings.Networks"*edge-id)
+        printf '\n'
         printf '%s\n' \
             billwatch_api_edge \
             billwatch_edge_egress \
