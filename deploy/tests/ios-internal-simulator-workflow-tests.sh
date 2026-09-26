@@ -34,10 +34,31 @@ grep -Fq 'runs-on: macos-latest' "$workflow" ||
     fail "iOS build is not running on a macOS runner."
 grep -Fq 'dotnet workload install maui-ios --skip-manifest-update' "$workflow" ||
     fail "MAUI iOS workload installation is missing."
-grep -Fq 'RuntimeIdentifier=iossimulator-x64' "$workflow" ||
-    fail "workflow is not explicitly simulator-only."
+grep -Fq 'RuntimeIdentifier=iossimulator-arm64' "$workflow" ||
+    fail "workflow is not explicitly pinned to the arm64 simulator runtime."
 grep -Fq 'FullWorthApiBaseUrl=https://api.fullworth.org/' "$workflow" ||
     fail "iOS simulator build is not pinned to the canonical HTTPS API."
+
+grep -Fq 'dotnet restore FullWorth.Core/FullWorth.Core.csproj' "$workflow" ||
+    fail "shared Core restore is missing after the iOS-targeted restore."
+
+ios_restore_line=$(grep -Fn 'dotnet restore FullWorth.csproj' "$workflow" | head -n 1 | cut -d: -f1)
+core_restore_line=$(grep -Fn 'dotnet restore FullWorth.Core/FullWorth.Core.csproj' "$workflow" | head -n 1 | cut -d: -f1)
+
+[ -n "$ios_restore_line" ] ||
+    fail "could not locate the iOS-targeted restore."
+[ -n "$core_restore_line" ] ||
+    fail "could not locate the shared Core restore."
+[ "$ios_restore_line" -lt "$core_restore_line" ] ||
+    fail "shared Core must be restored after the iOS-targeted restore so its net10.0 assets are not overwritten."
+
+if grep -Fq 'iossimulator-x64' "$workflow"; then
+    fail "workflow must not produce an x64 simulator app on the arm64 macOS runner."
+fi
+
+if grep -Fq 'mapfile ' "$workflow"; then
+    fail "workflow must remain compatible with the macOS system Bash version."
+fi
 grep -Fq 'ios-simulator-smoke.sh' "$workflow" ||
     fail "workflow does not install and launch the built app in Simulator."
 grep -Fq 'actions/upload-artifact@v7' "$workflow" ||
