@@ -68,6 +68,56 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Select Xcode 26.0 required by .NET iOS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          selected_developer_dir=""
+
+          for xcode_app in /Applications/Xcode*.app
+          do
+            [ -d "$xcode_app" ] || continue
+
+            version=$(
+              DEVELOPER_DIR="$xcode_app/Contents/Developer" \
+                xcodebuild -version 2>/dev/null |
+                awk '/^Xcode / { print $2; exit }'
+            )
+
+            if [ "$version" = "26.0" ]; then
+              selected_developer_dir="$xcode_app/Contents/Developer"
+              break
+            fi
+          done
+
+          if [ -z "$selected_developer_dir" ]; then
+            printf '%s\n' \
+              "Xcode 26.0 is required by the installed .NET iOS workload but is not available on this runner." \
+              >&2
+            printf '%s\n' "Available Xcode installations:" >&2
+
+            for xcode_app in /Applications/Xcode*.app
+            do
+              [ -d "$xcode_app" ] || continue
+
+              version=$(
+                DEVELOPER_DIR="$xcode_app/Contents/Developer" \
+                  xcodebuild -version 2>/dev/null |
+                  head -n 1 ||
+                  true
+              )
+
+              printf '  %s: %s\n' "$xcode_app" "$version" >&2
+            done
+
+            exit 65
+          fi
+
+          printf 'DEVELOPER_DIR=%s\n' "$selected_developer_dir" >> "$GITHUB_ENV"
+
+          DEVELOPER_DIR="$selected_developer_dir" xcodebuild -version
+
       - name: Cache NuGet packages
         uses: actions/cache@v6
         with:
