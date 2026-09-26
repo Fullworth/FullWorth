@@ -11,6 +11,11 @@ fail()
 }
 
 env_file=${1:-.env.ai}
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+runtime_manifest="$script_dir/ai-runtime/llama-cpp-server-b11176.manifest"
+
+[ -f "$runtime_manifest" ] ||
+    fail "approved llama.cpp runtime manifest is missing."
 
 [ -f "$env_file" ] || fail "environment file is missing."
 [ ! -L "$env_file" ] || fail "environment file must not be a symbolic link."
@@ -61,6 +66,26 @@ read_value()
             exit
         }
     ' "$env_file"
+}
+
+read_manifest_value()
+{
+    key=$1
+
+    count=$(awk -F= -v key="$key" '
+        $1 == key { count++ }
+        END { print count + 0 }
+    ' "$runtime_manifest")
+
+    [ "$count" -eq 1 ] ||
+        fail "$key must appear exactly once in the approved runtime manifest."
+
+    awk -v prefix="$key=" '
+        index($0, prefix) == 1 {
+            print substr($0, length(prefix) + 1)
+            exit
+        }
+    ' "$runtime_manifest"
 }
 
 reject_placeholder()
@@ -133,8 +158,135 @@ do
 done
 
 printf '%s\n' "$image" |
-    grep -Eq '^ghcr\.io/ggml-org/llama\.cpp:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}$' ||
+    grep -Eq '^ghcr\.io/ggml-org/llama\.cpp:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}
+case "$model_path" in
+    /*) ;;
+    *) fail "FULLWORTH_LOCAL_AI_MODEL_PATH must be an absolute path." ;;
+esac
+
+[ -f "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must reference an existing regular file."
+
+[ ! -L "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must not be a symbolic link."
+
+[ -s "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must not be empty."
+
+printf '%s\n' "$model_sha256" |
+    grep -Eq '^[0-9a-f]{64}$' ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_SHA256 must be 64 lowercase hexadecimal characters."
+
+command -v sha256sum >/dev/null 2>&1 ||
+    fail "sha256sum is required to verify the model artifact."
+
+actual_model_sha256=$(
+    sha256sum "$model_path" |
+    awk '{ print $1 }'
+) || fail "model SHA-256 could not be calculated."
+
+[ "$actual_model_sha256" = "$model_sha256" ] ||
+    fail "model SHA-256 does not match the approved artifact."
+
+[ "${#api_key}" -ge 32 ] ||
+    fail "FULLWORTH_LOCAL_AI_API_KEY must contain at least 32 characters."
+
+printf '%s\n' "$model_alias" |
+    grep -Eq '^[A-Za-z0-9._-]{1,80}$' ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_ALIAS contains unsupported characters or length."
+
+validate_integer_range     FULLWORTH_LOCAL_AI_CONTEXT_SIZE     "$context_size"     2048     65536
+
+validate_integer_range     FULLWORTH_LOCAL_AI_MAX_PREDICT     "$max_predict"     256     8192
+
+validate_integer_range     FULLWORTH_LOCAL_AI_THREADS     "$threads"     1     128
+
+validate_integer_range     FULLWORTH_LOCAL_AI_GPU_LAYERS     "$gpu_layers"     0     999
+
+printf '%s\n' "AI evaluation configuration valid."
+ ||
     fail "FULLWORTH_LOCAL_AI_IMAGE must pin the official llama.cpp image with an immutable sha256 digest."
+
+runtime_format=$(read_manifest_value FORMAT_VERSION)
+runtime_id=$(read_manifest_value RUNTIME_ID)
+runtime_repository=$(read_manifest_value UPSTREAM_REPOSITORY)
+runtime_tag=$(read_manifest_value IMAGE_TAG)
+runtime_digest=$(read_manifest_value IMAGE_DIGEST)
+approved_image=$(read_manifest_value IMAGE)
+runtime_license=$(read_manifest_value LICENSE)
+
+[ "$runtime_format" = "fullworth-ai-runtime-manifest-v1" ] ||
+    fail "unsupported approved runtime manifest format."
+
+[ "$runtime_id" = "llama-cpp-server-b11176" ] ||
+    fail "unexpected approved runtime id."
+
+[ "$runtime_repository" = "ggml-org/llama.cpp" ] ||
+    fail "unexpected approved runtime repository."
+
+[ "$runtime_tag" = "server-b11176" ] ||
+    fail "unexpected approved runtime tag."
+
+printf '%s\n' "$runtime_digest" |
+    grep -Eq '^sha256:[0-9a-f]{64}
+case "$model_path" in
+    /*) ;;
+    *) fail "FULLWORTH_LOCAL_AI_MODEL_PATH must be an absolute path." ;;
+esac
+
+[ -f "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must reference an existing regular file."
+
+[ ! -L "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must not be a symbolic link."
+
+[ -s "$model_path" ] ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_PATH must not be empty."
+
+printf '%s\n' "$model_sha256" |
+    grep -Eq '^[0-9a-f]{64}$' ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_SHA256 must be 64 lowercase hexadecimal characters."
+
+command -v sha256sum >/dev/null 2>&1 ||
+    fail "sha256sum is required to verify the model artifact."
+
+actual_model_sha256=$(
+    sha256sum "$model_path" |
+    awk '{ print $1 }'
+) || fail "model SHA-256 could not be calculated."
+
+[ "$actual_model_sha256" = "$model_sha256" ] ||
+    fail "model SHA-256 does not match the approved artifact."
+
+[ "${#api_key}" -ge 32 ] ||
+    fail "FULLWORTH_LOCAL_AI_API_KEY must contain at least 32 characters."
+
+printf '%s\n' "$model_alias" |
+    grep -Eq '^[A-Za-z0-9._-]{1,80}$' ||
+    fail "FULLWORTH_LOCAL_AI_MODEL_ALIAS contains unsupported characters or length."
+
+validate_integer_range     FULLWORTH_LOCAL_AI_CONTEXT_SIZE     "$context_size"     2048     65536
+
+validate_integer_range     FULLWORTH_LOCAL_AI_MAX_PREDICT     "$max_predict"     256     8192
+
+validate_integer_range     FULLWORTH_LOCAL_AI_THREADS     "$threads"     1     128
+
+validate_integer_range     FULLWORTH_LOCAL_AI_GPU_LAYERS     "$gpu_layers"     0     999
+
+printf '%s\n' "AI evaluation configuration valid."
+ ||
+    fail "approved runtime digest is malformed."
+
+expected_image="ghcr.io/$runtime_repository:$runtime_tag@$runtime_digest"
+
+[ "$approved_image" = "$expected_image" ] ||
+    fail "approved runtime image does not match its manifest metadata."
+
+[ "$runtime_license" = "MIT" ] ||
+    fail "unexpected approved runtime license identifier."
+
+[ "$image" = "$approved_image" ] ||
+    fail "FULLWORTH_LOCAL_AI_IMAGE does not match the approved llama.cpp runtime."
 
 case "$model_path" in
     /*) ;;
