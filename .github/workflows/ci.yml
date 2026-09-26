@@ -385,7 +385,7 @@ jobs:
           chmod 600 "$env_file"
 
           cat > "$env_file" <<EOF
-          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
           FULLWORTH_LOCAL_AI_MODEL_PATH=$model_file
           FULLWORTH_LOCAL_AI_MODEL_SHA256=$model_sha
           FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum
@@ -399,7 +399,7 @@ jobs:
           sh deploy/validate-ai-evaluation-env.sh "$env_file"
 
           cat > "$env_file" <<EOF
-          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
           FULLWORTH_LOCAL_AI_MODEL_PATH=$model_file
           FULLWORTH_LOCAL_AI_MODEL_SHA256=7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5
           FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum
@@ -417,7 +417,7 @@ jobs:
             exit 1
           fi
 
-          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:0000000000000000000000000000000000000000000000000000000000000000 \
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af \
           FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum \
           FULLWORTH_LOCAL_AI_MODEL_PATH="$model_file" \
           docker compose --file compose.ai-evaluation.yml config >/dev/null
