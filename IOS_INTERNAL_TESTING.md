@@ -7,7 +7,7 @@ FullWorth still contains a transitional .NET MAUI iOS target while the authentic
 `.github/workflows/ios-internal-simulator.yml` builds the current `net10.0-ios` target on a GitHub-hosted macOS runner using:
 
 - the canonical production API endpoint, `https://api.fullworth.org/`;
-- an `iossimulator-x64` runtime identifier;
+- an `iossimulator-arm64` runtime identifier;
 - no Apple signing certificate, provisioning profile, or persistent signing secret.
 
 The workflow boots an isolated iPhone Simulator, installs the exact app it built, launches FullWorth, verifies the app container exists, then uploads a SHA-256-addressed ZIP artifact for 14 days.
@@ -16,7 +16,7 @@ The resulting ZIP is an iOS Simulator artifact. It **cannot be installed on a ph
 
 ## Why start here
 
-A simulator build gives FullWorth an iOS compile/install/launch gate now, without asking for Apple signing credentials and without committing signing material to source control. It also catches iOS-specific MAUI regressions independently from Android.
+The GitHub macOS runner used by this workflow is arm64, so the simulator build is pinned to `iossimulator-arm64`. The workflow also restores `FullWorth.Core` after the iOS-targeted restore so the shared project keeps its required `net10.0` asset target. A simulator build gives FullWorth an iOS compile/install/launch gate now, without asking for Apple signing credentials and without committing signing material to source control. It also catches iOS-specific MAUI regressions independently from Android.
 
 Physical-device/TestFlight distribution is a later signing milestone. When that work starts, certificates and provisioning material must be supplied through protected GitHub/Apple mechanisms rather than committed to this repository or pasted into chat.
 
