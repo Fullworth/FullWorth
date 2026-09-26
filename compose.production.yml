@@ -52,7 +52,7 @@ services:
       IdentityEmail__FromAddress: ${BILLWATCH_IDENTITY_EMAIL_FROM_ADDRESS:-security@billbeacon.net}
       IdentityEmail__FromName: ${BILLWATCH_IDENTITY_EMAIL_FROM_NAME:-FullWorth}
       IdentityEmail__PublicWebBaseUrl: https://${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
-      ReverseProxy__KnownProxies__0: 172.28.0.10
+      ReverseProxy__KnownProxies__0: 172.30.0.10
       StatementAi__OpenAI__Enabled: "false"
       StatementAi__Shadow__Enabled: "false"
       StatementAi__Shadow__AllowProviderCalls: "false"
@@ -102,7 +102,7 @@ services:
       DataProtection__KeysPath: /var/lib/billwatch-web/keys
       WebSession__RedisHost: web-session-cache
       WebSession__RedisPassword: ${BILLWATCH_WEB_SESSION_REDIS_PASSWORD:?Set BILLWATCH_WEB_SESSION_REDIS_PASSWORD}
-      ReverseProxy__KnownProxies__0: 172.29.0.10
+      ReverseProxy__KnownProxies__0: 172.31.0.10
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=256m,uid=1654,gid=1654,mode=0700
     volumes:
@@ -172,7 +172,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - data
+      data:
+        aliases:
+          - database
 
   backup:
     profiles:
@@ -280,9 +282,9 @@ services:
     networks:
       edge_egress:
       api_edge:
-        ipv4_address: 172.28.0.10
+        ipv4_address: 172.30.0.10
       web_edge:
-        ipv4_address: 172.29.0.10
+        ipv4_address: 172.31.0.10
 
 networks:
   data:
@@ -291,12 +293,12 @@ networks:
     internal: true
     ipam:
       config:
-        - subnet: 172.28.0.0/24
+        - subnet: 172.30.0.0/24
   web_edge:
     internal: true
     ipam:
       config:
-        - subnet: 172.29.0.0/24
+        - subnet: 172.31.0.0/24
   web_api:
     internal: true
   web_session:
