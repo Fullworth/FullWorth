@@ -37,7 +37,8 @@ public sealed class FullWorthReferenceDecoderTests
             architecture.VocabularySize,
             first.Length);
 
-        Assert.Equal(first, second);
+        Assert.True(
+            first.SequenceEqual(second));
 
         Assert.All(
             first,
@@ -80,13 +81,13 @@ public sealed class FullWorthReferenceDecoderTests
             decoder.ForwardAllTokenLogits(
                 [begin, a, b]);
 
-        Assert.Equal(
-            prefix[0],
-            extended[0]);
+        Assert.True(
+            prefix[0].SequenceEqual(
+                extended[0]));
 
-        Assert.Equal(
-            prefix[1],
-            extended[1]);
+        Assert.True(
+            prefix[1].SequenceEqual(
+                extended[1]));
     }
 
     [Fact]
@@ -141,9 +142,8 @@ public sealed class FullWorthReferenceDecoderTests
         float[] next =
             decoder.ForwardNextTokenLogits(tokens);
 
-        Assert.Equal(
-            all[^1],
-            next);
+        Assert.True(
+            all[^1].SequenceEqual(next));
     }
 
     [Fact]
@@ -165,11 +165,17 @@ public sealed class FullWorthReferenceDecoderTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             decoder.ForwardNextTokenLogits(
-                [FullWorthByteTokenizer.PaddingToken]));
+                new[]
+                {
+                    FullWorthByteTokenizer.PaddingToken
+                }));
 
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             decoder.ForwardNextTokenLogits(
-                [architecture.VocabularySize]));
+                new[]
+                {
+                    architecture.VocabularySize
+                }));
 
         int[] tooLong =
             Enumerable
