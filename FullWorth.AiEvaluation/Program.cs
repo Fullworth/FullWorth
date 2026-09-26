@@ -69,9 +69,8 @@ internal static class Program
                         SearchOption.TopDirectoryOnly)
                     .Select(
                         directory =>
-                            Path.GetFileName(
-                                Path.TrimEndingDirectorySeparator(
-                                    directory)))
+                            new DirectoryInfo(
+                                directory).Name)
                     .Order(
                         StringComparer.Ordinal)
                     .ToArray();
