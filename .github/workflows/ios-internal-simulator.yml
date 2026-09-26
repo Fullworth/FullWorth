@@ -83,7 +83,12 @@ jobs:
         run: >-
           dotnet restore FullWorth.csproj
           -p:TargetFramework=net10.0-ios
-          -p:RuntimeIdentifier=iossimulator-x64
+          -p:RuntimeIdentifier=iossimulator-arm64
+          -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+
+      - name: Restore shared Core target
+        run: >-
+          dotnet restore FullWorth.Core/FullWorth.Core.csproj
           -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
       - name: Build unsigned iOS simulator app
@@ -92,7 +97,7 @@ jobs:
           --framework net10.0-ios
           --configuration Release
           --no-restore
-          -p:RuntimeIdentifier=iossimulator-x64
+          -p:RuntimeIdentifier=iossimulator-arm64
           -p:FullWorthApiBaseUrl=https://api.fullworth.org/
           -p:ArchiveOnBuild=false
 
@@ -102,16 +107,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          mapfile -t apps < <(
-            find "$GITHUB_WORKSPACE/bin/Release/net10.0-ios"               -type d               -name 'FullWorth.app'               -path '*iossimulator-x64*'               -prune               -print
-          )
+          apps_file="$RUNNER_TEMP/fullworth-ios-apps.txt"
 
-          if [ "${#apps[@]}" -ne 1 ]; then
-            printf '%s\n'               "Expected exactly one iOS simulator FullWorth.app but found ${#apps[@]}."               >&2
+          find "$GITHUB_WORKSPACE/bin/Release/net10.0-ios" \
+            -type d \
+            -name 'FullWorth.app' \
+            -path '*iossimulator-arm64*' \
+            -prune \
+            -print > "$apps_file"
+
+          app_count=$(grep -c . "$apps_file" || true)
+
+          if [ "$app_count" -ne 1 ]; then
+            printf '%s\n' \
+              "Expected exactly one iOS simulator FullWorth.app but found $app_count." \
+              >&2
             exit 65
           fi
 
-          app_path="${apps[0]}"
+          app_path=$(sed -n '1p' "$apps_file")
           bundle_id=$(
             /usr/libexec/PlistBuddy               -c 'Print :CFBundleIdentifier'               "$app_path/Info.plist"
           )
@@ -172,7 +186,7 @@ jobs:
             echo "- Bundle ID: \`${{ steps.app.outputs.bundle_id }}\`"
             echo "- Package: \`${{ steps.package.outputs.artifact_name }}\`"
             echo "- SHA-256: \`${{ steps.package.outputs.sha256 }}\`"
-            echo "- Runtime: iOS Simulator (x64)"
+            echo "- Runtime: iOS Simulator (arm64)"
             echo "- Retention: 14 days"
             echo
             echo "This artifact is simulator-only. It is not signed for a physical iPhone and is not an App Store/TestFlight package."
