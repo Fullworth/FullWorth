@@ -43,7 +43,7 @@ data=json.load(sys.stdin)
 items=[
     r for r in data.get("runtimes", [])
     if r.get("isAvailable") and
-       r.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
+       r.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-26-0")
 ]
 if not items:
     raise SystemExit(1)
