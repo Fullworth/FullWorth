@@ -37,8 +37,8 @@ grep -Fq 'dotnet workload install maui-ios --skip-manifest-update' "$workflow" |
 
 grep -Fq 'Select Xcode 26.0 required by .NET iOS' "$workflow" ||
     fail "workflow does not explicitly select the Xcode version required by the .NET iOS workload."
-grep -Fq 'if [ "$version" = "26.0" ]; then' "$workflow" ||
-    fail "workflow does not pin Xcode 26.0 exactly."
+grep -Fq '26.0|26.0.*)' "$workflow" ||
+    fail "workflow does not accept the Xcode 26.0 patch line required by the .NET iOS workload."
 grep -Fq 'DEVELOPER_DIR=%s' "$workflow" ||
     fail "selected Xcode developer directory is not exported for later steps."
 grep -Fq 'xcodebuild -version' "$workflow" ||
