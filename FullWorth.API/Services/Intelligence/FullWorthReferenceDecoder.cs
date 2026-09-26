@@ -139,6 +139,20 @@ public sealed class FullWorthReferenceDecoder
     public float[] GetNextTokenLogits(
         ReadOnlySpan<int> tokens)
     {
+        IReadOnlyList<float[]> logits =
+            GetTokenLogits(tokens);
+
+        return logits[^1];
+    }
+
+    /// <summary>
+    /// Returns vocabulary logits at every prefix position. This wider surface
+    /// exists so tests can prove the causal mask: appending future tokens must
+    /// not change logits for already-computed prefix positions.
+    /// </summary>
+    public IReadOnlyList<float[]> GetTokenLogits(
+        ReadOnlySpan<int> tokens)
+    {
         ValidateTokens(tokens);
 
         int sequenceLength =
@@ -318,44 +332,55 @@ public sealed class FullWorthReferenceDecoder
                 sequenceLength,
                 hiddenSize);
 
-        int finalOffset =
-            checked(
-                (sequenceLength - 1) *
-                hiddenSize);
+        var logitsByPosition =
+            new float[sequenceLength][];
 
-        var logits =
-            new float[
-                _architecture.VocabularySize];
-
-        for (int token = 0;
-             token < logits.Length;
-             token++)
+        for (int position = 0;
+             position < sequenceLength;
+             position++)
         {
-            int embeddingOffset =
+            int hiddenOffset =
                 checked(
-                    token *
+                    position *
                     hiddenSize);
 
-            float sum = 0f;
+            var logits =
+                new float[
+                    _architecture.VocabularySize];
 
-            for (int feature = 0;
-                 feature < hiddenSize;
-                 feature++)
+            for (int token = 0;
+                 token < logits.Length;
+                 token++)
             {
-                sum +=
-                    normalized[
-                        finalOffset +
-                        feature] *
-                    tokenEmbedding[
-                        embeddingOffset +
-                        feature];
+                int embeddingOffset =
+                    checked(
+                        token *
+                        hiddenSize);
+
+                float sum = 0f;
+
+                for (int feature = 0;
+                     feature < hiddenSize;
+                     feature++)
+                {
+                    sum +=
+                        normalized[
+                            hiddenOffset +
+                            feature] *
+                        tokenEmbedding[
+                            embeddingOffset +
+                            feature];
+                }
+
+                logits[token] =
+                    sum;
             }
 
-            logits[token] =
-                sum;
+            logitsByPosition[position] =
+                logits;
         }
 
-        return logits;
+        return logitsByPosition;
     }
 
     private void ValidateTokens(
