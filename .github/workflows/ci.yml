@@ -94,9 +94,16 @@ jobs:
         if: steps.backend_changes.outputs.required == 'true'
         run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
+      - name: Restore offline AI evaluation runner
+        if: steps.backend_changes.outputs.required == 'true'
+        run: dotnet restore FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+
       - name: Build backend
         if: steps.backend_changes.outputs.required == 'true'
         run: dotnet build FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-restore
+      - name: Build offline AI evaluation runner
+        if: steps.backend_changes.outputs.required == 'true'
+        run: dotnet build FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release --no-restore
 
       - name: Install EF migration verifier
         if: steps.backend_changes.outputs.required == 'true'
