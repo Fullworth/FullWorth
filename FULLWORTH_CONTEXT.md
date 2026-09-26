@@ -5,7 +5,7 @@ Last updated: 2026-09-26
 
 ## Active AI evaluation checkpoint — 2026-09-26
 
-The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. The abandoned first-party tokenizer/decoder/initializer/checkpoint/training source and its dedicated tests have been removed from the active product tree. Do not reintroduce that path unless a separately justified R&D effort is approved.
+The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. PR #389 removes the abandoned first-party tokenizer/decoder/initializer/checkpoint/training source and its dedicated tests from the active product tree while preserving the local Qwen/llama.cpp path. Do not reintroduce that path unless a separately justified R&D effort is approved.
 
 PR #371 added the isolated local evaluation runtime and its fail-closed configuration validation. Exact head `9f1e76c6fb9d5b70781f4e9cbab802d1d39fe448` passed FullWorth CI #1038 and dependency security #144 before merge.
 
