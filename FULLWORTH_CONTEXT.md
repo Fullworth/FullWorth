@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-25
 
+
+## Guarded production deployment checkpoint — 2026-09-25
+
+GitHub Actions production deploy run #7 (`36221860082`) completed successfully for exact `master` release `7e8571a26447538db249c862ad009487cce119bc`. This is the current verified live production release.
+
+The guarded workflow verified the requested SHA against current `master`, used pinned SSH host verification, passed production configuration preflight, built release-tagged API/Web/backup images, created a verified encrypted pre-replacement recovery snapshot beginning `15a529e1844b...`, and completed the guarded deployment without bypassing the repository deployment script.
+
+Post-deploy server-side verification passed release-integrity, production exposure, runtime, API/Web readiness, private-beta readiness, active backup-timer, retention-configuration, and backup/runtime alert-configuration checks. Independent GitHub-runner readiness probes also passed for `https://api.fullworth.org` and `https://fullworth.org`.
+
+This deployment supersedes the prior live release `9d156f4c88d3929cc3873983a66e06938672c0c9`. That prior release had deployed successfully but its workflow run was marked failed because Docker network inspection emitted a blank line that the exposure verifier treated as an unexpected network. PR #354 corrected only that verifier normalization and its regression fixture; the production topology itself was already healthy.
+
+This checkpoint does not prove the remaining real-environment beta gates such as controlled cross-user fixture evidence, Plaid provider observation/Hosted Link human completion, representative statement/OCR review, controlled reboot, provider-enforced backup immutability, or qualified legal review.
+
 ## Direct registration/confirmation response checkpoint — 2026-09-25
 
 PR #350 closes the direct API duplicate-registration disclosure. A narrowly scoped endpoint filter unwraps Identity's registration result and maps duplicate-only email/username errors to the same empty 200 response as successful registration. Other validation failures remain failures. Framework registration, legal acceptance, password validation, rate limiting, and existing account state remain intact.
@@ -375,7 +388,7 @@ In particular:
 
 Before trusted external beta invitations:
 
-1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against deployed release `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`.
+1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against deployed release `7e8571a26447538db249c862ad009487cce119bc`.
 2. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
 3. Exercise the controlled Plaid connect/update lifecycle with a suitable account and complete the Hosted Link human-interaction observation.
 4. With explicit approval, upload controlled representative PDF/scanned-PDF/JPG/PNG fixtures and review extraction/OCR fields plus bill-change explanations against operator-known facts.
@@ -395,6 +408,6 @@ Before trusted external beta invitations:
 3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. The cookie review is complete through PRs #337/#339. PR #349 adds confirmed/unconfirmed email-recovery response coverage. PR #350 closes direct registration disclosure and verifies confirmation responses. Continue with mail-provider failure behavior and external registration/linking under the still-open enumeration item; patch only confirmed gaps.
 4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
 5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
-6. The last operator-reported live production release remains `81a74f11941f6ed67ba5de61b9ef186ef09bae3c`. Do not claim newer GitHub code is deployed without guarded deployment evidence.
+6. The current verified live production release is `7e8571a26447538db249c862ad009487cce119bc`, proven by successful guarded production deploy run #7 (`36221860082`). Do not claim newer GitHub code is deployed without guarded deployment evidence.
 7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
 8. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, container confinement, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build or architecture check pass.
