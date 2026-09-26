@@ -147,7 +147,8 @@ public sealed record FullWorthModelCheckpointManifest(
         string value,
         string fieldName)
     {
-        if (value.Length != 64)
+        if (string.IsNullOrEmpty(value) ||
+            value.Length != 64)
             throw InvalidManifest(
                 $"{fieldName} must be a lowercase SHA-256 digest.");
 
