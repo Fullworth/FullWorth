@@ -257,6 +257,7 @@ if (hostingConfiguration.UseForwardedHeaders)
     app.UseForwardedHeaders();
 }
 
+app.UseFullWorthRequestCorrelation();
 app.UseRequestLocalization();
 
 if (!app.Environment.IsDevelopment())
