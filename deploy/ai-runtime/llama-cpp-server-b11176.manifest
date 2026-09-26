@@ -1,0 +1,7 @@
+FORMAT_VERSION=fullworth-ai-runtime-manifest-v1
+RUNTIME_ID=llama-cpp-server-b11176
+UPSTREAM_REPOSITORY=ggml-org/llama.cpp
+IMAGE_TAG=server-b11176
+IMAGE_DIGEST=sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
+IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
+LICENSE=MIT
