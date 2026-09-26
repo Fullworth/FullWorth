@@ -37,8 +37,8 @@ grep -Fq 'dotnet workload install maui-ios --skip-manifest-update' "$workflow" |
 
 grep -Fq 'Select Xcode 26.0 required by .NET iOS' "$workflow" ||
     fail "workflow does not explicitly select the Xcode version required by the .NET iOS workload."
-grep -Fq 'xcode_app="/Applications/Xcode_26.0.app"' "$workflow" ||
-    fail "workflow does not use the pinned Xcode 26.0 compatibility symlink."
+grep -Fq 'xcode_app="/Applications/Xcode_26.0.1.app"' "$workflow" ||
+    fail "workflow does not use the real Xcode 26.0.1 bundle path."
 grep -Fq '26.0|26.0.*)' "$workflow" ||
     fail "workflow does not accept the Xcode 26.0 patch line required by the .NET iOS workload."
 grep -Fq 'com.apple.CoreSimulator.SimRuntime.iOS-26-0' "$workflow" ||
