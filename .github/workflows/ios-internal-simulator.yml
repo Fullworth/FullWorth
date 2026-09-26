@@ -107,17 +107,7 @@ jobs:
           runtime_count=$(
             DEVELOPER_DIR="$developer_dir" \
               xcrun simctl list runtimes --json |
-              python3 -c '
-import json, sys
-data=json.load(sys.stdin)
-items=[
-    runtime for runtime in data.get("runtimes", [])
-    if runtime.get("isAvailable") and
-       runtime.get("identifier", "").startswith(
-           "com.apple.CoreSimulator.SimRuntime.iOS-26-0")
-]
-print(len(items))
-'
+              python3 -c 'import json,sys; data=json.load(sys.stdin); print(sum(1 for runtime in data.get("runtimes", []) if runtime.get("isAvailable") and runtime.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-26-0")))'
           )
 
           if [ "$runtime_count" -lt 1 ]; then
