@@ -47,9 +47,8 @@ public sealed class FullWorthFirstPartyModelProvenanceTests
             first,
             value => value != 0f);
 
-        Assert.NotEqual(
-            first,
-            unrelated);
+        Assert.False(
+            first.SequenceEqual(unrelated));
     }
 
     [Fact]
@@ -87,9 +86,9 @@ public sealed class FullWorthFirstPartyModelProvenanceTests
                 FullWorthModelTensorRole.FeedForwardInputProjection,
                 7);
 
-        Assert.NotEqual(baseline, differentSeed);
-        Assert.NotEqual(baseline, differentName);
-        Assert.NotEqual(baseline, differentRole);
+        Assert.False(baseline.SequenceEqual(differentSeed));
+        Assert.False(baseline.SequenceEqual(differentName));
+        Assert.False(baseline.SequenceEqual(differentRole));
     }
 
     [Fact]
