@@ -221,6 +221,15 @@ if len(edge_ports) != 3:
 
 api_environment = services["api"].get("environment", {})
 
+for key in (
+    "StatementAi__OpenAI__Enabled",
+    "StatementAi__Local__Enabled",
+    "StatementAi__Shadow__Enabled",
+    "StatementAi__Shadow__AllowProviderCalls",
+):
+    if str(api_environment.get(key, "")).lower() != "false":
+        fail(f"Production API must keep {key} explicitly disabled.")
+
 if api_environment.get("ReverseProxy__KnownProxies__0") != "172.30.0.10":
     fail("API trusted proxy must be pinned to the API-edge Caddy address.")
 
