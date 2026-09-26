@@ -463,8 +463,7 @@ jobs:
 
               def do_POST(self):
                   length = int(self.headers.get("Content-Length", "0"))
-                  if length:
-                      self.rfile.read(length)
+                  raw_body = self.rfile.read(length) if length else b""
 
                   if self.path != "/v1/chat/completions":
                       self.send_json(404, {"error": "not_found"})
@@ -474,15 +473,42 @@ jobs:
                       self.send_json(401, {"error": "unauthorized"})
                       return
 
+                  try:
+                      request = json.loads(raw_body)
+                      response_format = request["response_format"]
+                      schema = response_format["json_schema"]
+                      schema_body = schema["schema"]
+                      valid_schema = (
+                          response_format["type"] == "json_schema"
+                          and schema["name"] == "fullworth_runtime_smoke"
+                          and schema["strict"] is True
+                          and schema_body["type"] == "object"
+                          and schema_body["properties"] == {
+                              "ok": {"type": "boolean"}
+                          }
+                          and schema_body["required"] == ["ok"]
+                          and schema_body["additionalProperties"] is False
+                      )
+                  except (ValueError, KeyError, TypeError):
+                      valid_schema = False
+
+                  if not valid_schema:
+                      self.send_json(400, {"error": "invalid_schema"})
+                      return
+
                   self.send_json(
                       200,
                       {
                           "choices": [
                               {
+                                  "finish_reason": "stop",
                                   "message": {
                                       "role": "assistant",
-                                      "content": "OK",
-                                  }
+                                      "content": json.dumps(
+                                          {"ok": True},
+                                          separators=(",", ":"),
+                                      ),
+                                  },
                               }
                           ]
                       },

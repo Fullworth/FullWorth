@@ -108,7 +108,7 @@ done
 [ "$health_ready" = "true" ] ||
     fail "llama.cpp did not become healthy on loopback."
 
-smoke_request='{"model":"fullworth-local","messages":[{"role":"user","content":"Reply with exactly OK. /no_think"}],"temperature":0,"max_tokens":32,"stream":false}'
+smoke_request='{"model":"fullworth-local","messages":[{"role":"user","content":"Return the JSON object required by the response schema. /no_think"}],"response_format":{"type":"json_schema","json_schema":{"name":"fullworth_runtime_smoke","strict":true,"schema":{"type":"object","properties":{"ok":{"type":"boolean"}},"required":["ok"],"additionalProperties":false}}},"temperature":0,"max_tokens":32,"stream":false}'
 
 unauthorized_status=$(
     printf '%s' "$smoke_request" |
@@ -126,10 +126,28 @@ authorized_status=$(
 [ "$authorized_status" = "200" ] ||
     fail "authenticated inference probe did not succeed."
 
-grep -Eq '"choices"[[:space:]]*:' "$response_file" ||
-    fail "authenticated inference response is missing choices."
+python3 - "$response_file" <<'PY'
+import json
+import sys
 
-grep -Eq '"message"[[:space:]]*:' "$response_file" ||
-    fail "authenticated inference response is missing a message."
+valid = False
+try:
+    with open(sys.argv[1], encoding="utf-8") as response_file:
+        response = json.load(response_file)
+    choice = response["choices"][0]
+    candidate = json.loads(choice["message"]["content"])
+    valid = (
+        choice.get("finish_reason") == "stop"
+        and candidate == {"ok": True}
+    )
+except (OSError, ValueError, KeyError, IndexError, TypeError):
+    valid = False
+
+if not valid:
+    sys.exit(1)
+PY
+
+[ "$?" -eq 0 ] ||
+    fail "authenticated inference did not return the requested structured JSON."
 
 printf '%s\n' "AI evaluation runtime check passed."
