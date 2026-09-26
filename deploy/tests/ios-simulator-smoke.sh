@@ -11,6 +11,30 @@ fail()
     exit 1
 }
 
+run_with_timeout()
+{
+    timeout_seconds=$1
+    shift
+
+    python3 - "$timeout_seconds" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout_seconds = float(sys.argv[1])
+command = sys.argv[2:]
+
+try:
+    completed = subprocess.run(
+        command,
+        timeout=timeout_seconds,
+        check=False)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+
+sys.exit(completed.returncode)
+PY
+}
+
 [ -n "$app_path" ] ||
     fail "app path is required."
 [ -n "$expected_bundle_id" ] ||
@@ -29,7 +53,9 @@ info_plist="$app_path/Info.plist"
     fail "app Info.plist is missing."
 
 actual_bundle_id=$(
-    /usr/libexec/PlistBuddy         -c 'Print :CFBundleIdentifier'         "$info_plist"
+    /usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleIdentifier' \
+        "$info_plist"
 )
 
 [ "$actual_bundle_id" = "$expected_bundle_id" ] ||
@@ -41,89 +67,75 @@ runtime_id=$(
 import json, sys
 data=json.load(sys.stdin)
 items=[
-    r for r in data.get("runtimes", [])
-    if r.get("isAvailable") and
-       r.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-26-0")
+    runtime for runtime in data.get("runtimes", [])
+    if runtime.get("isAvailable") and
+       runtime.get("identifier", "").startswith(
+           "com.apple.CoreSimulator.SimRuntime.iOS-26-0")
 ]
 if not items:
     raise SystemExit(1)
-items.sort(key=lambda r: tuple(int(x) for x in r.get("version", "0").split(".")))
-print(items[-1]["identifier"])
+print(items[0]["identifier"])
 '
-) || fail "no available iOS Simulator runtime was found."
+) || fail "no available iOS 26.0 Simulator runtime was found."
 
-device_type_id=$(
-    xcrun simctl list devicetypes --json |
+udid=$(
+    xcrun simctl list devices --json |
         python3 -c '
 import json, sys
+runtime_id=sys.argv[1]
 data=json.load(sys.stdin)
-items=[
-    d for d in data.get("devicetypes", [])
-    if d.get("name", "").startswith("iPhone")
+devices=[
+    device for device in data.get("devices", {}).get(runtime_id, [])
+    if device.get("isAvailable") and
+       device.get("name", "").startswith("iPhone")
 ]
-if not items:
+if not devices:
     raise SystemExit(1)
 preferred=[
-    d for d in items
-    if "Pro" in d.get("name", "")
+    device for device in devices
+    if "Pro" in device.get("name", "")
 ]
-choice=(preferred or items)[-1]
-print(choice["identifier"])
-'
-) || fail "no iPhone Simulator device type was found."
-
-device_name="FullWorth-CI-$$"
-udid=$(
-    xcrun simctl create         "$device_name"         "$device_type_id"         "$runtime_id"
-) || fail "could not create the iOS Simulator device."
+choice=(preferred or devices)[0]
+print(choice["udid"])
+' "$runtime_id"
+) || fail "no preinstalled iPhone Simulator is available for iOS 26.0."
 
 cleanup()
 {
     if [ -n "${udid:-}" ]; then
-        xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
-        xcrun simctl delete "$udid" >/dev/null 2>&1 || true
+        xcrun simctl terminate \
+            "$udid" \
+            "$expected_bundle_id" >/dev/null 2>&1 ||
+            true
+
+        xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
+            true
     fi
 }
 trap cleanup EXIT HUP INT TERM
 
+xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
+    true
+
+run_with_timeout 60 \
+    xcrun simctl erase "$udid" ||
+    fail "could not reset the iOS 26.0 Simulator within 60 seconds."
+
 xcrun simctl boot "$udid" ||
-    fail "could not boot the iOS Simulator device."
+    fail "could not boot the iOS 26.0 Simulator."
 
-attempt=0
-while [ "$attempt" -lt 90 ]
-do
-    state=$(
-        xcrun simctl list devices --json |
-            python3 -c '
-import json, sys
-udid=sys.argv[1]
-data=json.load(sys.stdin)
-for devices in data.get("devices", {}).values():
-    for device in devices:
-        if device.get("udid") == udid:
-            print(device.get("state", ""))
-            raise SystemExit(0)
-raise SystemExit(1)
-' "$udid"
-    ) || state=""
+run_with_timeout 180 \
+    xcrun simctl bootstatus "$udid" -b ||
+    fail "iOS 26.0 Simulator did not finish booting within 180 seconds."
 
-    if [ "$state" = "Booted" ]; then
-        break
-    fi
-
-    attempt=$((attempt + 1))
-    sleep 2
-done
-
-[ "$state" = "Booted" ] ||
-    fail "iOS Simulator did not reach Booted state within 180 seconds."
-
-xcrun simctl install "$udid" "$app_path" ||
-    fail "FullWorth could not be installed into the iOS Simulator."
+run_with_timeout 90 \
+    xcrun simctl install "$udid" "$app_path" ||
+    fail "FullWorth could not be installed into the iOS Simulator within 90 seconds."
 
 launch_output=$(
-    xcrun simctl launch "$udid" "$expected_bundle_id"
-) || fail "FullWorth could not be launched in the iOS Simulator."
+    run_with_timeout 60 \
+        xcrun simctl launch "$udid" "$expected_bundle_id"
+) || fail "FullWorth could not be launched in the iOS Simulator within 60 seconds."
 
 printf '%s\n' "$launch_output" |
     grep -Fq "$expected_bundle_id:" ||
@@ -131,7 +143,12 @@ printf '%s\n' "$launch_output" |
 
 sleep 3
 
-xcrun simctl get_app_container     "$udid"     "$expected_bundle_id"     app >/dev/null ||
+run_with_timeout 30 \
+    xcrun simctl get_app_container \
+        "$udid" \
+        "$expected_bundle_id" \
+        app >/dev/null ||
     fail "FullWorth app container was not available after launch."
 
-printf '%s\n'     "FullWorth iOS simulator install/launch smoke passed for $expected_bundle_id."
+printf '%s\n' \
+    "FullWorth iOS simulator install/launch smoke passed for $expected_bundle_id."
