@@ -34,6 +34,15 @@ grep -Fq 'runs-on: macos-latest' "$workflow" ||
     fail "iOS build is not running on a macOS runner."
 grep -Fq 'dotnet workload install maui-ios --skip-manifest-update' "$workflow" ||
     fail "MAUI iOS workload installation is missing."
+
+grep -Fq 'Select Xcode 26.0 required by .NET iOS' "$workflow" ||
+    fail "workflow does not explicitly select the Xcode version required by the .NET iOS workload."
+grep -Fq 'if [ "$version" = "26.0" ]; then' "$workflow" ||
+    fail "workflow does not pin Xcode 26.0 exactly."
+grep -Fq 'DEVELOPER_DIR=%s' "$workflow" ||
+    fail "selected Xcode developer directory is not exported for later steps."
+grep -Fq 'xcodebuild -version' "$workflow" ||
+    fail "selected Xcode version is not verified."
 grep -Fq 'RuntimeIdentifier=iossimulator-arm64' "$workflow" ||
     fail "workflow is not explicitly pinned to the arm64 simulator runtime."
 grep -Fq 'FullWorthApiBaseUrl=https://api.fullworth.org/' "$workflow" ||
