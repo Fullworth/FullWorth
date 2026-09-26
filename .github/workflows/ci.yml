@@ -374,6 +374,7 @@ jobs:
         if: steps.container_changes.outputs.required == 'true'
         run: |
           sh -n deploy/validate-ai-evaluation-env.sh
+          sh -n deploy/verify-approved-ai-model.sh
 
           model_file="$(mktemp)"
           env_file="$(mktemp)"
@@ -396,6 +397,25 @@ jobs:
           EOF
 
           sh deploy/validate-ai-evaluation-env.sh "$env_file"
+
+          cat > "$env_file" <<EOF
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          FULLWORTH_LOCAL_AI_MODEL_PATH=$model_file
+          FULLWORTH_LOCAL_AI_MODEL_SHA256=7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5
+          FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum
+          FULLWORTH_LOCAL_AI_MODEL_ALIAS=fullworth-local
+          FULLWORTH_LOCAL_AI_CONTEXT_SIZE=8192
+          FULLWORTH_LOCAL_AI_MAX_PREDICT=4096
+          FULLWORTH_LOCAL_AI_THREADS=4
+          FULLWORTH_LOCAL_AI_GPU_LAYERS=0
+          EOF
+
+          sh deploy/verify-approved-ai-model.sh metadata-only "$env_file"
+
+          if sh deploy/verify-approved-ai-model.sh full "$env_file"; then
+            printf '%s\n' "Approved-model verifier accepted an unapproved file." >&2
+            exit 1
+          fi
 
           FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:0000000000000000000000000000000000000000000000000000000000000000 \
           FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum \
