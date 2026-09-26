@@ -1,7 +1,19 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
+
+## Active AI evaluation checkpoint — 2026-09-26
+
+The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. Do not extend the experimental decoder/training work as product AI.
+
+PR #371 added the isolated local evaluation runtime and its fail-closed configuration validation. Exact head `9f1e76c6fb9d5b70781f4e9cbab802d1d39fe448` passed FullWorth CI #1038 and dependency security #144 before merge.
+
+PR #372 pinned Qwen3-4B Q4_K_M at upstream revision `a9a60d009fa7ff9606305047c2bf77ac25dbec49`, 2,497,280,256 bytes, SHA-256 `7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5`, with Apache-2.0 recorded in the manifest. Exact head `431f835b91fcdc520ac655f6e749d94ec36aa131` passed FullWorth CI #1039 and dependency security #145 before merge as `6a99162d445eb56e86e52f4e3fa468a76dba04bb`. Model weights are not in Git. Neither merge enables production AI or AI-derived persistence.
+
+The original runtime-smoke PR #374 passed its own exact-head CI but fell behind and became unmergeable. PR #375 reapplies the smoke on the then-current `development` head. Before merging, verify its latest exact-head CI and dependency-security results; its backend/test and dependency-security checks passed, while Android and Linux container/visual gates were still running at the time of this checkpoint.
+
+Next: merge only after PR #375's exact head is green, then run the synthetic authenticated structured-output smoke against the pinned local model. That proves API compatibility only. Actual quality claims require an authorized private corpus, held-out cases, and predeclared thresholds. Keep customer statements out of Git and CI logs. Production AI stays disabled.
 
 ## Guarded production deployment checkpoint — 2026-09-25
 

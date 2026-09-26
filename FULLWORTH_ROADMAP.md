@@ -181,7 +181,7 @@ AI must not be the final authority for:
 
 A confident “we do not know yet” is preferable to an invented explanation.
 
-The committed AI direction is a first-party central FullWorth AI, developed and trained from scratch with FullWorth-owned model weights, rather than external AI providers or pretrained models. Section 19 defines the staged architecture initiative. This is planned work, not a claim that the current external-provider shadow implementation has been replaced. Deterministic code retains arithmetic, validation, persistence, historical comparison, thresholds, alert decisions, ownership, and security authority.
+The current AI direction is to evaluate existing, externally trained models through FullWorth's bounded server-side candidate-extraction contract. The first local evaluation candidate is Qwen3-4B Q4_K_M served by the pinned llama.cpp runtime. This is an evaluation choice, not production approval and not a claim of extraction quality. Existing deterministic code remains responsible for evidence validation, financial arithmetic, ownership, persistence, historical comparison, thresholds, and alerts. The earlier from-scratch model-training plan is superseded.
 
 ## 3.6 Production safety
 
@@ -1624,158 +1624,100 @@ Do not introduce distributed complexity before metrics justify it.
 
 ---
 
-# 19. Milestone 13 — First-party central FullWorth AI
+# 19. AI-assisted bill intelligence and model evaluation
 
-Priority: P2/P3
+Priority: P2 for isolated evaluation; production use remains gated.
 
-Status: Committed architecture direction; implementation and acceptance gates remain open.
+Status: Qwen3-4B is the first pinned local evaluation candidate. Runtime and quality acceptance are incomplete. No AI-derived persistence or production activation is approved.
 
-Goal: Build a FullWorth-owned central AI from scratch that securely interprets server-side financial evidence and returns validated, authorized, user-scoped results and explanations through FullWorth's API/BFF to the UI.
+Goal: Measure whether a locally served, externally trained model improves statement candidate extraction over FullWorth's deterministic parser while keeping all financial and security decisions deterministic.
 
-The model architecture, tokenizer, data preparation, training process, randomly initialized weights, evaluation, and inference integration belong to FullWorth. No external AI provider, pretrained foundation model, pretrained weights, or teacher-model distillation is the basis of this initiative. General-purpose numerical libraries, compilers, operating systems, and GPU drivers are infrastructure dependencies to inventory and review; they do not supply a pretrained intelligence layer. Training scope and quality must be established experimentally, without promising a general-purpose frontier model.
+The active direction replaces the earlier plan to train a FullWorth model from scratch. Do not extend the experimental from-scratch training path as product work. Existing generic decoder experiments may remain in development temporarily, but they are not the selected statement-intelligence runtime and are not production components.
 
-Transactions continue to discover recurring bills; provider statements and other verified evidence explain changes. AI can propose structured facts and draft explanations, but its output is never evidence by itself. Credentials do not belong in model input. The central AI is a bounded server-side capability within the modular architecture, not an owner of every module's data or a reason to introduce unrestricted database access.
+The first evaluation artifact is recorded in `deploy/ai-models/qwen3-4b-q4_k_m.manifest`:
 
-Current-source baseline: `FullWorth.API/Services/Statements/BillStatementAiExtractionContracts.cs` already defines a candidate-only extractor contract; `BillStatementAiCandidateValidator.cs` validates candidates against document evidence. `Program.cs` still registers `OpenAiBillStatementAiExtractor`, and `BillStatementAiShadowOptions.cs` defaults shadow mode and provider calls off. The production statement processing path remains deterministic. These are reusable boundaries and a legacy external-provider implementation, not a completed first-party model. This roadmap change does not enable provider calls or AI-derived persistence.
+- Repository: `Qwen/Qwen3-4B-GGUF`
+- Revision: `a9a60d009fa7ff9606305047c2bf77ac25dbec49`
+- File: `Qwen3-4B-Q4_K_M.gguf`
+- Size: `2,497,280,256` bytes
+- SHA-256: `7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5`
+- License identifier recorded by the manifest: `Apache-2.0`
+- Runtime alias: `fullworth-local`
 
-Sequencing: preserve the active security checkpoint in `FULLWORTH_CONTEXT.md`, modular ownership rules, installed-device acceptance, and private-beta gates. Begin with the architecture boundary, then secure ingestion and the model/data pipeline, local GPU experiments, evaluation gates, user experience, and production inference. Privacy controls apply from the first dataset onward; provider independence applies to every stage and receives final end-to-end proof. Existing sections 19.1–19.4 remain the shadow-evaluation baseline for the new initiative. No milestone below is complete merely because this plan is committed.
+The model file is not committed to Git. Its manifest, exact hash/size verifier, and example configuration are repository-controlled. Artifact provenance and license notices must remain tied to the exact revision and file actually used.
 
-## 19.1 Private corpus
+## 19.1 Deterministic and security boundaries
 
-Keep outside Git.
+- Treat model output and all document text as untrusted candidate data. Source excerpts must match the supplied extracted/OCR text.
+- The model cannot choose a user, select resources, authorize access, perform arithmetic, write financial records, compare historical bills, set thresholds, or decide alerts.
+- Preserve module ownership contracts, `UserId + resource ID` checks, secure storage, no-store boundaries, and the absence of account/provider credentials and physical storage paths from model inputs and outputs.
+- Keep the API/BFF as the only product-facing path. Browser and MAUI clients must not call the model runtime directly.
+- Preserve explicit uncertainty and deterministic-only fallback. Never silently send a failed local inference request to another AI provider.
 
-Target representative corpus:
+Exit gate: contract and regression tests prove model output cannot cross ownership, persistence, arithmetic, or alert-decision boundaries.
 
-- multiple providers;
-- clean PDFs;
-- scanned PDFs;
-- image statements;
-- utilities;
-- telecom;
-- insurance;
-- subscriptions;
-- promotions;
-- fees;
-- ambiguous line items.
+## 19.2 Isolated local runtime
 
-## 19.2 Ground truth
+- Run the pinned llama.cpp server only through the development/evaluation Compose profile, bound to host loopback and an internal container network.
+- Require the separate local API key, exact approved model SHA-256 and size, and the pinned runtime image digest before startup.
+- Keep model weights outside Git, mount them read-only, and retain the current container confinement and bounded-resource settings.
+- The runtime health/authentication smoke proves service availability and request protection only. It does not establish extraction accuracy.
+- Do not change production Compose or production AI flags as part of local evaluation setup.
 
-Reviewer-approved fields.
+Exit gate: the exact model and runtime artifacts pass their manifests, and an authenticated local structured-output smoke succeeds without exposing output or secrets in logs.
 
-Measure:
+## 19.3 Private evaluation corpus and ground truth
 
-- precision;
-- recall;
-- candidate coverage;
-- provider-specific failures;
-- false explanation candidates;
-- cost;
-- latency.
+- Keep statement files, extracted text, labels, model responses, and case-level results outside Git.
+- Use synthetic or explicitly authorized representative documents. Product processing permission does not itself authorize model evaluation or training use.
+- Separate evaluation and held-out cases by document and provider to reduce leakage.
+- Preserve reviewer-approved expected fields, line items, supported evidence excerpts, ambiguity, and unknown labels.
+- Minimize identifiers before inference. Never include full account numbers, credentials, or unnecessary personal data.
 
-## 19.3 Deterministic baseline
+Measure provider coverage, field precision/recall, unsupported candidate rate, evidence support, abstention/unknown behavior, deterministic-baseline comparison, failures, latency, and resource use. Do not publish case-level data in CI logs or repository artifacts.
 
-Always compare AI against deterministic parser baseline.
+Exit gate: the corpus has documented authorization/provenance and reviewed ground truth; secret/private inputs remain outside GitHub.
 
-AI is justified only where it provides measurable incremental value.
+## 19.4 Evaluation thresholds
 
-## 19.4 Runtime policy
+Set numerical acceptance thresholds before running a held-out benchmark. Include at least:
 
-Even if shadow metrics pass:
+- correctness for amount, dates, currency, and supported line items;
+- precision/recall and candidate coverage;
+- source-excerpt fidelity and unsupported-claim rate;
+- uncertainty/abstention on absent or ambiguous facts;
+- false explanation/false alert behavior;
+- latency, memory, and CPU/GPU use.
 
-- do not automatically enable AI-derived persistence;
-- require separate architecture/security/product review;
-- validate cost controls;
-- preserve evidence requirement;
-- preserve deterministic final validation.
+Compare the local model to the deterministic extraction baseline. A result is useful only if it improves a defined task without weakening evidence or safety. Do not claim model quality from a health check, a single hand-picked statement, a schema-valid response, or synthetic CI fixtures.
 
-## 19.5 Stage 1 — Architecture and security boundary
+## 19.5 Actual-model benchmark
 
-- Define a first-party inference contract for bounded candidate facts, source references, uncertainty, and explanation drafts. Treat model outputs and document instructions as untrusted input.
-- Keep authentication, authorization, ownership, resource selection, arithmetic, validation, persistence, historical comparison, thresholds, and alert decisions exclusively in deterministic code. The model cannot grant access, choose a user identity, execute tools, or mutate financial records.
-- Obtain data through owner-module contracts, preserving the modular-monolith boundaries in `ARCHITECTURE.md`; no direct reads of sibling modules' private persistence. Carry trusted server-established user/job context separately from model-generated fields.
-- Specify application ownership checks using `UserId + resource ID` and appropriate database ownership constraints within module boundaries. Recheck authorization before returning results; reject cross-user access without disclosing another user's resources, normally with 404.
-- Threat-model document prompt injection, malicious uploads, tenant mixing, memorization, output leakage, model artifact tampering, and resource exhaustion.
+- First prove the pinned model starts and completes a synthetic structured-output smoke through the same schema-constrained API shape used by the extractor.
+- Then run the authorized private corpus offline with the pinned model/runtime and the committed deterministic scorer. Record only aggregate metrics, model/runtime manifest identifiers, and safe run metadata in repository-visible results.
+- Inspect representative field-level errors privately before changing prompts, schema, model size, or extraction behavior.
+- Consider a larger model only when the measured 4B errors justify its added storage, latency, and resource cost.
 
-Exit gate: reviewed data-flow/security design, explicit module contracts, and planned denial tests demonstrate that the model has no security or financial decision authority.
+Exit gate: reproducible held-out measurements meet the thresholds from 19.4 and show a useful improvement over deterministic extraction without unsupported evidence claims.
 
-## 19.6 Stage 2 — Secure ingestion pipeline
+## 19.6 Product integration and rollout
 
-Target flow:
+- Keep local and external provider paths disabled by default unless explicitly configured for an isolated evaluation.
+- Shadow output remains non-persistent and cannot change the statement or bill state.
+- Any later user-facing explanation must be composed from validated evidence and deterministic amounts, with clear uncertainty and authorized evidence references.
+- Production serving requires a separately reviewed runtime, artifact integrity and provenance, least-privilege network boundaries, quotas/deadlines, overload behavior, monitoring, rollback, and kill switch.
+- Provider outages return deterministic results or a clear unavailable/unknown state. No provider fallback is allowed unless separately reviewed and deliberately implemented.
 
-Authenticated ingestion → owned secure storage → classification → text/OCR extraction → bounded model candidates → deterministic evidence/financial validation → owned Bill Stream matching → deterministic persistence/comparison/change detection → validated explanation → deterministic alert decision → authorized API/BFF result → user UI.
+Exit gate: exact-head CI, security review, held-out quality evidence, resource/load tests, failure/rollback drills, and separate product approval pass before production activation. Passing evaluation does not turn on AI-derived persistence.
 
-- Ingest raw financial data only through authenticated, authorized server-side paths. Preserve document signature/type/size checks, safe storage identifiers, encryption requirements, and bounded parsing resources.
-- Select the minimum evidence needed per job on the server. Never provide Plaid tokens, bearer/refresh tokens, passwords, full credentials, or physical storage paths to the model or UI. Minimize account identifiers and raw sensitive text in model inputs and result DTOs.
-- Carry ownership through ingestion, processing, retries, result storage, and delivery. Define idempotency, cancellation, timeout, failure/quarantine, and deletion-during-processing behavior.
-- Keep raw evidence in protected server storage. Send only authorized results and necessary evidence excerpts to the UI; existing separately authorized document access remains subject to its own ownership checks. Preserve no-store and PWA cache restrictions.
+## 19.7 Privacy, retention, and observability
 
-Exit gate: controlled fixtures prove normal processing, malformed-upload rejection, cross-user denial, safe retries/deletion, and absence of credentials/storage paths in outputs and logs.
+- Define separate access and retention rules for raw documents, extracted text, candidates, explanations, evaluation results, caches, and backups.
+- Keep all model prompts/responses containing financial data out of logs. Emit metadata-only diagnostics such as model/runtime versions, safe correlation ID, latency, resource use, and rejection category.
+- Make account deletion, corpus withdrawal, retention expiry, backup reconciliation, and incident response cover AI evaluation artifacts.
+- Do not claim a deleted source document can be removed from an already-trained model; the active plan does not authorize training on customer financial data.
 
-## 19.7 Stage 3 — Model and data pipeline from scratch
-
-- Build and version FullWorth's tokenizer, model architecture, random initialization, training code, dataset transformations, labels, checkpoints, and evaluation manifests.
-- Start with narrow evidence extraction and explanation tasks. Use synthetic, licensed, or explicitly authorized data with recorded provenance; live ingestion never implicitly authorizes training on a customer's financial records.
-- Keep sensitive corpora outside Git, restrict access, minimize/redact identifiers, and separate training, validation, and held-out evaluation sets by user/document/provider as appropriate to prevent leakage.
-- Preserve source-linked reviewer-approved ground truth, ambiguous cases, and explicit unknown labels. No externally generated model labels or distillation dependency substitutes for verified evidence.
-
-Exit gate: reproducible dataset/model manifests, documented data rights, isolation checks, and a small from-scratch training run with inspectable provenance.
-
-## 19.8 Stage 4 — Local GPU-first training and inference
-
-- Prefer the development GPU for ML-heavy matrix/tensor operations, training, and inference; benchmark GPU-suitable OCR/vision work separately against the from-scratch requirement.
-- Verify the actual local GPU, VRAM, driver, operating system, and compute-runtime compatibility before selecting a stack. Record measured memory use, throughput, latency, and CPU utilization; do not assume hardware support from prior discussion.
-- Keep API orchestration, database/I/O, deterministic financial/security controls, and ordinary compilation/testing on the CPU. Bound preprocessing workers, batch sizes, and concurrency to protect the weaker development CPU and available RAM/VRAM.
-- Support resumable checkpoints, out-of-memory handling, cancellation, and a deterministic product fallback when inference is unavailable. No silent fallback to an external AI provider.
-
-Exit gate: reproducible local GPU training and inference measurements demonstrate useful acceleration within explicit memory and CPU budgets. This is development evidence, not production-capacity proof.
-
-## 19.9 Stage 5 — Evaluation and safety gates
-
-- Extend sections 19.1–19.4 with held-out first-party model evaluation against deterministic extraction and explanation baselines.
-- Set numerical acceptance thresholds before evaluation for field accuracy, evidence support, unsupported claims, uncertainty/abstention, provider coverage, latency, and resource cost. Reject explanations that introduce unsupported facts or change deterministic amounts.
-- Test prompt injection, fabricated source references, conflicting documents, malformed model output, missing evidence, memorized sensitive data, and cross-user leakage through requests, caches, batches, and results.
-- Begin in isolated offline evaluation and then explicitly gated shadow mode. Passing shadow metrics does not enable AI-derived persistence or bypass separate architecture/security/product review.
-
-Exit gate: versioned held-out results meet predeclared quality/resource thresholds, boundary tests pass, and any critical security/privacy defect blocks promotion. Uncertainty remains visible and deterministic behavior remains available.
-
-## 19.10 Stage 6 — User-facing AI experience
-
-- Deliver approved explanations through the authenticated API/BFF; the browser and transitional MAUI client never call the inference worker directly.
-- Answer what changed, why, and how much it costs using server-computed monthly and annualized impact. Link necessary evidence and distinguish supported findings from “we do not know yet.”
-- Validate and safely render model text. Provide real loading, unavailable, error, correction, and insufficient-evidence states; preserve accessibility and localization.
-- Verify that each response contains only the requesting user's authorized results, with no raw ingestion payloads, credentials, internal paths, or unrelated evidence.
-
-Exit gate: end-to-end owned-result delivery, cross-user denial, evidence fidelity, correct deterministic amounts, and usable uncertainty/failure states are proven before user rollout.
-
-## 19.11 Stage 7 — Production inference architecture
-
-- Design a FullWorth-controlled inference runtime for its own versioned model artifacts. Keep training separate from production serving; do not depend on the developer's workstation for availability.
-- Start with the smallest deployable topology justified by measurements. Define authenticated internal calls, least-privilege worker access, network egress restrictions, quotas, bounded queues/concurrency, deadlines, and overload behavior without prematurely splitting the modular monolith.
-- Define tenant-isolated batching/caching, trusted model loading, artifact integrity/provenance, model/schema compatibility, rollout, rollback, and inference kill switches.
-- Load-test latency, throughput, GPU/CPU memory, and cost. Inference outages fall back to deterministic results or explicit unknown/unavailable states; they never trigger an external-provider call.
-
-Exit gate: production-capacity and isolation evidence, failure/rollback drills, and the normal exact-head CI and guarded release gates pass before production activation.
-
-## 19.12 Stage 8 — Privacy, retention, and observability
-
-- Specify separate purposes, access policies, and retention/deletion schedules for raw documents, extracted text, candidates, explanations, training corpora, checkpoints, caches, and backups before collecting them.
-- Keep training permission separate from product processing. Track dataset membership and define how consent withdrawal/account deletion affects future training and already-trained artifacts; do not claim that deleting a source record erases learned information. Establish retraining/artifact retirement requirements where needed.
-- Emit metadata-only operational signals such as model/version, safe correlation ID, latency, resource use, rejection category, and aggregate quality measures. Never log raw financial evidence, prompts/responses containing sensitive data, full account numbers, or credentials.
-- Verify access auditing, deletion propagation, retention expiry, backup/recovery reconciliation, and incident response. Staff diagnostics must not become arbitrary access to user evidence.
-
-Exit gate: reviewed privacy/retention policy and tested lifecycle/telemetry controls cover both inference and training artifacts; these controls are required throughout earlier stages.
-
-## 19.13 Stage 9 — Provider independence and migration completion
-
-- Replace the legacy external-provider extractor behind explicit first-party contracts in a separate reviewed implementation slice. Retain useful deterministic validators, scorers, corpus gates, and candidate schemas without carrying forward vendor-specific runtime assumptions.
-- Remove external AI SDK/configuration/credential and network-call requirements from the active training/inference path. Inventory model, tokenizer, OCR/vision, dataset, and runtime provenance so no pretrained component is silently presented as FullWorth-trained intelligence.
-- Demonstrate training from random initialization and serving owned artifacts with external AI credentials absent and external AI network access denied. Necessary banking/payment integrations are separate from the intelligence layer and do not gain access to model inputs.
-- Preserve deterministic-only operation, rollback, ownership constraints, and evidence gates. No external AI fallback is permitted. Removal of the existing adapter and provider independence must be verified in source and runtime evidence, not inferred from this roadmap.
-
-Exit gate for Milestone 13: all staged acceptance evidence is recorded, the first-party model adds measured value, provider-independent operation is proven, and user/production rollout passes its separate gates. AI never becomes the final authority for security, ownership, financial calculations, persistence, comparisons, thresholds, or alerts.
-
----
-
+Exit gate: reviewed privacy/retention controls and tests cover the full evaluation and inference lifecycle.
 # 20. Cross-cutting testing roadmap
 
 ## 20.1 Unit tests
