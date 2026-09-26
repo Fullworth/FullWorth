@@ -338,9 +338,8 @@ public sealed class FullWorthModelParameterInitializationTests
             second,
             secondSpec);
 
-        Assert.NotEqual(
-            first,
-            second);
+        Assert.False(
+            first.SequenceEqual(second));
     }
 
     [Fact]
