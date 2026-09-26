@@ -85,15 +85,17 @@ jobs:
                 awk '/^Xcode / { print $2; exit }'
             )
 
-            if [ "$version" = "26.0" ]; then
-              selected_developer_dir="$xcode_app/Contents/Developer"
-              break
-            fi
+            case "$version" in
+              26.0|26.0.*)
+                selected_developer_dir="$xcode_app/Contents/Developer"
+                break
+                ;;
+            esac
           done
 
           if [ -z "$selected_developer_dir" ]; then
             printf '%s\n' \
-              "Xcode 26.0 is required by the installed .NET iOS workload but is not available on this runner." \
+              "An Xcode 26.0.x installation is required by the installed .NET iOS workload but is not available on this runner." \
               >&2
             printf '%s\n' "Available Xcode installations:" >&2
 
