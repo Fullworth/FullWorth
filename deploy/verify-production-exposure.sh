@@ -53,6 +53,7 @@ assert_networks()
         docker inspect \
             --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' \
             "$id" |
+            sed '/^[[:space:]]*$/d' |
             sort
     )"
 
