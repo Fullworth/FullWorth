@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using System.Net;
 using FullWorth.API.Authorization;
@@ -860,6 +861,52 @@ if (useForwardedHeaders)
 {
     app.UseForwardedHeaders();
 }
+
+/*
+ * Every request receives a server-generated correlation identifier.
+ *
+ * Do not accept a client-supplied request ID as authoritative: attacker-
+ * controlled correlation values could inject misleading log context or carry
+ * user data into telemetry. The fixed 128-bit value is safe to show to users
+ * and operators and is also used as the ASP.NET Core TraceIdentifier.
+ *
+ * Register this before exception handling so the same logging scope covers
+ * downstream failures and the generated error response.
+ */
+app.Use(
+    async (
+        context,
+        next) =>
+    {
+        var requestId =
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(
+                        16))
+                .ToLowerInvariant();
+
+        context.TraceIdentifier =
+            requestId;
+
+        context.Response.OnStarting(
+            () =>
+            {
+                context.Response.Headers[
+                    "X-FullWorth-Request-Id"] =
+                    requestId;
+
+                return Task.CompletedTask;
+            });
+
+        using var requestScope =
+            app.Logger.BeginScope(
+                new Dictionary<string, object?>
+                {
+                    ["FullWorthRequestId"] =
+                        requestId
+                });
+
+        await next();
+    });
 
 if (app.Environment.IsDevelopment())
 {

@@ -21,6 +21,61 @@ public sealed class ApiSecurityHeaderTests
         AssertHeader(response, "Referrer-Policy", "no-referrer");
     }
 
+    [Fact]
+    public async Task Responses_UseServerGeneratedRequestIdInsteadOfClientValue()
+    {
+        const string spoofedRequestId =
+            "attacker-controlled-request-id";
+
+        await using var factory =
+            new FullWorthApiFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        client.DefaultRequestHeaders.Add(
+            "X-FullWorth-Request-Id",
+            spoofedRequestId);
+
+        using var firstResponse =
+            await client.GetAsync(
+                "/api/bank-accounts");
+
+        using var secondResponse =
+            await client.GetAsync(
+                "/api/bank-accounts");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            firstResponse.StatusCode);
+
+        var firstRequestId =
+            Assert.Single(
+                firstResponse.Headers.GetValues(
+                    "X-FullWorth-Request-Id"));
+
+        var secondRequestId =
+            Assert.Single(
+                secondResponse.Headers.GetValues(
+                    "X-FullWorth-Request-Id"));
+
+        Assert.Matches(
+            "^[0-9a-f]{32}$",
+            firstRequestId);
+
+        Assert.Matches(
+            "^[0-9a-f]{32}$",
+            secondRequestId);
+
+        Assert.NotEqual(
+            spoofedRequestId,
+            firstRequestId);
+
+        Assert.NotEqual(
+            firstRequestId,
+            secondRequestId);
+    }
+
     private static void AssertHeader(
         HttpResponseMessage response,
         string name,
