@@ -200,8 +200,13 @@ public sealed class ExternalIdentityController : ControllerBase
         if (existingLogin is not null ||
             existingEmailOwner is not null)
         {
-            return ValidationProblem(
-                "A FullWorth account already exists for this identity. Sign in and link the provider from Settings.");
+            /*
+             * Do not disclose whether the verified provider identity or email
+             * is already associated with a FullWorth account. The caller has
+             * proved control of the external identity, but that does not grant
+             * permission to enumerate FullWorth account state.
+             */
+            return ExternalRegistrationFailure();
         }
 
         var user =
@@ -227,8 +232,20 @@ public sealed class ExternalIdentityController : ControllerBase
 
         if (!createResult.Succeeded)
         {
-            return IdentityValidationProblem(
-                createResult);
+            /*
+             * The pre-check above is not a concurrency boundary. A competing
+             * registration can win after those reads and before CreateAsync.
+             * Collapse duplicate-only Identity failures to the same public
+             * result so the race cannot reintroduce an existence disclosure.
+             *
+             * Non-duplicate validation failures remain visible because callers
+             * still need actionable password/account-input feedback.
+             */
+            return IsDuplicateRegistrationFailure(
+                    createResult)
+                ? ExternalRegistrationFailure()
+                : IdentityValidationProblem(
+                    createResult);
         }
 
         var addLoginResult =
@@ -580,6 +597,48 @@ public sealed class ExternalIdentityController : ControllerBase
             _ =>
                 null
         };
+    }
+
+    private static ObjectResult ExternalRegistrationFailure()
+    {
+        return new ObjectResult(
+            new ValidationProblemDetails(
+                new Dictionary<string, string[]>(
+                    StringComparer.Ordinal)
+                {
+                    ["ExternalRegistration"] =
+                    [
+                        "FullWorth could not create this account."
+                    ]
+                }))
+        {
+            StatusCode =
+                StatusCodes.Status400BadRequest
+        };
+    }
+
+    private static bool IsDuplicateRegistrationFailure(
+        IdentityResult result)
+    {
+        ArgumentNullException.ThrowIfNull(
+            result);
+
+        var errors =
+            result.Errors.ToArray();
+
+        return errors.Length > 0 &&
+               errors.All(
+                   error =>
+                       string.Equals(
+                           error.Code,
+                           nameof(
+                               IdentityErrorDescriber.DuplicateEmail),
+                           StringComparison.Ordinal) ||
+                       string.Equals(
+                           error.Code,
+                           nameof(
+                               IdentityErrorDescriber.DuplicateUserName),
+                           StringComparison.Ordinal));
     }
 
     private ObjectResult IdentityValidationProblem(
