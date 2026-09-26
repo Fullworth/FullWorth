@@ -93,20 +93,28 @@ fi
 
 grep -Fq 'com.apple.CoreSimulator.SimRuntime.iOS-26-0' "$smoke_script" ||
     fail "smoke is not pinned to the iOS 26.0 simulator runtime compatible with the selected Xcode."
-grep -Fq 'xcrun simctl create' "$smoke_script" ||
-    fail "smoke does not create an isolated simulator."
-grep -Fq 'while [ "$attempt" -lt 90 ]' "$smoke_script" ||
-    fail "Simulator readiness wait is not bounded."
-grep -Fq 'within 180 seconds' "$smoke_script" ||
-    fail "Simulator readiness timeout is not explicit."
+grep -Fq 'xcrun simctl list devices --json' "$smoke_script" ||
+    fail "smoke does not select a preinstalled iOS 26.0 iPhone Simulator."
+grep -Fq 'xcrun simctl erase' "$smoke_script" ||
+    fail "smoke does not reset the selected Simulator before launch."
+grep -Fq 'xcrun simctl bootstatus "$udid" -b' "$smoke_script" ||
+    fail "smoke does not wait for Simulator boot completion."
+grep -Fq 'run_with_timeout 180' "$smoke_script" ||
+    fail "Simulator boot wait is not bounded."
+grep -Fq 'run_with_timeout 90' "$smoke_script" ||
+    fail "Simulator installation is not bounded."
+grep -Fq 'run_with_timeout 60' "$smoke_script" ||
+    fail "Simulator reset or app launch is not bounded."
 grep -Fq 'xcrun simctl install' "$smoke_script" ||
     fail "smoke does not install FullWorth."
 grep -Fq 'xcrun simctl launch' "$smoke_script" ||
     fail "smoke does not launch FullWorth."
 grep -Fq 'xcrun simctl get_app_container' "$smoke_script" ||
     fail "smoke does not verify the launched app container."
-grep -Fq 'xcrun simctl delete' "$smoke_script" ||
-    fail "temporary Simulator cleanup is missing."
+grep -Fq 'xcrun simctl shutdown' "$smoke_script" ||
+    fail "Simulator cleanup is missing."
+grep -Fq 'subprocess.run(' "$smoke_script" ||
+    fail "smoke does not use the bounded command wrapper."
 
 sh -n "$smoke_script" ||
     fail "iOS simulator smoke script has invalid shell syntax."
