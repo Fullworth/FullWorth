@@ -151,7 +151,7 @@ public sealed class FullWorthFirstPartyModelStateTests
 
             Assert.Equal(
                 tensor.ElementCount,
-                weights.Length);
+                (long)weights.Length);
         }
 
         Assert.All(
