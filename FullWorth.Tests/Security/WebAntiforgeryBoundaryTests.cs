@@ -137,6 +137,57 @@ public sealed class WebAntiforgeryBoundaryTests
     }
 
     [Fact]
+    public async Task WebResponses_UseServerGeneratedRequestIdInsteadOfClientValue()
+    {
+        const string spoofedRequestId =
+            "attacker-controlled-request-id";
+
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        client.DefaultRequestHeaders.Add(
+            "X-FullWorth-Request-Id",
+            spoofedRequestId);
+
+        using var firstResponse =
+            await client.GetAsync(
+                "/bff/antiforgery");
+
+        using var secondResponse =
+            await client.GetAsync(
+                "/bff/antiforgery");
+
+        var firstRequestId =
+            Assert.Single(
+                firstResponse.Headers.GetValues(
+                    "X-FullWorth-Request-Id"));
+
+        var secondRequestId =
+            Assert.Single(
+                secondResponse.Headers.GetValues(
+                    "X-FullWorth-Request-Id"));
+
+        Assert.Matches(
+            "^[0-9a-f]{32}$",
+            firstRequestId);
+
+        Assert.Matches(
+            "^[0-9a-f]{32}$",
+            secondRequestId);
+
+        Assert.NotEqual(
+            spoofedRequestId,
+            firstRequestId);
+
+        Assert.NotEqual(
+            firstRequestId,
+            secondRequestId);
+    }
+
+    [Fact]
     public void AntiforgeryCookie_IsHostOnlySecureAndStrict()
     {
         using var factory =
