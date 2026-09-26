@@ -91,7 +91,7 @@ public sealed class FullWorthReferenceDecoderTests
     }
 
     [Fact]
-    public void RotaryAttention_MakesRepeatedTokensPositionSensitive()
+    public void Attention_ChangesPredictionWhenPriorContextChanges()
     {
         var architecture =
             CreateArchitecture();
@@ -103,17 +103,28 @@ public sealed class FullWorthReferenceDecoderTests
                     architecture,
                     seed: 789));
 
-        int token =
+        int begin =
+            FullWorthByteTokenizer.BeginToken;
+
+        int contextToken =
+            'A' +
+            FullWorthByteTokenizer.ByteOffset;
+
+        int currentToken =
             'X' +
             FullWorthByteTokenizer.ByteOffset;
 
-        float[][] logits =
-            decoder.ForwardAllTokenLogits(
-                [token, token]);
+        float[] shortContext =
+            decoder.ForwardNextTokenLogits(
+                [begin, currentToken]);
+
+        float[] longerContext =
+            decoder.ForwardNextTokenLogits(
+                [begin, contextToken, currentToken]);
 
         Assert.False(
-            logits[0].SequenceEqual(
-                logits[1]));
+            shortContext.SequenceEqual(
+                longerContext));
     }
 
     [Fact]
