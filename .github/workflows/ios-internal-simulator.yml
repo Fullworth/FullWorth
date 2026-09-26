@@ -56,7 +56,7 @@ jobs:
   build:
     name: Build iOS simulator app
     needs: contract
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 35
 
     steps:
@@ -73,52 +73,59 @@ jobs:
         run: |
           set -euo pipefail
 
-          selected_developer_dir=""
+          xcode_app="/Applications/Xcode_26.0.app"
+          developer_dir="$xcode_app/Contents/Developer"
 
-          for xcode_app in /Applications/Xcode*.app
-          do
-            [ -d "$xcode_app" ] || continue
-
-            version=$(
-              DEVELOPER_DIR="$xcode_app/Contents/Developer" \
-                xcodebuild -version 2>/dev/null |
-                awk '/^Xcode / { print $2; exit }'
-            )
-
-            case "$version" in
-              26.0|26.0.*)
-                selected_developer_dir="$xcode_app/Contents/Developer"
-                break
-                ;;
-            esac
-          done
-
-          if [ -z "$selected_developer_dir" ]; then
+          [ -d "$developer_dir" ] || {
             printf '%s\n' \
-              "An Xcode 26.0.x installation is required by the installed .NET iOS workload but is not available on this runner." \
+              "Expected Xcode 26.0 compatibility symlink at $xcode_app on the pinned macos-15 runner." \
               >&2
-            printf '%s\n' "Available Xcode installations:" >&2
+            exit 65
+          }
 
-            for xcode_app in /Applications/Xcode*.app
-            do
-              [ -d "$xcode_app" ] || continue
+          version=$(
+            DEVELOPER_DIR="$developer_dir" \
+              xcodebuild -version |
+              awk '/^Xcode / { print $2; exit }'
+          )
 
-              version=$(
-                DEVELOPER_DIR="$xcode_app/Contents/Developer" \
-                  xcodebuild -version 2>/dev/null |
-                  head -n 1 ||
-                  true
-              )
+          case "$version" in
+            26.0|26.0.*)
+              ;;
+            *)
+              printf '%s\n' \
+                "Expected Xcode 26.0.x but $xcode_app reports Xcode $version." \
+                >&2
+              exit 65
+              ;;
+          esac
 
-              printf '  %s: %s\n' "$xcode_app" "$version" >&2
-            done
+          printf 'DEVELOPER_DIR=%s\n' "$developer_dir" >> "$GITHUB_ENV"
 
+          DEVELOPER_DIR="$developer_dir" xcodebuild -version
+
+          runtime_count=$(
+            DEVELOPER_DIR="$developer_dir" \
+              xcrun simctl list runtimes --json |
+              python3 -c '
+import json, sys
+data=json.load(sys.stdin)
+items=[
+    runtime for runtime in data.get("runtimes", [])
+    if runtime.get("isAvailable") and
+       runtime.get("identifier", "").startswith(
+           "com.apple.CoreSimulator.SimRuntime.iOS-26-0")
+]
+print(len(items))
+'
+          )
+
+          if [ "$runtime_count" -lt 1 ]; then
+            printf '%s\n' \
+              "The pinned macos-15 runner does not expose an available iOS 26.0 simulator runtime under Xcode $version." \
+              >&2
             exit 65
           fi
-
-          printf 'DEVELOPER_DIR=%s\n' "$selected_developer_dir" >> "$GITHUB_ENV"
-
-          DEVELOPER_DIR="$selected_developer_dir" xcodebuild -version
 
       - name: Cache NuGet packages
         uses: actions/cache@v6
