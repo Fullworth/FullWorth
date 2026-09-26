@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -193,6 +194,56 @@ public static class WebHostingExtensions
             apiBaseUri,
             apiHostHeader,
             useForwardedHeaders);
+    }
+
+    public static IApplicationBuilder
+        UseFullWorthRequestCorrelation(
+            this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(
+            app);
+
+        var logger =
+            app.ApplicationServices
+                .GetRequiredService<
+                    ILoggerFactory>()
+                .CreateLogger(
+                    "FullWorth.Web.RequestCorrelation");
+
+        return app.Use(
+            async (
+                context,
+                next) =>
+            {
+                var requestId =
+                    Convert.ToHexString(
+                            RandomNumberGenerator.GetBytes(
+                                16))
+                        .ToLowerInvariant();
+
+                context.TraceIdentifier =
+                    requestId;
+
+                context.Response.OnStarting(
+                    () =>
+                    {
+                        context.Response.Headers[
+                            "X-FullWorth-Request-Id"] =
+                            requestId;
+
+                        return Task.CompletedTask;
+                    });
+
+                using var requestScope =
+                    logger.BeginScope(
+                        new Dictionary<string, object?>
+                        {
+                            ["FullWorthRequestId"] =
+                                requestId
+                        });
+
+                await next();
+            });
     }
 
     public static IApplicationBuilder
