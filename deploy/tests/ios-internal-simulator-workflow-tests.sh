@@ -91,6 +91,8 @@ if grep -Eiq '(codesign|provisioning|certificate|p12|mobileprovision).*(password
     fail "simulator workflow appears to contain signing-secret handling."
 fi
 
+grep -Fq 'com.apple.CoreSimulator.SimRuntime.iOS-26-0' "$smoke_script" ||
+    fail "smoke is not pinned to the iOS 26.0 simulator runtime compatible with the selected Xcode."
 grep -Fq 'xcrun simctl create' "$smoke_script" ||
     fail "smoke does not create an isolated simulator."
 grep -Fq 'while [ "$attempt" -lt 90 ]' "$smoke_script" ||
