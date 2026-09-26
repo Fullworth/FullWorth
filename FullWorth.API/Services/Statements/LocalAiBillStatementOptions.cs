@@ -10,7 +10,7 @@ public sealed class LocalAiBillStatementOptions
     public bool Enabled { get; set; }
 
     public string Model { get; set; } =
-        "qwen3-14b";
+        "fullworth-local";
 
     public string? ApiKey { get; set; }
 
