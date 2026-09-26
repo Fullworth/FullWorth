@@ -32,6 +32,7 @@
 		<DefaultItemExcludes>
 			$(DefaultItemExcludes);
 			FullWorth.API\**\*;
+			FullWorth.AiEvaluation\**\*;
 			FullWorth.Core\**\*;
 			FullWorth.Tests\**\*;
 			FullWorth.Web\**\*
