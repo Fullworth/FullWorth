@@ -10,7 +10,7 @@ FullWorth still contains a transitional .NET MAUI iOS target while the authentic
 - an `iossimulator-arm64` runtime identifier;
 - no Apple signing certificate, provisioning profile, or persistent signing secret.
 
-The workflow boots an isolated iPhone Simulator, installs the exact app it built, launches FullWorth, verifies the app container exists, then uploads a SHA-256-addressed ZIP artifact for 14 days.
+The workflow selects a preinstalled iOS 26.0 iPhone Simulator on the ephemeral GitHub runner, erases it, boots it with a bounded wait, installs the exact app it built, launches FullWorth with a bounded wait, verifies the app container exists, then uploads a SHA-256-addressed ZIP artifact for 14 days.
 
 The resulting ZIP is an iOS Simulator artifact. It **cannot be installed on a physical iPhone** and is not an IPA, TestFlight build, or App Store package.
 
@@ -30,7 +30,7 @@ From GitHub Actions, run **FullWorth iOS Internal Simulator App**. A successful 
 
 1. the iOS target restored and compiled;
 2. the generated FullWorth app bundle had a concrete bundle identifier;
-3. a fresh iPhone Simulator booted;
+3. a reset iOS 26.0 iPhone Simulator booted;
 4. the app installed and launched;
 5. the app container was present after launch;
 6. the simulator ZIP and SHA-256 file were uploaded.
