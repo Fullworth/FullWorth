@@ -51,8 +51,18 @@ currently shipped or distributed by FullWorth:
 
 | Component | Intended role | Upstream license observed during evaluation | Release requirement |
 | --- | --- | --- | --- |
-| Qwen3-14B | Self-hosted model candidate | Apache License 2.0 | Pin exact artifact/version and preserve Apache-required notices if distributed. Re-verify the exact model artifact before release. |
-| llama.cpp | Local inference runtime candidate | MIT License | Preserve the MIT copyright/license notice when distributing covered software. Pin the runtime version or image digest. |
+| Qwen3-4B Q4_K_M | First self-hosted statement-extraction evaluation model; exact GGUF artifact is pinned outside Git by revision, size, and SHA-256 | Apache License 2.0 | Preserve Apache-required notices if the model is distributed. Re-verify the exact artifact and license before any release or redistribution. |
+| llama.cpp server-b11176 | Pinned local inference runtime for the evaluation profile | MIT License | Preserve the MIT copyright/license notice when distributing covered software. Keep the runtime pinned by immutable image digest and re-review before version changes. |
+
+The current repository manifests are the technical source of truth for the exact
+evaluation artifacts:
+
+- `deploy/ai-models/qwen3-4b-q4_k_m.manifest`
+- `deploy/ai-runtime/llama-cpp-server-b11176.manifest`
+
+Those manifests pin technical provenance; this policy records the separate
+license-review obligation. Neither file by itself approves production AI or
+AI-derived persistence.
 
 These entries must be updated if FullWorth chooses different artifacts.
 
