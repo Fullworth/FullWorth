@@ -29,6 +29,7 @@ Export the already-validated local runtime key without printing it, then
 explicitly authorize local inference:
 
 ```sh
+set +H
 set -a
 . ./.env.ai
 set +a
@@ -42,8 +43,9 @@ identifiers, provider keys, statement text, ground truth, model output,
 evidence, secrets, or corpus paths. It persists no records or result files.
 Keep or redirect the aggregate report only to an approved private location.
 
-The built-in 100-case, five-provider coverage minimum must pass before local
-inference starts. The default readiness policy also measures false alerts,
+The built-in coverage minimum is 100 cases across at least five providers,
+with at least 10 cases for every provider. It must pass before local inference
+starts. The default readiness policy also measures false alerts,
 which this extraction-only runner does not fabricate; a successful extraction
 benchmark therefore does not by itself pass the wider shadow-readiness gate.
 This command cannot enable runtime shadow mode or AI-derived persistence.
