@@ -30,15 +30,19 @@ grep -Fq -- '- master' "$workflow" ||
     fail "master push trigger is missing."
 grep -Fq 'contents: read' "$workflow" ||
     fail "workflow repository permissions are not read-only."
-grep -Fq 'runs-on: macos-latest' "$workflow" ||
-    fail "iOS build is not running on a macOS runner."
+grep -Fq 'runs-on: macos-15' "$workflow" ||
+    fail "iOS build is not pinned to the macos-15 runner that carries the matching iOS 26.0 simulator runtime."
 grep -Fq 'dotnet workload install maui-ios --skip-manifest-update' "$workflow" ||
     fail "MAUI iOS workload installation is missing."
 
 grep -Fq 'Select Xcode 26.0 required by .NET iOS' "$workflow" ||
     fail "workflow does not explicitly select the Xcode version required by the .NET iOS workload."
+grep -Fq 'xcode_app="/Applications/Xcode_26.0.app"' "$workflow" ||
+    fail "workflow does not use the pinned Xcode 26.0 compatibility symlink."
 grep -Fq '26.0|26.0.*)' "$workflow" ||
     fail "workflow does not accept the Xcode 26.0 patch line required by the .NET iOS workload."
+grep -Fq 'com.apple.CoreSimulator.SimRuntime.iOS-26-0' "$workflow" ||
+    fail "workflow does not preflight the matching iOS 26.0 simulator runtime."
 grep -Fq 'DEVELOPER_DIR=%s' "$workflow" ||
     fail "selected Xcode developer directory is not exported for later steps."
 grep -Fq 'xcodebuild -version' "$workflow" ||
