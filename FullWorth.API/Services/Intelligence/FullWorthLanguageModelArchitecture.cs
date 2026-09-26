@@ -48,6 +48,14 @@ public sealed class FullWorthLanguageModelArchitecture
             attentionHeadCount % keyValueHeadCount != 0)
             throw new ArgumentOutOfRangeException(nameof(keyValueHeadCount));
 
+        int headSize =
+            hiddenSize / attentionHeadCount;
+
+        if ((headSize & 1) != 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(hiddenSize),
+                "Rotary attention requires an even per-head dimension.");
+
         if (feedForwardSize < hiddenSize ||
             feedForwardSize > checked(hiddenSize * 16))
             throw new ArgumentOutOfRangeException(nameof(feedForwardSize));
