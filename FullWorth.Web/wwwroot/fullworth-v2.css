@@ -287,6 +287,12 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 /* Overview v2 */
 
+.app-shell .onboarding-card {
+    min-height: 410px;
+    padding: clamp(34px, 4vw, 44px);
+    gap: clamp(36px, 5vw, 52px);
+}
+
 .app-shell .overview-page {
     gap: 20px;
 }
@@ -299,7 +305,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.76fr);
-    min-height: 390px;
+    min-height: 350px;
     overflow: hidden;
     border: 1px solid rgba(135, 150, 255, 0.2);
     border-radius: 32px;
@@ -329,7 +335,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 .app-shell .fw-pulse-main {
     position: relative;
     z-index: 1;
-    padding: clamp(30px, 5vw, 58px);
+    padding: clamp(28px, 4vw, 46px);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -354,7 +360,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 }
 
 .app-shell .fw-pulse-label {
-    margin-top: 37px;
+    margin-top: 28px;
     color: #8f9aba;
     font-size: 0.75rem;
     font-weight: 720;
@@ -382,7 +388,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 30px;
+    margin-top: 24px;
 }
 
 .app-shell .fw-primary-action,
@@ -431,7 +437,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 }
 
 .app-shell .fw-pulse-stat {
-    min-height: 118px;
+    min-height: 104px;
     padding: 17px;
     display: flex;
     flex-direction: column;
@@ -474,7 +480,7 @@ html[data-theme="dark"] .app-shell .app-topbar {
 
 .app-shell .fw-sync-line {
     grid-column: 1 / -1;
-    min-height: 84px;
+    min-height: 72px;
     padding: 15px 17px;
     display: flex;
     flex-direction: column;
@@ -524,10 +530,44 @@ html[data-theme="dark"] .app-shell .app-topbar {
 }
 
 .app-shell .fw-inline-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: #7482f2;
     font-size: 0.76rem;
     font-weight: 760;
     text-decoration: none;
+}
+
+.app-shell .status-check-button .bw-sprite,
+.app-shell .onboarding-primary-action .bw-sprite,
+.app-shell .onboarding-secondary-action .bw-sprite,
+.app-shell .fw-primary-action .bw-sprite,
+.app-shell .fw-quiet-action .bw-sprite,
+.app-shell .fw-inline-action .bw-sprite {
+    width: 15px;
+    height: 15px;
+    flex: none;
+}
+
+.app-shell .onboarding-trust .bw-sprite {
+    width: 11px;
+    height: 11px;
+}
+
+.app-shell .state-symbol .bw-sprite {
+    width: 22px;
+    height: 22px;
+}
+
+.app-shell .attention-symbol .bw-sprite {
+    width: 38px;
+    height: 38px;
+}
+
+.app-shell .connection-warning-icon .bw-sprite {
+    width: 14px;
+    height: 14px;
 }
 
 .app-shell .fw-bill-list {
