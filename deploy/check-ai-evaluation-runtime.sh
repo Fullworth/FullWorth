@@ -61,6 +61,10 @@ model_alias=$(read_value FULLWORTH_LOCAL_AI_MODEL_ALIAS)
 [ "${#api_key}" -ge 32 ] ||
     fail "local AI API key is too short."
 
+printf '%s\n' "$api_key" |
+    grep -Eq '^[A-Za-z0-9._~!@%+=,:/-]+$' ||
+    fail "local AI API key contains unsupported characters."
+
 [ "$model_alias" = "fullworth-local" ] ||
     fail "unexpected local AI runtime alias."
 
