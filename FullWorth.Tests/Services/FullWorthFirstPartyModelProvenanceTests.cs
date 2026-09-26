@@ -145,7 +145,7 @@ public sealed class FullWorthFirstPartyModelProvenanceTests
 
         Assert.Throws<ArgumentException>(() =>
             initializer.Fill(
-                Span<float>.Empty,
+                Array.Empty<float>(),
                 "weights",
                 FullWorthModelTensorRole.TokenEmbedding,
                 masterSeed: 1));
