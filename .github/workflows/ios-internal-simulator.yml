@@ -73,12 +73,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          xcode_app="/Applications/Xcode_26.0.app"
+          xcode_app="/Applications/Xcode_26.0.1.app"
           developer_dir="$xcode_app/Contents/Developer"
 
           [ -d "$developer_dir" ] || {
             printf '%s\n' \
-              "Expected Xcode 26.0 compatibility symlink at $xcode_app on the pinned macos-15 runner." \
+              "Expected the real Xcode 26.0.1 bundle at $xcode_app on the pinned macos-15 runner." \
               >&2
             exit 65
           }
