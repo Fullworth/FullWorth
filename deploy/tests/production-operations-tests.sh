@@ -99,12 +99,12 @@ grep -Fq \
     fail "production Web edge subnet is not pinned to the transition-safe range."
 
 grep -Fq -- \
-    '--requirepass "$REDIS_PASSWORD"' \
+    '--requirepass "$$REDIS_PASSWORD"' \
     "$root_dir/compose.production.yml" ||
     fail "Redis password interpolation is consumed by Compose instead of the container."
 
 grep -Fq \
-    'REDISCLI_AUTH="$REDIS_PASSWORD"' \
+    'REDISCLI_AUTH="$$REDIS_PASSWORD"' \
     "$root_dir/compose.production.yml" ||
     fail "Redis healthcheck password interpolation is consumed by Compose instead of the container."
 
