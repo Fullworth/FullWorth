@@ -224,10 +224,266 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 hasStrictAggregateImprovement,
 
             CandidateQualifiesForPromotionReview:
-                noAggregateRegression &&
-                noFieldRegression &&
-                noProviderRegression &&
-                hasStrictAggregateImprovement);
+                false);
+    }
+
+    /*
+     * The aggregate-only comparison remains available for diagnostics but
+     * cannot qualify a prompt. Promotion review requires the intersection of
+     * each anonymous provider bucket with each fixed field.
+     */
+    public BillStatementAiPromptComparisonResult CompareWithProviderFields(
+        BillStatementAiShadowReadinessMetrics baseline,
+        IReadOnlyList<BillStatementAiFieldScore> baselineFields,
+        IReadOnlyList<BillStatementAiProviderScore> baselineProviders,
+        IReadOnlyList<BillStatementAiProviderFieldScore> baselineProviderFields,
+        BillStatementAiShadowReadinessMetrics candidate,
+        IReadOnlyList<BillStatementAiFieldScore> candidateFields,
+        IReadOnlyList<BillStatementAiProviderScore> candidateProviders,
+        IReadOnlyList<BillStatementAiProviderFieldScore> candidateProviderFields)
+    {
+        ArgumentNullException.ThrowIfNull(
+            baselineProviderFields);
+
+        ArgumentNullException.ThrowIfNull(
+            candidateProviderFields);
+
+        var aggregateComparison =
+            Compare(
+                baseline,
+                baselineFields,
+                baselineProviders,
+                candidate,
+                candidateFields,
+                candidateProviders);
+
+        ValidateProviderFieldScores(
+            baselineFields,
+            baselineProviders,
+            baselineProviderFields,
+            nameof(baselineProviderFields));
+
+        ValidateProviderFieldScores(
+            candidateFields,
+            candidateProviders,
+            candidateProviderFields,
+            nameof(candidateProviderFields));
+
+        var regressedCount =
+            CountRegressedProviderFields(
+                baselineProviderFields,
+                candidateProviderFields);
+
+        return aggregateComparison with
+        {
+            CandidateHasNoProviderFieldRegression =
+                regressedCount ==
+                0,
+
+            RegressedProviderFieldCount =
+                regressedCount,
+
+            CandidateQualifiesForPromotionReview =
+                aggregateComparison.CandidateHasNoAggregateRegression &&
+                aggregateComparison.CandidateHasNoFieldRegression &&
+                aggregateComparison.CandidateHasNoProviderRegression &&
+                regressedCount ==
+                    0 &&
+                aggregateComparison.CandidateHasStrictAggregateImprovement
+        };
+    }
+
+    private static void ValidateProviderFieldScores(
+        IReadOnlyList<BillStatementAiFieldScore> aggregateFields,
+        IReadOnlyList<BillStatementAiProviderScore> providers,
+        IReadOnlyList<BillStatementAiProviderFieldScore> providerFields,
+        string parameterName)
+    {
+        if (providerFields.Count !=
+            providers.Count)
+        {
+            throw new ArgumentException(
+                "Prompt comparison requires a fixed field breakdown for every anonymous provider.",
+                parameterName);
+        }
+
+        var fieldKeys =
+            BillStatementAiGroundTruthFieldKeys.All;
+
+        var correctByField =
+            new long[fieldKeys.Count];
+
+        var incorrectByField =
+            new long[fieldKeys.Count];
+
+        var missedByField =
+            new long[fieldKeys.Count];
+
+        for (var providerIndex = 0;
+             providerIndex < providers.Count;
+             providerIndex++)
+        {
+            var provider =
+                providers[providerIndex];
+
+            var providerField =
+                providerFields[providerIndex];
+
+            ArgumentNullException.ThrowIfNull(
+                providerField);
+
+            if (providerField.ProviderOrdinal !=
+                    provider.ProviderOrdinal ||
+                providerField.FieldScores is null ||
+                providerField.FieldScores.Count !=
+                    fieldKeys.Count)
+            {
+                throw new ArgumentException(
+                    "Anonymous provider field scores have an invalid ordinal or field set.",
+                    parameterName);
+            }
+
+            long correct =
+                0;
+
+            long incorrect =
+                0;
+
+            long missed =
+                0;
+
+            for (var fieldIndex = 0;
+                 fieldIndex < fieldKeys.Count;
+                 fieldIndex++)
+            {
+                var field =
+                    providerField.FieldScores[fieldIndex];
+
+                ArgumentNullException.ThrowIfNull(
+                    field);
+
+                if (field.FieldKey !=
+                        fieldKeys[fieldIndex] ||
+                    field.Correct <
+                        0 ||
+                    field.Incorrect <
+                        0 ||
+                    field.Missed <
+                        0)
+                {
+                    throw new ArgumentException(
+                        "Anonymous provider field scores contain an invalid fixed field.",
+                        parameterName);
+                }
+
+                correct +=
+                    field.Correct;
+
+                incorrect +=
+                    field.Incorrect;
+
+                missed +=
+                    field.Missed;
+
+                correctByField[fieldIndex] +=
+                    field.Correct;
+
+                incorrectByField[fieldIndex] +=
+                    field.Incorrect;
+
+                missedByField[fieldIndex] +=
+                    field.Missed;
+            }
+
+            if (correct !=
+                    provider.CorrectFactCount ||
+                incorrect !=
+                    provider.IncorrectFactCount ||
+                missed !=
+                    provider.MissedFactCount)
+            {
+                throw new ArgumentException(
+                    "Anonymous provider field scores do not reconcile with provider fact counts.",
+                    parameterName);
+            }
+        }
+
+        var aggregateByKey =
+            aggregateFields.ToDictionary(
+                field =>
+                    field.FieldKey,
+                StringComparer.Ordinal);
+
+        for (var index = 0;
+             index < fieldKeys.Count;
+             index++)
+        {
+            var aggregate =
+                aggregateByKey[fieldKeys[index]];
+
+            if (correctByField[index] !=
+                    aggregate.Correct ||
+                incorrectByField[index] !=
+                    aggregate.Incorrect ||
+                missedByField[index] !=
+                    aggregate.Missed)
+            {
+                throw new ArgumentException(
+                    "Anonymous provider field scores do not reconcile with fixed field totals.",
+                    parameterName);
+            }
+        }
+    }
+
+    private static int CountRegressedProviderFields(
+        IReadOnlyList<BillStatementAiProviderFieldScore> baseline,
+        IReadOnlyList<BillStatementAiProviderFieldScore> candidate)
+    {
+        var regressedCount =
+            0;
+
+        for (var providerIndex = 0;
+             providerIndex < baseline.Count;
+             providerIndex++)
+        {
+            var baselineFields =
+                baseline[providerIndex].FieldScores;
+
+            var candidateFields =
+                candidate[providerIndex].FieldScores;
+
+            for (var fieldIndex = 0;
+                 fieldIndex < baselineFields.Count;
+                 fieldIndex++)
+            {
+                var baselineField =
+                    baselineFields[fieldIndex];
+
+                var candidateField =
+                    candidateFields[fieldIndex];
+
+                RequireEqual(
+                    baselineField.ExpectedFactCount,
+                    candidateField.ExpectedFactCount,
+                    "anonymous provider fixed-field expected fact count");
+
+                if (candidateField.Correct <
+                        baselineField.Correct ||
+                    candidateField.Incorrect >
+                        baselineField.Incorrect ||
+                    candidateField.Missed >
+                        baselineField.Missed ||
+                    candidateField.Precision <
+                        baselineField.Precision ||
+                    candidateField.Recall <
+                        baselineField.Recall)
+                {
+                    regressedCount++;
+                }
+            }
+        }
+
+        return regressedCount;
     }
 
     private static IReadOnlyList<BillStatementAiPromptFieldComparison>
@@ -917,6 +1173,10 @@ public sealed record BillStatementAiPromptComparisonResult(
     bool CandidateHasStrictAggregateImprovement,
     bool CandidateQualifiesForPromotionReview)
 {
+    public bool CandidateHasNoProviderFieldRegression { get; init; }
+
+    public int RegressedProviderFieldCount { get; init; }
+
     public IReadOnlyList<string> RegressedFieldKeys =>
         FieldComparisons
             .Where(
