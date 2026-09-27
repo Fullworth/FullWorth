@@ -1632,7 +1632,7 @@ Status: Qwen3-4B is the first pinned local evaluation candidate. Runtime and qua
 
 Goal: Measure whether a locally served, externally trained model improves statement candidate extraction over FullWorth's deterministic parser while keeping all financial and security decisions deterministic.
 
-The active direction replaces the earlier plan to train a FullWorth model from scratch. Do not extend the experimental from-scratch training path as product work. Existing generic decoder experiments may remain in development temporarily, but they are not the selected statement-intelligence runtime and are not production components.
+The active direction replaces the earlier plan to train a FullWorth model from scratch. The superseded first-party tokenizer/decoder/initializer/checkpoint/training implementation and its dedicated tests have been removed from the active product tree rather than carried into release. Do not reintroduce that path as product work without a new, evidence-backed architecture decision.
 
 The first evaluation artifact is recorded in `deploy/ai-models/qwen3-4b-q4_k_m.manifest`:
 
