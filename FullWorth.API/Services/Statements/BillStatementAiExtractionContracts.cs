@@ -13,6 +13,20 @@
             CancellationToken cancellationToken = default);
     }
 
+    /*
+     * Optional aggregate metering boundary for evaluation-only extractor
+     * compositions that may make more than one underlying model call per
+     * statement attempt.
+     *
+     * The counter must be monotonic for the lifetime of the extractor
+     * instance. Evaluators consume a start/end delta and never expose
+     * per-statement call counts.
+     */
+    public interface IBillStatementAiInferenceCallCounter
+    {
+        long InferenceCallCount { get; }
+    }
+
     public sealed record BillStatementAiExtractionRequest(
         string DocumentText,
         BillStatementExtractionHints Hints,
