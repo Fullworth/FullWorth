@@ -8,7 +8,8 @@ using Microsoft.Extensions.Options;
 namespace FullWorth.API.Services.Statements;
 
 public sealed class LocalAiBillStatementAiExtractor
-    : IBillStatementAiExtractor
+    : IBillStatementAiExtractor,
+      IBillStatementAiInferenceCallCounter
 {
     private const int MaxResponseBytes =
         1_048_576;
@@ -26,6 +27,8 @@ public sealed class LocalAiBillStatementAiExtractor
     private readonly HttpClient _httpClient;
 
     private readonly LocalAiBillStatementOptions _options;
+
+    private long _inferenceCallCount;
 
     static LocalAiBillStatementAiExtractor()
     {
@@ -45,6 +48,10 @@ public sealed class LocalAiBillStatementAiExtractor
             options?.Value ??
             throw new ArgumentNullException(nameof(options));
     }
+
+    public long InferenceCallCount =>
+        Interlocked.Read(
+            ref _inferenceCallCount);
 
     public async Task<BillStatementAiCandidate> ExtractAsync(
         BillStatementAiExtractionRequest request,
@@ -128,6 +135,11 @@ public sealed class LocalAiBillStatementAiExtractor
 
         try
         {
+            linkedSource.Token.ThrowIfCancellationRequested();
+
+            Interlocked.Increment(
+                ref _inferenceCallCount);
+
             using HttpResponseMessage response =
                 await _httpClient.SendAsync(
                     httpRequest,
