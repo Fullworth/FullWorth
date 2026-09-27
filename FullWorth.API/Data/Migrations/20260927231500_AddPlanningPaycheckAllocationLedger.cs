@@ -33,6 +33,9 @@ public sealed class AddPlanningPaycheckAllocationLedger : Migration
                 PaycheckPostedDate = table.Column<DateOnly>(
                     type: "date",
                     nullable: false),
+                BillPeriodEnd = table.Column<DateOnly>(
+                    type: "date",
+                    nullable: false),
                 BillDueDate = table.Column<DateOnly>(
                     type: "date",
                     nullable: false),
@@ -80,13 +83,13 @@ public sealed class AddPlanningPaycheckAllocationLedger : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlanningPaycheckAllocations_UserId_BillStreamId_BillDueDate",
+            name: "IX_PlanningPaycheckAllocations_UserId_BillStreamId_BillPeriodEnd",
             table: "PlanningPaycheckAllocations",
             columns: new[]
             {
                 "UserId",
                 "BillStreamId",
-                "BillDueDate"
+                "BillPeriodEnd"
             });
 
         migrationBuilder.CreateIndex(
@@ -99,14 +102,14 @@ public sealed class AddPlanningPaycheckAllocationLedger : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_PlanningPaycheckAllocations_UserId_PayrollTransactionId_BillStreamId_BillDueDate",
+            name: "IX_PlanningPaycheckAllocations_UserId_PayrollTransactionId_BillStreamId_BillPeriodEnd",
             table: "PlanningPaycheckAllocations",
             columns: new[]
             {
                 "UserId",
                 "PayrollTransactionId",
                 "BillStreamId",
-                "BillDueDate"
+                "BillPeriodEnd"
             },
             unique: true);
     }
