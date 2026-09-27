@@ -162,6 +162,94 @@ public sealed class BillStatementAiGroundTruthScorer
                 falseAlertStatementCount);
     }
 
+    /*
+     * Returns provider-partitioned aggregate scores without returning provider
+     * keys. Ordinals are assigned from the sorted normalized provider-key set
+     * so two evaluations over the same corpus population can compare the same
+     * anonymous provider buckets without exposing provider identity.
+     */
+    public IReadOnlyList<BillStatementAiProviderScore> ScoreProviders(
+        IReadOnlyList<BillStatementAiGroundTruthObservation> observations)
+    {
+        ArgumentNullException.ThrowIfNull(
+            observations);
+
+        if (observations.Count ==
+            0)
+        {
+            return Array.Empty<
+                BillStatementAiProviderScore>();
+        }
+
+        foreach (var observation in
+                 observations)
+        {
+            ArgumentNullException.ThrowIfNull(
+                observation);
+
+            ValidateObservation(
+                observation);
+        }
+
+        var groups =
+            observations
+                .GroupBy(
+                    observation =>
+                        observation.ProviderKey
+                            .Trim()
+                            .ToUpperInvariant(),
+                    StringComparer.Ordinal)
+                .OrderBy(
+                    group =>
+                        group.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        var scores =
+            new List<BillStatementAiProviderScore>(
+                groups.Length);
+
+        for (var index = 0;
+             index < groups.Length;
+             index++)
+        {
+            var group =
+                groups[index].ToArray();
+
+            var metrics =
+                Score(
+                    group);
+
+            scores.Add(
+                new BillStatementAiProviderScore(
+                    ProviderOrdinal:
+                        index + 1,
+
+                    StatementCount:
+                        metrics.EvaluatedStatementCount,
+
+                    ProviderAttemptCount:
+                        metrics.ProviderAttemptCount,
+
+                    ProviderFailureCount:
+                        metrics.ProviderFailureCount,
+
+                    ReadyCandidateStatementCount:
+                        metrics.ReadyCandidateStatementCount,
+
+                    CorrectFactCount:
+                        metrics.CorrectFactCount,
+
+                    IncorrectFactCount:
+                        metrics.IncorrectFactCount,
+
+                    MissedFactCount:
+                        metrics.MissedFactCount));
+        }
+
+        return scores.AsReadOnly();
+    }
+
     public IReadOnlyList<BillStatementAiFieldScore> ScoreFields(
         IReadOnlyList<BillStatementAiGroundTruthObservation> observations)
     {
@@ -628,6 +716,51 @@ public static class BillStatementAiGroundTruthFieldKeys
                 CurrencyCode,
                 LineItems
             });
+}
+
+public sealed record BillStatementAiProviderScore(
+    int ProviderOrdinal,
+    long StatementCount,
+    long ProviderAttemptCount,
+    long ProviderFailureCount,
+    long ReadyCandidateStatementCount,
+    long CorrectFactCount,
+    long IncorrectFactCount,
+    long MissedFactCount)
+{
+    public decimal FactPrecision =>
+        Divide(
+            CorrectFactCount,
+            CorrectFactCount +
+            IncorrectFactCount);
+
+    public decimal FactRecall =>
+        Divide(
+            CorrectFactCount,
+            CorrectFactCount +
+            MissedFactCount);
+
+    public decimal ReadyCandidateRate =>
+        Divide(
+            ReadyCandidateStatementCount,
+            ProviderAttemptCount);
+
+    public decimal ProviderFailureRate =>
+        Divide(
+            ProviderFailureCount,
+            ProviderAttemptCount);
+
+    private static decimal Divide(
+        long numerator,
+        long denominator)
+    {
+        return denominator ==
+                0
+            ? 0m
+            : decimal.Divide(
+                numerator,
+                denominator);
+    }
 }
 
 public sealed record BillStatementAiFieldScore(
