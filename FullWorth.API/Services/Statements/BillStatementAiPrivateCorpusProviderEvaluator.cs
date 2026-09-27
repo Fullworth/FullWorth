@@ -299,13 +299,18 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.ScoreFields(
                 observations);
 
+        var providerScores =
+            _groundTruthScorer.ScoreProviders(
+                observations);
+
         return
             BillStatementAiPrivateCorpusProviderEvaluationResult
                 .Completed(
                     coverageSummary,
                     coverageDecision,
                     metrics,
-                    fieldScores);
+                    fieldScores,
+                    providerScores);
     }
 
     private static void ValidateCaseIds(
@@ -398,7 +403,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     BillStatementAiPrivateCorpusCatalogSummary Coverage,
     BillStatementAiPrivateCorpusCoverageDecision CoverageDecision,
     BillStatementAiShadowReadinessMetrics? Metrics,
-    IReadOnlyList<BillStatementAiFieldScore>? FieldScores)
+    IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
+    IReadOnlyList<BillStatementAiProviderScore>? ProviderScores)
 {
     public bool MayEnableRuntimeShadowMode =>
         false;
@@ -431,6 +437,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 null,
 
             FieldScores:
+                null,
+
+            ProviderScores:
                 null);
     }
 
@@ -439,7 +448,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             BillStatementAiPrivateCorpusCatalogSummary coverage,
             BillStatementAiPrivateCorpusCoverageDecision coverageDecision,
             BillStatementAiShadowReadinessMetrics metrics,
-            IReadOnlyList<BillStatementAiFieldScore> fieldScores)
+            IReadOnlyList<BillStatementAiFieldScore> fieldScores,
+            IReadOnlyList<BillStatementAiProviderScore> providerScores)
     {
         ArgumentNullException.ThrowIfNull(
             coverage);
@@ -452,6 +462,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
         ArgumentNullException.ThrowIfNull(
             fieldScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerScores);
 
         if (fieldScores.Count !=
             BillStatementAiGroundTruthFieldKeys.All.Count)
@@ -469,6 +482,88 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 nameof(coverageDecision));
         }
 
+        if (providerScores.Count !=
+            coverage.DistinctProviderCount)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires one anonymous provider score per covered provider.",
+                nameof(providerScores));
+        }
+
+        var expectedOrdinal =
+            1;
+
+        foreach (var providerScore in
+                 providerScores)
+        {
+            ArgumentNullException.ThrowIfNull(
+                providerScore);
+
+            if (providerScore.ProviderOrdinal !=
+                    expectedOrdinal ||
+                providerScore.StatementCount <=
+                    0 ||
+                providerScore.ProviderAttemptCount <
+                    0 ||
+                providerScore.ProviderFailureCount <
+                    0 ||
+                providerScore.ReadyCandidateStatementCount <
+                    0 ||
+                providerScore.CorrectFactCount <
+                    0 ||
+                providerScore.IncorrectFactCount <
+                    0 ||
+                providerScore.MissedFactCount <
+                    0 ||
+                providerScore.ProviderAttemptCount >
+                    providerScore.StatementCount ||
+                providerScore.ProviderFailureCount >
+                    providerScore.ProviderAttemptCount ||
+                providerScore.ReadyCandidateStatementCount >
+                    providerScore.ProviderAttemptCount)
+            {
+                throw new ArgumentException(
+                    "Completed provider evaluation contains an invalid anonymous provider score.",
+                    nameof(providerScores));
+            }
+
+            expectedOrdinal++;
+        }
+
+        if (providerScores.Sum(
+                    score =>
+                        score.StatementCount) !=
+                metrics.EvaluatedStatementCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ProviderAttemptCount) !=
+                metrics.ProviderAttemptCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ProviderFailureCount) !=
+                metrics.ProviderFailureCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ReadyCandidateStatementCount) !=
+                metrics.ReadyCandidateStatementCount ||
+            providerScores.Sum(
+                    score =>
+                        score.CorrectFactCount) !=
+                metrics.CorrectFactCount ||
+            providerScores.Sum(
+                    score =>
+                        score.IncorrectFactCount) !=
+                metrics.IncorrectFactCount ||
+            providerScores.Sum(
+                    score =>
+                        score.MissedFactCount) !=
+                metrics.MissedFactCount)
+        {
+            throw new ArgumentException(
+                "Anonymous provider scores do not reconcile with aggregate evaluation metrics.",
+                nameof(providerScores));
+        }
+
         return new BillStatementAiPrivateCorpusProviderEvaluationResult(
             ProviderEvaluationStarted:
                 true,
@@ -483,6 +578,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 metrics,
 
             FieldScores:
-                fieldScores);
+                fieldScores,
+
+            ProviderScores:
+                providerScores);
     }
 }
