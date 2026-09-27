@@ -218,6 +218,12 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
         long extractorAttemptCount =
             0;
 
+        long multiInferenceStatementCount =
+            0;
+
+        long maximumInferenceCallsPerStatement =
+            0;
+
         foreach (var corpusCase in
                  corpusCases)
         {
@@ -232,6 +238,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             var providerAttemptStarted =
                 global::System.Diagnostics.Stopwatch
                     .GetTimestamp();
+
+            var caseInferenceBaseline =
+                inferenceCallCounter?
+                    .InferenceCallCount ??
+                0L;
+
+            var caseExtractorAttemptBaseline =
+                extractorAttemptCount;
 
             try
             {
@@ -345,6 +359,27 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                         .GetElapsedTime(
                             providerAttemptStarted)
                         .TotalMilliseconds);
+
+                var caseInferenceCalls =
+                    GetInferenceCallCount(
+                        inferenceCallCounter,
+                        caseInferenceBaseline,
+                        extractorAttemptCount -
+                            caseExtractorAttemptBaseline);
+
+                if (caseInferenceCalls >
+                    1)
+                {
+                    multiInferenceStatementCount =
+                        checked(
+                            multiInferenceStatementCount +
+                            1);
+                }
+
+                maximumInferenceCallsPerStatement =
+                    Math.Max(
+                        maximumInferenceCallsPerStatement,
+                        caseInferenceCalls);
             }
 
             observations.Add(
@@ -437,6 +472,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     providerScores,
                     providerFieldScores,
                     inferenceCallCount,
+                    multiInferenceStatementCount,
+                    maximumInferenceCallsPerStatement,
                     providerAttemptLatency,
                     failureKindCounts);
     }
@@ -560,6 +597,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
     IReadOnlyList<BillStatementAiProviderFieldScore>? ProviderFieldScores,
     long? InferenceCallCount,
+    long? MultiInferenceStatementCount,
+    long? MaximumInferenceCallsPerStatement,
     BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
     IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
@@ -605,6 +644,12 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             InferenceCallCount:
                 null,
 
+            MultiInferenceStatementCount:
+                null,
+
+            MaximumInferenceCallsPerStatement:
+                null,
+
             ProviderAttemptLatency:
                 null,
 
@@ -621,6 +666,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             IReadOnlyList<BillStatementAiProviderScore> providerScores,
             IReadOnlyList<BillStatementAiProviderFieldScore> providerFieldScores,
             long inferenceCallCount,
+            long multiInferenceStatementCount,
+            long maximumInferenceCallsPerStatement,
             BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
             IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
@@ -762,6 +809,26 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 "Inference-call count cannot be negative.");
         }
 
+        if (multiInferenceStatementCount <
+                0 ||
+            multiInferenceStatementCount >
+                metrics.ProviderAttemptCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(multiInferenceStatementCount),
+                "Multi-inference statement count must fit within provider attempts.");
+        }
+
+        if (maximumInferenceCallsPerStatement <
+                0 ||
+            maximumInferenceCallsPerStatement >
+                inferenceCallCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumInferenceCallsPerStatement),
+                "Maximum inference calls per statement must fit within aggregate inference calls.");
+        }
+
         if (providerAttemptLatency.AttemptCount !=
                 metrics.ProviderAttemptCount ||
             providerAttemptLatency.MinimumMilliseconds <
@@ -841,6 +908,12 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
             InferenceCallCount:
                 inferenceCallCount,
+
+            MultiInferenceStatementCount:
+                multiInferenceStatementCount,
+
+            MaximumInferenceCallsPerStatement:
+                maximumInferenceCallsPerStatement,
 
             ProviderAttemptLatency:
                 providerAttemptLatency,
