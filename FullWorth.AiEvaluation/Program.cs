@@ -621,6 +621,17 @@ internal static class Program
                 "Local model evaluation configuration is invalid.");
         }
 
+        var localExtractor =
+            new LocalAiBillStatementAiExtractor(
+                httpClient,
+                Options.Create(
+                    options));
+
+        var evaluationExtractor =
+            new BillStatementAiChunkedEvaluationExtractor(
+                localExtractor,
+                options.MaxDocumentCharacters);
+
         var stopwatch =
             Stopwatch.StartNew();
 
@@ -628,10 +639,7 @@ internal static class Program
             await new BillStatementAiPrivateCorpusProviderEvaluator(
                 loader,
                 new BillStatementAiPrivateCorpusCoverageGate(),
-                new LocalAiBillStatementAiExtractor(
-                    httpClient,
-                    Options.Create(
-                        options)),
+                evaluationExtractor,
                 new BillStatementAiCandidateConversionService(
                     new BillStatementAiCandidateValidator()),
                 new BillStatementAiGroundTruthScorer())
