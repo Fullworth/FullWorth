@@ -120,5 +120,82 @@ public sealed class PlanningPersistenceModelTests
                 foreignKey.PrincipalEntityType.ClrType ==
                 typeof(
                     BillStreamEntity));
+
+        var paycheckAllocation =
+            context.Model.FindEntityType(
+                typeof(
+                    PlanningPaycheckAllocationEntity));
+
+        Assert.NotNull(
+            paycheckAllocation);
+
+        Assert.Contains(
+            paycheckAllocation.GetIndexes(),
+            index =>
+                index.IsUnique &&
+                index.Properties
+                    .Select(
+                        property =>
+                            property.Name)
+                    .SequenceEqual(
+                        [
+                            nameof(
+                                PlanningPaycheckAllocationEntity.UserId),
+                            nameof(
+                                PlanningPaycheckAllocationEntity.PayrollTransactionId),
+                            nameof(
+                                PlanningPaycheckAllocationEntity.BillStreamId),
+                            nameof(
+                                PlanningPaycheckAllocationEntity.BillDueDate)
+                        ]));
+
+        Assert.Contains(
+            paycheckAllocation.GetIndexes(),
+            index =>
+                index.Properties
+                    .Select(
+                        property =>
+                            property.Name)
+                    .SequenceEqual(
+                        [
+                            nameof(
+                                PlanningPaycheckAllocationEntity.UserId),
+                            nameof(
+                                PlanningPaycheckAllocationEntity.BillStreamId),
+                            nameof(
+                                PlanningPaycheckAllocationEntity.BillDueDate)
+                        ]));
+
+        var allocationForeignKey =
+            Assert.Single(
+                paycheckAllocation.GetForeignKeys());
+
+        Assert.Equal(
+            typeof(
+                ApplicationUser),
+            allocationForeignKey.PrincipalEntityType.ClrType);
+
+        Assert.Equal(
+            [
+                nameof(
+                    PlanningPaycheckAllocationEntity.UserId)
+            ],
+            allocationForeignKey.Properties
+                .Select(
+                    property =>
+                        property.Name));
+
+        Assert.DoesNotContain(
+            paycheckAllocation.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(
+                        BillStreamEntity) ||
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(
+                        BankTransactionEntity) ||
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(
+                        BillStatementEntity));
     }
 }
