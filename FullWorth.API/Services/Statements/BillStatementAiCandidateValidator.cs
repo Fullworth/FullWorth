@@ -756,6 +756,55 @@ namespace FullWorth.API.Services.Statements
                 };
 
             /*
+             * The lexical date recognizer accepts year-first slash and dot
+             * forms, including single-digit month/day components. Match those
+             * full dates as values too, so valid evidence is not rejected.
+             */
+            var year =
+                value.Value.Year.ToString(
+                    "D4",
+                    CultureInfo.InvariantCulture);
+
+            var shortMonth =
+                value.Value.Month.ToString(
+                    CultureInfo.InvariantCulture);
+
+            var paddedMonth =
+                value.Value.Month.ToString(
+                    "D2",
+                    CultureInfo.InvariantCulture);
+
+            var shortDay =
+                value.Value.Day.ToString(
+                    CultureInfo.InvariantCulture);
+
+            var paddedDay =
+                value.Value.Day.ToString(
+                    "D2",
+                    CultureInfo.InvariantCulture);
+
+            foreach (var separator in
+                     new[]
+                     {
+                         '-',
+                         '/',
+                         '.'
+                     })
+            {
+                supportedRepresentations.Add(
+                    $"{year}{separator}{shortMonth}{separator}{shortDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{shortMonth}{separator}{paddedDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{paddedMonth}{separator}{shortDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{paddedMonth}{separator}{paddedDay}");
+            }
+
+            /*
              * "Sept" is a common English abbreviation that DateOnly's
              * invariant "MMM" format does not emit ("Sep"). The evidence
              * recognizer already accepts both, so keep deterministic value
