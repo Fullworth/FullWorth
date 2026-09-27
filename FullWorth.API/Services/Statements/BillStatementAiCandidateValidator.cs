@@ -708,7 +708,7 @@ namespace FullWorth.API.Services.Statements
             }
 
             var supportedRepresentations =
-                new[]
+                new List<string>
                 {
                     value.Value.ToString(
                         "yyyy-MM-dd",
@@ -754,6 +754,25 @@ namespace FullWorth.API.Services.Statements
                         "d MMM yyyy",
                         CultureInfo.InvariantCulture)
                 };
+
+            /*
+             * "Sept" is a common English abbreviation that DateOnly's
+             * invariant "MMM" format does not emit ("Sep"). The evidence
+             * recognizer already accepts both, so keep deterministic value
+             * matching consistent with that grammar.
+             */
+            if (value.Value.Month ==
+                9)
+            {
+                supportedRepresentations.Add(
+                    $"Sept {value.Value.Day}, {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"Sept {value.Value.Day} {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"{value.Value.Day} Sept {value.Value.Year}");
+            }
 
             RequireEvidenceValue(
                 factKey,

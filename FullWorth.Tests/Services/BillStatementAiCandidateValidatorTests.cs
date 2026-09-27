@@ -273,6 +273,7 @@ public sealed class BillStatementAiCandidateValidatorTests
 
     [Theory]
     [InlineData("Due Sep 20 2026")]
+    [InlineData("Due Sept 20 2026")]
     [InlineData("Due September 20 2026")]
     public void DateEvidence_AcceptsMonthFirstDateWithoutComma(
         string documentText)
