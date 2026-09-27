@@ -698,6 +698,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires aggregate provider failure-kind counts.");
 
+        var inferenceCallCount =
+            run.Result.InferenceCallCount ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires aggregate inference-call accounting.");
+
         return new
         {
             promptVersion,
@@ -706,6 +711,7 @@ internal static class Program
             run.Result.Coverage.DistinctProviderCount,
             run.Result.Coverage.MinimumCasesForAnyProvider,
             metrics.ProviderAttemptCount,
+            inferenceCallCount,
             metrics.ProviderFailureCount,
             metrics.ReadyCandidateStatementCount,
             metrics.CorrectFactCount,
