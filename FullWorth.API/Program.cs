@@ -606,6 +606,10 @@ builder.Services.AddScoped<
     PlaidBankTransactionDiscoveryGateway>();
 
 builder.Services.AddScoped<
+    IPlanningPostedPayrollFactsGateway,
+    PlaidPlanningPostedPayrollFactsGateway>();
+
+builder.Services.AddScoped<
     IBillTransactionAssociationGateway,
     BillTransactionAssociationGateway>();
 
@@ -638,6 +642,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IBillStatementHistoryReadGateway,
     BillStatementHistoryReadGateway>();
+
+builder.Services.AddScoped<
+    IBillPlanningFactsGateway,
+    StatementBillPlanningFactsGateway>();
 
 builder.Services.AddScoped<
     IBillAlertReconciliationGateway,
