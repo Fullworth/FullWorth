@@ -382,6 +382,98 @@ public sealed class BillStatementAiGroundTruthScorerTests
     }
 
     [Fact]
+    public void ScoreProviderFields_ReconcilesWithoutProviderIdentity()
+    {
+        var scorer =
+            new BillStatementAiGroundTruthScorer();
+
+        var accepted =
+            Observation(
+                CompleteStatement(),
+                Extraction(
+                    CompleteStatement(),
+                    [])) with
+            {
+                ProviderKey =
+                    "provider-b"
+            };
+
+        var missed =
+            accepted with
+            {
+                ProviderKey =
+                    "provider-a",
+
+                ActualExtraction =
+                    null
+            };
+
+        var observations =
+            new[]
+            {
+                accepted,
+                missed
+            };
+
+        var providerFields =
+            scorer.ScoreProviderFields(
+                observations);
+
+        var aggregateFields =
+            scorer.ScoreFields(
+                observations);
+
+        Assert.Equal(
+            [
+                1,
+                2
+            ],
+            providerFields.Select(
+                provider =>
+                    provider.ProviderOrdinal));
+
+        for (var index = 0;
+             index < aggregateFields.Count;
+             index++)
+        {
+            var aggregate =
+                aggregateFields[index];
+
+            Assert.Equal(
+                aggregate.Correct,
+                providerFields.Sum(
+                    provider =>
+                        provider.FieldScores[index].Correct));
+
+            Assert.Equal(
+                aggregate.Incorrect,
+                providerFields.Sum(
+                    provider =>
+                        provider.FieldScores[index].Incorrect));
+
+            Assert.Equal(
+                aggregate.Missed,
+                providerFields.Sum(
+                    provider =>
+                        provider.FieldScores[index].Missed));
+        }
+
+        var serialized =
+            System.Text.Json.JsonSerializer.Serialize(
+                providerFields);
+
+        Assert.DoesNotContain(
+            "provider-a",
+            serialized,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "provider-b",
+            serialized,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void FalseAlertWithoutEvaluation_IsRejected()
     {
         var observation =
