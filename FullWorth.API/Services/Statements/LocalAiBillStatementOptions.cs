@@ -18,7 +18,7 @@ public sealed class LocalAiBillStatementOptions
         "http://127.0.0.1:8080/v1/chat/completions";
 
     public string PromptVersion { get; set; } =
-        "bill-statement-extraction-v1";
+        "bill-statement-extraction-v2";
 
     public int MaxDocumentCharacters { get; set; } =
         40_000;
