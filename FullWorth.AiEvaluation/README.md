@@ -38,9 +38,13 @@ dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --conf
 
 Do not enable shell tracing while loading `.env.ai`. The local AI mode requires
 the explicit authorization flag and calls only the loopback runtime. It prints
-aggregate metrics and pinned model/runtime identifiers; it never prints case
+aggregate metrics and the approved model/runtime identifiers; it never prints case
 identifiers, provider keys, statement text, ground truth, model output,
-evidence, secrets, or corpus paths. It persists no records or result files.
+evidence, secrets, or corpus paths. The report explicitly marks that runtime
+provenance is not independently verified by the .NET runner. The guarded
+`deploy/start-ai-evaluation.sh` path is what verifies the approved model file
+(size and SHA-256), launches the digest-pinned runtime image, and performs the
+authenticated loopback smoke before evaluation. It persists no records or result files.
 Keep or redirect the aggregate report only to an approved private location.
 
 The built-in coverage minimum is 100 cases across at least five providers,
