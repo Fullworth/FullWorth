@@ -79,6 +79,21 @@ public sealed class BillStatementAiGroundTruthScorerTests
             metrics.EvaluatedStatementCount);
 
         Assert.Equal(
+            10,
+            metrics.ScoredDocumentExactMatchCount);
+
+        var providerScores =
+            new BillStatementAiGroundTruthScorer()
+                .ScoreProviders(
+                    observations);
+
+        Assert.Equal(
+            metrics.ScoredDocumentExactMatchCount,
+            providerScores.Sum(
+                provider =>
+                    provider.ScoredDocumentExactMatchCount));
+
+        Assert.Equal(
             2,
             metrics.DistinctProviderCount);
 

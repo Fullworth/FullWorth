@@ -259,6 +259,11 @@ public sealed class BillStatementAiShadowReadinessEvaluator
             nameof(
                 metrics.AlertEvaluatedStatementCount));
 
+        ValidateNonNegative(
+            metrics.ScoredDocumentExactMatchCount,
+            nameof(
+                metrics.ScoredDocumentExactMatchCount));
+
         RequireNotGreaterThan(
             metrics.DistinctProviderCount,
             metrics.EvaluatedStatementCount,
@@ -300,6 +305,12 @@ public sealed class BillStatementAiShadowReadinessEvaluator
             metrics.EvaluatedStatementCount,
             nameof(
                 metrics.AlertEvaluatedStatementCount));
+
+        RequireNotGreaterThan(
+            metrics.ScoredDocumentExactMatchCount,
+            metrics.EvaluatedStatementCount,
+            nameof(
+                metrics.ScoredDocumentExactMatchCount));
     }
 
     private static void ValidatePolicy(
@@ -404,7 +415,16 @@ public sealed record BillStatementAiShadowReadinessMetrics(
     long IncorrectFactCount,
     long MissedFactCount,
     long AlertEvaluatedStatementCount,
-    long FalseAlertStatementCount);
+    long FalseAlertStatementCount)
+{
+    /*
+     * Number of statements where every currently scored field and line item
+     * exactly matches reviewer-approved ground truth, with no unsupported
+     * scored facts. This is an evaluation diagnostic, not a readiness gate
+     * by itself.
+     */
+    public long ScoredDocumentExactMatchCount { get; init; }
+}
 
 public sealed record BillStatementAiShadowReadinessPolicy(
     long MinimumEvaluatedStatementCount,

@@ -107,6 +107,72 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
     }
 
     [Fact]
+    public void Compare_ScoredDocumentRegressionVetoesFactMetricImprovement()
+    {
+        var baseline =
+            CreateMetrics(
+                providerFailureCount:
+                    5,
+                readyCandidateStatementCount:
+                    80,
+                correctFactCount:
+                    900,
+                incorrectFactCount:
+                    10,
+                missedFactCount:
+                    100,
+                scoredDocumentExactMatchCount:
+                    60);
+
+        var candidate =
+            CreateMetrics(
+                providerFailureCount:
+                    3,
+                readyCandidateStatementCount:
+                    85,
+                correctFactCount:
+                    930,
+                incorrectFactCount:
+                    5,
+                missedFactCount:
+                    70,
+                scoredDocumentExactMatchCount:
+                    59);
+
+        var result =
+            new BillStatementAiPromptComparisonEvaluator()
+                .Compare(
+                    baseline,
+                    CreateFieldScores(
+                        baseline),
+                    CreateProviderScores(
+                        baseline),
+                    candidate,
+                    CreateFieldScores(
+                        candidate),
+                    CreateProviderScores(
+                        candidate));
+
+        Assert.False(
+            result.CandidateHasNoAggregateRegression);
+
+        Assert.False(
+            result.CandidateHasNoScoredDocumentRegression);
+
+        Assert.Equal(
+            -1,
+            result.ScoredDocumentExactMatchCountDelta);
+
+        Assert.Equal(
+            -0.01m,
+            result.ScoredDocumentExactMatchRateDelta);
+
+        Assert.Contains(
+            4,
+            result.RegressedProviderOrdinals);
+    }
+
+    [Fact]
     public void Compare_FlagsCandidateAggregateRegression()
     {
         var baseline =
@@ -1083,7 +1149,8 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
         long readyCandidateStatementCount,
         long correctFactCount,
         long incorrectFactCount,
-        long missedFactCount)
+        long missedFactCount,
+        long scoredDocumentExactMatchCount = 0)
     {
         return new BillStatementAiShadowReadinessMetrics(
             EvaluatedStatementCount:
@@ -1117,7 +1184,11 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                 0,
 
             FalseAlertStatementCount:
-                0);
+                0)
+        {
+            ScoredDocumentExactMatchCount =
+                scoredDocumentExactMatchCount
+        };
     }
 
     private static IReadOnlyList<BillStatementAiProviderScore>
@@ -1205,6 +1276,11 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                 metrics.MissedFactCount,
                 providerCount);
 
+        var scoredDocumentExactMatchCounts =
+            DistributeWithCapacity(
+                metrics.ScoredDocumentExactMatchCount,
+                statementCounts);
+
         return Enumerable.Range(
                 0,
                 providerCount)
@@ -1233,7 +1309,11 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                             incorrectCounts[index],
 
                         MissedFactCount:
-                            missedCounts[index]))
+                            missedCounts[index])
+                    {
+                        ScoredDocumentExactMatchCount =
+                            scoredDocumentExactMatchCounts[index]
+                    })
             .ToArray();
 
         static long[] DistributeEvenly(

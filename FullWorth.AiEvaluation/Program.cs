@@ -402,6 +402,11 @@ internal static class Program
                         comparison.CorrectFactCountDelta,
                         comparison.IncorrectFactCountDelta,
                         comparison.MissedFactCountDelta,
+                        comparison.BaselineScoredDocumentExactMatchRate,
+                        comparison.CandidateScoredDocumentExactMatchRate,
+                        comparison.ScoredDocumentExactMatchRateDelta,
+                        comparison.ScoredDocumentExactMatchCountDelta,
+                        comparison.CandidateHasNoScoredDocumentRegression,
                         comparison.ReadyCandidateStatementCountDelta,
                         comparison.ProviderFailureCountDelta,
 
@@ -457,6 +462,9 @@ internal static class Program
                                         provider.BaselineProviderFailureRate,
                                         provider.CandidateProviderFailureRate,
                                         provider.ProviderFailureRateDelta,
+                                        provider.BaselineScoredDocumentExactMatchCount,
+                                        provider.CandidateScoredDocumentExactMatchCount,
+                                        provider.ScoredDocumentExactMatchCountDelta,
                                         provider.CandidateHasNoRegression
                                     }),
 
@@ -507,6 +515,12 @@ internal static class Program
                             true,
 
                         aggregateRecallMustNotDecrease =
+                            true,
+
+                        scoredDocumentExactMatchRateMustNotDecrease =
+                            true,
+
+                        scoredDocumentExactMatchCountMustNotDecreasePerAnonymousProvider =
                             true,
 
                         readyCandidateRateMustNotDecrease =
@@ -740,6 +754,12 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires chunked extraction rejection accounting.");
 
+        var scoredDocumentExactMatchRate =
+            metrics.EvaluatedStatementCount == 0
+                ? 0m
+                : metrics.ScoredDocumentExactMatchCount /
+                    (decimal)metrics.EvaluatedStatementCount;
+
         return new
         {
             promptVersion,
@@ -757,6 +777,8 @@ internal static class Program
             metrics.CorrectFactCount,
             metrics.IncorrectFactCount,
             metrics.MissedFactCount,
+            metrics.ScoredDocumentExactMatchCount,
+            scoredDocumentExactMatchRate,
             readiness.FactPrecision,
             readiness.FactRecall,
             readiness.ReadyCandidateRate,
@@ -790,6 +812,7 @@ internal static class Program
                             provider.CorrectFactCount,
                             provider.IncorrectFactCount,
                             provider.MissedFactCount,
+                            provider.ScoredDocumentExactMatchCount,
                             provider.FactPrecision,
                             provider.FactRecall,
                             provider.ReadyCandidateRate,
