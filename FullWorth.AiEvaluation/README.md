@@ -66,17 +66,28 @@ candidate validator, and ground-truth scorer:
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- compare-prompts --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
 ```
 
-The comparison remains aggregate-only. It reports precision, recall,
-ready-candidate rate, provider-failure rate, raw count deltas, elapsed time, and
-whether v2 has no aggregate regression plus at least one strict improvement.
+The comparison remains aggregate-only. It reports overall precision, recall,
+ready-candidate rate, provider-failure rate, raw count deltas, and a fixed
+field-level breakdown for TotalAmount, BillingPeriodStart, BillingPeriodEnd,
+StatementDate, DueDate, CurrencyCode, and LineItems. It never reports a case,
+provider, statement, evidence excerpt, or model response.
 
 A candidate qualifies only for **promotion review** when all of these are true:
 
-- fact precision does not decrease;
-- fact recall does not decrease;
+- aggregate fact precision does not decrease;
+- aggregate fact recall does not decrease;
 - ready-candidate rate does not decrease;
-- provider-failure rate does not increase; and
-- at least one of those four metrics strictly improves.
+- provider-failure rate does not increase;
+- every fixed field has the same expected-fact population in both runs;
+- for every fixed field, correct count does not decrease;
+- for every fixed field, incorrect count does not increase;
+- for every fixed field, missed count does not increase;
+- for every fixed field, precision and recall do not decrease; and
+- at least one aggregate metric strictly improves.
+
+This means an overall improvement cannot hide a regression in a critical field
+such as TotalAmount or DueDate. The report includes only the fixed field key and
+aggregate counts/rates needed to explain a veto.
 
 That flag does not promote a prompt automatically. It cannot enable runtime
 shadow mode, production inference, alerts, or AI-derived persistence.
