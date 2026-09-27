@@ -641,7 +641,9 @@ internal static class Program
                     promptVersion,
                     providerCallsAuthorized:
                         true,
-                    readinessPolicy);
+                    readinessPolicy,
+                    maxCharactersPerInference:
+                        options.MaxDocumentCharacters);
 
         stopwatch.Stop();
 
