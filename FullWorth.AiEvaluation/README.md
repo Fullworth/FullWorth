@@ -115,8 +115,9 @@ does not qualify for promotion review. Coverage rejection returns exit code
 
 ## Privacy and provenance
 
-Local AI modes require the explicit authorization flag and call only the
-loopback runtime. The runner prints aggregate metrics and approved
+Local AI modes require the explicit authorization flag and runtime key before
+opening the private corpus, and call only the loopback runtime. The runner
+prints aggregate metrics and approved
 model/runtime identifiers; it never prints case identifiers, provider keys,
 statement text, ground truth, model output, evidence, secrets, or corpus paths.
 
