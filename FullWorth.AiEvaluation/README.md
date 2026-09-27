@@ -66,11 +66,11 @@ candidate validator, and ground-truth scorer:
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- compare-prompts --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
 ```
 
-The comparison remains aggregate-only. It reports overall precision, recall,
-ready-candidate rate, provider-failure rate, raw count deltas, and a fixed
-field-level breakdown for TotalAmount, BillingPeriodStart, BillingPeriodEnd,
-StatementDate, DueDate, CurrencyCode, and LineItems. It never reports a case,
-provider, statement, evidence excerpt, or model response.
+The comparison reports overall precision, recall, ready-candidate rate,
+provider-failure rate, raw count deltas, and a fixed field-level breakdown for
+TotalAmount, BillingPeriodStart, BillingPeriodEnd, StatementDate, DueDate,
+CurrencyCode, and LineItems. It never reports a case, provider, statement,
+evidence excerpt, or model response.
 
 A candidate qualifies only for **promotion review** when all of these are true:
 
