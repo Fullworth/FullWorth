@@ -13,6 +13,7 @@ using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Plaid;
+using FullWorth.API.Services.Planning;
 using FullWorth.API.Services.Statements;
 using FullWorth.API.Services.Subscriptions;
 using FullWorth.Core.Services;
@@ -264,6 +265,9 @@ builder.Services.AddSingleton<
 
 builder.Services.AddSingleton(
     TimeProvider.System);
+
+builder.Services.AddScoped<
+    PlanningSettingsService>();
 
 builder.Services.AddSingleton<
     SubscriptionAccessKeyGenerator>();
