@@ -365,25 +365,13 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
 
         var candidateFields =
             CreateFieldScores(
-                    candidate,
-                    totalAmountCorrect:
-                        99,
-                    totalAmountIncorrect:
-                        0,
-                    totalAmountMissed:
-                        0)
-                .Select(
-                    field =>
-                        field.FieldKey ==
-                            BillStatementAiGroundTruthFieldKeys.LineItems
-                            ? field with
-                            {
-                                Correct =
-                                    field.Correct +
-                                    1
-                            }
-                            : field)
-                .ToArray();
+                candidate,
+                totalAmountCorrect:
+                    99,
+                totalAmountIncorrect:
+                    0,
+                totalAmountMissed:
+                    0);
 
         var exception =
             Assert.Throws<ArgumentException>(
