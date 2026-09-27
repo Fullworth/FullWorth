@@ -89,6 +89,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Null(
             result.FieldScores);
 
+        Assert.Null(
+            result.ProviderScores);
+
         Assert.False(
             result.CoverageDecision
                 .MayBeginOfflineProviderEvaluation);
@@ -248,6 +251,142 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 field =>
                     field.Missed));
 
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.Equal(
+            2,
+            providerScores.Count);
+
+        Assert.Equal(
+            new[]
+            {
+                1,
+                2
+            },
+            providerScores.Select(
+                score =>
+                    score.ProviderOrdinal));
+
+        Assert.All(
+            providerScores,
+            score =>
+            {
+                Assert.Equal(
+                    1,
+                    score.StatementCount);
+
+                Assert.Equal(
+                    1,
+                    score.ProviderAttemptCount);
+
+                Assert.Equal(
+                    0,
+                    score.ProviderFailureCount);
+
+                Assert.Equal(
+                    1,
+                    score.ReadyCandidateStatementCount);
+
+                Assert.Equal(
+                    4,
+                    score.CorrectFactCount);
+
+                Assert.Equal(
+                    0,
+                    score.IncorrectFactCount);
+
+                Assert.Equal(
+                    0,
+                    score.MissedFactCount);
+
+                Assert.Equal(
+                    1m,
+                    score.FactPrecision);
+
+                Assert.Equal(
+                    1m,
+                    score.FactRecall);
+
+                Assert.Equal(
+                    1m,
+                    score.ReadyCandidateRate);
+
+                Assert.Equal(
+                    0m,
+                    score.ProviderFailureRate);
+            });
+
+        Assert.Equal(
+            metrics.EvaluatedStatementCount,
+            providerScores.Sum(
+                score =>
+                    score.StatementCount));
+
+        Assert.Equal(
+            metrics.ProviderAttemptCount,
+            providerScores.Sum(
+                score =>
+                    score.ProviderAttemptCount));
+
+        Assert.Equal(
+            metrics.ProviderFailureCount,
+            providerScores.Sum(
+                score =>
+                    score.ProviderFailureCount));
+
+        Assert.Equal(
+            metrics.ReadyCandidateStatementCount,
+            providerScores.Sum(
+                score =>
+                    score.ReadyCandidateStatementCount));
+
+        Assert.Equal(
+            metrics.CorrectFactCount,
+            providerScores.Sum(
+                score =>
+                    score.CorrectFactCount));
+
+        Assert.Equal(
+            metrics.IncorrectFactCount,
+            providerScores.Sum(
+                score =>
+                    score.IncorrectFactCount));
+
+        Assert.Equal(
+            metrics.MissedFactCount,
+            providerScores.Sum(
+                score =>
+                    score.MissedFactCount));
+
+        Assert.DoesNotContain(
+            typeof(
+                    BillStatementAiProviderScore)
+                .GetProperties(),
+            property =>
+                property.Name.Contains(
+                    "Key",
+                    StringComparison.OrdinalIgnoreCase) ||
+                property.Name.Contains(
+                    "Name",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.DoesNotContain(
+            "provider-a",
+            string.Join(
+                "|",
+                providerScores),
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "provider-b",
+            string.Join(
+                "|",
+                providerScores),
+            StringComparison.OrdinalIgnoreCase);
+
         var totalAmount =
             Assert.Single(
                 fieldScores,
@@ -402,6 +541,35 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             4,
             metrics.MissedFactCount);
 
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.Equal(
+            2,
+            providerScores.Count);
+
+        Assert.Single(
+            providerScores,
+            score =>
+                score.ProviderFailureCount ==
+                    1 &&
+                score.ProviderFailureRate ==
+                    1m &&
+                score.ReadyCandidateStatementCount ==
+                    0);
+
+        Assert.Single(
+            providerScores,
+            score =>
+                score.ProviderFailureCount ==
+                    0 &&
+                score.ProviderFailureRate ==
+                    0m &&
+                score.ReadyCandidateStatementCount ==
+                    1);
+
         Assert.Equal(
             2,
             extractor.CallCount);
@@ -490,6 +658,32 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             8,
             metrics.MissedFactCount);
+
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.All(
+            providerScores,
+            score =>
+            {
+                Assert.Equal(
+                    0,
+                    score.ReadyCandidateStatementCount);
+
+                Assert.Equal(
+                    0,
+                    score.CorrectFactCount);
+
+                Assert.Equal(
+                    4,
+                    score.MissedFactCount);
+
+                Assert.Equal(
+                    0m,
+                    score.FactRecall);
+            });
     }
 
     private static BillStatementAiPrivateCorpusProviderEvaluator
