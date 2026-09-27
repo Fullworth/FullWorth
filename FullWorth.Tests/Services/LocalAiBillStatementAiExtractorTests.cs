@@ -179,6 +179,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
             options.ApiKey!,
             handler.RequestBody,
             StringComparison.Ordinal);
+
+        Assert.Equal(
+            1L,
+            extractor.InferenceCallCount);
     }
 
     [Fact]
@@ -225,6 +229,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
 
         Assert.Null(
             handler.RequestUri);
+
+        Assert.Equal(
+            0L,
+            extractor.InferenceCallCount);
     }
 
     [Fact]
@@ -358,6 +366,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
             sensitiveModelBody,
             exception.ToString(),
             StringComparison.Ordinal);
+
+        Assert.Equal(
+            1L,
+            extractor.InferenceCallCount);
     }
 
     [Fact]
