@@ -250,6 +250,54 @@ public sealed class BillStatementAiGroundTruthScorer
         return scores.AsReadOnly();
     }
 
+    /*
+     * Each fixed field is scored inside the same anonymous provider buckets
+     * as ScoreProviders. The ordinal carries no provider name.
+     */
+    public IReadOnlyList<BillStatementAiProviderFieldScore> ScoreProviderFields(
+        IReadOnlyList<BillStatementAiGroundTruthObservation> observations)
+    {
+        ArgumentNullException.ThrowIfNull(
+            observations);
+
+        foreach (var observation in
+                 observations)
+        {
+            ArgumentNullException.ThrowIfNull(
+                observation);
+
+            ValidateObservation(
+                observation);
+        }
+
+        var groups =
+            observations
+                .GroupBy(
+                    observation =>
+                        observation.ProviderKey
+                            .Trim()
+                            .ToUpperInvariant(),
+                    StringComparer.Ordinal)
+                .OrderBy(
+                    group =>
+                        group.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        return Array.AsReadOnly(
+            groups
+                .Select(
+                    (group, index) =>
+                        new BillStatementAiProviderFieldScore(
+                            ProviderOrdinal:
+                                index + 1,
+
+                            FieldScores:
+                                ScoreFields(
+                                    group.ToArray())))
+                .ToArray());
+    }
+
     public IReadOnlyList<BillStatementAiFieldScore> ScoreFields(
         IReadOnlyList<BillStatementAiGroundTruthObservation> observations)
     {
@@ -717,6 +765,10 @@ public static class BillStatementAiGroundTruthFieldKeys
                 LineItems
             });
 }
+
+public sealed record BillStatementAiProviderFieldScore(
+    int ProviderOrdinal,
+    IReadOnlyList<BillStatementAiFieldScore> FieldScores);
 
 public sealed record BillStatementAiProviderScore(
     int ProviderOrdinal,
