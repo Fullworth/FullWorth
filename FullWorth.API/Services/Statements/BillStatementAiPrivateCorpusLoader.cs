@@ -81,6 +81,63 @@ public sealed class BillStatementAiPrivateCorpusLoader
         }
     }
 
+    public async Task<BillStatementAiPrivateCorpusSnapshot> LoadSnapshotAsync(
+        string corpusRootDirectory,
+        IReadOnlyList<string> caseIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            corpusRootDirectory);
+
+        ArgumentNullException.ThrowIfNull(
+            caseIds);
+
+        if (!Path.IsPathFullyQualified(
+                corpusRootDirectory))
+        {
+            throw new ArgumentException(
+                "The private corpus root must be an absolute path.",
+                nameof(corpusRootDirectory));
+        }
+
+        if (caseIds.Count is < 1 or > 1_000)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(caseIds),
+                "A private corpus snapshot requires between 1 and 1000 cases.");
+        }
+
+        if (caseIds.Any(
+                string.IsNullOrWhiteSpace) ||
+            caseIds.Distinct(
+                    StringComparer.OrdinalIgnoreCase)
+                .Count() != caseIds.Count)
+        {
+            throw new ArgumentException(
+                "Private corpus case identifiers must be non-empty and unique.",
+                nameof(caseIds));
+        }
+
+        var cases =
+            new List<BillStatementAiPrivateCorpusCase>(
+                caseIds.Count);
+
+        foreach (var caseId in
+                 caseIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            cases.Add(
+                await LoadAsync(
+                    corpusRootDirectory,
+                    caseId,
+                    cancellationToken));
+        }
+
+        return new BillStatementAiPrivateCorpusSnapshot(
+            cases);
+    }
+
     private static async Task<BillStatementAiPrivateCorpusCase> LoadCoreAsync(
         string corpusRootDirectory,
         string caseId,
@@ -460,6 +517,22 @@ public sealed record BillStatementAiPrivateCorpusCase(
     string StatementText,
     BillStatementStructuredData ExpectedStatement,
     IReadOnlyList<BillStatementStructuredLineItem> ExpectedLineItems);
+
+public sealed class BillStatementAiPrivateCorpusSnapshot
+{
+    internal BillStatementAiPrivateCorpusSnapshot(
+        IReadOnlyList<BillStatementAiPrivateCorpusCase> cases)
+    {
+        ArgumentNullException.ThrowIfNull(
+            cases);
+
+        Cases =
+            Array.AsReadOnly(
+                cases.ToArray());
+    }
+
+    public IReadOnlyList<BillStatementAiPrivateCorpusCase> Cases { get; }
+}
 
 public sealed record BillStatementAiGroundTruthDocument(
     string ProviderKey,

@@ -148,23 +148,94 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
          * from consuming provider spend for the cases that happened to come
          * before it.
          */
-        var corpusCases =
-            new List<BillStatementAiPrivateCorpusCase>(
-                caseIds.Count);
+        var corpusSnapshot =
+            await _loader.LoadSnapshotAsync(
+                corpusRootDirectory,
+                caseIds,
+                cancellationToken);
 
-        foreach (var caseId in
-                 caseIds)
+        return await EvaluateLoadedCasesAsync(
+            corpusSnapshot,
+            promptVersion,
+            providerCallsAuthorized,
+            readinessPolicy,
+            cancellationToken,
+            maxCharactersPerInference);
+    }
+
+    public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
+        EvaluateLoadedCasesAsync(
+            BillStatementAiPrivateCorpusSnapshot corpusSnapshot,
+            string promptVersion,
+            bool providerCallsAuthorized,
+            BillStatementAiShadowReadinessPolicy readinessPolicy,
+            CancellationToken cancellationToken = default,
+            int? maxCharactersPerInference = null)
+    {
+        ArgumentNullException.ThrowIfNull(
+            corpusSnapshot);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            promptVersion);
+
+        ArgumentNullException.ThrowIfNull(
+            readinessPolicy);
+
+        if (maxCharactersPerInference is <= 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCharactersPerInference),
+                maxCharactersPerInference,
+                "Maximum characters per inference must be positive when configured.");
+        }
 
-            var corpusCase =
-                await _loader.LoadAsync(
-                    corpusRootDirectory,
-                    caseId,
-                    cancellationToken);
+        if (!providerCallsAuthorized)
+        {
+            throw new InvalidOperationException(
+                "Offline AI provider evaluation requires explicit provider-call authorization.");
+        }
 
-            corpusCases.Add(
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var corpusCases =
+            corpusSnapshot.Cases.ToArray();
+
+        if (corpusCases.Length is < 1 or > MaxCasesPerRun)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(corpusSnapshot),
+                $"An offline provider evaluation requires between 1 and {MaxCasesPerRun} cases.");
+        }
+
+        var seenCaseIds =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var corpusCase in
+                 corpusCases)
+        {
+            ArgumentNullException.ThrowIfNull(
                 corpusCase);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.CaseId);
+
+            if (!seenCaseIds.Add(
+                    corpusCase.CaseId))
+            {
+                throw new ArgumentException(
+                    "Private corpus case identifiers must be unique.",
+                    nameof(corpusCases));
+            }
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.ProviderKey);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedStatement);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedLineItems);
         }
 
         var coverageSummary =
@@ -195,11 +266,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         var observations =
             new List<BillStatementAiGroundTruthObservation>(
-                corpusCases.Count);
+                corpusCases.Length);
 
         var providerAttemptDurationsMilliseconds =
             new List<double>(
-                corpusCases.Count);
+                corpusCases.Length);
 
         var providerFailureKinds =
             new Dictionary<

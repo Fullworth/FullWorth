@@ -64,6 +64,10 @@ partial document as complete.
 Use the comparison mode to run the preserved v1 baseline and current v2 prompt
 against the exact same sorted case identifiers, model endpoint, deterministic
 candidate validator, and ground-truth scorer:
+For the paired inference runs, the runner loads and validates the selected cases
+into one in-memory snapshot before the first inference, then reuses it for both
+prompt versions. Editing or replacing corpus files during a run cannot silently
+change the paired comparison.
 
 ```sh
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- compare-prompts --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
