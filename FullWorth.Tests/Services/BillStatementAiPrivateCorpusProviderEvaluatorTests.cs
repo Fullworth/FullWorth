@@ -95,6 +95,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Null(
             result.ProviderAttemptLatency);
 
+        Assert.Null(
+            result.FailureKindCounts);
+
         Assert.False(
             result.CoverageDecision
                 .MayBeginOfflineProviderEvaluation);
@@ -428,6 +431,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 property.PropertyType !=
                     typeof(double));
 
+        var failureKindCounts =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                result.FailureKindCounts);
+
+        Assert.Empty(
+            failureKindCounts);
+
         var totalAmount =
             Assert.Single(
                 fieldScores,
@@ -618,6 +629,20 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                     result.ProviderAttemptLatency)
                 .AttemptCount);
 
+        var failureKind =
+            Assert.Single(
+                Assert.IsAssignableFrom<
+                    IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                    result.FailureKindCounts));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Unknown,
+            failureKind.FailureKind);
+
+        Assert.Equal(
+            1,
+            failureKind.Count);
+
         Assert.Equal(
             2,
             extractor.CallCount);
@@ -739,6 +764,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                     BillStatementAiProviderAttemptLatencySummary>(
                     result.ProviderAttemptLatency)
                 .AttemptCount);
+
+        Assert.Empty(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                result.FailureKindCounts));
     }
 
     [Fact]
