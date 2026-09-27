@@ -809,6 +809,116 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
             result.CandidateQualifiesForPromotionReview);
     }
 
+    [Fact]
+    public void CompareWithProviderFields_RejectsChangedTruthInsideBuckets()
+    {
+        var candidateProviderFields =
+            CreateCrossProviderFields(
+                    firstTotalCorrect:
+                        10,
+                    firstDueCorrect:
+                        9,
+                    secondTotalCorrect:
+                        9,
+                    secondDueCorrect:
+                        10)
+                .ToArray();
+
+        candidateProviderFields[0] =
+            WithMissed(
+                WithMissed(
+                    candidateProviderFields[0],
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount,
+                    1),
+                BillStatementAiGroundTruthFieldKeys.DueDate,
+                0);
+
+        candidateProviderFields[1] =
+            WithMissed(
+                WithMissed(
+                    candidateProviderFields[1],
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount,
+                    0),
+                BillStatementAiGroundTruthFieldKeys.DueDate,
+                1);
+
+        var exception =
+            Assert.Throws<ArgumentException>(
+                () =>
+                    new BillStatementAiPromptComparisonEvaluator()
+                        .CompareWithProviderFields(
+                            CreateCrossMetrics(
+                                correctFactCount:
+                                    36),
+                            CreateCrossFields(
+                                totalCorrect:
+                                    18,
+                                dueCorrect:
+                                    18),
+                            CreateCrossProviders(
+                                firstCorrect:
+                                    18,
+                                secondCorrect:
+                                    18),
+                            CreateCrossProviderFields(
+                                firstTotalCorrect:
+                                    10,
+                                firstDueCorrect:
+                                    8,
+                                secondTotalCorrect:
+                                    8,
+                                secondDueCorrect:
+                                    10),
+                            CreateCrossMetrics(
+                                correctFactCount:
+                                    38),
+                            CreateCrossFields(
+                                totalCorrect:
+                                    19,
+                                dueCorrect:
+                                    19),
+                            CreateCrossProviders(
+                                firstCorrect:
+                                    19,
+                                secondCorrect:
+                                    19),
+                            candidateProviderFields));
+
+        Assert.Contains(
+            "anonymous provider fixed-field expected fact count",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    private static BillStatementAiProviderFieldScore WithMissed(
+        BillStatementAiProviderFieldScore provider,
+        string fieldKey,
+        long missed)
+    {
+        var fields =
+            provider.FieldScores.ToArray();
+
+        var index =
+            Array.FindIndex(
+                fields,
+                field =>
+                    field.FieldKey ==
+                    fieldKey);
+
+        fields[index] =
+            fields[index] with
+            {
+                Missed =
+                    missed
+            };
+
+        return provider with
+        {
+            FieldScores =
+                fields
+        };
+    }
+
     private static BillStatementAiShadowReadinessMetrics CreateCrossMetrics(
         long correctFactCount)
     {
