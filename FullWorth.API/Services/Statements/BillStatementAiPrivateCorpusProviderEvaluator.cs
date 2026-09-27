@@ -187,7 +187,16 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 BillStatementAiExtractionFailureKind,
                 long>();
 
-        long inferenceCallCount =
+        var inferenceCallCounter =
+            _aiExtractor as
+                IBillStatementAiInferenceCallCounter;
+
+        var inferenceCallBaseline =
+            inferenceCallCounter?
+                .InferenceCallCount ??
+            0L;
+
+        long extractorAttemptCount =
             0;
 
         foreach (var corpusCase in
@@ -213,9 +222,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * The purpose of this evaluation is to measure the extractor,
                  * not help it by leaking approved answers into its context.
                  */
-                inferenceCallCount =
+                extractorAttemptCount =
                     checked(
-                        inferenceCallCount +
+                        extractorAttemptCount +
                         1);
 
                 var candidate =
@@ -344,6 +353,12 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.ScoreProviderFields(
                 observations);
 
+        var inferenceCallCount =
+            GetInferenceCallCount(
+                inferenceCallCounter,
+                inferenceCallBaseline,
+                extractorAttemptCount);
+
         var providerAttemptLatency =
             BillStatementAiProviderAttemptLatencySummary
                 .Create(
@@ -376,6 +391,31 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     inferenceCallCount,
                     providerAttemptLatency,
                     failureKindCounts);
+    }
+
+    private static long GetInferenceCallCount(
+        IBillStatementAiInferenceCallCounter? inferenceCallCounter,
+        long inferenceCallBaseline,
+        long extractorAttemptCount)
+    {
+        if (inferenceCallCounter is null)
+        {
+            return extractorAttemptCount;
+        }
+
+        var currentCount =
+            inferenceCallCounter.InferenceCallCount;
+
+        if (currentCount <
+            inferenceCallBaseline)
+        {
+            throw new InvalidOperationException(
+                "The aggregate inference-call counter moved backwards during evaluation.");
+        }
+
+        return checked(
+            currentCount -
+            inferenceCallBaseline);
     }
 
     private static void ValidateCaseIds(
