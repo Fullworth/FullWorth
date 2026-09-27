@@ -916,9 +916,11 @@ namespace FullWorth.API.Data.Migrations
 
                     b.ToTable("PlanningPaySchedules", null, t =>
                         {
+                            t.HasCheckConstraint("CK_PlanningPaySchedules_Frequency", "\"Frequency\" IN ('Weekly', 'Biweekly', 'SemiMonthly', 'Monthly')");
+
                             t.HasCheckConstraint("CK_PlanningPaySchedules_DefaultPaychecksAhead", "\"DefaultPaychecksAhead\" >= 1 AND \"DefaultPaychecksAhead\" <= 26");
 
-                            t.HasCheckConstraint("CK_PlanningPaySchedules_SecondaryDay", "(\"Frequency\" = 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NOT NULL AND \"SecondaryDayOfMonth\" >= 1 AND \"SecondaryDayOfMonth\" <= 31) OR (\"Frequency\" <> 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NULL)");
+                            t.HasCheckConstraint("CK_PlanningPaySchedules_SecondaryDay", "(\"Frequency\" = 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NOT NULL AND \"SecondaryDayOfMonth\" >= 1 AND \"SecondaryDayOfMonth\" <= 31 AND \"SecondaryDayOfMonth\" <> EXTRACT(DAY FROM \"AnchorPayDate\")::integer) OR (\"Frequency\" <> 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NULL)");
                         });
                 });
 
