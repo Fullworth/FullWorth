@@ -309,6 +309,47 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Theory]
+    [InlineData("9/02/2026")]
+    [InlineData("09/2/2026")]
+    [InlineData("9-02-2026")]
+    [InlineData("09-2-2026")]
+    public void DateEvidence_AcceptsMixedWidthMonthFirstNumericDate(
+        string printedDate)
+    {
+        var documentText =
+            $"Due {printedDate}";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        2),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Theory]
     [InlineData("Due Sep 02 2026")]
     [InlineData("Due September 02, 2026")]
     [InlineData("Due 02 Sep 2026")]
