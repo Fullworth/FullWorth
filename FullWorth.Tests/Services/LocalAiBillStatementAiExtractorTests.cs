@@ -143,6 +143,32 @@ public sealed class LocalAiBillStatementAiExtractorTests
             handler.RequestBody,
             StringComparison.Ordinal);
 
+        JsonElement systemMessage =
+            root.GetProperty("messages")[0];
+
+        string systemInstructions =
+            systemMessage.GetProperty("content").GetString()!;
+
+        Assert.Contains(
+            "total amount due from current-period charges",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "previous balance, payments, credits",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "Preserve the printed amount and sign",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "Do not calculate or reconcile totals",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
         Assert.Equal(
             new Uri(options.Endpoint),
             handler.RequestUri);
@@ -391,7 +417,7 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         "Internet"),
 
             PromptVersion:
-                "bill-statement-extraction-v1");
+                "bill-statement-extraction-v2");
     }
 
     private static BillStatementAiCandidate CreateCandidate()
