@@ -52,11 +52,6 @@ namespace FullWorth.API.Services.Statements
                 @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
                 RegexOptions.Compiled |
                 RegexOptions.CultureInvariant |
-                RegexOptions.IgnoreCase);        private static readonly Regex MoneyValueRegex =
-            new(
-                @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
-                RegexOptions.Compiled |
-                RegexOptions.CultureInvariant |
                 RegexOptions.IgnoreCase);
 
         public BillStatementAiCandidateValidationResult Validate(
