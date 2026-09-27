@@ -146,7 +146,7 @@ public sealed class PlanningPersistenceModelTests
                             nameof(
                                 PlanningPaycheckAllocationEntity.BillStreamId),
                             nameof(
-                                PlanningPaycheckAllocationEntity.BillDueDate)
+                                PlanningPaycheckAllocationEntity.BillPeriodEnd)
                         ]));
 
         Assert.Contains(
@@ -163,7 +163,7 @@ public sealed class PlanningPersistenceModelTests
                             nameof(
                                 PlanningPaycheckAllocationEntity.BillStreamId),
                             nameof(
-                                PlanningPaycheckAllocationEntity.BillDueDate)
+                                PlanningPaycheckAllocationEntity.BillPeriodEnd)
                         ]));
 
         var allocationForeignKey =
