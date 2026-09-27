@@ -5,7 +5,7 @@ namespace FullWorth.Tests.Services;
 public sealed class BillStatementAiPromptComparisonEvaluatorTests
 {
     [Fact]
-    public void Compare_ReportsRegressionFreeStrictImprovement()
+    public void Compare_ReportsRegressionFreeImprovementWithoutIntersectionApproval()
     {
         var baseline =
             CreateMetrics(
@@ -59,8 +59,11 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
         Assert.True(
             result.CandidateHasStrictAggregateImprovement);
 
-        Assert.True(
+        Assert.False(
             result.CandidateQualifiesForPromotionReview);
+
+        Assert.False(
+            result.CandidateHasNoProviderFieldRegression);
 
         Assert.Empty(
             result.RegressedFieldKeys);
@@ -704,6 +707,265 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
             "do not reconcile with aggregate fact counts",
             exception.Message,
             StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CompareWithProviderFields_GatesMaskedProviderFieldRegression(
+        bool regressAtIntersections)
+    {
+        var baseline =
+            CreateCrossMetrics(
+                correctFactCount:
+                    36);
+
+        var candidate =
+            CreateCrossMetrics(
+                correctFactCount:
+                    38);
+
+        var candidateProviderFields =
+            regressAtIntersections
+                ? CreateCrossProviderFields(
+                    firstTotalCorrect:
+                        9,
+                    firstDueCorrect:
+                        10,
+                    secondTotalCorrect:
+                        10,
+                    secondDueCorrect:
+                        9)
+                : CreateCrossProviderFields(
+                    firstTotalCorrect:
+                        10,
+                    firstDueCorrect:
+                        9,
+                    secondTotalCorrect:
+                        9,
+                    secondDueCorrect:
+                        10);
+
+        var result =
+            new BillStatementAiPromptComparisonEvaluator()
+                .CompareWithProviderFields(
+                    baseline,
+                    CreateCrossFields(
+                        totalCorrect:
+                            18,
+                        dueCorrect:
+                            18),
+                    CreateCrossProviders(
+                        firstCorrect:
+                            18,
+                        secondCorrect:
+                            18),
+                    CreateCrossProviderFields(
+                        firstTotalCorrect:
+                            10,
+                        firstDueCorrect:
+                            8,
+                        secondTotalCorrect:
+                            8,
+                        secondDueCorrect:
+                            10),
+                    candidate,
+                    CreateCrossFields(
+                        totalCorrect:
+                            19,
+                        dueCorrect:
+                            19),
+                    CreateCrossProviders(
+                        firstCorrect:
+                            19,
+                        secondCorrect:
+                            19),
+                    candidateProviderFields);
+
+        Assert.True(
+            result.CandidateHasNoAggregateRegression);
+
+        Assert.True(
+            result.CandidateHasNoFieldRegression);
+
+        Assert.True(
+            result.CandidateHasNoProviderRegression);
+
+        Assert.True(
+            result.CandidateHasStrictAggregateImprovement);
+
+        Assert.Equal(
+            regressAtIntersections
+                ? 2
+                : 0,
+            result.RegressedProviderFieldCount);
+
+        Assert.Equal(
+            !regressAtIntersections,
+            result.CandidateHasNoProviderFieldRegression);
+
+        Assert.Equal(
+            !regressAtIntersections,
+            result.CandidateQualifiesForPromotionReview);
+    }
+
+    private static BillStatementAiShadowReadinessMetrics CreateCrossMetrics(
+        long correctFactCount)
+    {
+        return new BillStatementAiShadowReadinessMetrics(
+            EvaluatedStatementCount:
+                20,
+            DistinctProviderCount:
+                2,
+            MinimumStatementsForAnyProvider:
+                10,
+            ProviderAttemptCount:
+                20,
+            ProviderFailureCount:
+                0,
+            ReadyCandidateStatementCount:
+                20,
+            CorrectFactCount:
+                correctFactCount,
+            IncorrectFactCount:
+                0,
+            MissedFactCount:
+                40 -
+                correctFactCount,
+            AlertEvaluatedStatementCount:
+                0,
+            FalseAlertStatementCount:
+                0);
+    }
+
+    private static IReadOnlyList<BillStatementAiFieldScore> CreateCrossFields(
+        long totalCorrect,
+        long dueCorrect)
+    {
+        return BillStatementAiGroundTruthFieldKeys.All
+            .Select(
+                fieldKey =>
+                    fieldKey switch
+                    {
+                        BillStatementAiGroundTruthFieldKeys.TotalAmount =>
+                            new BillStatementAiFieldScore(
+                                fieldKey,
+                                totalCorrect,
+                                0,
+                                20 - totalCorrect),
+
+                        BillStatementAiGroundTruthFieldKeys.DueDate =>
+                            new BillStatementAiFieldScore(
+                                fieldKey,
+                                dueCorrect,
+                                0,
+                                20 - dueCorrect),
+
+                        _ =>
+                            new BillStatementAiFieldScore(
+                                fieldKey,
+                                0,
+                                0,
+                                0)
+                    })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<BillStatementAiProviderScore> CreateCrossProviders(
+        long firstCorrect,
+        long secondCorrect)
+    {
+        return
+        [
+            CreateProvider(
+                1,
+                firstCorrect),
+            CreateProvider(
+                2,
+                secondCorrect)
+        ];
+
+        static BillStatementAiProviderScore CreateProvider(
+            int ordinal,
+            long correct)
+        {
+            return new BillStatementAiProviderScore(
+                ProviderOrdinal:
+                    ordinal,
+                StatementCount:
+                    10,
+                ProviderAttemptCount:
+                    10,
+                ProviderFailureCount:
+                    0,
+                ReadyCandidateStatementCount:
+                    10,
+                CorrectFactCount:
+                    correct,
+                IncorrectFactCount:
+                    0,
+                MissedFactCount:
+                    20 - correct);
+        }
+    }
+
+    private static IReadOnlyList<BillStatementAiProviderFieldScore>
+        CreateCrossProviderFields(
+            long firstTotalCorrect,
+            long firstDueCorrect,
+            long secondTotalCorrect,
+            long secondDueCorrect)
+    {
+        return
+        [
+            CreateProviderFields(
+                1,
+                firstTotalCorrect,
+                firstDueCorrect),
+            CreateProviderFields(
+                2,
+                secondTotalCorrect,
+                secondDueCorrect)
+        ];
+
+        static BillStatementAiProviderFieldScore CreateProviderFields(
+            int ordinal,
+            long totalCorrect,
+            long dueCorrect)
+        {
+            return new BillStatementAiProviderFieldScore(
+                ProviderOrdinal:
+                    ordinal,
+
+                FieldScores:
+                    BillStatementAiGroundTruthFieldKeys.All
+                        .Select(
+                            fieldKey =>
+                                fieldKey switch
+                                {
+                                    BillStatementAiGroundTruthFieldKeys.TotalAmount =>
+                                        new BillStatementAiFieldScore(
+                                            fieldKey,
+                                            totalCorrect,
+                                            0,
+                                            10 - totalCorrect),
+
+                                    BillStatementAiGroundTruthFieldKeys.DueDate =>
+                                        new BillStatementAiFieldScore(
+                                            fieldKey,
+                                            dueCorrect,
+                                            0,
+                                            10 - dueCorrect),
+
+                                    _ =>
+                                        new BillStatementAiFieldScore(
+                                            fieldKey,
+                                            0,
+                                            0,
+                                            0)
+                                })
+                        .ToArray());
+        }
     }
 
     private static BillStatementAiShadowReadinessMetrics CreateMetrics(
