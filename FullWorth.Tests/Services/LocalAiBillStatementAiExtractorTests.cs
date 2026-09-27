@@ -36,6 +36,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         CreateRequest(
                             "Total due $10.00")));
 
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Disabled,
+            exception.FailureKind);
+
         Assert.Contains(
             "disabled",
             exception.Message,
@@ -301,6 +305,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         CreateRequest(
                             "ACME Total due $10.00 USD")));
 
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.HttpStatus,
+            exception.FailureKind);
+
         Assert.Contains(
             "HTTP 400",
             exception.Message,
@@ -365,6 +373,10 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         CreateRequest(
                             "ACME Total due $10.00 USD")));
 
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.IncompleteResponse,
+            exception.FailureKind);
+
         Assert.Contains(
             "did not complete",
             exception.Message,
@@ -409,10 +421,111 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         CreateRequest(
                             "ACME Total due $10.00 USD")));
 
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.OversizedResponse,
+            exception.FailureKind);
+
         Assert.Contains(
             "oversized",
             exception.Message,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InvalidStructuredOutput_IsClassifiedWithoutEchoingModelContent()
+    {
+        const string invalidCandidate =
+            "not-valid-json-sensitive-model-content";
+
+        var response =
+            new JsonObject
+            {
+                ["choices"] =
+                    new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["finish_reason"] =
+                                "stop",
+
+                            ["message"] =
+                                new JsonObject
+                                {
+                                    ["role"] =
+                                        "assistant",
+
+                                    ["content"] =
+                                        invalidCandidate
+                                }
+                        }
+                    }
+            };
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    new HttpResponseMessage(
+                        HttpStatusCode.OK)
+                    {
+                        Content =
+                            new StringContent(
+                                response.ToJsonString(),
+                                Encoding.UTF8,
+                                "application/json")
+                    });
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.InvalidStructuredOutput,
+            exception.FailureKind);
+
+        Assert.DoesNotContain(
+            invalidCandidate,
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TransportFailure_IsClassified()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    throw new HttpRequestException(
+                        "transport-detail-not-for-aggregate-output"));
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Transport,
+            exception.FailureKind);
+
+        Assert.Equal(
+            "Local AI statement extraction could not reach the local model.",
+            exception.Message);
     }
 
     [Theory]
