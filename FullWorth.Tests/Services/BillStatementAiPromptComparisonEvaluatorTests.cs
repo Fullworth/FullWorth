@@ -39,8 +39,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                     baseline,
                     CreateFieldScores(
                         baseline),
+                    CreateProviderScores(
+                        baseline),
                     candidate,
                     CreateFieldScores(
+                        candidate),
+                    CreateProviderScores(
                         candidate));
 
         Assert.True(
@@ -50,6 +54,9 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
             result.CandidateHasNoFieldRegression);
 
         Assert.True(
+            result.CandidateHasNoProviderRegression);
+
+        Assert.True(
             result.CandidateHasStrictAggregateImprovement);
 
         Assert.True(
@@ -57,6 +64,9 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
 
         Assert.Empty(
             result.RegressedFieldKeys);
+
+        Assert.Empty(
+            result.RegressedProviderOrdinals);
 
         Assert.True(
             result.FactPrecisionDelta >
@@ -128,8 +138,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                     baseline,
                     CreateFieldScores(
                         baseline),
+                    CreateProviderScores(
+                        baseline),
                     candidate,
                     CreateFieldScores(
+                        candidate),
+                    CreateProviderScores(
                         candidate));
 
         Assert.False(
@@ -199,6 +213,8 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                             0,
                         totalAmountMissed:
                             0),
+                    CreateProviderScores(
+                        baseline),
                     candidate,
                     CreateFieldScores(
                         candidate,
@@ -207,7 +223,9 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                         totalAmountIncorrect:
                             0,
                         totalAmountMissed:
-                            1));
+                            1),
+                    CreateProviderScores(
+                        candidate));
 
         Assert.True(
             result.CandidateHasNoAggregateRegression);
@@ -257,6 +275,125 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
     }
 
     [Fact]
+    public void Compare_ProviderRegressionVetoesAggregateAndFieldImprovement()
+    {
+        var baseline =
+            CreateMetrics(
+                providerFailureCount:
+                    5,
+                readyCandidateStatementCount:
+                    80,
+                correctFactCount:
+                    900,
+                incorrectFactCount:
+                    10,
+                missedFactCount:
+                    100);
+
+        var candidate =
+            CreateMetrics(
+                providerFailureCount:
+                    3,
+                readyCandidateStatementCount:
+                    85,
+                correctFactCount:
+                    920,
+                incorrectFactCount:
+                    8,
+                missedFactCount:
+                    80);
+
+        var baselineProviders =
+            CreateProviderScores(
+                baseline)
+                .ToArray();
+
+        var candidateProviders =
+            CreateProviderScores(
+                candidate)
+                .ToArray();
+
+        /*
+         * Provider 1 gets worse while provider 2 gets correspondingly better.
+         * Aggregate and field totals still improve, so only the provider-aware
+         * gate can detect this masked regression.
+         */
+        candidateProviders[0] =
+            candidateProviders[0] with
+            {
+                CorrectFactCount =
+                    baselineProviders[0]
+                        .CorrectFactCount -
+                    1,
+
+                MissedFactCount =
+                    baselineProviders[0]
+                        .MissedFactCount +
+                    1
+            };
+
+        var correctCompensation =
+            CreateProviderScores(
+                    candidate)[0]
+                .CorrectFactCount -
+            candidateProviders[0]
+                .CorrectFactCount;
+
+        candidateProviders[1] =
+            candidateProviders[1] with
+            {
+                CorrectFactCount =
+                    candidateProviders[1]
+                        .CorrectFactCount +
+                    correctCompensation,
+
+                MissedFactCount =
+                    candidateProviders[1]
+                        .MissedFactCount -
+                    correctCompensation
+            };
+
+        var result =
+            new BillStatementAiPromptComparisonEvaluator()
+                .Compare(
+                    baseline,
+                    CreateFieldScores(
+                        baseline),
+                    baselineProviders,
+                    candidate,
+                    CreateFieldScores(
+                        candidate),
+                    candidateProviders);
+
+        Assert.True(
+            result.CandidateHasNoAggregateRegression);
+
+        Assert.True(
+            result.CandidateHasNoFieldRegression);
+
+        Assert.False(
+            result.CandidateHasNoProviderRegression);
+
+        Assert.False(
+            result.CandidateQualifiesForPromotionReview);
+
+        Assert.Equal(
+            new[]
+            {
+                1
+            },
+            result.RegressedProviderOrdinals);
+
+        Assert.False(
+            result.ProviderComparisons[0]
+                .CandidateHasNoRegression);
+
+        Assert.True(
+            result.ProviderComparisons[1]
+                .CandidateHasNoRegression);
+    }
+
+    [Fact]
     public void Compare_RejectsDifferentEvaluationPopulations()
     {
         var baseline =
@@ -293,8 +430,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                             baseline,
                             CreateFieldScores(
                                 baseline),
+                            CreateProviderScores(
+                                baseline),
                             candidate,
                             CreateFieldScores(
+                                candidate),
+                            CreateProviderScores(
                                 candidate)));
 
         Assert.Contains(
@@ -334,8 +475,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                             baseline,
                             CreateFieldScores(
                                 baseline),
+                            CreateProviderScores(
+                                baseline),
                             candidate,
                             CreateFieldScores(
+                                candidate),
+                            CreateProviderScores(
                                 candidate)));
 
         Assert.Contains(
@@ -381,8 +526,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                             baseline,
                             CreateFieldScores(
                                 baseline),
+                            CreateProviderScores(
+                                baseline),
                             candidate,
-                            candidateFields));
+                            candidateFields,
+                            CreateProviderScores(
+                                candidate)));
 
         Assert.Contains(
             "same TotalAmount expected fact count",
@@ -429,8 +578,12 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                         .Compare(
                             metrics,
                             invalidFields,
+                            CreateProviderScores(
+                                metrics),
                             metrics,
                             CreateFieldScores(
+                                metrics),
+                            CreateProviderScores(
                                 metrics)));
 
         Assert.Contains(
@@ -479,6 +632,183 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
 
             FalseAlertStatementCount:
                 0);
+    }
+
+    private static IReadOnlyList<BillStatementAiProviderScore>
+        CreateProviderScores(
+            BillStatementAiShadowReadinessMetrics metrics)
+    {
+        var providerCount =
+            checked(
+                (int)metrics.DistinctProviderCount);
+
+        if (providerCount <=
+            0)
+        {
+            throw new InvalidOperationException(
+                "The provider-score fixture requires at least one provider.");
+        }
+
+        var statementCounts =
+            new long[providerCount];
+
+        statementCounts[0] =
+            metrics.MinimumStatementsForAnyProvider;
+
+        var remainingStatements =
+            metrics.EvaluatedStatementCount -
+            statementCounts[0];
+
+        for (var index = 1;
+             index < providerCount;
+             index++)
+        {
+            var remainingBuckets =
+                providerCount -
+                index;
+
+            var value =
+                remainingBuckets ==
+                    0
+                    ? remainingStatements
+                    : remainingStatements /
+                        remainingBuckets;
+
+            statementCounts[index] =
+                value;
+
+            remainingStatements -=
+                value;
+        }
+
+        if (statementCounts.Any(
+                count =>
+                    count <
+                    metrics.MinimumStatementsForAnyProvider) ||
+            statementCounts.Sum() !=
+                metrics.EvaluatedStatementCount ||
+            metrics.ProviderAttemptCount !=
+                metrics.EvaluatedStatementCount)
+        {
+            throw new InvalidOperationException(
+                "The test metrics cannot be represented by the provider-score fixture.");
+        }
+
+        var readyCounts =
+            DistributeWithCapacity(
+                metrics.ReadyCandidateStatementCount,
+                statementCounts);
+
+        var failureCounts =
+            DistributeWithCapacity(
+                metrics.ProviderFailureCount,
+                statementCounts);
+
+        var correctCounts =
+            DistributeEvenly(
+                metrics.CorrectFactCount,
+                providerCount);
+
+        var incorrectCounts =
+            DistributeEvenly(
+                metrics.IncorrectFactCount,
+                providerCount);
+
+        var missedCounts =
+            DistributeEvenly(
+                metrics.MissedFactCount,
+                providerCount);
+
+        return Enumerable.Range(
+                0,
+                providerCount)
+            .Select(
+                index =>
+                    new BillStatementAiProviderScore(
+                        ProviderOrdinal:
+                            index + 1,
+
+                        StatementCount:
+                            statementCounts[index],
+
+                        ProviderAttemptCount:
+                            statementCounts[index],
+
+                        ProviderFailureCount:
+                            failureCounts[index],
+
+                        ReadyCandidateStatementCount:
+                            readyCounts[index],
+
+                        CorrectFactCount:
+                            correctCounts[index],
+
+                        IncorrectFactCount:
+                            incorrectCounts[index],
+
+                        MissedFactCount:
+                            missedCounts[index]))
+            .ToArray();
+
+        static long[] DistributeEvenly(
+            long total,
+            int bucketCount)
+        {
+            var values =
+                new long[bucketCount];
+
+            for (var index = 0;
+                 index < bucketCount;
+                 index++)
+            {
+                values[index] =
+                    total /
+                    bucketCount +
+                    (index <
+                        total %
+                        bucketCount
+                        ? 1
+                        : 0);
+            }
+
+            return values;
+        }
+
+        static long[] DistributeWithCapacity(
+            long total,
+            IReadOnlyList<long> capacities)
+        {
+            var values =
+                new long[capacities.Count];
+
+            var remaining =
+                total;
+
+            for (var index = 0;
+                 index < capacities.Count;
+                 index++)
+            {
+                var value =
+                    Math.Min(
+                        remaining,
+                        capacities[index]);
+
+                values[index] =
+                    value;
+
+                remaining -=
+                    value;
+            }
+
+            if (remaining !=
+                0)
+            {
+                throw new InvalidOperationException(
+                    "The test metric exceeds provider capacity.");
+            }
+
+            return values;
+        }
     }
 
     private static IReadOnlyList<BillStatementAiFieldScore>
