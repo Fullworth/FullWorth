@@ -779,11 +779,27 @@ namespace FullWorth.API.Services.Statements
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
+                        "M/dd/yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM/d/yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
                         "M-d-yyyy",
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
                         "MM-dd-yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "M-dd-yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM-d-yyyy",
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
