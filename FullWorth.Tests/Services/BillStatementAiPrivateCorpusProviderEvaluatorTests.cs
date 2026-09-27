@@ -92,6 +92,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Null(
             result.ProviderScores);
 
+        Assert.Null(
+            result.ProviderAttemptLatency);
+
         Assert.False(
             result.CoverageDecision
                 .MayBeginOfflineProviderEvaluation);
@@ -387,6 +390,44 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 providerScores),
             StringComparison.OrdinalIgnoreCase);
 
+        var latency =
+            Assert.IsType<
+                BillStatementAiProviderAttemptLatencySummary>(
+                result.ProviderAttemptLatency);
+
+        Assert.Equal(
+            metrics.ProviderAttemptCount,
+            latency.AttemptCount);
+
+        Assert.True(
+            latency.MinimumMilliseconds >=
+            0d);
+
+        Assert.InRange(
+            latency.MeanMilliseconds,
+            latency.MinimumMilliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.InRange(
+            latency.P50Milliseconds,
+            latency.MinimumMilliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.InRange(
+            latency.P95Milliseconds,
+            latency.P50Milliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.DoesNotContain(
+            typeof(
+                    BillStatementAiProviderAttemptLatencySummary)
+                .GetProperties(),
+            property =>
+                property.PropertyType !=
+                    typeof(long) &&
+                property.PropertyType !=
+                    typeof(double));
+
         var totalAmount =
             Assert.Single(
                 fieldScores,
@@ -572,6 +613,13 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
 
         Assert.Equal(
             2,
+            Assert.IsType<
+                    BillStatementAiProviderAttemptLatencySummary>(
+                    result.ProviderAttemptLatency)
+                .AttemptCount);
+
+        Assert.Equal(
+            2,
             extractor.CallCount);
 
         Assert.DoesNotContain(
@@ -684,6 +732,53 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                     0m,
                     score.FactRecall);
             });
+
+        Assert.Equal(
+            2,
+            Assert.IsType<
+                    BillStatementAiProviderAttemptLatencySummary>(
+                    result.ProviderAttemptLatency)
+                .AttemptCount);
+    }
+
+    [Fact]
+    public void ProviderAttemptLatencySummary_UsesAggregateNearestRankPercentiles()
+    {
+        var summary =
+            BillStatementAiProviderAttemptLatencySummary
+                .Create(
+                    new[]
+                    {
+                        10d,
+                        20d,
+                        30d,
+                        40d,
+                        100d
+                    });
+
+        Assert.Equal(
+            5,
+            summary.AttemptCount);
+
+        Assert.Equal(
+            10d,
+            summary.MinimumMilliseconds);
+
+        Assert.Equal(
+            40d,
+            summary.MeanMilliseconds);
+
+        Assert.Equal(
+            30d,
+            summary.P50Milliseconds);
+
+        Assert.Equal(
+            100d,
+            summary.P95Milliseconds);
+
+        Assert.Equal(
+            100d,
+            summary.MaximumMilliseconds);
     }
 
     private static BillStatementAiPrivateCorpusProviderEvaluator

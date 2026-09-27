@@ -177,6 +177,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             new List<BillStatementAiGroundTruthObservation>(
                 corpusCases.Count);
 
+        var providerAttemptDurationsMilliseconds =
+            new List<double>(
+                corpusCases.Count);
+
         foreach (var corpusCase in
                  corpusCases)
         {
@@ -187,6 +191,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
             var providerFailed =
                 false;
+
+            var providerAttemptStarted =
+                global::System.Diagnostics.Stopwatch
+                    .GetTimestamp();
 
             try
             {
@@ -252,6 +260,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 providerFailed =
                     true;
             }
+            finally
+            {
+                providerAttemptDurationsMilliseconds.Add(
+                    global::System.Diagnostics.Stopwatch
+                        .GetElapsedTime(
+                            providerAttemptStarted)
+                        .TotalMilliseconds);
+            }
 
             observations.Add(
                 new BillStatementAiGroundTruthObservation(
@@ -303,6 +319,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.ScoreProviders(
                 observations);
 
+        var providerAttemptLatency =
+            BillStatementAiProviderAttemptLatencySummary
+                .Create(
+                    providerAttemptDurationsMilliseconds);
+
         return
             BillStatementAiPrivateCorpusProviderEvaluationResult
                 .Completed(
@@ -310,7 +331,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     coverageDecision,
                     metrics,
                     fieldScores,
-                    providerScores);
+                    providerScores,
+                    providerAttemptLatency);
     }
 
     private static void ValidateCaseIds(
@@ -404,7 +426,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     BillStatementAiPrivateCorpusCoverageDecision CoverageDecision,
     BillStatementAiShadowReadinessMetrics? Metrics,
     IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
-    IReadOnlyList<BillStatementAiProviderScore>? ProviderScores)
+    IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
+    BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency)
 {
     public bool MayEnableRuntimeShadowMode =>
         false;
@@ -440,6 +463,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 null,
 
             ProviderScores:
+                null,
+
+            ProviderAttemptLatency:
                 null);
     }
 
@@ -449,7 +475,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             BillStatementAiPrivateCorpusCoverageDecision coverageDecision,
             BillStatementAiShadowReadinessMetrics metrics,
             IReadOnlyList<BillStatementAiFieldScore> fieldScores,
-            IReadOnlyList<BillStatementAiProviderScore> providerScores)
+            IReadOnlyList<BillStatementAiProviderScore> providerScores,
+            BillStatementAiProviderAttemptLatencySummary providerAttemptLatency)
     {
         ArgumentNullException.ThrowIfNull(
             coverage);
@@ -465,6 +492,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
         ArgumentNullException.ThrowIfNull(
             providerScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerAttemptLatency);
 
         if (fieldScores.Count !=
             BillStatementAiGroundTruthFieldKeys.All.Count)
@@ -564,6 +594,24 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 nameof(providerScores));
         }
 
+        if (providerAttemptLatency.AttemptCount !=
+                metrics.ProviderAttemptCount ||
+            providerAttemptLatency.MinimumMilliseconds <
+                0d ||
+            providerAttemptLatency.MeanMilliseconds <
+                providerAttemptLatency.MinimumMilliseconds ||
+            providerAttemptLatency.P50Milliseconds <
+                providerAttemptLatency.MinimumMilliseconds ||
+            providerAttemptLatency.P95Milliseconds <
+                providerAttemptLatency.P50Milliseconds ||
+            providerAttemptLatency.MaximumMilliseconds <
+                providerAttemptLatency.P95Milliseconds)
+        {
+            throw new ArgumentException(
+                "Provider-attempt latency summary does not reconcile with the completed evaluation.",
+                nameof(providerAttemptLatency));
+        }
+
         return new BillStatementAiPrivateCorpusProviderEvaluationResult(
             ProviderEvaluationStarted:
                 true,
@@ -581,6 +629,91 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 fieldScores,
 
             ProviderScores:
-                providerScores);
+                providerScores,
+
+            ProviderAttemptLatency:
+                providerAttemptLatency);
+    }
+}
+
+public sealed record BillStatementAiProviderAttemptLatencySummary(
+    long AttemptCount,
+    double MinimumMilliseconds,
+    double MeanMilliseconds,
+    double P50Milliseconds,
+    double P95Milliseconds,
+    double MaximumMilliseconds)
+{
+    public static BillStatementAiProviderAttemptLatencySummary Create(
+        IReadOnlyList<double> durationsMilliseconds)
+    {
+        ArgumentNullException.ThrowIfNull(
+            durationsMilliseconds);
+
+        if (durationsMilliseconds.Count ==
+            0)
+        {
+            throw new ArgumentException(
+                "At least one provider-attempt duration is required.",
+                nameof(durationsMilliseconds));
+        }
+
+        if (durationsMilliseconds.Any(
+                duration =>
+                    duration <
+                        0d ||
+                    double.IsNaN(
+                        duration) ||
+                    double.IsInfinity(
+                        duration)))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(durationsMilliseconds),
+                "Provider-attempt durations must be finite and non-negative.");
+        }
+
+        var ordered =
+            durationsMilliseconds
+                .Order()
+                .ToArray();
+
+        return new BillStatementAiProviderAttemptLatencySummary(
+            AttemptCount:
+                ordered.LongLength,
+
+            MinimumMilliseconds:
+                ordered[0],
+
+            MeanMilliseconds:
+                ordered.Average(),
+
+            P50Milliseconds:
+                Percentile(
+                    ordered,
+                    0.50d),
+
+            P95Milliseconds:
+                Percentile(
+                    ordered,
+                    0.95d),
+
+            MaximumMilliseconds:
+                ordered[^1]);
+    }
+
+    private static double Percentile(
+        IReadOnlyList<double> ordered,
+        double percentile)
+    {
+        var rank =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    ordered.Count *
+                    percentile));
+
+        return ordered[
+            rank -
+            1];
     }
 }

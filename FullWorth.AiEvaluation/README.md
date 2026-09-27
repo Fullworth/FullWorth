@@ -67,10 +67,11 @@ dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --conf
 ```
 
 The comparison reports overall precision, recall, ready-candidate rate,
-provider-failure rate, raw count deltas, and a fixed field-level breakdown for
+provider-failure rate, raw count deltas, a fixed field-level breakdown for
 TotalAmount, BillingPeriodStart, BillingPeriodEnd, StatementDate, DueDate,
-CurrencyCode, and LineItems. It never reports a case, provider, statement,
-evidence excerpt, or model response.
+CurrencyCode, and LineItems, plus anonymous provider-bucket comparisons. It
+never reports a case, provider identity, statement, evidence excerpt, or model
+response. Provider buckets use stable ordinals only.
 
 A candidate qualifies only for **promotion review** when all of these are true:
 
@@ -82,11 +83,16 @@ A candidate qualifies only for **promotion review** when all of these are true:
 - for every fixed field, correct count does not decrease;
 - for every fixed field, incorrect count does not increase;
 - for every fixed field, missed count does not increase;
-- for every fixed field, precision and recall do not decrease; and
+- for every fixed field, precision and recall do not decrease;
+- every anonymous provider bucket has the same statement/attempt/expected-fact
+  population in both runs;
+- no anonymous provider bucket loses correct facts, gains incorrect/missed
+  facts, loses precision/recall/readiness, or gains provider failures; and
 - at least one aggregate metric strictly improves.
 
 This means an overall improvement cannot hide a regression in a critical field
-such as TotalAmount or DueDate. The report includes only the fixed field key and
+such as TotalAmount or DueDate, or a regression concentrated in one provider.
+The report includes only fixed field keys, anonymous provider ordinals, and
 aggregate counts/rates needed to explain a veto.
 
 That flag does not promote a prompt automatically. It cannot enable runtime
@@ -106,8 +112,16 @@ statement text, ground truth, model output, evidence, secrets, or corpus paths.
 The report explicitly states that runtime provenance is not independently
 verified by the .NET runner. The guarded `deploy/start-ai-evaluation.sh` path
 is what verifies the approved model file and digest-pinned runtime before
-evaluation. The runner persists no records or result files. Keep or redirect
-aggregate reports only to an approved private location.
+evaluation.
+
+Local-model runs also report aggregate provider-attempt latency: minimum, mean,
+p50, p95, and maximum milliseconds. Prompt comparison reports latency deltas,
+but latency does not yet participate in promotion qualification because
+FullWorth has not established an evidence-backed speed threshold. No per-case
+timing samples are returned.
+
+The runner persists no records or result files. Keep or redirect aggregate
+reports only to an approved private location.
 
 The built-in coverage minimum is 100 cases across at least five providers,
 with at least 10 cases for every provider. It must pass before local inference
