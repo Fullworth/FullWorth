@@ -154,6 +154,175 @@ public sealed class BillStatementAiGroundTruthScorerTests
     }
 
     [Fact]
+    public void ScoreFields_ProducesFixedAggregateBreakdown()
+    {
+        var expectedLineItem =
+            new BillStatementStructuredLineItem(
+                "Internet service",
+                99.99m,
+                "Service");
+
+        var actualLineItem =
+            new BillStatementStructuredLineItem(
+                "Equipment fee",
+                5m,
+                "Equipment");
+
+        var actualStatement =
+            CompleteStatement() with
+            {
+                TotalAmount =
+                    999.99m
+            };
+
+        var observation =
+            new BillStatementAiGroundTruthObservation(
+                ProviderKey:
+                    "provider-a",
+                ExpectedStatement:
+                    CompleteStatement(),
+                ExpectedLineItems:
+                    [
+                        expectedLineItem
+                    ],
+                ProviderAttempted:
+                    true,
+                ProviderFailed:
+                    false,
+                ActualExtraction:
+                    Extraction(
+                        actualStatement,
+                        [
+                            actualLineItem
+                        ]),
+                AlertEvaluated:
+                    false,
+                FalseAlert:
+                    false);
+
+        var fields =
+            new BillStatementAiGroundTruthScorer()
+                .ScoreFields(
+                    [
+                        observation
+                    ]);
+
+        Assert.Equal(
+            BillStatementAiGroundTruthFieldKeys.All,
+            fields.Select(
+                field =>
+                    field.FieldKey));
+
+        Assert.Equal(
+            7,
+            fields.Count);
+
+        var totalAmount =
+            Assert.Single(
+                fields,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount);
+
+        Assert.Equal(
+            0,
+            totalAmount.Correct);
+
+        Assert.Equal(
+            1,
+            totalAmount.Incorrect);
+
+        Assert.Equal(
+            1,
+            totalAmount.Missed);
+
+        Assert.Equal(
+            0m,
+            totalAmount.Precision);
+
+        Assert.Equal(
+            0m,
+            totalAmount.Recall);
+
+        var billingPeriodStart =
+            Assert.Single(
+                fields,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.BillingPeriodStart);
+
+        Assert.Equal(
+            1,
+            billingPeriodStart.Correct);
+
+        Assert.Equal(
+            1m,
+            billingPeriodStart.Precision);
+
+        Assert.Equal(
+            1m,
+            billingPeriodStart.Recall);
+
+        var lineItems =
+            Assert.Single(
+                fields,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.LineItems);
+
+        Assert.Equal(
+            0,
+            lineItems.Correct);
+
+        Assert.Equal(
+            1,
+            lineItems.Incorrect);
+
+        Assert.Equal(
+            1,
+            lineItems.Missed);
+
+        Assert.DoesNotContain(
+            "provider-a",
+            string.Join(
+                "|",
+                fields),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EmptyCorpus_FieldBreakdownUsesStableZeroSchema()
+    {
+        var fields =
+            new BillStatementAiGroundTruthScorer()
+                .ScoreFields(
+                    []);
+
+        Assert.Equal(
+            BillStatementAiGroundTruthFieldKeys.All,
+            fields.Select(
+                field =>
+                    field.FieldKey));
+
+        Assert.All(
+            fields,
+            field =>
+            {
+                Assert.Equal(
+                    0,
+                    field.Correct);
+
+                Assert.Equal(
+                    0,
+                    field.Incorrect);
+
+                Assert.Equal(
+                    0,
+                    field.Missed);
+            });
+    }
+
+    [Fact]
     public void LineItems_AreComparedAsOrderIndependentCompositeFacts()
     {
         var first =
