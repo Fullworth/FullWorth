@@ -165,6 +165,76 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void StringEvidence_RejectsValueThatIsOnlyPartOfAnotherWord()
+    {
+        const string documentText =
+            "MIDCO total due $104.99";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                ProviderName =
+                    "MID",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.ProviderName,
+                            "MIDCO")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StringEvidence_AcceptsWholeValueInsideLongerExcerpt()
+    {
+        const string documentText =
+            "Internet service $20.00";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                PlanOrService =
+                    "Internet",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.PlanOrService,
+                            "Internet service $20.00")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Fact]
     public void InventedEvidence_IsRejected()
     {
         const string documentText =
