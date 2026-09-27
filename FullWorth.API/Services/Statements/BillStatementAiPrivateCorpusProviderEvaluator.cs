@@ -707,11 +707,11 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
         }
 
         if (inferenceCallCount <
-            metrics.ProviderAttemptCount)
+            0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(inferenceCallCount),
-                "Inference-call count cannot be lower than the number of attempted statements.");
+                "Inference-call count cannot be negative.");
         }
 
         if (providerAttemptLatency.AttemptCount !=
