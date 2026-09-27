@@ -9,6 +9,10 @@ public sealed record BillStreamReadRecord(
 
 public interface IBillStreamReadGateway
 {
+    Task<IReadOnlyList<BillStreamReadRecord>> ListOwnedActiveAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task<BillStreamReadRecord?> GetOwnedAsync(
         Guid userId,
         Guid billStreamId,
