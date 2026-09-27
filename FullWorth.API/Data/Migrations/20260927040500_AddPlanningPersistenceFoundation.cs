@@ -105,12 +105,16 @@ public sealed class AddPlanningPersistenceFoundation : Migration
                     });
 
                 table.CheckConstraint(
+                    "CK_PlanningPaySchedules_Frequency",
+                    "\"Frequency\" IN ('Weekly', 'Biweekly', 'SemiMonthly', 'Monthly')");
+
+                table.CheckConstraint(
                     "CK_PlanningPaySchedules_DefaultPaychecksAhead",
                     "\"DefaultPaychecksAhead\" >= 1 AND \"DefaultPaychecksAhead\" <= 26");
 
                 table.CheckConstraint(
                     "CK_PlanningPaySchedules_SecondaryDay",
-                    "(\"Frequency\" = 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NOT NULL AND \"SecondaryDayOfMonth\" >= 1 AND \"SecondaryDayOfMonth\" <= 31) OR (\"Frequency\" <> 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NULL)");
+                    "(\"Frequency\" = 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NOT NULL AND \"SecondaryDayOfMonth\" >= 1 AND \"SecondaryDayOfMonth\" <= 31 AND \"SecondaryDayOfMonth\" <> EXTRACT(DAY FROM \"AnchorPayDate\")::integer) OR (\"Frequency\" <> 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NULL)");
 
                 table.ForeignKey(
                     name: "FK_PlanningPaySchedules_AspNetUsers_UserId",
