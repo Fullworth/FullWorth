@@ -47,9 +47,9 @@ internal static class Program
             return 2;
         }
 
-        if (parsed.Mode is
-                LocalAiMode or
-                ComparePromptsMode &&
+        if ((parsed.Mode is
+                 LocalAiMode or
+                 ComparePromptsMode) &&
             !parsed.LocalInferenceAuthorized)
         {
             Console.Error.WriteLine(
