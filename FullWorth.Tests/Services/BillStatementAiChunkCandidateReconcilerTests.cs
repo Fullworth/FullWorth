@@ -366,6 +366,82 @@ public sealed class BillStatementAiChunkCandidateReconcilerTests
             result.Candidate?.CurrencyCode);
     }
 
+    [Fact]
+    public void Reconcile_MissingChunkPayloads_RejectsWithoutThrowing()
+    {
+        var validChunk =
+            new BillStatementAiDocumentChunk(
+                Index:
+                    0,
+                StartOffset:
+                    0,
+                Text:
+                    "source");
+
+        BillStatementAiChunkCandidate[] malformedItems =
+        [
+            null!,
+            new BillStatementAiChunkCandidate(
+                null!,
+                Candidate()),
+            new BillStatementAiChunkCandidate(
+                validChunk,
+                null!),
+            new BillStatementAiChunkCandidate(
+                validChunk with
+                {
+                    Text =
+                        null!
+                },
+                Candidate())
+        ];
+
+        foreach (var item in malformedItems)
+        {
+            var result =
+                CreateService()
+                    .Reconcile(
+                        "source",
+                        [item]);
+
+            Assert.False(
+                result.IsAccepted);
+
+            Assert.Null(
+                result.Candidate);
+
+            Assert.Contains(
+                "Chunk 0 is missing source or candidate data.",
+                result.Errors);
+        }
+    }
+
+    [Fact]
+    public void Reconcile_EmptyChunk_RejectsWithoutThrowing()
+    {
+        var result =
+            CreateService()
+                .Reconcile(
+                    "source",
+                    [
+                        Item(
+                            0,
+                            0,
+                            string.Empty,
+                            Candidate())
+                    ]);
+
+        Assert.False(
+            result.IsAccepted);
+
+        Assert.Null(
+            result.Candidate);
+
+        Assert.Contains(
+            "Chunk 0 has empty source text.",
+            result.Errors);
+    }
+
     private static BillStatementAiChunkCandidateReconciler CreateService()
     {
         return new BillStatementAiChunkCandidateReconciler(
