@@ -314,13 +314,25 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed candidate prompt evaluation requires field scores.");
 
+        var baselineProviderScores =
+            baselineRun.Result.ProviderScores ??
+            throw new InvalidOperationException(
+                "A completed baseline prompt evaluation requires anonymous provider scores.");
+
+        var candidateProviderScores =
+            candidateRun.Result.ProviderScores ??
+            throw new InvalidOperationException(
+                "A completed candidate prompt evaluation requires anonymous provider scores.");
+
         var comparison =
             new BillStatementAiPromptComparisonEvaluator()
                 .Compare(
                     baselineRun.Result.Metrics,
                     baselineFieldScores,
+                    baselineProviderScores,
                     candidateRun.Result.Metrics,
-                    candidateFieldScores);
+                    candidateFieldScores,
+                    candidateProviderScores);
 
         WriteJson(
             new
@@ -387,10 +399,43 @@ internal static class Program
                                         field.CandidateHasNoRegression
                                     }),
 
+                        providerComparisons =
+                            comparison.ProviderComparisons.Select(
+                                provider =>
+                                    new
+                                    {
+                                        provider.ProviderOrdinal,
+                                        provider.StatementCount,
+                                        provider.BaselineCorrect,
+                                        provider.CandidateCorrect,
+                                        provider.CorrectDelta,
+                                        provider.BaselineIncorrect,
+                                        provider.CandidateIncorrect,
+                                        provider.IncorrectDelta,
+                                        provider.BaselineMissed,
+                                        provider.CandidateMissed,
+                                        provider.MissedDelta,
+                                        provider.BaselinePrecision,
+                                        provider.CandidatePrecision,
+                                        provider.PrecisionDelta,
+                                        provider.BaselineRecall,
+                                        provider.CandidateRecall,
+                                        provider.RecallDelta,
+                                        provider.BaselineReadyCandidateRate,
+                                        provider.CandidateReadyCandidateRate,
+                                        provider.ReadyCandidateRateDelta,
+                                        provider.BaselineProviderFailureRate,
+                                        provider.CandidateProviderFailureRate,
+                                        provider.ProviderFailureRateDelta,
+                                        provider.CandidateHasNoRegression
+                                    }),
+
                         comparison.CandidateHasNoAggregateRegression,
                         comparison.CandidateHasNoFieldRegression,
+                        comparison.CandidateHasNoProviderRegression,
                         comparison.CandidateHasStrictAggregateImprovement,
                         comparison.RegressedFieldKeys,
+                        comparison.RegressedProviderOrdinals,
                         comparison.CandidateQualifiesForPromotionReview
                     },
 
@@ -428,6 +473,33 @@ internal static class Program
                             true,
 
                         fieldRecallMustNotDecrease =
+                            true,
+
+                        requiresSameStatementPopulationPerAnonymousProvider =
+                            true,
+
+                        requiresSameExpectedFactCountPerAnonymousProvider =
+                            true,
+
+                        providerCorrectCountMustNotDecrease =
+                            true,
+
+                        providerIncorrectCountMustNotIncrease =
+                            true,
+
+                        providerMissedCountMustNotIncrease =
+                            true,
+
+                        providerPrecisionMustNotDecrease =
+                            true,
+
+                        providerRecallMustNotDecrease =
+                            true,
+
+                        providerReadyCandidateRateMustNotDecrease =
+                            true,
+
+                        providerFailureRatePerBucketMustNotIncrease =
                             true,
 
                         requiresAtLeastOneStrictAggregateImprovement =
@@ -552,6 +624,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires field scores.");
 
+        var providerScores =
+            run.Result.ProviderScores ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires anonymous provider scores.");
+
         return new
         {
             promptVersion,
@@ -583,6 +660,25 @@ internal static class Program
                             field.PredictedFactCount,
                             field.Precision,
                             field.Recall
+                        }),
+
+            anonymousProviderScores =
+                providerScores.Select(
+                    provider =>
+                        new
+                        {
+                            provider.ProviderOrdinal,
+                            provider.StatementCount,
+                            provider.ProviderAttemptCount,
+                            provider.ProviderFailureCount,
+                            provider.ReadyCandidateStatementCount,
+                            provider.CorrectFactCount,
+                            provider.IncorrectFactCount,
+                            provider.MissedFactCount,
+                            provider.FactPrecision,
+                            provider.FactRecall,
+                            provider.ReadyCandidateRate,
+                            provider.ProviderFailureRate
                         }),
 
             meetsFullShadowAccuracyGate =
