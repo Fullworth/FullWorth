@@ -5,13 +5,13 @@ using Microsoft.Extensions.Options;
 
 internal static class Program
 {
-    private const string ModelId =
+    private const string ApprovedModelId =
         "qwen3-4b-q4-k-m";
 
-    private const string ModelSha256 =
+    private const string ApprovedModelSha256 =
         "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5";
 
-    private const string RuntimeId =
+    private const string ApprovedRuntimeId =
         "llama-cpp-server-b11176";
 
     private static readonly JsonSerializerOptions JsonOptions =
@@ -176,9 +176,10 @@ internal static class Program
                     new
                     {
                         mode,
-                        modelId = ModelId,
-                        modelSha256 = ModelSha256,
-                        runtimeId = RuntimeId,
+                        approvedModelId = ApprovedModelId,
+                        approvedModelSha256 = ApprovedModelSha256,
+                        approvedRuntimeId = ApprovedRuntimeId,
+                        runtimeProvenanceVerifiedByRunner = false,
                         result.ProviderEvaluationStarted,
                         result.Coverage.CaseCount,
                         result.Coverage.DistinctProviderCount,
@@ -204,9 +205,10 @@ internal static class Program
                 new
                 {
                     mode,
-                    modelId = ModelId,
-                    modelSha256 = ModelSha256,
-                    runtimeId = RuntimeId,
+                    approvedModelId = ApprovedModelId,
+                    approvedModelSha256 = ApprovedModelSha256,
+                    approvedRuntimeId = ApprovedRuntimeId,
+                        runtimeProvenanceVerifiedByRunner = false,
                     promptVersion = options.PromptVersion,
                     result.ProviderEvaluationStarted,
                     result.Coverage.CaseCount,
