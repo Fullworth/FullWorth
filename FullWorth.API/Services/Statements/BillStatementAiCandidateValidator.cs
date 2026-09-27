@@ -335,6 +335,16 @@ namespace FullWorth.API.Services.Statements
                     continue;
                 }
 
+                if (!IsSupportedEvidenceFactKey(
+                        factKey,
+                        candidate.LineItems?.Count ?? 0))
+                {
+                    errors.Add(
+                        $"Evidence item {index} has an unsupported fact key.");
+
+                    continue;
+                }
+
                 if (string.IsNullOrWhiteSpace(
                         sourceExcerpt))
                 {
@@ -502,6 +512,52 @@ namespace FullWorth.API.Services.Statements
                     evidenceByFact,
                     errors);
             }
+        }
+
+        private static bool IsSupportedEvidenceFactKey(
+            string factKey,
+            int lineItemCount)
+        {
+            if (factKey is
+                BillStatementAiFactKeys.ProviderName or
+                BillStatementAiFactKeys.AccountIdentifierSuffix or
+                BillStatementAiFactKeys.BillingPeriodStart or
+                BillStatementAiFactKeys.BillingPeriodEnd or
+                BillStatementAiFactKeys.StatementDate or
+                BillStatementAiFactKeys.DueDate or
+                BillStatementAiFactKeys.PreviousBalance or
+                BillStatementAiFactKeys.Payments or
+                BillStatementAiFactKeys.CurrentCharges or
+                BillStatementAiFactKeys.TotalDue or
+                BillStatementAiFactKeys.CurrencyCode or
+                BillStatementAiFactKeys.PlanOrService or
+                BillStatementAiFactKeys.UsageSummary)
+            {
+                return true;
+            }
+
+            for (var index = 0;
+                 index < Math.Min(
+                     lineItemCount,
+                     MaxLineItems);
+                 index++)
+            {
+                if (string.Equals(
+                        factKey,
+                        BillStatementAiFactKeys.LineItemDescription(
+                            index),
+                        StringComparison.Ordinal) ||
+                    string.Equals(
+                        factKey,
+                        BillStatementAiFactKeys.LineItemAmount(
+                            index),
+                        StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateOptionalLength(

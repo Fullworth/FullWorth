@@ -632,20 +632,17 @@ public sealed class BillStatementAiCandidateValidatorTests
     [Theory]
     [InlineData("", "does not contain a source excerpt")]
     [InlineData("unrelated", "was not found in the source document")]
-    public void ModelSuppliedFactKey_IsNeverEchoedInEvidenceErrors(
+    public void KnownFactKeyErrors_UseEvidenceOrdinal(
         string sourceExcerpt,
         string expectedError)
     {
-        const string privateFactKey =
-            "Private account 1234567890123456";
-
         var candidate =
             CreateEmptyCandidate() with
             {
                 Evidence =
                     [
                         new BillStatementAiEvidence(
-                            privateFactKey,
+                            BillStatementAiFactKeys.TotalDue,
                             sourceExcerpt)
                     ]
             };
@@ -663,31 +660,20 @@ public sealed class BillStatementAiCandidateValidatorTests
             result.Errors,
             error =>
                 error.Contains(
-                    expectedError,
-                    StringComparison.Ordinal));
-
-        Assert.All(
-            result.Errors,
-            error =>
-                Assert.DoesNotContain(
-                    privateFactKey,
-                    error,
+                    $"Evidence item 0 {expectedError}",
                     StringComparison.Ordinal));
     }
 
     [Fact]
-    public void LongModelSuppliedFactKey_IsNeverEchoedInEvidenceErrors()
+    public void LongKnownFactEvidence_UsesEvidenceOrdinal()
     {
-        const string privateFactKey =
-            "Private account 1234567890123456";
-
         var candidate =
             CreateEmptyCandidate() with
             {
                 Evidence =
                     [
                         new BillStatementAiEvidence(
-                            privateFactKey,
+                            BillStatementAiFactKeys.TotalDue,
                             new string(
                                 'x',
                                 501))
@@ -704,17 +690,45 @@ public sealed class BillStatementAiCandidateValidatorTests
             result.IsValid);
 
         Assert.Contains(
-            result.Errors,
-            error =>
-                error.Contains(
-                    "is too long",
-                    StringComparison.Ordinal));
+            "Evidence item 0 is too long.",
+            result.Errors);
+    }
+
+    [Theory]
+    [InlineData("Private account 1234567890123456")]
+    [InlineData("lineItems[0].amount")]
+    public void UnsupportedFactKey_IsRejectedWithoutEchoingInput(
+        string untrustedFactKey)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            untrustedFactKey,
+                            "Statement total due $42.00")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            "Evidence item 0 has an unsupported fact key.",
+            result.Errors);
 
         Assert.All(
             result.Errors,
             error =>
                 Assert.DoesNotContain(
-                    privateFactKey,
+                    untrustedFactKey,
                     error,
                     StringComparison.Ordinal));
     }
