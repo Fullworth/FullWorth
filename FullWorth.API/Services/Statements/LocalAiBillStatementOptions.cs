@@ -18,7 +18,7 @@ public sealed class LocalAiBillStatementOptions
         "http://127.0.0.1:8080/v1/chat/completions";
 
     public string PromptVersion { get; set; } =
-        "bill-statement-extraction-v2";
+        LocalAiBillStatementPromptCatalog.CurrentVersion;
 
     public int MaxDocumentCharacters { get; set; } =
         40_000;
@@ -71,6 +71,12 @@ public sealed class LocalAiBillStatementOptionsValidator
         {
             failures.Add(
                 "StatementAi:Local:PromptVersion is required.");
+        }
+        else if (!LocalAiBillStatementPromptCatalog.IsSupported(
+                     options.PromptVersion))
+        {
+            failures.Add(
+                $"StatementAi:Local:PromptVersion must be one of: {string.Join(", ", LocalAiBillStatementPromptCatalog.SupportedVersions)}.");
         }
 
         if (options.MaxDocumentCharacters is < 1_000 or > 200_000)

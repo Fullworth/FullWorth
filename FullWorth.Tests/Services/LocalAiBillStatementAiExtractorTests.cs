@@ -184,6 +184,94 @@ public sealed class LocalAiBillStatementAiExtractorTests
     }
 
     [Fact]
+    public async Task PromptVersion1_PreservesBaselineInstructions()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    CreateModelResponse(
+                        CreateCandidate()));
+
+        var options =
+            CreateEnabledOptions();
+
+        options.PromptVersion =
+            LocalAiBillStatementPromptCatalog.Version1;
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        await extractor.ExtractAsync(
+            CreateRequest(
+                "ACME Total due $10.00 USD",
+                LocalAiBillStatementPromptCatalog.Version1));
+
+        Assert.NotNull(
+            handler.RequestBody);
+
+        using JsonDocument requestJson =
+            JsonDocument.Parse(
+                handler.RequestBody);
+
+        string systemInstructions =
+            requestJson.RootElement
+                .GetProperty("messages")[0]
+                .GetProperty("content")
+                .GetString()!;
+
+        Assert.Contains(
+            "Return account suffixes only, never full account numbers. Do not",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "calculate, reconcile, or invent amounts.",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "total amount due from current-period charges",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            LocalAiBillStatementPromptCatalog.Version1,
+            systemInstructions,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Options_RejectUnsupportedPromptVersion()
+    {
+        var validator =
+            new LocalAiBillStatementOptionsValidator();
+
+        var result =
+            validator.Validate(
+                null,
+                new LocalAiBillStatementOptions
+                {
+                    Enabled =
+                        true,
+
+                    PromptVersion =
+                        "bill-statement-extraction-unknown"
+                });
+
+        Assert.True(
+            result.Failed);
+
+        Assert.Contains(
+            result.Failures!,
+            failure =>
+                failure.Contains(
+                    "PromptVersion must be one of",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task HttpFailure_DoesNotExposeModelResponseBody()
     {
         const string sensitiveModelBody =
@@ -402,7 +490,9 @@ public sealed class LocalAiBillStatementAiExtractorTests
     }
 
     private static BillStatementAiExtractionRequest CreateRequest(
-        string documentText)
+        string documentText,
+        string promptVersion =
+            LocalAiBillStatementPromptCatalog.CurrentVersion)
     {
         return new BillStatementAiExtractionRequest(
             DocumentText:
@@ -417,7 +507,7 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         "Internet"),
 
             PromptVersion:
-                "bill-statement-extraction-v2");
+                promptVersion);
     }
 
     private static BillStatementAiCandidate CreateCandidate()
