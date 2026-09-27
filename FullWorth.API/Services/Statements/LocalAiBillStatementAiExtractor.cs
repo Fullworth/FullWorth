@@ -55,6 +55,7 @@ public sealed class LocalAiBillStatementAiExtractor
         if (!_options.Enabled)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.Disabled,
                 "Local AI statement extraction is disabled.");
         }
 
@@ -71,6 +72,7 @@ public sealed class LocalAiBillStatementAiExtractor
                 StringComparison.Ordinal))
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.Configuration,
                 "The requested prompt version is not configured.");
         }
 
@@ -78,6 +80,7 @@ public sealed class LocalAiBillStatementAiExtractor
                 _options.PromptVersion))
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.Configuration,
                 "The configured prompt version is not supported.");
         }
 
@@ -130,6 +133,7 @@ public sealed class LocalAiBillStatementAiExtractor
             if (!response.IsSuccessStatusCode)
             {
                 throw new BillStatementAiExtractionException(
+                    BillStatementAiExtractionFailureKind.HttpStatus,
                     $"Local AI statement extraction failed with HTTP {(int)response.StatusCode}.");
             }
 
@@ -146,6 +150,7 @@ public sealed class LocalAiBillStatementAiExtractor
                 FindOutputText(
                     responseJson.RootElement)
                 ?? throw new BillStatementAiExtractionException(
+                    BillStatementAiExtractionFailureKind.MissingStructuredOutput,
                     "Local AI returned no structured statement output.");
 
             return JsonSerializer.Deserialize<
@@ -153,6 +158,7 @@ public sealed class LocalAiBillStatementAiExtractor
                     outputText,
                     JsonOptions)
                 ?? throw new BillStatementAiExtractionException(
+                    BillStatementAiExtractionFailureKind.MissingStructuredOutput,
                     "Local AI returned an empty structured statement candidate.");
         }
         catch (OperationCanceledException) when (
@@ -160,23 +166,27 @@ public sealed class LocalAiBillStatementAiExtractor
             !cancellationToken.IsCancellationRequested)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.Timeout,
                 "Local AI statement extraction timed out.");
         }
         catch (HttpRequestException exception)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.Transport,
                 "Local AI statement extraction could not reach the local model.",
                 exception);
         }
         catch (IOException exception)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.ResponseRead,
                 "Local AI returned an unreadable response.",
                 exception);
         }
         catch (JsonException exception)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.InvalidStructuredOutput,
                 "Local AI returned invalid structured statement output.",
                 exception);
         }
@@ -292,6 +302,7 @@ public sealed class LocalAiBillStatementAiExtractor
                 StringComparison.Ordinal))
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.IncompleteResponse,
                 "Local AI did not complete the structured statement response.");
         }
 
@@ -321,6 +332,7 @@ public sealed class LocalAiBillStatementAiExtractor
         if (content.Headers.ContentLength is > MaxResponseBytes)
         {
             throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.OversizedResponse,
                 "Local AI returned an oversized response.");
         }
 
@@ -348,6 +360,7 @@ public sealed class LocalAiBillStatementAiExtractor
                 MaxResponseBytes)
             {
                 throw new BillStatementAiExtractionException(
+                    BillStatementAiExtractionFailureKind.OversizedResponse,
                     "Local AI returned an oversized response.");
             }
 
