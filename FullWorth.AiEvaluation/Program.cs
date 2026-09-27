@@ -5,6 +5,15 @@ using Microsoft.Extensions.Options;
 
 internal static class Program
 {
+    private const string BaselineMode =
+        "baseline";
+
+    private const string LocalAiMode =
+        "local-ai";
+
+    private const string ComparePromptsMode =
+        "compare-prompts";
+
     private const string ApprovedModelId =
         "qwen3-4b-q4-k-m";
 
@@ -32,16 +41,16 @@ internal static class Program
 
         if (!TryParseArguments(
                 args,
-                out var mode,
-                out var corpusRoot,
-                out var localInferenceAuthorized))
+                out var parsed))
         {
             PrintUsage();
             return 2;
         }
 
-        if (mode == "local-ai" &&
-            !localInferenceAuthorized)
+        if (parsed.Mode is
+                LocalAiMode or
+                ComparePromptsMode &&
+            !parsed.LocalInferenceAuthorized)
         {
             Console.Error.WriteLine(
                 "Local model evaluation requires --authorize-local-model-inference.");
@@ -51,7 +60,8 @@ internal static class Program
         try
         {
             var fullCorpusRoot =
-                Path.GetFullPath(corpusRoot);
+                Path.GetFullPath(
+                    parsed.CorpusRoot);
 
             var loader =
                 new BillStatementAiPrivateCorpusLoader();
@@ -75,164 +85,55 @@ internal static class Program
                         StringComparer.Ordinal)
                     .ToArray();
 
-            if (mode == "baseline")
+            if (parsed.Mode ==
+                BaselineMode)
             {
-                var baseline =
-                    await new BillStatementDeterministicPrivateCorpusEvaluator(
-                        loader,
-                        new DeterministicBillStatementExtractionService(
-                            new DeterministicBillStatementParser(),
-                            new DeterministicBillLineItemParser()))
-                        .EvaluateAsync(
-                            fullCorpusRoot,
-                            caseIds);
-
-                WriteJson(
-                    new
-                    {
-                        mode,
-                        catalog.CaseCount,
-                        catalog.DistinctProviderCount,
-                        catalog.MinimumCasesForAnyProvider,
-                        baseline.EvaluatedStatementCount,
-                        baseline.ReadyStatementCount,
-                        baseline.CorrectFactCount,
-                        baseline.IncorrectFactCount,
-                        baseline.MissedFactCount,
-                        baseline.ReadyStatementRate,
-                        baseline.FactPrecision,
-                        baseline.FactRecall,
-                        persisted = false
-                    });
-
-                return 0;
+                return await RunDeterministicBaselineAsync(
+                    loader,
+                    catalog,
+                    fullCorpusRoot,
+                    caseIds);
             }
 
             var apiKey =
                 Environment.GetEnvironmentVariable(
                     "FULLWORTH_LOCAL_AI_API_KEY");
 
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(
+                    apiKey))
             {
                 Console.Error.WriteLine(
                     "FULLWORTH_LOCAL_AI_API_KEY must be provided through the process environment.");
                 return 2;
             }
 
-            var options =
-                new LocalAiBillStatementOptions
-                {
-                    Enabled = true,
-                    Model = "fullworth-local",
-                    ApiKey = apiKey,
-                    Endpoint = "http://127.0.0.1:8080/v1/chat/completions"
-                };
-
-            var validation =
-                new LocalAiBillStatementOptionsValidator()
-                    .Validate(
-                        null,
-                        options);
-
-            if (validation.Failed)
-            {
-                Console.Error.WriteLine(
-                    "Local model evaluation configuration is invalid.");
-                return 2;
-            }
-
-            var readinessPolicy =
-                BillStatementAiShadowReadinessPolicy.PrivateBetaDefault;
-
             using var httpClient =
                 new HttpClient();
 
-            var stopwatch =
-                Stopwatch.StartNew();
+            var readinessPolicy =
+                BillStatementAiShadowReadinessPolicy
+                    .PrivateBetaDefault;
 
-            var result =
-                await new BillStatementAiPrivateCorpusProviderEvaluator(
-                    loader,
-                    new BillStatementAiPrivateCorpusCoverageGate(),
-                    new LocalAiBillStatementAiExtractor(
-                        httpClient,
-                        Options.Create(options)),
-                    new BillStatementAiCandidateConversionService(
-                        new BillStatementAiCandidateValidator()),
-                    new BillStatementAiGroundTruthScorer())
-                    .EvaluateAsync(
-                        fullCorpusRoot,
-                        caseIds,
-                        options.PromptVersion,
-                        providerCallsAuthorized:
-                            localInferenceAuthorized,
-                        readinessPolicy);
-
-            stopwatch.Stop();
-
-            if (result.Metrics is null)
+            if (parsed.Mode ==
+                ComparePromptsMode)
             {
-                WriteJson(
-                    new
-                    {
-                        mode,
-                        approvedModelId = ApprovedModelId,
-                        approvedModelSha256 = ApprovedModelSha256,
-                        approvedRuntimeId = ApprovedRuntimeId,
-                        runtimeProvenanceVerifiedByRunner = false,
-                        result.ProviderEvaluationStarted,
-                        result.Coverage.CaseCount,
-                        result.Coverage.DistinctProviderCount,
-                        result.Coverage.MinimumCasesForAnyProvider,
-                        result.CoverageDecision.RequiredCaseCount,
-                        result.CoverageDecision.Failures,
-                        persisted = false
-                    });
-
-                return 3;
+                return await RunPromptComparisonAsync(
+                    loader,
+                    httpClient,
+                    fullCorpusRoot,
+                    caseIds,
+                    apiKey,
+                    readinessPolicy);
             }
 
-            var readiness =
-                new BillStatementAiShadowReadinessEvaluator()
-                    .Evaluate(
-                        result.Metrics,
-                        readinessPolicy);
-
-            var metrics =
-                result.Metrics;
-
-            WriteJson(
-                new
-                {
-                    mode,
-                    approvedModelId = ApprovedModelId,
-                    approvedModelSha256 = ApprovedModelSha256,
-                    approvedRuntimeId = ApprovedRuntimeId,
-                        runtimeProvenanceVerifiedByRunner = false,
-                    promptVersion = options.PromptVersion,
-                    result.ProviderEvaluationStarted,
-                    result.Coverage.CaseCount,
-                    result.Coverage.DistinctProviderCount,
-                    result.Coverage.MinimumCasesForAnyProvider,
-                    metrics.ProviderAttemptCount,
-                    metrics.ProviderFailureCount,
-                    metrics.ReadyCandidateStatementCount,
-                    metrics.CorrectFactCount,
-                    metrics.IncorrectFactCount,
-                    metrics.MissedFactCount,
-                    readiness.FactPrecision,
-                    readiness.FactRecall,
-                    readiness.ReadyCandidateRate,
-                    readiness.ProviderFailureRate,
-                    readiness.MeetsShadowAccuracyGate,
-                    readiness.Failures,
-                    elapsedSeconds = stopwatch.Elapsed.TotalSeconds,
-                    persisted = false,
-                    mayEnableRuntimeShadowMode = false,
-                    mayInfluencePersistence = false
-                });
-
-            return 0;
+            return await RunSinglePromptEvaluationAsync(
+                loader,
+                httpClient,
+                fullCorpusRoot,
+                caseIds,
+                apiKey,
+                parsed.PromptVersion,
+                readinessPolicy);
         }
         catch (OperationCanceledException)
         {
@@ -248,58 +149,566 @@ internal static class Program
         }
     }
 
+    private static async Task<int> RunDeterministicBaselineAsync(
+        BillStatementAiPrivateCorpusLoader loader,
+        BillStatementAiPrivateCorpusCatalogSummary catalog,
+        string fullCorpusRoot,
+        IReadOnlyList<string> caseIds)
+    {
+        var baseline =
+            await new BillStatementDeterministicPrivateCorpusEvaluator(
+                loader,
+                new DeterministicBillStatementExtractionService(
+                    new DeterministicBillStatementParser(),
+                    new DeterministicBillLineItemParser()))
+                .EvaluateAsync(
+                    fullCorpusRoot,
+                    caseIds);
+
+        WriteJson(
+            new
+            {
+                mode =
+                    BaselineMode,
+
+                catalog.CaseCount,
+                catalog.DistinctProviderCount,
+                catalog.MinimumCasesForAnyProvider,
+                baseline.EvaluatedStatementCount,
+                baseline.ReadyStatementCount,
+                baseline.CorrectFactCount,
+                baseline.IncorrectFactCount,
+                baseline.MissedFactCount,
+                baseline.ReadyStatementRate,
+                baseline.FactPrecision,
+                baseline.FactRecall,
+                persisted =
+                    false
+            });
+
+        return 0;
+    }
+
+    private static async Task<int> RunSinglePromptEvaluationAsync(
+        BillStatementAiPrivateCorpusLoader loader,
+        HttpClient httpClient,
+        string fullCorpusRoot,
+        IReadOnlyList<string> caseIds,
+        string apiKey,
+        string promptVersion,
+        BillStatementAiShadowReadinessPolicy readinessPolicy)
+    {
+        var run =
+            await EvaluatePromptAsync(
+                loader,
+                httpClient,
+                fullCorpusRoot,
+                caseIds,
+                apiKey,
+                promptVersion,
+                readinessPolicy);
+
+        if (run.Result.Metrics is null)
+        {
+            WriteCoverageRejected(
+                LocalAiMode,
+                promptVersion,
+                run.Result);
+
+            return 3;
+        }
+
+        WriteJson(
+            new
+            {
+                mode =
+                    LocalAiMode,
+
+                approvedModelId =
+                    ApprovedModelId,
+
+                approvedModelSha256 =
+                    ApprovedModelSha256,
+
+                approvedRuntimeId =
+                    ApprovedRuntimeId,
+
+                runtimeProvenanceVerifiedByRunner =
+                    false,
+
+                promptVersion,
+
+                evaluation =
+                    CreatePromptSummary(
+                        promptVersion,
+                        run),
+
+                persisted =
+                    false,
+
+                mayEnableRuntimeShadowMode =
+                    false,
+
+                mayInfluencePersistence =
+                    false
+            });
+
+        return 0;
+    }
+
+    private static async Task<int> RunPromptComparisonAsync(
+        BillStatementAiPrivateCorpusLoader loader,
+        HttpClient httpClient,
+        string fullCorpusRoot,
+        IReadOnlyList<string> caseIds,
+        string apiKey,
+        BillStatementAiShadowReadinessPolicy readinessPolicy)
+    {
+        var baselineRun =
+            await EvaluatePromptAsync(
+                loader,
+                httpClient,
+                fullCorpusRoot,
+                caseIds,
+                apiKey,
+                LocalAiBillStatementPromptCatalog.Version1,
+                readinessPolicy);
+
+        if (baselineRun.Result.Metrics is null)
+        {
+            WriteCoverageRejected(
+                ComparePromptsMode,
+                LocalAiBillStatementPromptCatalog.Version1,
+                baselineRun.Result);
+
+            return 3;
+        }
+
+        var candidateRun =
+            await EvaluatePromptAsync(
+                loader,
+                httpClient,
+                fullCorpusRoot,
+                caseIds,
+                apiKey,
+                LocalAiBillStatementPromptCatalog.Version2,
+                readinessPolicy);
+
+        if (candidateRun.Result.Metrics is null)
+        {
+            WriteCoverageRejected(
+                ComparePromptsMode,
+                LocalAiBillStatementPromptCatalog.Version2,
+                candidateRun.Result);
+
+            return 3;
+        }
+
+        var comparison =
+            new BillStatementAiPromptComparisonEvaluator()
+                .Compare(
+                    baselineRun.Result.Metrics,
+                    candidateRun.Result.Metrics);
+
+        WriteJson(
+            new
+            {
+                mode =
+                    ComparePromptsMode,
+
+                approvedModelId =
+                    ApprovedModelId,
+
+                approvedModelSha256 =
+                    ApprovedModelSha256,
+
+                approvedRuntimeId =
+                    ApprovedRuntimeId,
+
+                runtimeProvenanceVerifiedByRunner =
+                    false,
+
+                baseline =
+                    CreatePromptSummary(
+                        LocalAiBillStatementPromptCatalog.Version1,
+                        baselineRun),
+
+                candidate =
+                    CreatePromptSummary(
+                        LocalAiBillStatementPromptCatalog.Version2,
+                        candidateRun),
+
+                comparison =
+                    new
+                    {
+                        comparison.FactPrecisionDelta,
+                        comparison.FactRecallDelta,
+                        comparison.ReadyCandidateRateDelta,
+                        comparison.ProviderFailureRateDelta,
+                        comparison.CorrectFactCountDelta,
+                        comparison.IncorrectFactCountDelta,
+                        comparison.MissedFactCountDelta,
+                        comparison.ReadyCandidateStatementCountDelta,
+                        comparison.ProviderFailureCountDelta,
+                        comparison.CandidateHasNoAggregateRegression,
+                        comparison.CandidateHasStrictAggregateImprovement,
+                        comparison.CandidateQualifiesForPromotionReview
+                    },
+
+                comparisonPolicy =
+                    new
+                    {
+                        requiresSameEvaluationPopulation =
+                            true,
+
+                        precisionMustNotDecrease =
+                            true,
+
+                        recallMustNotDecrease =
+                            true,
+
+                        readyCandidateRateMustNotDecrease =
+                            true,
+
+                        providerFailureRateMustNotIncrease =
+                            true,
+
+                        requiresAtLeastOneStrictImprovement =
+                            true
+                    },
+
+                persisted =
+                    false,
+
+                mayEnableRuntimeShadowMode =
+                    false,
+
+                mayInfluencePersistence =
+                    false
+            });
+
+        return comparison
+                .CandidateQualifiesForPromotionReview
+            ? 0
+            : 4;
+    }
+
+    private static async Task<PromptEvaluationRun> EvaluatePromptAsync(
+        BillStatementAiPrivateCorpusLoader loader,
+        HttpClient httpClient,
+        string fullCorpusRoot,
+        IReadOnlyList<string> caseIds,
+        string apiKey,
+        string promptVersion,
+        BillStatementAiShadowReadinessPolicy readinessPolicy)
+    {
+        var options =
+            new LocalAiBillStatementOptions
+            {
+                Enabled =
+                    true,
+
+                Model =
+                    "fullworth-local",
+
+                ApiKey =
+                    apiKey,
+
+                Endpoint =
+                    "http://127.0.0.1:8080/v1/chat/completions",
+
+                PromptVersion =
+                    promptVersion
+            };
+
+        var validation =
+            new LocalAiBillStatementOptionsValidator()
+                .Validate(
+                    null,
+                    options);
+
+        if (validation.Failed)
+        {
+            throw new InvalidOperationException(
+                "Local model evaluation configuration is invalid.");
+        }
+
+        var stopwatch =
+            Stopwatch.StartNew();
+
+        var result =
+            await new BillStatementAiPrivateCorpusProviderEvaluator(
+                loader,
+                new BillStatementAiPrivateCorpusCoverageGate(),
+                new LocalAiBillStatementAiExtractor(
+                    httpClient,
+                    Options.Create(
+                        options)),
+                new BillStatementAiCandidateConversionService(
+                    new BillStatementAiCandidateValidator()),
+                new BillStatementAiGroundTruthScorer())
+                .EvaluateAsync(
+                    fullCorpusRoot,
+                    caseIds,
+                    promptVersion,
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy);
+
+        stopwatch.Stop();
+
+        var readiness =
+            result.Metrics is null
+                ? null
+                : new BillStatementAiShadowReadinessEvaluator()
+                    .Evaluate(
+                        result.Metrics,
+                        readinessPolicy);
+
+        return new PromptEvaluationRun(
+            Result:
+                result,
+
+            Readiness:
+                readiness,
+
+            ElapsedSeconds:
+                stopwatch.Elapsed.TotalSeconds);
+    }
+
+    private static object CreatePromptSummary(
+        string promptVersion,
+        PromptEvaluationRun run)
+    {
+        var metrics =
+            run.Result.Metrics ??
+            throw new InvalidOperationException(
+                "A prompt summary requires completed aggregate metrics.");
+
+        var readiness =
+            run.Readiness ??
+            throw new InvalidOperationException(
+                "A prompt summary requires aggregate readiness rates.");
+
+        return new
+        {
+            promptVersion,
+            run.Result.ProviderEvaluationStarted,
+            run.Result.Coverage.CaseCount,
+            run.Result.Coverage.DistinctProviderCount,
+            run.Result.Coverage.MinimumCasesForAnyProvider,
+            metrics.ProviderAttemptCount,
+            metrics.ProviderFailureCount,
+            metrics.ReadyCandidateStatementCount,
+            metrics.CorrectFactCount,
+            metrics.IncorrectFactCount,
+            metrics.MissedFactCount,
+            readiness.FactPrecision,
+            readiness.FactRecall,
+            readiness.ReadyCandidateRate,
+            readiness.ProviderFailureRate,
+            meetsFullShadowAccuracyGate =
+                readiness.MeetsShadowAccuracyGate,
+
+            readiness.Failures,
+            run.ElapsedSeconds
+        };
+    }
+
+    private static void WriteCoverageRejected(
+        string mode,
+        string promptVersion,
+        BillStatementAiPrivateCorpusProviderEvaluationResult result)
+    {
+        WriteJson(
+            new
+            {
+                mode,
+
+                approvedModelId =
+                    ApprovedModelId,
+
+                approvedModelSha256 =
+                    ApprovedModelSha256,
+
+                approvedRuntimeId =
+                    ApprovedRuntimeId,
+
+                runtimeProvenanceVerifiedByRunner =
+                    false,
+
+                promptVersion,
+                result.ProviderEvaluationStarted,
+                result.Coverage.CaseCount,
+                result.Coverage.DistinctProviderCount,
+                result.Coverage.MinimumCasesForAnyProvider,
+                result.CoverageDecision.RequiredCaseCount,
+                result.CoverageDecision.Failures,
+                persisted =
+                    false,
+
+                mayEnableRuntimeShadowMode =
+                    false,
+
+                mayInfluencePersistence =
+                    false
+            });
+    }
+
     private static bool TryParseArguments(
         string[] args,
-        out string mode,
-        out string corpusRoot,
-        out bool localInferenceAuthorized)
+        out EvaluationArguments parsed)
     {
-        mode =
-            args.Length > 0
-                ? args[0]
-                : string.Empty;
+        parsed =
+            new EvaluationArguments(
+                Mode:
+                    string.Empty,
 
-        corpusRoot =
-            string.Empty;
+                CorpusRoot:
+                    string.Empty,
 
-        localInferenceAuthorized =
-            args.Contains(
-                "--authorize-local-model-inference",
-                StringComparer.Ordinal);
+                LocalInferenceAuthorized:
+                    false,
 
-        var expectedArgumentCount =
-            mode == "baseline"
-                ? 3
-                : mode == "local-ai"
-                    ? 4
-                    : -1;
+                PromptVersion:
+                    LocalAiBillStatementPromptCatalog.CurrentVersion);
 
-        if (args.Length !=
-            expectedArgumentCount ||
-            (mode == "baseline" &&
-                localInferenceAuthorized) ||
-            (mode == "local-ai" &&
-                !localInferenceAuthorized))
+        if (args.Length <
+            1)
         {
             return false;
         }
 
-        var rootOptionIndex =
-            Array.IndexOf(
-                args,
-                "--corpus-root");
+        var mode =
+            args[0];
 
-        if (rootOptionIndex < 1 ||
-            rootOptionIndex + 1 >= args.Length)
+        if (mode is not
+            BaselineMode and not
+            LocalAiMode and not
+            ComparePromptsMode)
         {
             return false;
         }
 
-        corpusRoot =
-            args[rootOptionIndex + 1];
+        string? corpusRoot =
+            null;
 
-        return Path.IsPathFullyQualified(
-            corpusRoot);
+        string? promptVersion =
+            null;
+
+        var localInferenceAuthorized =
+            false;
+
+        for (var index = 1;
+             index <
+             args.Length;)
+        {
+            switch (args[index])
+            {
+                case "--corpus-root":
+                    if (corpusRoot is not null ||
+                        index + 1 >=
+                        args.Length)
+                    {
+                        return false;
+                    }
+
+                    corpusRoot =
+                        args[index + 1];
+
+                    index +=
+                        2;
+
+                    break;
+
+                case "--authorize-local-model-inference":
+                    if (localInferenceAuthorized)
+                    {
+                        return false;
+                    }
+
+                    localInferenceAuthorized =
+                        true;
+
+                    index++;
+
+                    break;
+
+                case "--prompt-version":
+                    if (mode !=
+                            LocalAiMode ||
+                        promptVersion is not null ||
+                        index + 1 >=
+                        args.Length)
+                    {
+                        return false;
+                    }
+
+                    promptVersion =
+                        args[index + 1];
+
+                    index +=
+                        2;
+
+                    break;
+
+                default:
+                    return false;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                corpusRoot) ||
+            !Path.IsPathFullyQualified(
+                corpusRoot))
+        {
+            return false;
+        }
+
+        if (mode ==
+                BaselineMode &&
+            (localInferenceAuthorized ||
+             promptVersion is not null))
+        {
+            return false;
+        }
+
+        var selectedPromptVersion =
+            promptVersion ??
+            LocalAiBillStatementPromptCatalog
+                .CurrentVersion;
+
+        if (mode ==
+                LocalAiMode &&
+            !LocalAiBillStatementPromptCatalog
+                .IsSupported(
+                    selectedPromptVersion))
+        {
+            return false;
+        }
+
+        if (mode ==
+                ComparePromptsMode &&
+            promptVersion is not null)
+        {
+            return false;
+        }
+
+        parsed =
+            new EvaluationArguments(
+                Mode:
+                    mode,
+
+                CorpusRoot:
+                    corpusRoot,
+
+                LocalInferenceAuthorized:
+                    localInferenceAuthorized,
+
+                PromptVersion:
+                    selectedPromptVersion);
+
+        return true;
     }
 
     private static void WriteJson(
@@ -315,11 +724,34 @@ internal static class Program
     {
         Console.Error.WriteLine(
             "Usage:");
+
         Console.Error.WriteLine(
             "  FullWorth.AiEvaluation baseline --corpus-root <absolute-private-corpus-path>");
+
         Console.Error.WriteLine(
-            "  FullWorth.AiEvaluation local-ai --corpus-root <absolute-private-corpus-path> --authorize-local-model-inference");
+            "  FullWorth.AiEvaluation local-ai --corpus-root <absolute-private-corpus-path> --authorize-local-model-inference [--prompt-version <version>]");
+
         Console.Error.WriteLine(
-            "Local AI mode reads FULLWORTH_LOCAL_AI_API_KEY from the process environment.");
+            "  FullWorth.AiEvaluation compare-prompts --corpus-root <absolute-private-corpus-path> --authorize-local-model-inference");
+
+        Console.Error.WriteLine(
+            $"Supported prompt versions: {string.Join(", ", LocalAiBillStatementPromptCatalog.SupportedVersions)}");
+
+        Console.Error.WriteLine(
+            "Local AI modes read FULLWORTH_LOCAL_AI_API_KEY from the process environment.");
+
+        Console.Error.WriteLine(
+            "compare-prompts returns exit code 4 when the candidate prompt does not qualify for promotion review.");
     }
+
+    private sealed record EvaluationArguments(
+        string Mode,
+        string CorpusRoot,
+        bool LocalInferenceAuthorized,
+        string PromptVersion);
+
+    private sealed record PromptEvaluationRun(
+        BillStatementAiPrivateCorpusProviderEvaluationResult Result,
+        BillStatementAiShadowReadinessResult? Readiness,
+        double ElapsedSeconds);
 }
