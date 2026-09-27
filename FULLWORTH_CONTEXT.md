@@ -5,6 +5,17 @@ Last updated: 2026-09-26
 
 ## Active AI evaluation checkpoint — 2026-09-26
 
+### Current local-AI recognition checkpoint — 2026-09-26
+
+The selected path remains evaluation of externally trained local models, not training a FullWorth model from scratch. There is no OpenAI/cloud statement-extraction fallback in the API. PR #405 removed that provider and its selection/configuration code; PR #404 explicitly sets local inference, shadow mode, and shadow provider calls to false in production. These changes merged to development as `af193d1761c3531ea11518c9bb65f9fb2bb01b66` (after #404 merge `4761931fda8df9c3e9ae21679857cb52bd60a08a`). Exact PR heads passed FullWorth CI and dependency security before merge.
+
+Prompt evaluation now compares preserved v1 and v2 on the same sorted case population. PR #402 added fixed field-level accuracy metrics. PR #403 made the comparison field-aware: each of TotalAmount, BillingPeriodStart, BillingPeriodEnd, StatementDate, DueDate, CurrencyCode, and LineItems must have a matching expected-fact population, reconcile with aggregate counts, and show no regression in correct/incorrect/missed counts, precision, or recall before v2 qualifies for promotion review. An overall improvement cannot conceal a loss in one field. This is review evidence only; no automatic prompt promotion or production activation is possible.
+
+PR #403 exact head `95e2979252de68d1599784ec63c084b32a5ca984` passed FullWorth CI run `36287918706` and dependency security run `36287918783`, then merged to development as `7222be0fd61c67760393cbaed380c0ed53a27538`. The CI run also skipped the MAUI workload for these non-mobile AI changes. PR #406 introduced the safe-path MAUI skip rule and merged as `e9acaaed4497e83c17e9acd5aa3027400a065e05`; MAUI source and project changes still require the Android build. PR #404 exact head `89d6fcd9c5f1864b5a9a6893c715b4ec75aaea75` and PR #405 exact head `c99170193af80a99ce1caacbe3dcb2a9bc5983cb` each passed their exact-head FullWorth CI and dependency security checks.
+
+No real Qwen accuracy benchmark has been run. The next meaningful recognition-quality step is still the guarded local evaluation on an authorized host with the pinned Qwen3-4B Q4_K_M artifact and the private held-out corpus. The runner requires at least 100 cases across five providers, with at least 10 cases for each provider. Keep statement text, ground truth, secrets, and case-level outputs outside GitHub and logs. The current extraction-only benchmark does not measure false alerts and cannot establish full shadow readiness. Production AI and AI-derived persistence remain disabled.
+
+
 The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. The abandoned first-party tokenizer/decoder/initializer/checkpoint/training source and its dedicated tests have been removed from the active product tree. Do not reintroduce that path unless a separately justified R&D effort is approved.
 
 PR #371 added the isolated local evaluation runtime and its fail-closed configuration validation. Exact head `9f1e76c6fb9d5b70781f4e9cbab802d1d39fe448` passed FullWorth CI #1038 and dependency security #144 before merge.
