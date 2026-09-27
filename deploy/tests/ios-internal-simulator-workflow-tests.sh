@@ -101,12 +101,26 @@ grep -Fq 'xcrun simctl bootstatus "$udid" -b' "$smoke_script" ||
     fail "smoke does not wait for Simulator boot completion."
 grep -Fq 'run_with_timeout 180' "$smoke_script" ||
     fail "Simulator boot wait is not bounded."
-grep -Fq 'run_with_timeout 90' "$smoke_script" ||
-    fail "Simulator installation is not bounded."
+
+install_function=$(
+    sed -n '/^install_app()$/,/^}/p' "$smoke_script"
+)
+printf '%s\n' "$install_function" |
+    grep -Fq 'run_with_timeout 180' ||
+    fail "Simulator installation is not bounded to 180 seconds."
+printf '%s\n' "$install_function" |
+    grep -Fq 'xcrun simctl install "$udid" "$app_path"' ||
+    fail "bounded install helper does not install the FullWorth app."
+
+grep -Fq 'if ! install_app; then' "$smoke_script" ||
+    fail "Simulator installation does not have a bounded recovery path."
+grep -Fq 'Initial FullWorth simulator install failed or timed out; rebooting and retrying once.' "$smoke_script" ||
+    fail "Simulator install retry is not explicitly limited to one recovery attempt."
+grep -Fq 'FullWorth could not be installed into the iOS Simulator after one bounded retry.' "$smoke_script" ||
+    fail "Simulator install retry does not fail closed."
+
 grep -Fq 'run_with_timeout 60' "$smoke_script" ||
     fail "Simulator reset or app launch is not bounded."
-grep -Fq 'xcrun simctl install' "$smoke_script" ||
-    fail "smoke does not install FullWorth."
 grep -Fq 'xcrun simctl launch' "$smoke_script" ||
     fail "smoke does not launch FullWorth."
 grep -Fq 'xcrun simctl get_app_container' "$smoke_script" ||
