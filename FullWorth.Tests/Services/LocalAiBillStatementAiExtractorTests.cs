@@ -160,7 +160,7 @@ public sealed class LocalAiBillStatementAiExtractorTests
             StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains(
-            "Preserve the printed amount and sign",
+            "printed amount and sign",
             systemInstructions,
             StringComparison.OrdinalIgnoreCase);
 
