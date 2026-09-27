@@ -120,6 +120,12 @@ but latency does not yet participate in promotion qualification because
 FullWorth has not established an evidence-backed speed threshold. No per-case
 timing samples are returned.
 
+Provider-call failures are reported only as aggregate counts by coarse
+vendor-neutral category (for example Timeout, Transport, HttpStatus,
+InvalidStructuredOutput, IncompleteResponse, or OversizedResponse). Exception
+messages, inner exceptions, response bodies, endpoints, provider identities,
+and case identifiers are not written into the benchmark report.
+
 The runner persists no records or result files. Keep or redirect aggregate
 reports only to an approved private location.
 
