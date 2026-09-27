@@ -37,7 +37,8 @@ PY
 
 boot_simulator()
 {
-    xcrun simctl boot "$udid" >/dev/null 2>&1 ||
+    run_with_timeout 30 \
+        xcrun simctl boot "$udid" >/dev/null 2>&1 ||
         return 1
 
     run_with_timeout 180 \
