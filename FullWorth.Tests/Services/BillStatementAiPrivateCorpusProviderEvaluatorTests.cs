@@ -99,6 +99,12 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             result.InferenceCallCount);
 
         Assert.Null(
+            result.MultiInferenceStatementCount);
+
+        Assert.Null(
+            result.MaximumInferenceCallsPerStatement);
+
+        Assert.Null(
             result.ProviderAttemptLatency);
 
         Assert.Null(
@@ -207,6 +213,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             4L,
             result.InferenceCallCount);
+
+        Assert.Equal(
+            2L,
+            result.MultiInferenceStatementCount);
+
+        Assert.Equal(
+            2L,
+            result.MaximumInferenceCallsPerStatement);
 
         Assert.Equal(
             0,
@@ -660,6 +674,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             8L,
             result.InferenceCallCount);
+
+        Assert.Equal(
+            2L,
+            result.MultiInferenceStatementCount);
+
+        Assert.Equal(
+            4L,
+            result.MaximumInferenceCallsPerStatement);
 
         Assert.All(
             extractor.Requests,
