@@ -622,18 +622,7 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                         baseline.Recall,
 
                     CandidateHasNoRegression:
-                        noRegression)
-                {
-                    BaselineScoredDocumentExactMatchCount =
-                        baseline.ScoredDocumentExactMatchCount,
-
-                    CandidateScoredDocumentExactMatchCount =
-                        candidate.ScoredDocumentExactMatchCount,
-
-                    ScoredDocumentExactMatchCountDelta =
-                        candidate.ScoredDocumentExactMatchCount -
-                        baseline.ScoredDocumentExactMatchCount
-                });
+                        noRegression));
         }
 
         return comparisons.AsReadOnly();
@@ -781,7 +770,18 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                         baseline.ProviderFailureRate,
 
                     CandidateHasNoRegression:
-                        noRegression));
+                        noRegression)
+                {
+                    BaselineScoredDocumentExactMatchCount =
+                        baseline.ScoredDocumentExactMatchCount,
+
+                    CandidateScoredDocumentExactMatchCount =
+                        candidate.ScoredDocumentExactMatchCount,
+
+                    ScoredDocumentExactMatchCountDelta =
+                        candidate.ScoredDocumentExactMatchCount -
+                        baseline.ScoredDocumentExactMatchCount
+                });
         }
 
         return comparisons.AsReadOnly();
