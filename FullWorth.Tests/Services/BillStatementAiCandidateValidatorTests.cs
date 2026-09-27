@@ -235,6 +235,43 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void MoneyEvidence_DoesNotTreatDateYearAsAmount()
+    {
+        const string documentText =
+            "Statement date September 20, 2026";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                TotalDue =
+                    2026m,
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.TotalDue,
+                            "Statement date September 20, 2026")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void DateEvidence_RejectsDateEmbeddedInLongerDigits()
     {
         const string documentText =
