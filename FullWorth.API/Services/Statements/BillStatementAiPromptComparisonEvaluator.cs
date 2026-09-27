@@ -584,10 +584,10 @@ public sealed record BillStatementAiPromptComparisonResult(
     public IReadOnlyList<string> RegressedFieldKeys =>
         FieldComparisons
             .Where(
-                field =>
-                    !field.CandidateHasNoRegression)
+                comparison =>
+                    !comparison.CandidateHasNoRegression)
             .Select(
-                field =>
-                    field.FieldKey)
+                comparison =>
+                    comparison.FieldKey)
             .ToArray();
 }
