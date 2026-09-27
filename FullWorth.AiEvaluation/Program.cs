@@ -334,6 +334,16 @@ internal static class Program
                     candidateFieldScores,
                     candidateProviderScores);
 
+        var baselineLatency =
+            baselineRun.Result.ProviderAttemptLatency ??
+            throw new InvalidOperationException(
+                "A completed baseline prompt evaluation requires provider-attempt latency metrics.");
+
+        var candidateLatency =
+            candidateRun.Result.ProviderAttemptLatency ??
+            throw new InvalidOperationException(
+                "A completed candidate prompt evaluation requires provider-attempt latency metrics.");
+
         WriteJson(
             new
             {
@@ -437,6 +447,29 @@ internal static class Program
                         comparison.RegressedFieldKeys,
                         comparison.RegressedProviderOrdinals,
                         comparison.CandidateQualifiesForPromotionReview
+                    },
+
+                performanceComparison =
+                    new
+                    {
+                        meanMillisecondsDelta =
+                            candidateLatency.MeanMilliseconds -
+                            baselineLatency.MeanMilliseconds,
+
+                        p50MillisecondsDelta =
+                            candidateLatency.P50Milliseconds -
+                            baselineLatency.P50Milliseconds,
+
+                        p95MillisecondsDelta =
+                            candidateLatency.P95Milliseconds -
+                            baselineLatency.P95Milliseconds,
+
+                        maximumMillisecondsDelta =
+                            candidateLatency.MaximumMilliseconds -
+                            baselineLatency.MaximumMilliseconds,
+
+                        latencyIsReportedNotPromotionGated =
+                            true
                     },
 
                 comparisonPolicy =
@@ -629,6 +662,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires anonymous provider scores.");
 
+        var providerAttemptLatency =
+            run.Result.ProviderAttemptLatency ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires aggregate provider-attempt latency metrics.");
+
         return new
         {
             promptVersion,
@@ -680,6 +718,17 @@ internal static class Program
                             provider.ReadyCandidateRate,
                             provider.ProviderFailureRate
                         }),
+
+            providerAttemptLatency =
+                new
+                {
+                    providerAttemptLatency.AttemptCount,
+                    providerAttemptLatency.MinimumMilliseconds,
+                    providerAttemptLatency.MeanMilliseconds,
+                    providerAttemptLatency.P50Milliseconds,
+                    providerAttemptLatency.P95Milliseconds,
+                    providerAttemptLatency.MaximumMilliseconds
+                },
 
             meetsFullShadowAccuracyGate =
                 readiness.MeetsShadowAccuracyGate,
