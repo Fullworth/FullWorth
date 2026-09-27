@@ -222,7 +222,12 @@ public sealed class LocalAiBillStatementAiExtractorTests
                 .GetString()!;
 
         Assert.Contains(
-            "Do not calculate, reconcile, or invent amounts",
+            "Return account suffixes only, never full account numbers. Do not",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "calculate, reconcile, or invent amounts.",
             systemInstructions,
             StringComparison.OrdinalIgnoreCase);
 
