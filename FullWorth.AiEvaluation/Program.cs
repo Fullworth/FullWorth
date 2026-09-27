@@ -59,6 +59,26 @@ internal static class Program
 
         try
         {
+            var apiKey =
+                string.Empty;
+
+            if (parsed.Mode !=
+                BaselineMode)
+            {
+                apiKey =
+                    Environment.GetEnvironmentVariable(
+                        "FULLWORTH_LOCAL_AI_API_KEY") ??
+                    string.Empty;
+
+                if (string.IsNullOrWhiteSpace(
+                        apiKey))
+                {
+                    Console.Error.WriteLine(
+                        "FULLWORTH_LOCAL_AI_API_KEY must be provided through the process environment.");
+                    return 2;
+                }
+            }
+
             var fullCorpusRoot =
                 Path.GetFullPath(
                     parsed.CorpusRoot);
@@ -93,18 +113,6 @@ internal static class Program
                     catalog,
                     fullCorpusRoot,
                     caseIds);
-            }
-
-            var apiKey =
-                Environment.GetEnvironmentVariable(
-                    "FULLWORTH_LOCAL_AI_API_KEY");
-
-            if (string.IsNullOrWhiteSpace(
-                    apiKey))
-            {
-                Console.Error.WriteLine(
-                    "FULLWORTH_LOCAL_AI_API_KEY must be provided through the process environment.");
-                return 2;
             }
 
             using var httpClient =
