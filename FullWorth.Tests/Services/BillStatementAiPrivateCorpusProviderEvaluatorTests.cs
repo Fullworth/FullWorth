@@ -96,6 +96,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             result.ProviderFieldScores);
 
         Assert.Null(
+            result.InferenceCallCount);
+
+        Assert.Null(
             result.ProviderAttemptLatency);
 
         Assert.Null(
@@ -198,6 +201,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             2,
             metrics.ProviderAttemptCount);
+
+        Assert.Equal(
+            2L,
+            result.InferenceCallCount);
 
         Assert.Equal(
             0,
