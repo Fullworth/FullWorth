@@ -27,6 +27,8 @@ owners = {
     "BillChanges": "Statements",
     "BillStatementUploads": "Statements",
     "BillStatementAiEvaluations": "Statements",
+    "PlanningPaySchedules": "Planning",
+    "PlanningBillFundingPreferences": "Planning",
     "SubscriptionEntitlements": "Subscriptions",
     "UserProgramMemberships": "Subscriptions",
     "SubscriptionAccessKeys": "Subscriptions",
@@ -44,6 +46,8 @@ def controller_module(filename):
         return "Plaid"
     if filename.startswith("Subscription"):
         return "Subscriptions"
+    if filename.startswith("Planning"):
+        return "Planning"
     if filename.startswith("Account"):
         return "Accounts"
     if filename.startswith("Admin"):
