@@ -156,6 +156,7 @@ jobs:
 
           $safePrefixes = @(
             "FullWorth.API/",
+            "FullWorth.AiEvaluation/",
             "FullWorth.Web/",
             "FullWorth.Tests/",
             "FullWorth.VisualTests/",
@@ -164,15 +165,19 @@ jobs:
 
           $safeExactFiles = @(
             ".dockerignore",
+            ".env.ai.example",
             ".env.production.example",
             "AI_SHADOW_CORPUS.md",
             "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
+            "FULLWORTH_ROADMAP.md",
+            "IOS_INTERNAL_TESTING.md",
             "Dockerfile",
             "Dockerfile.web",
             "README.md",
             "REVENUE_READINESS.md",
+            "compose.ai-evaluation.yml",
             "compose.production.yml"
           )
 
