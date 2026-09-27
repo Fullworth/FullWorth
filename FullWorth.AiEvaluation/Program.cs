@@ -268,17 +268,9 @@ internal static class Program
         // statements and reviewer-approved labels, even if source files change
         // while the model calls are running.
         var corpusSnapshot =
-            new List<BillStatementAiPrivateCorpusCase>(
-                caseIds.Count);
-
-        foreach (var caseId in
-                 caseIds)
-        {
-            corpusSnapshot.Add(
-                await loader.LoadAsync(
-                    fullCorpusRoot,
-                    caseId));
-        }
+            await loader.LoadSnapshotAsync(
+                fullCorpusRoot,
+                caseIds);
 
         var baselineRun =
             await EvaluatePromptAsync(
@@ -607,7 +599,7 @@ internal static class Program
         string apiKey,
         string promptVersion,
         BillStatementAiShadowReadinessPolicy readinessPolicy,
-        IReadOnlyList<BillStatementAiPrivateCorpusCase>? corpusSnapshot = null)
+        BillStatementAiPrivateCorpusSnapshot? corpusSnapshot = null)
     {
         var options =
             new LocalAiBillStatementOptions

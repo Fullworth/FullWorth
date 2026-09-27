@@ -148,27 +148,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
          * from consuming provider spend for the cases that happened to come
          * before it.
          */
-        var corpusCases =
-            new List<BillStatementAiPrivateCorpusCase>(
-                caseIds.Count);
-
-        foreach (var caseId in
-                 caseIds)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var corpusCase =
-                await _loader.LoadAsync(
-                    corpusRootDirectory,
-                    caseId,
-                    cancellationToken);
-
-            corpusCases.Add(
-                corpusCase);
-        }
+        var corpusSnapshot =
+            await _loader.LoadSnapshotAsync(
+                corpusRootDirectory,
+                caseIds,
+                cancellationToken);
 
         return await EvaluateLoadedCasesAsync(
-            corpusCases,
+            corpusSnapshot,
             promptVersion,
             providerCallsAuthorized,
             readinessPolicy,
@@ -178,7 +165,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
     public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
         EvaluateLoadedCasesAsync(
-            IReadOnlyList<BillStatementAiPrivateCorpusCase> corpusCases,
+            BillStatementAiPrivateCorpusSnapshot corpusSnapshot,
             string promptVersion,
             bool providerCallsAuthorized,
             BillStatementAiShadowReadinessPolicy readinessPolicy,
@@ -186,7 +173,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             int? maxCharactersPerInference = null)
     {
         ArgumentNullException.ThrowIfNull(
-            corpusCases);
+            corpusSnapshot);
 
         ArgumentException.ThrowIfNullOrWhiteSpace(
             promptVersion);
@@ -202,13 +189,6 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 "Maximum characters per inference must be positive when configured.");
         }
 
-        if (corpusCases.Count is < 1 or > MaxCasesPerRun)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(corpusCases),
-                $"An offline provider evaluation requires between 1 and {MaxCasesPerRun} cases.");
-        }
-
         if (!providerCallsAuthorized)
         {
             throw new InvalidOperationException(
@@ -217,9 +197,15 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Do not retain a caller-owned mutable collection during a run.
-        corpusCases =
-            corpusCases.ToArray();
+        var corpusCases =
+            corpusSnapshot.Cases.ToArray();
+
+        if (corpusCases.Length is < 1 or > MaxCasesPerRun)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(corpusSnapshot),
+                $"An offline provider evaluation requires between 1 and {MaxCasesPerRun} cases.");
+        }
 
         var seenCaseIds =
             new HashSet<string>(

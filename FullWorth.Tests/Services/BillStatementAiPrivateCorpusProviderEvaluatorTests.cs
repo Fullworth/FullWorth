@@ -56,11 +56,13 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
 
         var loader =
             new BillStatementAiPrivateCorpusLoader();
-        var snapshot = new[]
-        {
-            await loader.LoadAsync(directory.Path, "provider-a-001"),
-            await loader.LoadAsync(directory.Path, "provider-b-001")
-        };
+        var snapshot =
+            await loader.LoadSnapshotAsync(
+                directory.Path,
+                [
+                    "provider-a-001",
+                    "provider-b-001"
+                ]);
 
         // Simulate source changes between paired prompt runs. The second run
         // must keep using the already-validated statement and labels.
