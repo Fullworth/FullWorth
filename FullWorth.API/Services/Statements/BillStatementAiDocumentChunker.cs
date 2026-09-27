@@ -114,9 +114,43 @@ public sealed class BillStatementAiDocumentChunker
         }
 
         /*
-         * If no line ending exists inside the window, split the long line at
-         * the hard bound. Avoid splitting a CRLF pair when the bound lands
-         * between '\r' and '\n'.
+         * OCR/PDF extraction can produce very long logical lines. When there
+         * is no newline inside the bounded window, prefer a nearby whitespace
+         * boundary instead of cutting through a token, amount, provider name,
+         * or line-item description. Restrict the search to the final quarter
+         * of the window so a single early space cannot create a tiny chunk and
+         * multiply model calls.
+         */
+        var minimumSoftBoundary =
+            startOffset +
+            Math.Max(
+                1,
+                (
+                    tentativeEndOffset -
+                    startOffset) *
+                3 /
+                4);
+
+        for (var index =
+                 tentativeEndOffset - 1;
+             index >= minimumSoftBoundary;
+             index--)
+        {
+            if (char.IsWhiteSpace(
+                    documentText[index]) &&
+                documentText[index] !=
+                    '\r' &&
+                documentText[index] !=
+                    '\n')
+            {
+                return index + 1;
+            }
+        }
+
+        /*
+         * If no safe soft boundary exists, split the long line at the hard
+         * bound. Avoid splitting a CRLF pair when the bound lands between
+         * '\r' and '\n'.
          */
         if (tentativeEndOffset >
                 startOffset &&

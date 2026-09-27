@@ -132,6 +132,84 @@ public sealed class BillStatementAiDocumentChunkerTests
     }
 
     [Fact]
+    public void Plan_LongLine_PrefersNearbyWhitespaceBoundary()
+    {
+        const string text =
+            "Provider ACME Internet monthly service charge $42.10 due soon";
+
+        var chunks =
+            new BillStatementAiDocumentChunker()
+                .Plan(
+                    text,
+                    maxCharacters:
+                        30);
+
+        Assert.True(
+            chunks.Count >
+            1);
+
+        Assert.Equal(
+            text,
+            string.Concat(
+                chunks.Select(
+                    chunk =>
+                        chunk.Text)));
+
+        Assert.All(
+            chunks,
+            chunk =>
+                Assert.InRange(
+                    chunk.Length,
+                    1,
+                    30));
+
+        for (var index = 0;
+             index <
+             chunks.Count - 1;
+             index++)
+        {
+            Assert.True(
+                char.IsWhiteSpace(
+                    chunks[index].Text[^1]));
+        }
+
+        Assert.DoesNotContain(
+            chunks,
+            chunk =>
+                chunk.Text.EndsWith(
+                    "Inter",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Plan_LongLine_IgnoresWhitespaceTooFarFromHardBoundary()
+    {
+        string text =
+            "a " +
+            new string(
+                'x',
+                80);
+
+        var chunks =
+            new BillStatementAiDocumentChunker()
+                .Plan(
+                    text,
+                    maxCharacters:
+                        40);
+
+        Assert.Equal(
+            40,
+            chunks[0].Length);
+
+        Assert.Equal(
+            text,
+            string.Concat(
+                chunks.Select(
+                    chunk =>
+                        chunk.Text)));
+    }
+
+    [Fact]
     public void Plan_LongLine_UsesHardBoundWithoutDroppingCharacters()
     {
         string text =
