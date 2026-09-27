@@ -97,10 +97,21 @@ grep -Fq 'xcrun simctl list devices --json' "$smoke_script" ||
     fail "smoke does not select a preinstalled iOS 26.0 iPhone Simulator."
 grep -Fq 'xcrun simctl erase' "$smoke_script" ||
     fail "smoke does not reset the selected Simulator before launch."
-grep -Fq 'xcrun simctl bootstatus "$udid" -b' "$smoke_script" ||
+boot_function=$(
+    sed -n '/^boot_simulator()$/,/^}/p' "$smoke_script"
+)
+printf '%s\n' "$boot_function" |
+    grep -Fq 'run_with_timeout 30' ||
+    fail "Simulator boot command is not bounded."
+printf '%s\n' "$boot_function" |
+    grep -Fq 'xcrun simctl boot "$udid"' ||
+    fail "bounded boot helper does not boot the selected Simulator."
+printf '%s\n' "$boot_function" |
+    grep -Fq 'run_with_timeout 180' ||
+    fail "Simulator boot readiness wait is not bounded."
+printf '%s\n' "$boot_function" |
+    grep -Fq 'xcrun simctl bootstatus "$udid" -b' ||
     fail "smoke does not wait for Simulator boot completion."
-grep -Fq 'run_with_timeout 180' "$smoke_script" ||
-    fail "Simulator boot wait is not bounded."
 
 install_function=$(
     sed -n '/^install_app()$/,/^}/p' "$smoke_script"
