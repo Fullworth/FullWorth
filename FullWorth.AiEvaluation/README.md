@@ -54,7 +54,10 @@ A specific preserved prompt version may be selected explicitly:
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- local-ai --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference --prompt-version bill-statement-extraction-v1
 ```
 
-Unsupported prompt versions fail closed.
+Unsupported prompt versions fail closed. Statement text that exceeds the
+configured local-AI input limit also fails closed before any inference request;
+the extractor does not silently truncate the statement and then treat the
+partial document as complete.
 
 ## Compare prompt v1 with v2
 
