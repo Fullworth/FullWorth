@@ -705,6 +705,16 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires aggregate inference-call accounting.");
 
+        var multiInferenceStatementCount =
+            run.Result.MultiInferenceStatementCount ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires multi-inference statement accounting.");
+
+        var maximumInferenceCallsPerStatement =
+            run.Result.MaximumInferenceCallsPerStatement ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires maximum per-statement inference-call accounting.");
+
         return new
         {
             promptVersion,
@@ -714,6 +724,8 @@ internal static class Program
             run.Result.Coverage.MinimumCasesForAnyProvider,
             metrics.ProviderAttemptCount,
             inferenceCallCount,
+            multiInferenceStatementCount,
+            maximumInferenceCallsPerStatement,
             metrics.ProviderFailureCount,
             metrics.ReadyCandidateStatementCount,
             metrics.CorrectFactCount,
