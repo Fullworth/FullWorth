@@ -167,6 +167,87 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 corpusCase);
         }
 
+        return await EvaluateLoadedCasesAsync(
+            corpusCases,
+            promptVersion,
+            providerCallsAuthorized,
+            readinessPolicy,
+            cancellationToken,
+            maxCharactersPerInference);
+    }
+
+    public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
+        EvaluateLoadedCasesAsync(
+            IReadOnlyList<BillStatementAiPrivateCorpusCase> corpusCases,
+            string promptVersion,
+            bool providerCallsAuthorized,
+            BillStatementAiShadowReadinessPolicy readinessPolicy,
+            CancellationToken cancellationToken = default,
+            int? maxCharactersPerInference = null)
+    {
+        ArgumentNullException.ThrowIfNull(
+            corpusCases);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            promptVersion);
+
+        ArgumentNullException.ThrowIfNull(
+            readinessPolicy);
+
+        if (maxCharactersPerInference is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCharactersPerInference),
+                maxCharactersPerInference,
+                "Maximum characters per inference must be positive when configured.");
+        }
+
+        if (corpusCases.Count is < 1 or > MaxCasesPerRun)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(corpusCases),
+                $"An offline provider evaluation requires between 1 and {MaxCasesPerRun} cases.");
+        }
+
+        if (!providerCallsAuthorized)
+        {
+            throw new InvalidOperationException(
+                "Offline AI provider evaluation requires explicit provider-call authorization.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var seenCaseIds =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var corpusCase in
+                 corpusCases)
+        {
+            ArgumentNullException.ThrowIfNull(
+                corpusCase);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.CaseId);
+
+            if (!seenCaseIds.Add(
+                    corpusCase.CaseId))
+            {
+                throw new ArgumentException(
+                    "Private corpus case identifiers must be unique.",
+                    nameof(corpusCases));
+            }
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.ProviderKey);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedStatement);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedLineItems);
+        }
+
         var coverageSummary =
             CreateCoverageSummary(
                 corpusCases);

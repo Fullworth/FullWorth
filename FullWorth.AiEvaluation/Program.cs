@@ -264,6 +264,22 @@ internal static class Program
         string apiKey,
         BillStatementAiShadowReadinessPolicy readinessPolicy)
     {
+        // Load once so v1 and v2 are scored against the same in-memory
+        // statements and reviewer-approved labels, even if source files change
+        // while the model calls are running.
+        var corpusSnapshot =
+            new List<BillStatementAiPrivateCorpusCase>(
+                caseIds.Count);
+
+        foreach (var caseId in
+                 caseIds)
+        {
+            corpusSnapshot.Add(
+                await loader.LoadAsync(
+                    fullCorpusRoot,
+                    caseId));
+        }
+
         var baselineRun =
             await EvaluatePromptAsync(
                 loader,
@@ -272,7 +288,8 @@ internal static class Program
                 caseIds,
                 apiKey,
                 LocalAiBillStatementPromptCatalog.Version1,
-                readinessPolicy);
+                readinessPolicy,
+                corpusSnapshot);
 
         if (baselineRun.Result.Metrics is null)
         {
@@ -292,7 +309,8 @@ internal static class Program
                 caseIds,
                 apiKey,
                 LocalAiBillStatementPromptCatalog.Version2,
-                readinessPolicy);
+                readinessPolicy,
+                corpusSnapshot);
 
         if (candidateRun.Result.Metrics is null)
         {
@@ -588,7 +606,8 @@ internal static class Program
         IReadOnlyList<string> caseIds,
         string apiKey,
         string promptVersion,
-        BillStatementAiShadowReadinessPolicy readinessPolicy)
+        BillStatementAiShadowReadinessPolicy readinessPolicy,
+        IReadOnlyList<BillStatementAiPrivateCorpusCase>? corpusSnapshot = null)
     {
         var options =
             new LocalAiBillStatementOptions
@@ -624,8 +643,8 @@ internal static class Program
         var stopwatch =
             Stopwatch.StartNew();
 
-        var result =
-            await new BillStatementAiPrivateCorpusProviderEvaluator(
+        var evaluator =
+            new BillStatementAiPrivateCorpusProviderEvaluator(
                 loader,
                 new BillStatementAiPrivateCorpusCoverageGate(),
                 new LocalAiBillStatementAiExtractor(
@@ -634,10 +653,21 @@ internal static class Program
                         options)),
                 new BillStatementAiCandidateConversionService(
                     new BillStatementAiCandidateValidator()),
-                new BillStatementAiGroundTruthScorer())
-                .EvaluateAsync(
+                new BillStatementAiGroundTruthScorer());
+
+        var result =
+            corpusSnapshot is null
+                ? await evaluator.EvaluateAsync(
                     fullCorpusRoot,
                     caseIds,
+                    promptVersion,
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy,
+                    maxCharactersPerInference:
+                        options.MaxDocumentCharacters)
+                : await evaluator.EvaluateLoadedCasesAsync(
+                    corpusSnapshot,
                     promptVersion,
                     providerCallsAuthorized:
                         true,

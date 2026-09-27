@@ -40,6 +40,58 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
     }
 
     [Fact]
+    public async Task EvaluateLoadedCases_UsesTheValidatedInMemorySnapshot()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId: "provider-a-001",
+            providerKey: "provider-a",
+            totalAmount: 104.99m);
+        directory.WriteCase(
+            caseId: "provider-b-001",
+            providerKey: "provider-b",
+            totalAmount: 55m);
+
+        var loader =
+            new BillStatementAiPrivateCorpusLoader();
+        var snapshot = new[]
+        {
+            await loader.LoadAsync(directory.Path, "provider-a-001"),
+            await loader.LoadAsync(directory.Path, "provider-b-001")
+        };
+
+        // Simulate source changes between paired prompt runs. The second run
+        // must keep using the already-validated statement and labels.
+        directory.WriteCase(
+            caseId: "provider-a-001",
+            providerKey: "provider-a",
+            totalAmount: 999m);
+        directory.WriteCase(
+            caseId: "provider-b-001",
+            providerKey: "provider-b",
+            totalAmount: 888m);
+
+        var extractor =
+            new FakeAiExtractor();
+
+        var result =
+            await CreateEvaluator(extractor)
+                .EvaluateLoadedCasesAsync(
+                    snapshot,
+                    promptVersion: "offline-test-v1",
+                    providerCallsAuthorized: true,
+                    readinessPolicy: CreateReadinessPolicy());
+
+        Assert.True(result.ProviderEvaluationStarted);
+        Assert.Equal(2, extractor.CallCount);
+        Assert.Equal(0, result.Metrics!.ProviderFailureCount);
+        Assert.Equal(2, result.Metrics.EvaluatedStatementCount);
+        Assert.Equal(8, result.Metrics.CorrectFactCount);
+    }
+
+    [Fact]
     public async Task Evaluate_RejectsInsufficientCoverageBeforeProviderCall()
     {
         using var directory =
