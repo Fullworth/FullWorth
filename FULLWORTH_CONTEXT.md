@@ -3,6 +3,16 @@
 Last updated: 2026-09-27
 
 
+## CI simulator reliability / human handoff checkpoint — 2026-09-27
+
+PR #459 hardens the GitHub-hosted iOS simulator smoke after repeated runner failures occurred after successful iOS compilation. The smoke still requires the real FullWorth simulator app to install, launch, and expose its app container. Simulator boot now gets one bounded recovery attempt, installation gets 180 seconds instead of 90 seconds plus one bounded reboot/retry, and shutdown/cleanup calls are bounded so a wedged CoreSimulator process cannot hang the job indefinitely. The gate still fails closed after those retries.
+
+PR #459 also introduces `HUMAN-TODO.md` as the durable list for genuinely human-only actions. Its first item records the currently verified absence of branch protection on `master` and `development`; the connected GitHub tooling can detect that state but does not expose the repository-administration mutation needed to create the ruleset.
+
+Do not treat PR #459 as complete until its exact final head passes the required CI/security/iOS checks and is merged to `development`. The Planning stack remains separate: PR #442 has previously passed its exact-head CI/security/Android/iOS gates but is stale/diverged from current `development`; PR #444 is stacked on that older Planning base and must be refreshed after the persistence layer is rebased/recreated on current `development`.
+
+
+
 ## Active AI evaluation checkpoint — 2026-09-27
 
 ### Current local-AI recognition checkpoint — 2026-09-27
