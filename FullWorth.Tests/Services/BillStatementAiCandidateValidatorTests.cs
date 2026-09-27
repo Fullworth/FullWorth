@@ -271,6 +271,42 @@ public sealed class BillStatementAiCandidateValidatorTests
                     StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("Due Sep 20 2026")]
+    [InlineData("Due September 20 2026")]
+    public void DateEvidence_AcceptsMonthFirstDateWithoutComma(
+        string documentText)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        20),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
     [Fact]
     public void DateEvidence_RejectsDateEmbeddedInLongerDigits()
     {
