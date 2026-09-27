@@ -40,6 +40,13 @@ namespace FullWorth.API.Services.Statements
         private const decimal MaxAbsoluteMoneyValue =
             1_000_000m;
 
+        private static readonly Regex DateLikeEvidenceRegex =
+            new(
+                @"\b(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{4})\b",
+                RegexOptions.Compiled |
+                RegexOptions.CultureInvariant |
+                RegexOptions.IgnoreCase);
+
         private static readonly Regex MoneyValueRegex =
             new(
                 @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
@@ -392,7 +399,8 @@ namespace FullWorth.API.Services.Statements
                 candidate.AccountIdentifierSuffix,
                 BillStatementAiFactKeys.AccountIdentifierSuffix,
                 evidenceByFact,
-                errors);
+                errors,
+                allowAccountSuffix: true);
 
             RequireDateEvidence(
                 candidate.BillingPeriodStart,
@@ -538,7 +546,8 @@ namespace FullWorth.API.Services.Statements
             string? value,
             string factKey,
             IReadOnlyDictionary<string, List<string>> evidenceByFact,
-            ICollection<string> errors)
+            ICollection<string> errors,
+            bool allowAccountSuffix = false)
         {
             if (string.IsNullOrWhiteSpace(
                     value))
@@ -546,15 +555,132 @@ namespace FullWorth.API.Services.Statements
                 return;
             }
 
+            var normalizedValue =
+                NormalizeEvidenceText(
+                    value);
+
             RequireEvidenceValue(
                 factKey,
                 evidenceByFact,
                 excerpt =>
-                    excerpt.Contains(
-                        NormalizeEvidenceText(
-                            value),
-                        StringComparison.OrdinalIgnoreCase),
+                    ContainsWholeEvidenceValue(
+                        excerpt,
+                        normalizedValue) ||
+                    allowAccountSuffix &&
+                    ContainsAccountSuffixEvidence(
+                        excerpt,
+                        normalizedValue),
                 errors);
+        }
+
+        private static bool ContainsWholeEvidenceValue(
+            string excerpt,
+            string normalizedValue)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedValue))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedValue,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedValue.Length;
+
+                var hasWholeLeadingBoundary =
+                    index ==
+                        0 ||
+                    !char.IsLetterOrDigit(
+                        excerpt[index - 1]);
+
+                var hasWholeTrailingBoundary =
+                    endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]);
+
+                if (hasWholeLeadingBoundary &&
+                    hasWholeTrailingBoundary)
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
+        }
+
+        private static bool ContainsAccountSuffixEvidence(
+            string excerpt,
+            string normalizedSuffix)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedSuffix) ||
+                normalizedSuffix.Any(
+                    character =>
+                        !char.IsLetterOrDigit(
+                            character)))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedSuffix,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedSuffix.Length;
+
+                if (endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]))
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
         }
 
         private static bool IsOutsideMoneyRange(
@@ -627,9 +753,9 @@ namespace FullWorth.API.Services.Statements
                 excerpt =>
                     supportedRepresentations.Any(
                         representation =>
-                            excerpt.Contains(
-                                representation,
-                                StringComparison.OrdinalIgnoreCase)),
+                            ContainsWholeEvidenceValue(
+                                excerpt,
+                                representation)),
                 errors);
         }
 
@@ -702,9 +828,18 @@ namespace FullWorth.API.Services.Statements
             var values =
                 new List<decimal>();
 
+            /*
+             * Date components are not monetary evidence. Remove complete
+             * date expressions before scanning their numeric tokens.
+             */
+            var excerptWithoutDates =
+                DateLikeEvidenceRegex.Replace(
+                    excerpt,
+                    " ");
+
             foreach (Match match in
                      MoneyValueRegex.Matches(
-                         excerpt))
+                         excerptWithoutDates))
             {
                 var numericText =
                     match.Groups["number"]
