@@ -234,10 +234,13 @@ public sealed class BillStatementAiChunkedExtractionCoordinatorTests
     }
 
     [Fact]
-    public async Task ExtractAsync_LineItemsAcrossChunks_FailsClosed()
+    public async Task ExtractAsync_LineItemsAcrossChunks_ReconcilesBySourceEvidence()
     {
-        const string text =
-            "Service fee $5.00\nmore text\n";
+        const string firstText =
+            "Service fee $5.00\n";
+
+        const string secondText =
+            "State tax $1.25\n";
 
         var extractor =
             new RecordingExtractor(
@@ -257,33 +260,54 @@ public sealed class BillStatementAiChunkedExtractionCoordinatorTests
                                         BillStatementAiLineItemKind.Fee)
                             ],
                             evidence:
+                            LineItemEvidence(
+                                0,
+                                "Service fee $5.00"))
+                        : Candidate(
+                            lineItems:
                             [
-                                Evidence(
-                                    BillStatementAiFactKeys.LineItemDescription(
-                                        0),
-                                    "Service fee $5.00"),
-                                Evidence(
-                                    BillStatementAiFactKeys.LineItemAmount(
-                                        0),
-                                    "Service fee $5.00")
-                            ])
-                        : Candidate());
+                                new BillStatementAiLineItemCandidate(
+                                    Description:
+                                        "State tax",
+                                    Amount:
+                                        1.25m,
+                                    Kind:
+                                        BillStatementAiLineItemKind.Tax)
+                            ],
+                            evidence:
+                            LineItemEvidence(
+                                0,
+                                "State tax $1.25")));
 
         var result =
             await CreateService(
                     extractor)
                 .ExtractAsync(
                     Request(
-                        text),
+                        firstText +
+                        secondText),
                     maxCharactersPerChunk:
-                        18);
+                        firstText.Length);
 
-        Assert.False(
+        Assert.True(
             result.IsAccepted);
 
-        Assert.Contains(
-            "Chunked line-item reconciliation is not supported.",
-            result.Errors);
+        Assert.True(
+            result.UsedChunking);
+
+        Assert.Equal(
+            2,
+            result.Candidate?.LineItems.Count);
+
+        Assert.Equal(
+            "Service fee",
+            result.Candidate?.LineItems[0]
+                .Description);
+
+        Assert.Equal(
+            "State tax",
+            result.Candidate?.LineItems[1]
+                .Description);
     }
 
     [Fact]
@@ -394,6 +418,26 @@ public sealed class BillStatementAiChunkedExtractionCoordinatorTests
                 [],
             ModelConfidence:
                 BillStatementAiModelConfidence.Unknown);
+    }
+
+    private static IReadOnlyList<BillStatementAiEvidence> LineItemEvidence(
+        int index,
+        string excerpt)
+    {
+        return
+        [
+            Evidence(
+                BillStatementAiFactKeys
+                    .LineItemDescription(
+                        index),
+                excerpt),
+
+            Evidence(
+                BillStatementAiFactKeys
+                    .LineItemAmount(
+                        index),
+                excerpt)
+        ];
     }
 
     private static BillStatementAiEvidence Evidence(
