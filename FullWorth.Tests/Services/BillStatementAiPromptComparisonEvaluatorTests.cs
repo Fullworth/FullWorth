@@ -540,6 +540,120 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
     }
 
     [Fact]
+    public void Compare_RejectsProviderScoresThatDoNotReconcileWithAggregateTotals()
+    {
+        var metrics =
+            CreateMetrics(
+                providerFailureCount:
+                    0,
+                readyCandidateStatementCount:
+                    90,
+                correctFactCount:
+                    900,
+                incorrectFactCount:
+                    10,
+                missedFactCount:
+                    100);
+
+        var invalidProviders =
+            CreateProviderScores(
+                    metrics)
+                .ToArray();
+
+        invalidProviders[0] =
+            invalidProviders[0] with
+            {
+                CorrectFactCount =
+                    invalidProviders[0]
+                        .CorrectFactCount -
+                    1
+            };
+
+        var exception =
+            Assert.Throws<ArgumentException>(
+                () =>
+                    new BillStatementAiPromptComparisonEvaluator()
+                        .Compare(
+                            metrics,
+                            CreateFieldScores(
+                                metrics),
+                            invalidProviders,
+                            metrics,
+                            CreateFieldScores(
+                                metrics),
+                            CreateProviderScores(
+                                metrics)));
+
+        Assert.Contains(
+            "provider scores do not reconcile with aggregate metrics",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Compare_RejectsDifferentGroundTruthPopulationForAnonymousProvider()
+    {
+        var baseline =
+            CreateMetrics(
+                providerFailureCount:
+                    0,
+                readyCandidateStatementCount:
+                    90,
+                correctFactCount:
+                    900,
+                incorrectFactCount:
+                    10,
+                missedFactCount:
+                    100);
+
+        var candidate =
+            baseline;
+
+        var candidateProviders =
+            CreateProviderScores(
+                    candidate)
+                .ToArray();
+
+        candidateProviders[0] =
+            candidateProviders[0] with
+            {
+                CorrectFactCount =
+                    candidateProviders[0]
+                        .CorrectFactCount +
+                    1
+            };
+
+        candidateProviders[1] =
+            candidateProviders[1] with
+            {
+                CorrectFactCount =
+                    candidateProviders[1]
+                        .CorrectFactCount -
+                    1
+            };
+
+        var exception =
+            Assert.Throws<ArgumentException>(
+                () =>
+                    new BillStatementAiPromptComparisonEvaluator()
+                        .Compare(
+                            baseline,
+                            CreateFieldScores(
+                                baseline),
+                            CreateProviderScores(
+                                baseline),
+                            candidate,
+                            CreateFieldScores(
+                                candidate),
+                            candidateProviders));
+
+        Assert.Contains(
+            "provider 1 ground-truth fact count",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Compare_RejectsFieldScoresThatDoNotReconcileWithAggregateTotals()
     {
         var metrics =
