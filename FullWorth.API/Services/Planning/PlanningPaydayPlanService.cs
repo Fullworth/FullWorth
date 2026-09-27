@@ -543,9 +543,7 @@ public sealed class PlanningPaydayPlanService(
         out string? normalized)
     {
         normalized =
-            currencyCode?
-                .Trim()
-                .ToUpperInvariant();
+            currencyCode?.Trim().ToUpperInvariant();
 
         if (normalized is null ||
             normalized.Length !=
