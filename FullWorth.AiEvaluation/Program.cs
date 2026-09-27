@@ -304,11 +304,23 @@ internal static class Program
             return 3;
         }
 
+        var baselineFieldScores =
+            baselineRun.Result.FieldScores ??
+            throw new InvalidOperationException(
+                "A completed baseline prompt evaluation requires field scores.");
+
+        var candidateFieldScores =
+            candidateRun.Result.FieldScores ??
+            throw new InvalidOperationException(
+                "A completed candidate prompt evaluation requires field scores.");
+
         var comparison =
             new BillStatementAiPromptComparisonEvaluator()
                 .Compare(
                     baselineRun.Result.Metrics,
-                    candidateRun.Result.Metrics);
+                    baselineFieldScores,
+                    candidateRun.Result.Metrics,
+                    candidateFieldScores);
 
         WriteJson(
             new
@@ -350,8 +362,35 @@ internal static class Program
                         comparison.MissedFactCountDelta,
                         comparison.ReadyCandidateStatementCountDelta,
                         comparison.ProviderFailureCountDelta,
+
+                        fieldComparisons =
+                            comparison.FieldComparisons.Select(
+                                field =>
+                                    new
+                                    {
+                                        field.FieldKey,
+                                        field.BaselineCorrect,
+                                        field.CandidateCorrect,
+                                        field.CorrectDelta,
+                                        field.BaselineIncorrect,
+                                        field.CandidateIncorrect,
+                                        field.IncorrectDelta,
+                                        field.BaselineMissed,
+                                        field.CandidateMissed,
+                                        field.MissedDelta,
+                                        field.BaselinePrecision,
+                                        field.CandidatePrecision,
+                                        field.PrecisionDelta,
+                                        field.BaselineRecall,
+                                        field.CandidateRecall,
+                                        field.RecallDelta,
+                                        field.CandidateHasNoRegression
+                                    }),
+
                         comparison.CandidateHasNoAggregateRegression,
+                        comparison.CandidateHasNoFieldRegression,
                         comparison.CandidateHasStrictAggregateImprovement,
+                        comparison.RegressedFieldKeys,
                         comparison.CandidateQualifiesForPromotionReview
                     },
 
@@ -361,10 +400,13 @@ internal static class Program
                         requiresSameEvaluationPopulation =
                             true,
 
-                        precisionMustNotDecrease =
+                        requiresSameExpectedFactCountPerField =
                             true,
 
-                        recallMustNotDecrease =
+                        aggregatePrecisionMustNotDecrease =
+                            true,
+
+                        aggregateRecallMustNotDecrease =
                             true,
 
                         readyCandidateRateMustNotDecrease =
@@ -373,7 +415,22 @@ internal static class Program
                         providerFailureRateMustNotIncrease =
                             true,
 
-                        requiresAtLeastOneStrictImprovement =
+                        fieldCorrectCountMustNotDecrease =
+                            true,
+
+                        fieldIncorrectCountMustNotIncrease =
+                            true,
+
+                        fieldMissedCountMustNotIncrease =
+                            true,
+
+                        fieldPrecisionMustNotDecrease =
+                            true,
+
+                        fieldRecallMustNotDecrease =
+                            true,
+
+                        requiresAtLeastOneStrictAggregateImprovement =
                             true
                     },
 
@@ -490,6 +547,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A prompt summary requires aggregate readiness rates.");
 
+        var fieldScores =
+            run.Result.FieldScores ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires field scores.");
+
         return new
         {
             promptVersion,
@@ -507,6 +569,22 @@ internal static class Program
             readiness.FactRecall,
             readiness.ReadyCandidateRate,
             readiness.ProviderFailureRate,
+
+            fieldScores =
+                fieldScores.Select(
+                    field =>
+                        new
+                        {
+                            field.FieldKey,
+                            field.Correct,
+                            field.Incorrect,
+                            field.Missed,
+                            field.ExpectedFactCount,
+                            field.PredictedFactCount,
+                            field.Precision,
+                            field.Recall
+                        }),
+
             meetsFullShadowAccuracyGate =
                 readiness.MeetsShadowAccuracyGate,
 
