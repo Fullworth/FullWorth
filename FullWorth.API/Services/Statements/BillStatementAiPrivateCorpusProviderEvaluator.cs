@@ -11,7 +11,8 @@
  * - requires explicit authorization before any provider call
  * - validates every selected corpus case before any provider call
  * - requires the existing aggregate coverage gate to pass first
- * - makes at most one provider call per selected case
+ * - makes one extractor/provider attempt per selected case in this evaluator mode
+ * - reports aggregate inference-call count separately from statement attempts
  * - validates model output through FullWorth's deterministic trust boundary
  * - treats rejected AI candidates as unusable rather than trusted facts
  * - stores nothing
@@ -186,6 +187,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 BillStatementAiExtractionFailureKind,
                 long>();
 
+        long inferenceCallCount =
+            0;
+
         foreach (var corpusCase in
                  corpusCases)
         {
@@ -209,6 +213,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * The purpose of this evaluation is to measure the extractor,
                  * not help it by leaking approved answers into its context.
                  */
+                inferenceCallCount =
+                    checked(
+                        inferenceCallCount +
+                        1);
+
                 var candidate =
                     await _aiExtractor.ExtractAsync(
                         new BillStatementAiExtractionRequest(
@@ -364,6 +373,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     fieldScores,
                     providerScores,
                     providerFieldScores,
+                    inferenceCallCount,
                     providerAttemptLatency,
                     failureKindCounts);
     }
@@ -461,6 +471,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
     IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
     IReadOnlyList<BillStatementAiProviderFieldScore>? ProviderFieldScores,
+    long? InferenceCallCount,
     BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
     IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
@@ -503,6 +514,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             ProviderFieldScores:
                 null,
 
+            InferenceCallCount:
+                null,
+
             ProviderAttemptLatency:
                 null,
 
@@ -518,6 +532,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             IReadOnlyList<BillStatementAiFieldScore> fieldScores,
             IReadOnlyList<BillStatementAiProviderScore> providerScores,
             IReadOnlyList<BillStatementAiProviderFieldScore> providerFieldScores,
+            long inferenceCallCount,
             BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
             IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
@@ -651,6 +666,14 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 nameof(providerScores));
         }
 
+        if (inferenceCallCount <
+            metrics.ProviderAttemptCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(inferenceCallCount),
+                "Inference-call count cannot be lower than the number of attempted statements.");
+        }
+
         if (providerAttemptLatency.AttemptCount !=
                 metrics.ProviderAttemptCount ||
             providerAttemptLatency.MinimumMilliseconds <
@@ -727,6 +750,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
             ProviderFieldScores:
                 providerFieldScores,
+
+            InferenceCallCount:
+                inferenceCallCount,
 
             ProviderAttemptLatency:
                 providerAttemptLatency,
