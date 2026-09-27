@@ -295,12 +295,17 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.Score(
                 observations);
 
+        var fieldScores =
+            _groundTruthScorer.ScoreFields(
+                observations);
+
         return
             BillStatementAiPrivateCorpusProviderEvaluationResult
                 .Completed(
                     coverageSummary,
                     coverageDecision,
-                    metrics);
+                    metrics,
+                    fieldScores);
     }
 
     private static void ValidateCaseIds(
@@ -392,7 +397,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     bool ProviderEvaluationStarted,
     BillStatementAiPrivateCorpusCatalogSummary Coverage,
     BillStatementAiPrivateCorpusCoverageDecision CoverageDecision,
-    BillStatementAiShadowReadinessMetrics? Metrics)
+    BillStatementAiShadowReadinessMetrics? Metrics,
+    IReadOnlyList<BillStatementAiFieldScore>? FieldScores)
 {
     public bool MayEnableRuntimeShadowMode =>
         false;
@@ -422,6 +428,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 coverageDecision,
 
             Metrics:
+                null,
+
+            FieldScores:
                 null);
     }
 
@@ -429,7 +438,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
         Completed(
             BillStatementAiPrivateCorpusCatalogSummary coverage,
             BillStatementAiPrivateCorpusCoverageDecision coverageDecision,
-            BillStatementAiShadowReadinessMetrics metrics)
+            BillStatementAiShadowReadinessMetrics metrics,
+            IReadOnlyList<BillStatementAiFieldScore> fieldScores)
     {
         ArgumentNullException.ThrowIfNull(
             coverage);
@@ -439,6 +449,17 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
         ArgumentNullException.ThrowIfNull(
             metrics);
+
+        ArgumentNullException.ThrowIfNull(
+            fieldScores);
+
+        if (fieldScores.Count !=
+            BillStatementAiGroundTruthFieldKeys.All.Count)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires the fixed field-score set.",
+                nameof(fieldScores));
+        }
 
         if (!coverageDecision
                 .MayBeginOfflineProviderEvaluation)
@@ -459,6 +480,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 coverageDecision,
 
             Metrics:
-                metrics);
+                metrics,
+
+            FieldScores:
+                fieldScores);
     }
 }
