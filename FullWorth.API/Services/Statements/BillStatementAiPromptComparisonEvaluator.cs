@@ -12,17 +12,40 @@ public sealed class BillStatementAiPromptComparisonEvaluator
 {
     public BillStatementAiPromptComparisonResult Compare(
         BillStatementAiShadowReadinessMetrics baseline,
-        BillStatementAiShadowReadinessMetrics candidate)
+        IReadOnlyList<BillStatementAiFieldScore> baselineFields,
+        BillStatementAiShadowReadinessMetrics candidate,
+        IReadOnlyList<BillStatementAiFieldScore> candidateFields)
     {
         ArgumentNullException.ThrowIfNull(
             baseline);
 
         ArgumentNullException.ThrowIfNull(
+            baselineFields);
+
+        ArgumentNullException.ThrowIfNull(
             candidate);
+
+        ArgumentNullException.ThrowIfNull(
+            candidateFields);
 
         ValidatePopulation(
             baseline,
             candidate);
+
+        ValidateFieldScores(
+            baseline,
+            baselineFields,
+            nameof(baselineFields));
+
+        ValidateFieldScores(
+            candidate,
+            candidateFields,
+            nameof(candidateFields));
+
+        var fieldComparisons =
+            CompareFields(
+                baselineFields,
+                candidateFields);
 
         var baselineFactPrecision =
             Divide(
@@ -88,6 +111,11 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             candidateProviderFailureRate <
                 baselineProviderFailureRate;
 
+        var noFieldRegression =
+            fieldComparisons.All(
+                field =>
+                    field.CandidateHasNoRegression);
+
         return new BillStatementAiPromptComparisonResult(
             BaselineFactPrecision:
                 baselineFactPrecision,
@@ -149,15 +177,131 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 candidate.ProviderFailureCount -
                 baseline.ProviderFailureCount,
 
+            FieldComparisons:
+                fieldComparisons,
+
             CandidateHasNoAggregateRegression:
                 noAggregateRegression,
+
+            CandidateHasNoFieldRegression:
+                noFieldRegression,
 
             CandidateHasStrictAggregateImprovement:
                 hasStrictAggregateImprovement,
 
             CandidateQualifiesForPromotionReview:
                 noAggregateRegression &&
+                noFieldRegression &&
                 hasStrictAggregateImprovement);
+    }
+
+    private static IReadOnlyList<BillStatementAiPromptFieldComparison>
+        CompareFields(
+            IReadOnlyList<BillStatementAiFieldScore> baselineFields,
+            IReadOnlyList<BillStatementAiFieldScore> candidateFields)
+    {
+        var baselineByKey =
+            baselineFields.ToDictionary(
+                field =>
+                    field.FieldKey,
+                StringComparer.Ordinal);
+
+        var candidateByKey =
+            candidateFields.ToDictionary(
+                field =>
+                    field.FieldKey,
+                StringComparer.Ordinal);
+
+        var comparisons =
+            new List<BillStatementAiPromptFieldComparison>(
+                BillStatementAiGroundTruthFieldKeys.All.Count);
+
+        foreach (var fieldKey in
+                 BillStatementAiGroundTruthFieldKeys.All)
+        {
+            var baseline =
+                baselineByKey[fieldKey];
+
+            var candidate =
+                candidateByKey[fieldKey];
+
+            RequireEqual(
+                baseline.ExpectedFactCount,
+                candidate.ExpectedFactCount,
+                $"{fieldKey} expected fact count");
+
+            var noRegression =
+                candidate.Correct >=
+                    baseline.Correct &&
+                candidate.Incorrect <=
+                    baseline.Incorrect &&
+                candidate.Missed <=
+                    baseline.Missed &&
+                candidate.Precision >=
+                    baseline.Precision &&
+                candidate.Recall >=
+                    baseline.Recall;
+
+            comparisons.Add(
+                new BillStatementAiPromptFieldComparison(
+                    FieldKey:
+                        fieldKey,
+
+                    BaselineCorrect:
+                        baseline.Correct,
+
+                    CandidateCorrect:
+                        candidate.Correct,
+
+                    CorrectDelta:
+                        candidate.Correct -
+                        baseline.Correct,
+
+                    BaselineIncorrect:
+                        baseline.Incorrect,
+
+                    CandidateIncorrect:
+                        candidate.Incorrect,
+
+                    IncorrectDelta:
+                        candidate.Incorrect -
+                        baseline.Incorrect,
+
+                    BaselineMissed:
+                        baseline.Missed,
+
+                    CandidateMissed:
+                        candidate.Missed,
+
+                    MissedDelta:
+                        candidate.Missed -
+                        baseline.Missed,
+
+                    BaselinePrecision:
+                        baseline.Precision,
+
+                    CandidatePrecision:
+                        candidate.Precision,
+
+                    PrecisionDelta:
+                        candidate.Precision -
+                        baseline.Precision,
+
+                    BaselineRecall:
+                        baseline.Recall,
+
+                    CandidateRecall:
+                        candidate.Recall,
+
+                    RecallDelta:
+                        candidate.Recall -
+                        baseline.Recall,
+
+                    CandidateHasNoRegression:
+                        noRegression));
+        }
+
+        return comparisons.AsReadOnly();
     }
 
     private static void ValidatePopulation(
@@ -229,6 +373,96 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             baselineGroundTruthFactCount,
             candidateGroundTruthFactCount,
             "ground-truth fact count");
+    }
+
+    private static void ValidateFieldScores(
+        BillStatementAiShadowReadinessMetrics metrics,
+        IReadOnlyList<BillStatementAiFieldScore> fields,
+        string parameterName)
+    {
+        if (fields.Count !=
+            BillStatementAiGroundTruthFieldKeys.All.Count)
+        {
+            throw new ArgumentException(
+                "Prompt comparison requires the fixed field-score set.",
+                parameterName);
+        }
+
+        var expectedKeys =
+            new HashSet<string>(
+                BillStatementAiGroundTruthFieldKeys.All,
+                StringComparer.Ordinal);
+
+        var actualKeys =
+            new HashSet<string>(
+                StringComparer.Ordinal);
+
+        long correct =
+            0;
+
+        long incorrect =
+            0;
+
+        long missed =
+            0;
+
+        foreach (var field in
+                 fields)
+        {
+            ArgumentNullException.ThrowIfNull(
+                field);
+
+            if (!expectedKeys.Contains(
+                    field.FieldKey) ||
+                !actualKeys.Add(
+                    field.FieldKey))
+            {
+                throw new ArgumentException(
+                    "Prompt comparison field scores contain an unknown or duplicate field key.",
+                    parameterName);
+            }
+
+            if (field.Correct <
+                    0 ||
+                field.Incorrect <
+                    0 ||
+                field.Missed <
+                    0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    parameterName,
+                    "Prompt comparison field-score counts cannot be negative.");
+            }
+
+            correct +=
+                field.Correct;
+
+            incorrect +=
+                field.Incorrect;
+
+            missed +=
+                field.Missed;
+        }
+
+        if (!actualKeys.SetEquals(
+                expectedKeys))
+        {
+            throw new ArgumentException(
+                "Prompt comparison field scores do not contain the fixed field-score set.",
+                parameterName);
+        }
+
+        if (correct !=
+                metrics.CorrectFactCount ||
+            incorrect !=
+                metrics.IncorrectFactCount ||
+            missed !=
+                metrics.MissedFactCount)
+        {
+            throw new ArgumentException(
+                "Prompt comparison field scores do not reconcile with aggregate fact counts.",
+                parameterName);
+        }
     }
 
     private static void ValidateNonNegative(
@@ -304,6 +538,25 @@ public sealed class BillStatementAiPromptComparisonEvaluator
     }
 }
 
+public sealed record BillStatementAiPromptFieldComparison(
+    string FieldKey,
+    long BaselineCorrect,
+    long CandidateCorrect,
+    long CorrectDelta,
+    long BaselineIncorrect,
+    long CandidateIncorrect,
+    long IncorrectDelta,
+    long BaselineMissed,
+    long CandidateMissed,
+    long MissedDelta,
+    decimal BaselinePrecision,
+    decimal CandidatePrecision,
+    decimal PrecisionDelta,
+    decimal BaselineRecall,
+    decimal CandidateRecall,
+    decimal RecallDelta,
+    bool CandidateHasNoRegression);
+
 public sealed record BillStatementAiPromptComparisonResult(
     decimal BaselineFactPrecision,
     decimal CandidateFactPrecision,
@@ -322,6 +575,19 @@ public sealed record BillStatementAiPromptComparisonResult(
     long MissedFactCountDelta,
     long ReadyCandidateStatementCountDelta,
     long ProviderFailureCountDelta,
+    IReadOnlyList<BillStatementAiPromptFieldComparison> FieldComparisons,
     bool CandidateHasNoAggregateRegression,
+    bool CandidateHasNoFieldRegression,
     bool CandidateHasStrictAggregateImprovement,
-    bool CandidateQualifiesForPromotionReview);
+    bool CandidateQualifiesForPromotionReview)
+{
+    public IReadOnlyList<string> RegressedFieldKeys =>
+        FieldComparisons
+            .Where(
+                field =>
+                    !field.CandidateHasNoRegression)
+            .Select(
+                field =>
+                    field.FieldKey)
+            .ToArray();
+}
