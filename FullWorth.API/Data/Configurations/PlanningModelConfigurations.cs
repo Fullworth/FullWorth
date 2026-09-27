@@ -179,6 +179,10 @@ internal sealed class PlanningPaycheckAllocationEntityConfiguration
             .IsRequired();
 
         entity.Property(
+                allocation => allocation.BillPeriodEnd)
+            .IsRequired();
+
+        entity.Property(
                 allocation => allocation.BillDueDate)
             .IsRequired();
 
@@ -211,7 +215,7 @@ internal sealed class PlanningPaycheckAllocationEntityConfiguration
             {
                 allocation.UserId,
                 allocation.BillStreamId,
-                allocation.BillDueDate
+                allocation.BillPeriodEnd
             });
 
         entity.HasIndex(
@@ -220,7 +224,7 @@ internal sealed class PlanningPaycheckAllocationEntityConfiguration
                     allocation.UserId,
                     allocation.PayrollTransactionId,
                     allocation.BillStreamId,
-                    allocation.BillDueDate
+                    allocation.BillPeriodEnd
                 })
             .IsUnique();
 
