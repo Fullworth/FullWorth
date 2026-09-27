@@ -564,7 +564,7 @@ public sealed class BillStatementAiPromptComparisonEvaluatorTests
                 lineItemMissed)
         ];
 
-        static BillStatementAiFieldScore FixedScalar(
+        BillStatementAiFieldScore FixedScalar(
             string fieldKey)
         {
             return new BillStatementAiFieldScore(
