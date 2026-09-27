@@ -34,7 +34,7 @@ public sealed class PaycheckBillPlanCalculatorTests
     }
 
     [Fact]
-    public void BiweeklyPlan_AllocatesExactlyAcrossThreePaychecks()
+    public void BiweeklyPlan_AllocatesExactlyAcrossRemainingPaychecks()
     {
         var result =
             PaycheckBillPlanCalculator.Calculate(
@@ -164,6 +164,116 @@ public sealed class PaycheckBillPlanCalculatorTests
                 new DateOnly(2027, 3, 31)
             },
             result.RemainingPayDates);
+    }
+
+    [Fact]
+    public void ObservedEarlyBiweeklyPayday_ReplacesScheduledCycleDate()
+    {
+        var result =
+            PaycheckBillPlanCalculator.Calculate(
+                new PaycheckBillPlanRequest(
+                    AmountDue: 200m,
+                    AlreadySetAside: 0m,
+                    DueDate: new DateOnly(2026, 12, 18),
+                    CurrentPayDate: new DateOnly(2026, 11, 19),
+                    PaychecksAhead: 3,
+                    Schedule: new PayScheduleDefinition(
+                        PayScheduleFrequency.Biweekly,
+                        new DateOnly(2026, 11, 6))));
+
+        Assert.Equal(
+            new[]
+            {
+                new DateOnly(2026, 11, 19),
+                new DateOnly(2026, 12, 4)
+            },
+            result.RemainingPayDates);
+
+        Assert.Equal(
+            2,
+            result.PaychecksRemaining);
+
+        Assert.Equal(
+            100m,
+            result.RecommendedSetAsideFromCurrentPaycheck);
+    }
+
+    [Fact]
+    public void ObservedLateBiweeklyPayday_ReplacesScheduledCycleDate()
+    {
+        var result =
+            PaycheckBillPlanCalculator.Calculate(
+                new PaycheckBillPlanRequest(
+                    AmountDue: 200m,
+                    AlreadySetAside: 0m,
+                    DueDate: new DateOnly(2026, 12, 18),
+                    CurrentPayDate: new DateOnly(2026, 11, 21),
+                    PaychecksAhead: 3,
+                    Schedule: new PayScheduleDefinition(
+                        PayScheduleFrequency.Biweekly,
+                        new DateOnly(2026, 11, 6))));
+
+        Assert.Equal(
+            new[]
+            {
+                new DateOnly(2026, 11, 21),
+                new DateOnly(2026, 12, 4)
+            },
+            result.RemainingPayDates);
+
+        Assert.Equal(
+            2,
+            result.PaychecksRemaining);
+    }
+
+    [Fact]
+    public void ObservedEarlyMonthlyPayday_DoesNotDoubleCountScheduledDate()
+    {
+        var result =
+            PaycheckBillPlanCalculator.Calculate(
+                new PaycheckBillPlanRequest(
+                    AmountDue: 200m,
+                    AlreadySetAside: 0m,
+                    DueDate: new DateOnly(2027, 4, 15),
+                    CurrentPayDate: new DateOnly(2027, 2, 27),
+                    PaychecksAhead: 3,
+                    Schedule: new PayScheduleDefinition(
+                        PayScheduleFrequency.Monthly,
+                        new DateOnly(2027, 1, 31))));
+
+        Assert.Equal(
+            new[]
+            {
+                new DateOnly(2027, 2, 27),
+                new DateOnly(2027, 3, 31)
+            },
+            result.RemainingPayDates);
+
+        Assert.Equal(
+            2,
+            result.PaychecksRemaining);
+
+        Assert.Equal(
+            100m,
+            result.RecommendedSetAsideFromCurrentPaycheck);
+    }
+
+    [Fact]
+    public void SemiMonthlySchedule_RejectsDuplicateConfiguredDays()
+    {
+        Assert.Throws<ArgumentException>(
+            () =>
+                PaycheckBillPlanCalculator.Calculate(
+                    new PaycheckBillPlanRequest(
+                        AmountDue: 100m,
+                        AlreadySetAside: 0m,
+                        DueDate: new DateOnly(2027, 4, 15),
+                        CurrentPayDate: new DateOnly(2027, 3, 15),
+                        PaychecksAhead: 2,
+                        Schedule: new PayScheduleDefinition(
+                            PayScheduleFrequency.SemiMonthly,
+                            new DateOnly(2027, 1, 15),
+                            SecondaryDayOfMonth: 15))));
     }
 
     [Fact]
