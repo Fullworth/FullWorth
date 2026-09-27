@@ -122,7 +122,9 @@ public sealed class BillStatementAiChunkedExtractionCoordinatorTests
                     Request(
                         documentText),
                     maxCharactersPerChunk:
-                        firstText.Length);
+                        Math.Max(
+                            firstText.Length,
+                            secondText.Length));
 
         Assert.True(
             result.IsAccepted);
