@@ -120,6 +120,8 @@ opening the private corpus, and call only the loopback runtime. The runner
 prints aggregate metrics and approved
 model/runtime identifiers; it never prints case identifiers, provider keys,
 statement text, ground truth, model output, evidence, secrets, or corpus paths.
+The runner evaluates the sorted case identifiers selected during catalog
+preflight; it does not discover a second case population afterward.
 
 The report explicitly states that runtime provenance is not independently
 verified by the .NET runner. The guarded `deploy/start-ai-evaluation.sh` path
