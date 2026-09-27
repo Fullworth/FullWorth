@@ -184,34 +184,201 @@ public static class PaycheckBillPlanCalculator
         DateOnly currentPayDate,
         DateOnly dueDate)
     {
+        /*
+         * CurrentPayDate is an observed/confirmed paycheck. It represents the
+         * current pay cycle even when payroll posted a little early or late.
+         *
+         * First align that observation to the nearest configured schedule
+         * occurrence. Future configured dates are then generated strictly
+         * after that occurrence so an early paycheck is not double-counted
+         * together with the scheduled date it replaced.
+         */
+        var scheduledCurrentPayDate =
+            FindScheduledPayDateForObservedPaycheck(
+                schedule,
+                currentPayDate);
+
+        var results =
+            BuildScheduledPayDatesAfter(
+                schedule,
+                scheduledCurrentPayDate,
+                dueDate)
+                .Where(
+                    payDate =>
+                        payDate >
+                            currentPayDate &&
+                        payDate <
+                            dueDate)
+                .ToList();
+
+        results.Insert(
+            0,
+            currentPayDate);
+
+        return results
+            .Distinct()
+            .OrderBy(
+                payDate =>
+                    payDate)
+            .ToList();
+    }
+
+    private static DateOnly FindScheduledPayDateForObservedPaycheck(
+        PayScheduleDefinition schedule,
+        DateOnly currentPayDate)
+    {
         return schedule.Frequency switch
         {
             PayScheduleFrequency.Weekly =>
-                BuildFixedIntervalPayDates(
+                FindNearestFixedIntervalPayDate(
                     schedule.AnchorPayDate,
                     currentPayDate,
+                    7),
+
+            PayScheduleFrequency.Biweekly =>
+                FindNearestFixedIntervalPayDate(
+                    schedule.AnchorPayDate,
+                    currentPayDate,
+                    14),
+
+            PayScheduleFrequency.Monthly =>
+                FindNearestMonthlyPayDate(
+                    schedule.AnchorPayDate.Day,
+                    secondaryDayOfMonth:
+                        null,
+                    currentPayDate),
+
+            PayScheduleFrequency.SemiMonthly =>
+                FindNearestMonthlyPayDate(
+                    schedule.AnchorPayDate.Day,
+                    schedule.SecondaryDayOfMonth,
+                    currentPayDate),
+
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(schedule),
+                    "Pay schedule frequency is invalid.")
+        };
+    }
+
+    private static DateOnly FindNearestFixedIntervalPayDate(
+        DateOnly anchorPayDate,
+        DateOnly currentPayDate,
+        int intervalDays)
+    {
+        var daysFromAnchor =
+            currentPayDate.DayNumber -
+            anchorPayDate.DayNumber;
+
+        var intervalOffset =
+            (int)Math.Floor(
+                daysFromAnchor /
+                (double)intervalDays);
+
+        var previous =
+            anchorPayDate.AddDays(
+                intervalOffset *
+                intervalDays);
+
+        var next =
+            previous.AddDays(
+                intervalDays);
+
+        var previousDistance =
+            Math.Abs(
+                currentPayDate.DayNumber -
+                previous.DayNumber);
+
+        var nextDistance =
+            Math.Abs(
+                next.DayNumber -
+                currentPayDate.DayNumber);
+
+        /*
+         * A tie chooses the earlier scheduled occurrence. That treats an
+         * exactly-midpoint observation as a late current-cycle paycheck rather
+         * than an early future-cycle paycheck.
+         */
+        return previousDistance <=
+            nextDistance
+                ? previous
+                : next;
+    }
+
+    private static DateOnly FindNearestMonthlyPayDate(
+        int primaryDayOfMonth,
+        int? secondaryDayOfMonth,
+        DateOnly currentPayDate)
+    {
+        var month =
+            new DateOnly(
+                currentPayDate.Year,
+                currentPayDate.Month,
+                1);
+
+        var candidates =
+            new List<DateOnly>();
+
+        for (var offset = -1;
+             offset <= 1;
+             offset++)
+        {
+            var candidateMonth =
+                month.AddMonths(
+                    offset);
+
+            AddMonthlyCandidates(
+                candidates,
+                candidateMonth,
+                primaryDayOfMonth,
+                secondaryDayOfMonth);
+        }
+
+        return candidates
+            .Distinct()
+            .OrderBy(
+                candidate =>
+                    Math.Abs(
+                        candidate.DayNumber -
+                        currentPayDate.DayNumber))
+            .ThenBy(
+                candidate =>
+                    candidate)
+            .First();
+    }
+
+    private static List<DateOnly> BuildScheduledPayDatesAfter(
+        PayScheduleDefinition schedule,
+        DateOnly scheduledCurrentPayDate,
+        DateOnly dueDate)
+    {
+        return schedule.Frequency switch
+        {
+            PayScheduleFrequency.Weekly =>
+                BuildFixedIntervalPayDatesAfter(
+                    scheduledCurrentPayDate,
                     dueDate,
                     7),
 
             PayScheduleFrequency.Biweekly =>
-                BuildFixedIntervalPayDates(
-                    schedule.AnchorPayDate,
-                    currentPayDate,
+                BuildFixedIntervalPayDatesAfter(
+                    scheduledCurrentPayDate,
                     dueDate,
                     14),
 
             PayScheduleFrequency.Monthly =>
-                BuildMonthlyPayDates(
+                BuildMonthlyPayDatesAfter(
                     schedule.AnchorPayDate.Day,
-                    secondaryDayOfMonth: null,
-                    currentPayDate,
+                    secondaryDayOfMonth:
+                        null,
+                    scheduledCurrentPayDate,
                     dueDate),
 
             PayScheduleFrequency.SemiMonthly =>
-                BuildMonthlyPayDates(
+                BuildMonthlyPayDatesAfter(
                     schedule.AnchorPayDate.Day,
                     schedule.SecondaryDayOfMonth,
-                    currentPayDate,
+                    scheduledCurrentPayDate,
                     dueDate),
 
             _ =>
@@ -221,83 +388,43 @@ public static class PaycheckBillPlanCalculator
         };
     }
 
-    private static List<DateOnly> BuildFixedIntervalPayDates(
-        DateOnly anchorPayDate,
-        DateOnly currentPayDate,
+    private static List<DateOnly> BuildFixedIntervalPayDatesAfter(
+        DateOnly scheduledCurrentPayDate,
         DateOnly dueDate,
         int intervalDays)
     {
-        var firstCandidate =
-            anchorPayDate;
-
-        if (firstCandidate <
-            currentPayDate)
-        {
-            var daysSinceAnchor =
-                currentPayDate.DayNumber -
-                anchorPayDate.DayNumber;
-
-            var intervals =
-                daysSinceAnchor /
-                intervalDays;
-
-            firstCandidate =
-                anchorPayDate.AddDays(
-                    intervals *
-                    intervalDays);
-
-            if (firstCandidate <
-                currentPayDate)
-            {
-                firstCandidate =
-                    firstCandidate.AddDays(
-                        intervalDays);
-            }
-        }
-
         var results =
             new List<DateOnly>();
 
-        for (var candidate = firstCandidate;
-             candidate < dueDate;
-             candidate = candidate.AddDays(intervalDays))
+        for (var candidate =
+                 scheduledCurrentPayDate.AddDays(
+                     intervalDays);
+             candidate <
+                 dueDate;
+             candidate =
+                 candidate.AddDays(
+                     intervalDays))
         {
-            if (candidate >=
-                currentPayDate)
-            {
-                results.Add(
-                    candidate);
-            }
+            results.Add(
+                candidate);
         }
 
         return results;
     }
 
-    private static List<DateOnly> BuildMonthlyPayDates(
+    private static List<DateOnly> BuildMonthlyPayDatesAfter(
         int primaryDayOfMonth,
         int? secondaryDayOfMonth,
-        DateOnly currentPayDate,
+        DateOnly scheduledCurrentPayDate,
         DateOnly dueDate)
     {
-        var days =
-            secondaryDayOfMonth.HasValue
-                ? new[]
-                {
-                    primaryDayOfMonth,
-                    secondaryDayOfMonth.Value
-                }
-                : new[]
-                {
-                    primaryDayOfMonth
-                };
-
         var results =
             new List<DateOnly>();
 
         var month =
             new DateOnly(
-                currentPayDate.Year,
-                currentPayDate.Month,
+                scheduledCurrentPayDate.Year,
+                scheduledCurrentPayDate.Month,
                 1);
 
         var finalMonth =
@@ -309,24 +436,20 @@ public static class PaycheckBillPlanCalculator
         while (month <=
                finalMonth)
         {
-            foreach (var configuredDay in
-                     days)
+            var candidates =
+                new List<DateOnly>();
+
+            AddMonthlyCandidates(
+                candidates,
+                month,
+                primaryDayOfMonth,
+                secondaryDayOfMonth);
+
+            foreach (var candidate in
+                     candidates)
             {
-                var actualDay =
-                    Math.Min(
-                        configuredDay,
-                        DateTime.DaysInMonth(
-                            month.Year,
-                            month.Month));
-
-                var candidate =
-                    new DateOnly(
-                        month.Year,
-                        month.Month,
-                        actualDay);
-
-                if (candidate >=
-                        currentPayDate &&
+                if (candidate >
+                        scheduledCurrentPayDate &&
                     candidate <
                         dueDate)
                 {
@@ -342,8 +465,49 @@ public static class PaycheckBillPlanCalculator
 
         return results
             .Distinct()
-            .OrderBy(date => date)
+            .OrderBy(
+                date =>
+                    date)
             .ToList();
+    }
+
+    private static void AddMonthlyCandidates(
+        ICollection<DateOnly> candidates,
+        DateOnly month,
+        int primaryDayOfMonth,
+        int? secondaryDayOfMonth)
+    {
+        AddMonthlyCandidate(
+            candidates,
+            month,
+            primaryDayOfMonth);
+
+        if (secondaryDayOfMonth.HasValue)
+        {
+            AddMonthlyCandidate(
+                candidates,
+                month,
+                secondaryDayOfMonth.Value);
+        }
+    }
+
+    private static void AddMonthlyCandidate(
+        ICollection<DateOnly> candidates,
+        DateOnly month,
+        int configuredDay)
+    {
+        var actualDay =
+            Math.Min(
+                configuredDay,
+                DateTime.DaysInMonth(
+                    month.Year,
+                    month.Month));
+
+        candidates.Add(
+            new DateOnly(
+                month.Year,
+                month.Month,
+                actualDay));
     }
 
     private static decimal AllocateFirstContribution(
