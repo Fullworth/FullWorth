@@ -265,34 +265,148 @@ public sealed class BillStatementAiChunkCandidateReconcilerTests
     }
 
     [Fact]
-    public void Reconcile_LineItems_RejectsUntilDeterministicDeduplicationExists()
+    public void Reconcile_LineItemsAcrossChunks_PreservesSourceOrderAndReindexesEvidence()
     {
-        const string text =
+        const string firstText =
+            "Service fee $5.00\n";
+
+        const string secondText =
+            "State tax $1.25\n";
+
+        var result =
+            CreateService()
+                .Reconcile(
+                    firstText +
+                    secondText,
+                    [
+                        Item(
+                            0,
+                            0,
+                            firstText,
+                            Candidate(
+                                lineItems:
+                                [
+                                    LineItem(
+                                        "Service fee",
+                                        5.00m,
+                                        BillStatementAiLineItemKind.Fee)
+                                ],
+                                evidence:
+                                LineItemEvidence(
+                                    0,
+                                    "Service fee $5.00"))),
+
+                        Item(
+                            1,
+                            firstText.Length,
+                            secondText,
+                            Candidate(
+                                lineItems:
+                                [
+                                    LineItem(
+                                        "State tax",
+                                        1.25m,
+                                        BillStatementAiLineItemKind.Tax)
+                                ],
+                                evidence:
+                                LineItemEvidence(
+                                    0,
+                                    "State tax $1.25")))
+                    ]);
+
+        Assert.True(
+            result.IsAccepted);
+
+        Assert.NotNull(
+            result.Candidate);
+
+        Assert.Equal(
+            2,
+            result.Candidate.LineItems.Count);
+
+        Assert.Equal(
+            "Service fee",
+            result.Candidate.LineItems[0]
+                .Description);
+
+        Assert.Equal(
+            "State tax",
+            result.Candidate.LineItems[1]
+                .Description);
+
+        Assert.Contains(
+            result.Candidate.Evidence,
+            evidence =>
+                evidence.FactKey ==
+                    BillStatementAiFactKeys
+                        .LineItemDescription(
+                            0) &&
+                evidence.SourceExcerpt ==
+                    "Service fee $5.00");
+
+        Assert.Contains(
+            result.Candidate.Evidence,
+            evidence =>
+                evidence.FactKey ==
+                    BillStatementAiFactKeys
+                        .LineItemAmount(
+                            1) &&
+                evidence.SourceExcerpt ==
+                    "State tax $1.25");
+    }
+
+    [Fact]
+    public void Reconcile_IdenticalPhysicalLineItemsInDifferentChunks_PreservesBoth()
+    {
+        const string line =
             "Service fee $5.00\n";
 
         var candidate =
             Candidate(
                 lineItems:
                 [
-                    new BillStatementAiLineItemCandidate(
-                        Description:
-                            "Service fee",
-                        Amount:
-                            5.00m,
-                        Kind:
-                            BillStatementAiLineItemKind.Fee)
+                    LineItem(
+                        "Service fee",
+                        5.00m,
+                        BillStatementAiLineItemKind.Fee)
                 ],
                 evidence:
-                [
-                    Evidence(
-                        BillStatementAiFactKeys.LineItemDescription(
-                            0),
-                        "Service fee $5.00"),
-                    Evidence(
-                        BillStatementAiFactKeys.LineItemAmount(
-                            0),
-                        "Service fee $5.00")
-                ]);
+                LineItemEvidence(
+                    0,
+                    "Service fee $5.00"));
+
+        var result =
+            CreateService()
+                .Reconcile(
+                    line +
+                    line,
+                    [
+                        Item(
+                            0,
+                            0,
+                            line,
+                            candidate),
+
+                        Item(
+                            1,
+                            line.Length,
+                            line,
+                            candidate)
+                    ]);
+
+        Assert.True(
+            result.IsAccepted);
+
+        Assert.Equal(
+            2,
+            result.Candidate?.LineItems.Count);
+    }
+
+    [Fact]
+    public void Reconcile_RepeatedExcerptInsideOneChunk_RejectsAmbiguousLineItemIdentity()
+    {
+        const string text =
+            "Service fee $5.00\nService fee $5.00\n";
 
         var result =
             CreateService()
@@ -303,15 +417,85 @@ public sealed class BillStatementAiChunkCandidateReconcilerTests
                             0,
                             0,
                             text,
-                            candidate)
+                            Candidate(
+                                lineItems:
+                                [
+                                    LineItem(
+                                        "Service fee",
+                                        5.00m,
+                                        BillStatementAiLineItemKind.Fee)
+                                ],
+                                evidence:
+                                LineItemEvidence(
+                                    0,
+                                    "Service fee $5.00")))
                     ]);
 
         Assert.False(
             result.IsAccepted);
 
         Assert.Contains(
-            "Chunked line-item reconciliation is not supported.",
-            result.Errors);
+            result.Errors,
+            error =>
+                error.Contains(
+                    "unique source occurrence",
+                    StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Reconcile_MultipleLineItemsMappedToSameSourceEvidence_Rejects()
+    {
+        const string text =
+            "Service fee $5.00\n";
+
+        var evidence =
+            new List<BillStatementAiEvidence>();
+
+        evidence.AddRange(
+            LineItemEvidence(
+                0,
+                "Service fee $5.00"));
+
+        evidence.AddRange(
+            LineItemEvidence(
+                1,
+                "Service fee $5.00"));
+
+        var result =
+            CreateService()
+                .Reconcile(
+                    text,
+                    [
+                        Item(
+                            0,
+                            0,
+                            text,
+                            Candidate(
+                                lineItems:
+                                [
+                                    LineItem(
+                                        "Service fee",
+                                        5.00m,
+                                        BillStatementAiLineItemKind.Fee),
+
+                                    LineItem(
+                                        "Service fee",
+                                        5.00m,
+                                        BillStatementAiLineItemKind.Fee)
+                                ],
+                                evidence:
+                                    evidence))
+                    ]);
+
+        Assert.False(
+            result.IsAccepted);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "overlapping source evidence",
+                    StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -443,6 +627,40 @@ public sealed class BillStatementAiChunkCandidateReconcilerTests
                 [],
             ModelConfidence:
                 confidence);
+    }
+
+    private static BillStatementAiLineItemCandidate LineItem(
+        string description,
+        decimal amount,
+        BillStatementAiLineItemKind kind)
+    {
+        return new BillStatementAiLineItemCandidate(
+            Description:
+                description,
+            Amount:
+                amount,
+            Kind:
+                kind);
+    }
+
+    private static IReadOnlyList<BillStatementAiEvidence> LineItemEvidence(
+        int index,
+        string excerpt)
+    {
+        return
+        [
+            Evidence(
+                BillStatementAiFactKeys
+                    .LineItemDescription(
+                        index),
+                excerpt),
+
+            Evidence(
+                BillStatementAiFactKeys
+                    .LineItemAmount(
+                        index),
+                excerpt)
+        ];
     }
 
     private static BillStatementAiEvidence Evidence(
