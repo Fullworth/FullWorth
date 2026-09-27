@@ -5,7 +5,7 @@ Last updated: 2026-09-26
 
 ## Active AI evaluation checkpoint — 2026-09-26
 
-The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. Do not extend the experimental decoder/training work as product AI.
+The product direction is local evaluation of externally trained models; from-scratch model training is no longer the active plan. The abandoned first-party tokenizer/decoder/initializer/checkpoint/training source and its dedicated tests have been removed from the active product tree. Do not reintroduce that path unless a separately justified R&D effort is approved.
 
 PR #371 added the isolated local evaluation runtime and its fail-closed configuration validation. Exact head `9f1e76c6fb9d5b70781f4e9cbab802d1d39fe448` passed FullWorth CI #1038 and dependency security #144 before merge.
 
@@ -15,7 +15,9 @@ PR #375 added the authenticated local runtime smoke and merged as `008b4b5eb97f5
 
 PR #379 added the standalone `FullWorth.AiEvaluation` command for deterministic-baseline and explicitly authorized local-model evaluation. It validates the private corpus before inference, uses the pinned loopback runtime, routes candidates through deterministic evidence validation, and emits aggregate metrics only. It cannot persist results, enable runtime shadow mode, or influence production persistence.
 
-PR #379 was squash-merged as `c29d4859d3397d5ea03792bb7067ec13267f19cf`. Exact head `825e0697d5485d3aceea641e6ee10da3bdebae36` passed FullWorth CI, dependency review, Linux production-container and isolated recovery validation, backend/tests and migration verification, MAUI Android build, Android internal APK build/emulator launch, and iOS simulator build. Model weights, private statements, and case-level outputs were not added to GitHub. No real Qwen benchmark has been run.
+PR #379 was squash-merged as `c29d4859d3397d5ea03792bb7067ec13267f19cf`.
+
+PR #396 added versioned extraction-prompt guidance as `a16aa2774921c3bf082279e3391d955a14575194`. Prompt v2 explicitly distinguishes total due from current-period charges, statement/billing/due dates, and signed credits/discounts. This is a quality hypothesis only; no model-accuracy improvement is claimed. The offline evaluator is being extended to compare the preserved v1 prompt and v2 against the same held-out corpus and pinned local model/runtime. Exact head `825e0697d5485d3aceea641e6ee10da3bdebae36` passed FullWorth CI, dependency review, Linux production-container and isolated recovery validation, backend/tests and migration verification, MAUI Android build, Android internal APK build/emulator launch, and iOS simulator build. Model weights, private statements, and case-level outputs were not added to GitHub. No real Qwen benchmark has been run.
 
 Next: on an authorized evaluation host, start the pinned local runtime and complete its authenticated structured-output smoke against Qwen3-4B Q4_K_M. Then run the deterministic baseline and local-model evaluator against an authorized held-out private corpus after reviewing ground truth and numerical thresholds. The local runner requires at least 100 cases across at least five providers, with at least 10 cases for each provider. Keep statement text, ground truth, secrets, and case-level output outside GitHub and logs. The extraction-only runner does not measure false alerts and cannot by itself establish full shadow readiness. Production AI and AI-derived persistence remain disabled.
 

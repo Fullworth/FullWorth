@@ -34,6 +34,7 @@ internal static class Program
                 args,
                 out var mode,
                 out var corpusRoot,
+                out var promptVersion,
                 out var localInferenceAuthorized))
         {
             PrintUsage();
@@ -125,7 +126,8 @@ internal static class Program
                     Enabled = true,
                     Model = "fullworth-local",
                     ApiKey = apiKey,
-                    Endpoint = "http://127.0.0.1:8080/v1/chat/completions"
+                    Endpoint = "http://127.0.0.1:8080/v1/chat/completions",
+                    PromptVersion = promptVersion
                 };
 
             var validation =
@@ -250,6 +252,7 @@ internal static class Program
         string[] args,
         out string mode,
         out string corpusRoot,
+        out string promptVersion,
         out bool localInferenceAuthorized)
     {
         mode =
@@ -260,35 +263,72 @@ internal static class Program
         corpusRoot =
             string.Empty;
 
+        promptVersion =
+            BillStatementAiPromptVersions.V2;
+
         localInferenceAuthorized =
             args.Contains(
                 "--authorize-local-model-inference",
                 StringComparer.Ordinal);
-
-        var expectedArgumentCount =
-            mode == "baseline"
-                ? 3
-                : mode == "local-ai"
-                    ? 4
-                    : -1;
-
-        if (args.Length !=
-            expectedArgumentCount ||
-            (mode == "baseline" &&
-                localInferenceAuthorized) ||
-            (mode == "local-ai" &&
-                !localInferenceAuthorized))
-        {
-            return false;
-        }
 
         var rootOptionIndex =
             Array.IndexOf(
                 args,
                 "--corpus-root");
 
+        var promptOptionIndex =
+            Array.IndexOf(
+                args,
+                "--prompt-version");
+
+        var hasPromptVersion =
+            promptOptionIndex >= 0;
+
+        if ((mode != "baseline" &&
+                mode != "local-ai") ||
+            args.Count(argument => argument == "--corpus-root") != 1 ||
+            (mode == "baseline" &&
+                (args.Length != 3 ||
+                 localInferenceAuthorized ||
+                 hasPromptVersion)) ||
+            (mode == "local-ai" &&
+                (!localInferenceAuthorized ||
+                 args.Count(argument => argument == "--authorize-local-model-inference") != 1 ||
+                 args.Length != (hasPromptVersion ? 6 : 4))) ||
+            (hasPromptVersion &&
+                (mode != "local-ai" ||
+                 promptOptionIndex + 1 >= args.Length ||
+                 args.Count(argument => argument == "--prompt-version") != 1)))
+        {
+            return false;
+        }
+
+        if (hasPromptVersion)
+        {
+            promptVersion =
+                args[promptOptionIndex + 1];
+
+            if (!BillStatementAiPromptVersions.IsSupported(
+                    promptVersion))
+            {
+                return false;
+            }
+        }
+
+        if (args.Any(
+                argument =>
+                    argument.StartsWith("--", StringComparison.Ordinal) &&
+                    argument is not "--corpus-root" and
+                        not "--authorize-local-model-inference" and
+                        not "--prompt-version"))
+        {
+            return false;
+        }
+
         if (rootOptionIndex < 1 ||
-            rootOptionIndex + 1 >= args.Length)
+            rootOptionIndex + 1 >= args.Length ||
+            (hasPromptVersion &&
+                rootOptionIndex + 1 == promptOptionIndex))
         {
             return false;
         }
@@ -316,7 +356,7 @@ internal static class Program
         Console.Error.WriteLine(
             "  FullWorth.AiEvaluation baseline --corpus-root <absolute-private-corpus-path>");
         Console.Error.WriteLine(
-            "  FullWorth.AiEvaluation local-ai --corpus-root <absolute-private-corpus-path> --authorize-local-model-inference");
+            "  FullWorth.AiEvaluation local-ai --corpus-root <absolute-private-corpus-path> --authorize-local-model-inference [--prompt-version bill-statement-extraction-v1|bill-statement-extraction-v2]");
         Console.Error.WriteLine(
             "Local AI mode reads FULLWORTH_LOCAL_AI_API_KEY from the process environment.");
     }

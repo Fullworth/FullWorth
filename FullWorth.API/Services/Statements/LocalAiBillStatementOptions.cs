@@ -2,6 +2,20 @@ using Microsoft.Extensions.Options;
 
 namespace FullWorth.API.Services.Statements;
 
+public static class BillStatementAiPromptVersions
+{
+    public const string V1 =
+        "bill-statement-extraction-v1";
+
+    public const string V2 =
+        "bill-statement-extraction-v2";
+
+    public static bool IsSupported(string? promptVersion)
+    {
+        return promptVersion is V1 or V2;
+    }
+}
+
 public sealed class LocalAiBillStatementOptions
 {
     public const string SectionName =
@@ -18,7 +32,7 @@ public sealed class LocalAiBillStatementOptions
         "http://127.0.0.1:8080/v1/chat/completions";
 
     public string PromptVersion { get; set; } =
-        "bill-statement-extraction-v2";
+        BillStatementAiPromptVersions.V2;
 
     public int MaxDocumentCharacters { get; set; } =
         40_000;
@@ -67,10 +81,11 @@ public sealed class LocalAiBillStatementOptionsValidator
                 "StatementAi:Local:Endpoint must be a loopback HTTP(S) /v1/chat/completions endpoint.");
         }
 
-        if (string.IsNullOrWhiteSpace(options.PromptVersion))
+        if (!BillStatementAiPromptVersions.IsSupported(
+                options.PromptVersion))
         {
             failures.Add(
-                "StatementAi:Local:PromptVersion is required.");
+                "StatementAi:Local:PromptVersion must be a supported, versioned prompt.");
         }
 
         if (options.MaxDocumentCharacters is < 1_000 or > 200_000)

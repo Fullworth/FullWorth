@@ -43,6 +43,19 @@ identifiers, provider keys, statement text, ground truth, model output,
 evidence, secrets, or corpus paths. It persists no records or result files.
 Keep or redirect the aggregate report only to an approved private location.
 
+To compare prompt versions, run local-ai twice against the same held-out
+corpus, changing only `--prompt-version`. The model and runtime identifiers
+remain pinned, and each aggregate report records the selected prompt version:
+
+```sh
+dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- local-ai --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference --prompt-version bill-statement-extraction-v1
+dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- local-ai --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference --prompt-version bill-statement-extraction-v2
+```
+
+Compare the reports privately. Keep the corpus split and evaluator unchanged
+between runs. Prompt v2 is a hypothesis until held-out metrics show improvement
+without unacceptable regressions.
+
 The built-in coverage minimum is 100 cases across at least five providers,
 with at least 10 cases for every provider. It must pass before local inference
 starts. The default readiness policy also measures false alerts,

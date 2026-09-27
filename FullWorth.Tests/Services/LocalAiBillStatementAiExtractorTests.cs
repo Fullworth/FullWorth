@@ -184,6 +184,68 @@ public sealed class LocalAiBillStatementAiExtractorTests
     }
 
     [Fact]
+    public async Task VersionOneUsesItsOriginalExtractionInstructions()
+    {
+        var options =
+            CreateEnabledOptions();
+
+        options.PromptVersion =
+            BillStatementAiPromptVersions.V1;
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    CreateModelResponse(
+                        CreateCandidate()));
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        await extractor.ExtractAsync(
+            CreateRequest(
+                "ACME Total due $10.00 USD",
+                BillStatementAiPromptVersions.V1));
+
+        using JsonDocument requestJson =
+            JsonDocument.Parse(
+                handler.RequestBody!);
+
+        string systemInstructions =
+            requestJson.RootElement
+                .GetProperty("messages")[0]
+                .GetProperty("content")
+                .GetString()!;
+
+        Assert.Contains(
+            "Use null when a fact is absent or uncertain.",
+            systemInstructions,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "current-period charges",
+            systemInstructions,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Options_RejectUnsupportedPromptVersion()
+    {
+        var result =
+            new LocalAiBillStatementOptionsValidator()
+                .Validate(
+                    null,
+                    new LocalAiBillStatementOptions
+                    {
+                        PromptVersion =
+                            "bill-statement-extraction-v99"
+                    });
+
+        Assert.True(result.Failed);
+    }
+
+    [Fact]
     public async Task HttpFailure_DoesNotExposeModelResponseBody()
     {
         const string sensitiveModelBody =
@@ -402,7 +464,8 @@ public sealed class LocalAiBillStatementAiExtractorTests
     }
 
     private static BillStatementAiExtractionRequest CreateRequest(
-        string documentText)
+        string documentText,
+        string promptVersion = BillStatementAiPromptVersions.V2)
     {
         return new BillStatementAiExtractionRequest(
             DocumentText:
@@ -417,7 +480,7 @@ public sealed class LocalAiBillStatementAiExtractorTests
                         "Internet"),
 
             PromptVersion:
-                "bill-statement-extraction-v2");
+                promptVersion);
     }
 
     private static BillStatementAiCandidate CreateCandidate()
