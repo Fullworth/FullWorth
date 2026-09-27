@@ -1,7 +1,7 @@
 # Offline AI evaluation runner
 
-This command runs FullWorth's existing deterministic baseline or local-model
-private-corpus evaluator. It is a standalone development tool; it is not
+This command runs FullWorth's deterministic statement baseline and local-model
+private-corpus evaluations. It is a standalone development tool; it is not
 registered in the API, Web, or production runtime.
 
 Keep the encrypted private corpus outside GitHub and outside the repository.
@@ -11,45 +11,96 @@ Each immediate child directory is one case and contains only
 documents and held-out cases. Do not place account numbers, credentials, or
 unnecessary personal data in the corpus.
 
-From the repository root, run the deterministic baseline first:
+## Deterministic baseline
+
+Run the deterministic parser baseline first:
 
 ```sh
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- baseline --corpus-root /absolute/path/to/private-corpus
 ```
 
-After reviewing the baseline, start the pinned local runtime. The startup
-script verifies the exact model and runtime manifests and runs the
+## Start the guarded local runtime
+
+The startup script verifies the approved model manifest, checks the exact GGUF
+file size and SHA-256, launches the digest-pinned llama.cpp image, and runs the
 authenticated structured-output smoke:
 
 ```sh
 sh deploy/start-ai-evaluation.sh .env.ai
 ```
 
-Export the already-validated local runtime key without printing it, then
-explicitly authorize local inference:
+Export the already-validated local runtime key without printing it:
 
 ```sh
 set +H
 set -a
 . ./.env.ai
 set +a
+```
+
+Do not enable shell tracing while loading `.env.ai`.
+
+## Evaluate one prompt
+
+The default local evaluation uses the current prompt version:
+
+```sh
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- local-ai --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
 ```
 
-Do not enable shell tracing while loading `.env.ai`. The local AI mode requires
-the explicit authorization flag and calls only the loopback runtime. It prints
-aggregate metrics and the approved model/runtime identifiers; it never prints case
-identifiers, provider keys, statement text, ground truth, model output,
-evidence, secrets, or corpus paths. The report explicitly marks that runtime
-provenance is not independently verified by the .NET runner. The guarded
-`deploy/start-ai-evaluation.sh` path is what verifies the approved model file
-(size and SHA-256), launches the digest-pinned runtime image, and performs the
-authenticated loopback smoke before evaluation. It persists no records or result files.
-Keep or redirect the aggregate report only to an approved private location.
+A specific preserved prompt version may be selected explicitly:
+
+```sh
+dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- local-ai --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference --prompt-version bill-statement-extraction-v1
+```
+
+Unsupported prompt versions fail closed.
+
+## Compare prompt v1 with v2
+
+Use the comparison mode to run the preserved v1 baseline and current v2 prompt
+against the exact same sorted case identifiers, model endpoint, deterministic
+candidate validator, and ground-truth scorer:
+
+```sh
+dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- compare-prompts --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
+```
+
+The comparison remains aggregate-only. It reports precision, recall,
+ready-candidate rate, provider-failure rate, raw count deltas, elapsed time, and
+whether v2 has no aggregate regression plus at least one strict improvement.
+
+A candidate qualifies only for **promotion review** when all of these are true:
+
+- fact precision does not decrease;
+- fact recall does not decrease;
+- ready-candidate rate does not decrease;
+- provider-failure rate does not increase; and
+- at least one of those four metrics strictly improves.
+
+That flag does not promote a prompt automatically. It cannot enable runtime
+shadow mode, production inference, alerts, or AI-derived persistence.
+
+`compare-prompts` returns exit code `4` when the comparison completed but v2
+does not qualify for promotion review. Coverage rejection returns exit code
+`3`.
+
+## Privacy and provenance
+
+Local AI modes require the explicit authorization flag and call only the
+loopback runtime. The runner prints aggregate metrics and approved
+model/runtime identifiers; it never prints case identifiers, provider keys,
+statement text, ground truth, model output, evidence, secrets, or corpus paths.
+
+The report explicitly states that runtime provenance is not independently
+verified by the .NET runner. The guarded `deploy/start-ai-evaluation.sh` path
+is what verifies the approved model file and digest-pinned runtime before
+evaluation. The runner persists no records or result files. Keep or redirect
+aggregate reports only to an approved private location.
 
 The built-in coverage minimum is 100 cases across at least five providers,
 with at least 10 cases for every provider. It must pass before local inference
-starts. The default readiness policy also measures false alerts,
-which this extraction-only runner does not fabricate; a successful extraction
-benchmark therefore does not by itself pass the wider shadow-readiness gate.
-This command cannot enable runtime shadow mode or AI-derived persistence.
+starts. The wider shadow-readiness policy also requires false-alert evaluation,
+which this extraction-only runner deliberately does not fabricate. Passing a
+prompt comparison therefore does not by itself pass the full shadow-readiness
+gate.
