@@ -13,8 +13,10 @@ public sealed class BillStatementAiPromptComparisonEvaluator
     public BillStatementAiPromptComparisonResult Compare(
         BillStatementAiShadowReadinessMetrics baseline,
         IReadOnlyList<BillStatementAiFieldScore> baselineFields,
+        IReadOnlyList<BillStatementAiProviderScore> baselineProviders,
         BillStatementAiShadowReadinessMetrics candidate,
-        IReadOnlyList<BillStatementAiFieldScore> candidateFields)
+        IReadOnlyList<BillStatementAiFieldScore> candidateFields,
+        IReadOnlyList<BillStatementAiProviderScore> candidateProviders)
     {
         ArgumentNullException.ThrowIfNull(
             baseline);
@@ -23,10 +25,16 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             baselineFields);
 
         ArgumentNullException.ThrowIfNull(
+            baselineProviders);
+
+        ArgumentNullException.ThrowIfNull(
             candidate);
 
         ArgumentNullException.ThrowIfNull(
             candidateFields);
+
+        ArgumentNullException.ThrowIfNull(
+            candidateProviders);
 
         ValidatePopulation(
             baseline,
@@ -42,10 +50,25 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             candidateFields,
             nameof(candidateFields));
 
+        ValidateProviderScores(
+            baseline,
+            baselineProviders,
+            nameof(baselineProviders));
+
+        ValidateProviderScores(
+            candidate,
+            candidateProviders,
+            nameof(candidateProviders));
+
         var fieldComparisons =
             CompareFields(
                 baselineFields,
                 candidateFields);
+
+        var providerComparisons =
+            CompareProviders(
+                baselineProviders,
+                candidateProviders);
 
         var baselineFactPrecision =
             Divide(
@@ -116,6 +139,11 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 field =>
                     field.CandidateHasNoRegression);
 
+        var noProviderRegression =
+            providerComparisons.All(
+                provider =>
+                    provider.CandidateHasNoRegression);
+
         return new BillStatementAiPromptComparisonResult(
             BaselineFactPrecision:
                 baselineFactPrecision,
@@ -180,11 +208,17 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             FieldComparisons:
                 fieldComparisons,
 
+            ProviderComparisons:
+                providerComparisons,
+
             CandidateHasNoAggregateRegression:
                 noAggregateRegression,
 
             CandidateHasNoFieldRegression:
                 noFieldRegression,
+
+            CandidateHasNoProviderRegression:
+                noProviderRegression,
 
             CandidateHasStrictAggregateImprovement:
                 hasStrictAggregateImprovement,
@@ -192,6 +226,7 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             CandidateQualifiesForPromotionReview:
                 noAggregateRegression &&
                 noFieldRegression &&
+                noProviderRegression &&
                 hasStrictAggregateImprovement);
     }
 
@@ -296,6 +331,152 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                     RecallDelta:
                         candidate.Recall -
                         baseline.Recall,
+
+                    CandidateHasNoRegression:
+                        noRegression));
+        }
+
+        return comparisons.AsReadOnly();
+    }
+
+    private static IReadOnlyList<BillStatementAiPromptProviderComparison>
+        CompareProviders(
+            IReadOnlyList<BillStatementAiProviderScore> baselineProviders,
+            IReadOnlyList<BillStatementAiProviderScore> candidateProviders)
+    {
+        var comparisons =
+            new List<BillStatementAiPromptProviderComparison>(
+                baselineProviders.Count);
+
+        for (var index = 0;
+             index < baselineProviders.Count;
+             index++)
+        {
+            var baseline =
+                baselineProviders[index];
+
+            var candidate =
+                candidateProviders[index];
+
+            RequireEqual(
+                baseline.ProviderOrdinal,
+                candidate.ProviderOrdinal,
+                "anonymous provider ordinal");
+
+            RequireEqual(
+                baseline.StatementCount,
+                candidate.StatementCount,
+                $"provider {baseline.ProviderOrdinal} statement count");
+
+            RequireEqual(
+                baseline.ProviderAttemptCount,
+                candidate.ProviderAttemptCount,
+                $"provider {baseline.ProviderOrdinal} attempt count");
+
+            RequireEqual(
+                baseline.CorrectFactCount +
+                    baseline.MissedFactCount,
+                candidate.CorrectFactCount +
+                    candidate.MissedFactCount,
+                $"provider {baseline.ProviderOrdinal} ground-truth fact count");
+
+            var noRegression =
+                candidate.CorrectFactCount >=
+                    baseline.CorrectFactCount &&
+                candidate.IncorrectFactCount <=
+                    baseline.IncorrectFactCount &&
+                candidate.MissedFactCount <=
+                    baseline.MissedFactCount &&
+                candidate.FactPrecision >=
+                    baseline.FactPrecision &&
+                candidate.FactRecall >=
+                    baseline.FactRecall &&
+                candidate.ReadyCandidateStatementCount >=
+                    baseline.ReadyCandidateStatementCount &&
+                candidate.ReadyCandidateRate >=
+                    baseline.ReadyCandidateRate &&
+                candidate.ProviderFailureCount <=
+                    baseline.ProviderFailureCount &&
+                candidate.ProviderFailureRate <=
+                    baseline.ProviderFailureRate;
+
+            comparisons.Add(
+                new BillStatementAiPromptProviderComparison(
+                    ProviderOrdinal:
+                        baseline.ProviderOrdinal,
+
+                    StatementCount:
+                        baseline.StatementCount,
+
+                    BaselineCorrect:
+                        baseline.CorrectFactCount,
+
+                    CandidateCorrect:
+                        candidate.CorrectFactCount,
+
+                    CorrectDelta:
+                        candidate.CorrectFactCount -
+                        baseline.CorrectFactCount,
+
+                    BaselineIncorrect:
+                        baseline.IncorrectFactCount,
+
+                    CandidateIncorrect:
+                        candidate.IncorrectFactCount,
+
+                    IncorrectDelta:
+                        candidate.IncorrectFactCount -
+                        baseline.IncorrectFactCount,
+
+                    BaselineMissed:
+                        baseline.MissedFactCount,
+
+                    CandidateMissed:
+                        candidate.MissedFactCount,
+
+                    MissedDelta:
+                        candidate.MissedFactCount -
+                        baseline.MissedFactCount,
+
+                    BaselinePrecision:
+                        baseline.FactPrecision,
+
+                    CandidatePrecision:
+                        candidate.FactPrecision,
+
+                    PrecisionDelta:
+                        candidate.FactPrecision -
+                        baseline.FactPrecision,
+
+                    BaselineRecall:
+                        baseline.FactRecall,
+
+                    CandidateRecall:
+                        candidate.FactRecall,
+
+                    RecallDelta:
+                        candidate.FactRecall -
+                        baseline.FactRecall,
+
+                    BaselineReadyCandidateRate:
+                        baseline.ReadyCandidateRate,
+
+                    CandidateReadyCandidateRate:
+                        candidate.ReadyCandidateRate,
+
+                    ReadyCandidateRateDelta:
+                        candidate.ReadyCandidateRate -
+                        baseline.ReadyCandidateRate,
+
+                    BaselineProviderFailureRate:
+                        baseline.ProviderFailureRate,
+
+                    CandidateProviderFailureRate:
+                        candidate.ProviderFailureRate,
+
+                    ProviderFailureRateDelta:
+                        candidate.ProviderFailureRate -
+                        baseline.ProviderFailureRate,
 
                     CandidateHasNoRegression:
                         noRegression));
@@ -465,6 +646,133 @@ public sealed class BillStatementAiPromptComparisonEvaluator
         }
     }
 
+    private static void ValidateProviderScores(
+        BillStatementAiShadowReadinessMetrics metrics,
+        IReadOnlyList<BillStatementAiProviderScore> providers,
+        string parameterName)
+    {
+        if (providers.Count !=
+            metrics.DistinctProviderCount)
+        {
+            throw new ArgumentException(
+                "Prompt comparison requires one anonymous provider score per evaluated provider.",
+                parameterName);
+        }
+
+        long statementCount =
+            0;
+
+        long providerAttemptCount =
+            0;
+
+        long providerFailureCount =
+            0;
+
+        long readyCandidateStatementCount =
+            0;
+
+        long correctFactCount =
+            0;
+
+        long incorrectFactCount =
+            0;
+
+        long missedFactCount =
+            0;
+
+        var expectedOrdinal =
+            1;
+
+        foreach (var provider in
+                 providers)
+        {
+            ArgumentNullException.ThrowIfNull(
+                provider);
+
+            if (provider.ProviderOrdinal !=
+                    expectedOrdinal ||
+                provider.StatementCount <=
+                    0 ||
+                provider.ProviderAttemptCount <
+                    0 ||
+                provider.ProviderFailureCount <
+                    0 ||
+                provider.ReadyCandidateStatementCount <
+                    0 ||
+                provider.CorrectFactCount <
+                    0 ||
+                provider.IncorrectFactCount <
+                    0 ||
+                provider.MissedFactCount <
+                    0 ||
+                provider.ProviderAttemptCount >
+                    provider.StatementCount ||
+                provider.ProviderFailureCount >
+                    provider.ProviderAttemptCount ||
+                provider.ReadyCandidateStatementCount >
+                    provider.ProviderAttemptCount)
+            {
+                throw new ArgumentException(
+                    "Prompt comparison contains an invalid anonymous provider score.",
+                    parameterName);
+            }
+
+            statementCount +=
+                provider.StatementCount;
+
+            providerAttemptCount +=
+                provider.ProviderAttemptCount;
+
+            providerFailureCount +=
+                provider.ProviderFailureCount;
+
+            readyCandidateStatementCount +=
+                provider.ReadyCandidateStatementCount;
+
+            correctFactCount +=
+                provider.CorrectFactCount;
+
+            incorrectFactCount +=
+                provider.IncorrectFactCount;
+
+            missedFactCount +=
+                provider.MissedFactCount;
+
+            expectedOrdinal++;
+        }
+
+        if (statementCount !=
+                metrics.EvaluatedStatementCount ||
+            providerAttemptCount !=
+                metrics.ProviderAttemptCount ||
+            providerFailureCount !=
+                metrics.ProviderFailureCount ||
+            readyCandidateStatementCount !=
+                metrics.ReadyCandidateStatementCount ||
+            correctFactCount !=
+                metrics.CorrectFactCount ||
+            incorrectFactCount !=
+                metrics.IncorrectFactCount ||
+            missedFactCount !=
+                metrics.MissedFactCount)
+        {
+            throw new ArgumentException(
+                "Prompt comparison provider scores do not reconcile with aggregate metrics.",
+                parameterName);
+        }
+
+        if (providers.Count > 0 &&
+            providers.Min(
+                provider =>
+                    provider.StatementCount) !=
+            metrics.MinimumStatementsForAnyProvider)
+        {
+            throw new ArgumentException(
+                "Prompt comparison provider scores do not reconcile with the minimum provider population.",
+                parameterName);
+        }
+    }
+
     private static void ValidateNonNegative(
         BillStatementAiShadowReadinessMetrics metrics,
         string parameterName)
@@ -557,6 +865,32 @@ public sealed record BillStatementAiPromptFieldComparison(
     decimal RecallDelta,
     bool CandidateHasNoRegression);
 
+public sealed record BillStatementAiPromptProviderComparison(
+    int ProviderOrdinal,
+    long StatementCount,
+    long BaselineCorrect,
+    long CandidateCorrect,
+    long CorrectDelta,
+    long BaselineIncorrect,
+    long CandidateIncorrect,
+    long IncorrectDelta,
+    long BaselineMissed,
+    long CandidateMissed,
+    long MissedDelta,
+    decimal BaselinePrecision,
+    decimal CandidatePrecision,
+    decimal PrecisionDelta,
+    decimal BaselineRecall,
+    decimal CandidateRecall,
+    decimal RecallDelta,
+    decimal BaselineReadyCandidateRate,
+    decimal CandidateReadyCandidateRate,
+    decimal ReadyCandidateRateDelta,
+    decimal BaselineProviderFailureRate,
+    decimal CandidateProviderFailureRate,
+    decimal ProviderFailureRateDelta,
+    bool CandidateHasNoRegression);
+
 public sealed record BillStatementAiPromptComparisonResult(
     decimal BaselineFactPrecision,
     decimal CandidateFactPrecision,
@@ -576,8 +910,10 @@ public sealed record BillStatementAiPromptComparisonResult(
     long ReadyCandidateStatementCountDelta,
     long ProviderFailureCountDelta,
     IReadOnlyList<BillStatementAiPromptFieldComparison> FieldComparisons,
+    IReadOnlyList<BillStatementAiPromptProviderComparison> ProviderComparisons,
     bool CandidateHasNoAggregateRegression,
     bool CandidateHasNoFieldRegression,
+    bool CandidateHasNoProviderRegression,
     bool CandidateHasStrictAggregateImprovement,
     bool CandidateQualifiesForPromotionReview)
 {
@@ -589,5 +925,15 @@ public sealed record BillStatementAiPromptComparisonResult(
             .Select(
                 comparison =>
                     comparison.FieldKey)
+            .ToArray();
+
+    public IReadOnlyList<int> RegressedProviderOrdinals =>
+        ProviderComparisons
+            .Where(
+                comparison =>
+                    !comparison.CandidateHasNoRegression)
+            .Select(
+                comparison =>
+                    comparison.ProviderOrdinal)
             .ToArray();
 }
