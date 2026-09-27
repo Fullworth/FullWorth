@@ -266,11 +266,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         var observations =
             new List<BillStatementAiGroundTruthObservation>(
-                corpusCases.Count);
+                corpusCases.Length);
 
         var providerAttemptDurationsMilliseconds =
             new List<double>(
-                corpusCases.Count);
+                corpusCases.Length);
 
         var providerFailureKinds =
             new Dictionary<
