@@ -685,9 +685,9 @@ namespace FullWorth.API.Services.Statements
                 excerpt =>
                     supportedRepresentations.Any(
                         representation =>
-                            excerpt.Contains(
-                                representation,
-                                StringComparison.OrdinalIgnoreCase)),
+                            ContainsWholeEvidenceValue(
+                                excerpt,
+                                representation)),
                 errors);
         }
 
