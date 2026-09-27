@@ -628,6 +628,96 @@ public sealed class BillStatementAiCandidateValidatorTests
                     StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("", "does not contain a source excerpt")]
+    [InlineData("unrelated", "was not found in the source document")]
+    public void ModelSuppliedFactKey_IsNeverEchoedInEvidenceErrors(
+        string sourceExcerpt,
+        string expectedError)
+    {
+        const string privateFactKey =
+            "Private account 1234567890123456";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            privateFactKey,
+                            sourceExcerpt)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    expectedError,
+                    StringComparison.Ordinal));
+
+        Assert.All(
+            result.Errors,
+            error =>
+                Assert.DoesNotContain(
+                    privateFactKey,
+                    error,
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void LongModelSuppliedFactKey_IsNeverEchoedInEvidenceErrors()
+    {
+        const string privateFactKey =
+            "Private account 1234567890123456";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            privateFactKey,
+                            new string(
+                                'x',
+                                501))
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "is too long",
+                    StringComparison.Ordinal));
+
+        Assert.All(
+            result.Errors,
+            error =>
+                Assert.DoesNotContain(
+                    privateFactKey,
+                    error,
+                    StringComparison.Ordinal));
+    }
+
     private static BillStatementAiCandidate
         CreateEmptyCandidate()
     {
