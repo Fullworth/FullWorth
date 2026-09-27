@@ -721,17 +721,6 @@ builder.Services.AddSingleton<
     BillStatementAiCandidateConversionService>();
 
 builder.Services
-    .AddOptions<OpenAiBillStatementOptions>()
-    .Bind(
-        builder.Configuration.GetSection(
-            OpenAiBillStatementOptions.SectionName))
-    .ValidateOnStart();
-
-builder.Services.AddSingleton<
-    IValidateOptions<OpenAiBillStatementOptions>,
-    OpenAiBillStatementOptionsValidator>();
-
-builder.Services
     .AddOptions<LocalAiBillStatementOptions>()
     .Bind(
         builder.Configuration.GetSection(
@@ -754,22 +743,6 @@ builder.Services.AddSingleton<
     BillStatementAiShadowOptionsValidator>();
 
 /*
- * OpenAiBillStatementAiExtractor owns its request timeout with a linked
- * cancellation token.
- *
- * Disable HttpClient's independent 100-second timeout so two unrelated
- * timeout mechanisms cannot race each other and produce an unsanitized
- * cancellation path.
- */
-builder.Services.AddHttpClient<
-    OpenAiBillStatementAiExtractor>(
-    client =>
-    {
-        client.Timeout =
-            Timeout.InfiniteTimeSpan;
-    });
-
-/*
  * The local extractor is intentionally limited by its validated configuration
  * to a loopback llama.cpp-compatible endpoint. HttpClient does not own a
  * separate timeout; the extractor links the caller token with its bounded
@@ -786,30 +759,8 @@ builder.Services.AddHttpClient<
 builder.Services.AddTransient<
     IBillStatementAiExtractor>(
     serviceProvider =>
-    {
-        var localOptions =
-            serviceProvider.GetRequiredService<
-                    IOptions<LocalAiBillStatementOptions>>()
-                .Value;
-
-        var openAiOptions =
-            serviceProvider.GetRequiredService<
-                    IOptions<OpenAiBillStatementOptions>>()
-                .Value;
-
-        if (localOptions.Enabled &&
-            openAiOptions.Enabled)
-        {
-            throw new InvalidOperationException(
-                "Only one statement AI provider may be enabled at a time.");
-        }
-
-        return localOptions.Enabled
-            ? serviceProvider.GetRequiredService<
-                LocalAiBillStatementAiExtractor>()
-            : serviceProvider.GetRequiredService<
-                OpenAiBillStatementAiExtractor>();
-    });
+        serviceProvider.GetRequiredService<
+            LocalAiBillStatementAiExtractor>());
 
 builder.Services.AddSingleton<
     BillStatementValidationService>();
