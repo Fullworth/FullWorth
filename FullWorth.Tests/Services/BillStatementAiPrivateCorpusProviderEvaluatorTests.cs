@@ -834,6 +834,74 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
     }
 
     [Fact]
+    public async Task Evaluate_DeterministicChunkRejection_IsNotProviderFailure()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId:
+                "provider-a-001",
+            providerKey:
+                "provider-a",
+            totalAmount:
+                104.99m);
+
+        directory.WriteCase(
+            caseId:
+                "provider-b-001",
+            providerKey:
+                "provider-b",
+            totalAmount:
+                55m);
+
+        var result =
+            await CreateEvaluator(
+                    new DeterministicRejectingAiExtractor())
+                .EvaluateAsync(
+                    directory.Path,
+                    [
+                        "provider-a-001",
+                        "provider-b-001"
+                    ],
+                    promptVersion:
+                        "offline-test-v1",
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy:
+                        CreateReadinessPolicy());
+
+        var metrics =
+            Assert.IsType<BillStatementAiShadowReadinessMetrics>(
+                result.Metrics);
+
+        Assert.Equal(
+            2,
+            metrics.ProviderAttemptCount);
+
+        Assert.Equal(
+            0,
+            metrics.ProviderFailureCount);
+
+        Assert.Equal(
+            0,
+            metrics.ReadyCandidateStatementCount);
+
+        Assert.Equal(
+            8,
+            metrics.MissedFactCount);
+
+        Assert.Equal(
+            2L,
+            result.InferenceCallCount);
+
+        Assert.Empty(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                result.FailureKindCounts));
+    }
+
+    [Fact]
     public void ProviderAttemptLatencySummary_UsesAggregateNearestRankPercentiles()
     {
         var summary =
@@ -910,6 +978,31 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 0.01m,
             MaximumProviderFailureRate:
                 0.50m);
+    }
+
+    private sealed class DeterministicRejectingAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
+    {
+        public long InferenceCallCount
+        {
+            get;
+            private set;
+        }
+
+        public Task<BillStatementAiCandidate> ExtractAsync(
+            BillStatementAiExtractionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    1);
+
+            throw new BillStatementAiDeterministicCandidateRejectionException();
+        }
     }
 
     private sealed class FakeAiExtractor
