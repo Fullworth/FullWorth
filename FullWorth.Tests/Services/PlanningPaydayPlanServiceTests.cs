@@ -659,7 +659,11 @@ public sealed class PlanningPaydayPlanServiceTests
                         pair =>
                             billStreamIds.Contains(
                                 pair.Key))
-                    .ToDictionary();
+                    .ToDictionary(
+                        pair =>
+                            pair.Key,
+                        pair =>
+                            pair.Value);
 
             return Task.FromResult(
                 result);
