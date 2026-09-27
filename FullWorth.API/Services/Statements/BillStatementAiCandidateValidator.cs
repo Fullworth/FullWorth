@@ -808,6 +808,30 @@ namespace FullWorth.API.Services.Statements
 
                     value.Value.ToString(
                         "d MMM yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMMM dd, yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMM dd, yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMMM dd yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMM dd yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "dd MMMM yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "dd MMM yyyy",
                         CultureInfo.InvariantCulture)
                 };
 
@@ -877,6 +901,20 @@ namespace FullWorth.API.Services.Statements
 
                 supportedRepresentations.Add(
                     $"{value.Value.Day} Sept {value.Value.Year}");
+
+                var paddedSeptDay =
+                    value.Value.Day.ToString(
+                        "D2",
+                        CultureInfo.InvariantCulture);
+
+                supportedRepresentations.Add(
+                    $"Sept {paddedSeptDay}, {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"Sept {paddedSeptDay} {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"{paddedSeptDay} Sept {value.Value.Year}");
             }
 
             RequireEvidenceValue(
