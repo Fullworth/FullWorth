@@ -162,10 +162,107 @@ public sealed class BillStatementAiGroundTruthScorer
                 falseAlertStatementCount);
     }
 
+    public IReadOnlyList<BillStatementAiFieldScore> ScoreFields(
+        IReadOnlyList<BillStatementAiGroundTruthObservation> observations)
+    {
+        ArgumentNullException.ThrowIfNull(
+            observations);
+
+        var totals =
+            BillStatementAiGroundTruthFieldKeys.All
+                .ToDictionary(
+                    fieldKey =>
+                        fieldKey,
+                    _ =>
+                        new MutableFactScore(),
+                    StringComparer.Ordinal);
+
+        foreach (var observation in
+                 observations)
+        {
+            ArgumentNullException.ThrowIfNull(
+                observation);
+
+            ValidateObservation(
+                observation);
+
+            foreach (var fieldScore in
+                     ScoreExtractionFields(
+                         observation.ExpectedStatement,
+                         observation.ExpectedLineItems,
+                         observation.ActualExtraction))
+            {
+                var total =
+                    totals[fieldScore.FieldKey];
+
+                total.Correct +=
+                    fieldScore.Correct;
+
+                total.Incorrect +=
+                    fieldScore.Incorrect;
+
+                total.Missed +=
+                    fieldScore.Missed;
+            }
+        }
+
+        return Array.AsReadOnly(
+            BillStatementAiGroundTruthFieldKeys.All
+                .Select(
+                    fieldKey =>
+                    {
+                        var total =
+                            totals[fieldKey];
+
+                        return new BillStatementAiFieldScore(
+                            FieldKey:
+                                fieldKey,
+
+                            Correct:
+                                total.Correct,
+
+                            Incorrect:
+                                total.Incorrect,
+
+                            Missed:
+                                total.Missed);
+                    })
+                .ToArray());
+    }
+
     public static BillStatementAiFactScore ScoreExtractionFacts(
         BillStatementStructuredData expected,
         IReadOnlyList<BillStatementStructuredLineItem> expectedLineItems,
         BillStatementExtractionResult? actualExtraction)
+    {
+        var fields =
+            ScoreExtractionFields(
+                expected,
+                expectedLineItems,
+                actualExtraction);
+
+        return new BillStatementAiFactScore(
+            Correct:
+                fields.Sum(
+                    field =>
+                        field.Correct),
+
+            Incorrect:
+                fields.Sum(
+                    field =>
+                        field.Incorrect),
+
+            Missed:
+                fields.Sum(
+                    field =>
+                        field.Missed));
+    }
+
+    public static IReadOnlyList<BillStatementAiFieldScore>
+        ScoreExtractionFields(
+            BillStatementStructuredData expected,
+            IReadOnlyList<BillStatementStructuredLineItem> expectedLineItems,
+            BillStatementExtractionResult? actualExtraction)
     {
         ArgumentNullException.ThrowIfNull(
             expected);
@@ -173,52 +270,99 @@ public sealed class BillStatementAiGroundTruthScorer
         ArgumentNullException.ThrowIfNull(
             expectedLineItems);
 
-        var score =
-            new MutableFactScore();
-
         var actual =
             actualExtraction?.Statement;
 
-        ScoreOptionalValue(
-            expected.TotalAmount,
-            actual?.TotalAmount,
+        return Array.AsReadOnly(
+            new[]
+            {
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount,
+                    score =>
+                        ScoreOptionalValue(
+                            expected.TotalAmount,
+                            actual?.TotalAmount,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.BillingPeriodStart,
+                    score =>
+                        ScoreOptionalValue(
+                            expected.BillingPeriodStart,
+                            actual?.BillingPeriodStart,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.BillingPeriodEnd,
+                    score =>
+                        ScoreOptionalValue(
+                            expected.BillingPeriodEnd,
+                            actual?.BillingPeriodEnd,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.StatementDate,
+                    score =>
+                        ScoreOptionalValue(
+                            expected.StatementDate,
+                            actual?.StatementDate,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.DueDate,
+                    score =>
+                        ScoreOptionalValue(
+                            expected.DueDate,
+                            actual?.DueDate,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.CurrencyCode,
+                    score =>
+                        ScoreOptionalString(
+                            expected.CurrencyCode,
+                            actual?.CurrencyCode,
+                            score)),
+
+                ScoreField(
+                    BillStatementAiGroundTruthFieldKeys.LineItems,
+                    score =>
+                        ScoreLineItems(
+                            expectedLineItems,
+                            actualExtraction?.LineItems ??
+                                [],
+                            score))
+            });
+    }
+
+    private static BillStatementAiFieldScore ScoreField(
+        string fieldKey,
+        Action<MutableFactScore> scoreAction)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            fieldKey);
+
+        ArgumentNullException.ThrowIfNull(
+            scoreAction);
+
+        var score =
+            new MutableFactScore();
+
+        scoreAction(
             score);
 
-        ScoreOptionalValue(
-            expected.BillingPeriodStart,
-            actual?.BillingPeriodStart,
-            score);
+        return new BillStatementAiFieldScore(
+            FieldKey:
+                fieldKey,
 
-        ScoreOptionalValue(
-            expected.BillingPeriodEnd,
-            actual?.BillingPeriodEnd,
-            score);
+            Correct:
+                score.Correct,
 
-        ScoreOptionalValue(
-            expected.StatementDate,
-            actual?.StatementDate,
-            score);
+            Incorrect:
+                score.Incorrect,
 
-        ScoreOptionalValue(
-            expected.DueDate,
-            actual?.DueDate,
-            score);
-
-        ScoreOptionalString(
-            expected.CurrencyCode,
-            actual?.CurrencyCode,
-            score);
-
-        ScoreLineItems(
-            expectedLineItems,
-            actualExtraction?.LineItems ??
-                [],
-            score);
-
-        return new BillStatementAiFactScore(
-            score.Correct,
-            score.Incorrect,
-            score.Missed);
+            Missed:
+                score.Missed);
     }
 
     private static void ScoreOptionalValue<T>(
@@ -439,6 +583,89 @@ public sealed record BillStatementAiGroundTruthObservation(
     BillStatementExtractionResult? ActualExtraction,
     bool AlertEvaluated,
     bool FalseAlert);
+
+public static class BillStatementAiGroundTruthFieldKeys
+{
+    public const string TotalAmount =
+        nameof(
+            BillStatementStructuredData.TotalAmount);
+
+    public const string BillingPeriodStart =
+        nameof(
+            BillStatementStructuredData.BillingPeriodStart);
+
+    public const string BillingPeriodEnd =
+        nameof(
+            BillStatementStructuredData.BillingPeriodEnd);
+
+    public const string StatementDate =
+        nameof(
+            BillStatementStructuredData.StatementDate);
+
+    public const string DueDate =
+        nameof(
+            BillStatementStructuredData.DueDate);
+
+    public const string CurrencyCode =
+        nameof(
+            BillStatementStructuredData.CurrencyCode);
+
+    public const string LineItems =
+        "LineItems";
+
+    public static IReadOnlyList<string> All
+    {
+        get;
+    } =
+        Array.AsReadOnly(
+            new[]
+            {
+                TotalAmount,
+                BillingPeriodStart,
+                BillingPeriodEnd,
+                StatementDate,
+                DueDate,
+                CurrencyCode,
+                LineItems
+            });
+}
+
+public sealed record BillStatementAiFieldScore(
+    string FieldKey,
+    long Correct,
+    long Incorrect,
+    long Missed)
+{
+    public long ExpectedFactCount =>
+        Correct +
+        Missed;
+
+    public long PredictedFactCount =>
+        Correct +
+        Incorrect;
+
+    public decimal Precision =>
+        Divide(
+            Correct,
+            PredictedFactCount);
+
+    public decimal Recall =>
+        Divide(
+            Correct,
+            ExpectedFactCount);
+
+    private static decimal Divide(
+        long numerator,
+        long denominator)
+    {
+        return denominator ==
+                0
+            ? 0m
+            : decimal.Divide(
+                numerator,
+                denominator);
+    }
+}
 
 public sealed record BillStatementAiFactScore(
     long Correct,

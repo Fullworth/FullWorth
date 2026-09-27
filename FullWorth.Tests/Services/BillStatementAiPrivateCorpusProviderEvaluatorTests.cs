@@ -86,6 +86,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Null(
             result.Metrics);
 
+        Assert.Null(
+            result.FieldScores);
+
         Assert.False(
             result.CoverageDecision
                 .MayBeginOfflineProviderEvaluation);
@@ -215,6 +218,69 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             0,
             metrics.FalseAlertStatementCount);
+
+        var fieldScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiFieldScore>>(
+                result.FieldScores);
+
+        Assert.Equal(
+            BillStatementAiGroundTruthFieldKeys.All,
+            fieldScores.Select(
+                field =>
+                    field.FieldKey));
+
+        Assert.Equal(
+            metrics.CorrectFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Correct));
+
+        Assert.Equal(
+            metrics.IncorrectFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Incorrect));
+
+        Assert.Equal(
+            metrics.MissedFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Missed));
+
+        var totalAmount =
+            Assert.Single(
+                fieldScores,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount);
+
+        Assert.Equal(
+            2,
+            totalAmount.Correct);
+
+        Assert.Equal(
+            1m,
+            totalAmount.Precision);
+
+        Assert.Equal(
+            1m,
+            totalAmount.Recall);
+
+        var statementDate =
+            Assert.Single(
+                fieldScores,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.StatementDate);
+
+        Assert.Equal(
+            0,
+            statementDate.ExpectedFactCount);
+
+        Assert.Equal(
+            0,
+            statementDate.PredictedFactCount);
 
         Assert.Equal(
             2,
