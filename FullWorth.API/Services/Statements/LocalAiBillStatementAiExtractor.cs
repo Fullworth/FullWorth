@@ -84,12 +84,16 @@ public sealed class LocalAiBillStatementAiExtractor
                 "The configured prompt version is not supported.");
         }
 
-        string boundedDocumentText =
-            request.DocumentText.Length <=
-                _options.MaxDocumentCharacters
-                ? request.DocumentText
-                : request.DocumentText[
-                    .._options.MaxDocumentCharacters];
+        if (request.DocumentText.Length >
+            _options.MaxDocumentCharacters)
+        {
+            throw new BillStatementAiExtractionException(
+                BillStatementAiExtractionFailureKind.InputTooLarge,
+                "Statement text exceeds the configured local AI input limit.");
+        }
+
+        string validatedDocumentText =
+            request.DocumentText;
 
         using var timeoutSource =
             new CancellationTokenSource(
@@ -110,7 +114,7 @@ public sealed class LocalAiBillStatementAiExtractor
                     JsonContent.Create(
                         CreateRequestBody(
                             request,
-                            boundedDocumentText))
+                            validatedDocumentText))
             };
 
         if (!string.IsNullOrWhiteSpace(
