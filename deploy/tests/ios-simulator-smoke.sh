@@ -35,6 +35,30 @@ sys.exit(completed.returncode)
 PY
 }
 
+boot_simulator()
+{
+    xcrun simctl boot "$udid" >/dev/null 2>&1 ||
+        return 1
+
+    run_with_timeout 180 \
+        xcrun simctl bootstatus "$udid" -b
+}
+
+restart_simulator()
+{
+    run_with_timeout 30 \
+        xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
+        true
+
+    boot_simulator
+}
+
+install_app()
+{
+    run_with_timeout 180 \
+        xcrun simctl install "$udid" "$app_path"
+}
+
 [ -n "$app_path" ] ||
     fail "app path is required."
 [ -n "$expected_bundle_id" ] ||
@@ -103,34 +127,45 @@ print(choice["udid"])
 cleanup()
 {
     if [ -n "${udid:-}" ]; then
-        xcrun simctl terminate \
-            "$udid" \
-            "$expected_bundle_id" >/dev/null 2>&1 ||
+        run_with_timeout 30 \
+            xcrun simctl terminate \
+                "$udid" \
+                "$expected_bundle_id" >/dev/null 2>&1 ||
             true
 
-        xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
+        run_with_timeout 30 \
+            xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
             true
     fi
 }
 trap cleanup EXIT HUP INT TERM
 
-xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
+run_with_timeout 30 \
+    xcrun simctl shutdown "$udid" >/dev/null 2>&1 ||
     true
 
 run_with_timeout 60 \
     xcrun simctl erase "$udid" ||
     fail "could not reset the iOS 26.0 Simulator within 60 seconds."
 
-xcrun simctl boot "$udid" ||
-    fail "could not boot the iOS 26.0 Simulator."
+if ! boot_simulator; then
+    printf '%s\n' \
+        "Initial iOS simulator boot did not become ready; retrying once." >&2
 
-run_with_timeout 180 \
-    xcrun simctl bootstatus "$udid" -b ||
-    fail "iOS 26.0 Simulator did not finish booting within 180 seconds."
+    restart_simulator ||
+        fail "iOS 26.0 Simulator did not finish booting after one bounded retry."
+fi
 
-run_with_timeout 90 \
-    xcrun simctl install "$udid" "$app_path" ||
-    fail "FullWorth could not be installed into the iOS Simulator within 90 seconds."
+if ! install_app; then
+    printf '%s\n' \
+        "Initial FullWorth simulator install failed or timed out; rebooting and retrying once." >&2
+
+    restart_simulator ||
+        fail "iOS 26.0 Simulator did not recover for the install retry."
+
+    install_app ||
+        fail "FullWorth could not be installed into the iOS Simulator after one bounded retry."
+fi
 
 launch_output=$(
     run_with_timeout 60 \
