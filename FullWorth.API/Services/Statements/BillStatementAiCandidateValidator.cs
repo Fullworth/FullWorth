@@ -550,11 +550,69 @@ namespace FullWorth.API.Services.Statements
                 factKey,
                 evidenceByFact,
                 excerpt =>
-                    excerpt.Contains(
+                    ContainsWholeEvidenceValue(
+                        excerpt,
                         NormalizeEvidenceText(
-                            value),
-                        StringComparison.OrdinalIgnoreCase),
+                            value)),
                 errors);
+        }
+
+        private static bool ContainsWholeEvidenceValue(
+            string excerpt,
+            string normalizedValue)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedValue))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedValue,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedValue.Length;
+
+                var hasWholeLeadingBoundary =
+                    index ==
+                        0 ||
+                    !char.IsLetterOrDigit(
+                        excerpt[index - 1]);
+
+                var hasWholeTrailingBoundary =
+                    endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]);
+
+                if (hasWholeLeadingBoundary &&
+                    hasWholeTrailingBoundary)
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
         }
 
         private static bool IsOutsideMoneyRange(
