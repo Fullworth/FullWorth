@@ -25,6 +25,8 @@ PR #423 removed model-supplied fact keys from validation error messages, using e
 
 PR #427 made the offline chunk reconciler reject missing chunk/candidate/text records and zero-length chunks through its structured result instead of throwing. Exact head `523a9122fd667af0d62ebfc5cbb11a4df613a411` passed FullWorth CI run `36292183740` and dependency security run `36292183896`, then merged as `7528164680fc21aedbafa254b6e3efa8357feead`. This only hardens offline evaluation and does not register chunking for production extraction.
 
+PR #431 aligned deterministic date evidence matching with lexical recognition for unambiguous year-first slash/dot dates, variable-width numeric components, and padded-day month-name dates including `Sept`. This accepts correctly cited complete dates without dropping whole-value boundaries. Exact head `7cfdf471791e7d57100daa5dcb7df37daeb903bc` passed FullWorth CI run `36292522540` and dependency security run `36292522531`, then merged as `68f579be7bf4a140c91028eb0821194941eee202`. Its older base PR #430 was closed in favor of the clean current-development PR. These deterministic tests do not measure real-model statement accuracy.
+
 No real Qwen accuracy benchmark has been run. The next meaningful recognition-quality step is still the guarded local evaluation on an authorized host with the pinned Qwen3-4B Q4_K_M artifact and the private held-out corpus. The runner requires at least 100 cases across five providers, with at least 10 cases for each provider. Keep statement text, ground truth, secrets, and case-level outputs outside GitHub and logs. The current extraction-only benchmark does not measure false alerts and cannot establish full shadow readiness. Production AI and AI-derived persistence remain disabled.
 
 
