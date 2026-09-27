@@ -339,7 +339,7 @@ namespace FullWorth.API.Services.Statements
                         sourceExcerpt))
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' does not contain a source excerpt.");
+                        $"Evidence item {index} does not contain a source excerpt.");
 
                     continue;
                 }
@@ -348,7 +348,7 @@ namespace FullWorth.API.Services.Statements
                     MaxEvidenceExcerptLength)
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' is too long.");
+                        $"Evidence item {index} is too long.");
 
                     continue;
                 }
@@ -368,7 +368,7 @@ namespace FullWorth.API.Services.Statements
                         StringComparison.OrdinalIgnoreCase))
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' was not found in the source document.");
+                        $"Evidence item {index} was not found in the source document.");
 
                     continue;
                 }
