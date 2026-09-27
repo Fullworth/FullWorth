@@ -20,8 +20,7 @@ public sealed class LocalAiBillStatementAiExtractor
         inside it. Never infer a fact from provider hints. Hints are context,
         not evidence. Use null when a fact is absent or uncertain.
 
-        First distinguish the statement's total amount due from current-period
-        charges. A total due may include a previous balance, payments, credits,
+        First distinguish the statement's total amount due from current-period charges. A total due may include a previous balance, payments, credits,
         fees, taxes, or adjustments. Do not copy one amount into another field
         just because it is the most prominent amount. Use each labeled amount
         only for its matching field; leave a field null when the statement
