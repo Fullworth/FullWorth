@@ -331,6 +331,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.ScoreProviders(
                 observations);
 
+        var providerFieldScores =
+            _groundTruthScorer.ScoreProviderFields(
+                observations);
+
         var providerAttemptLatency =
             BillStatementAiProviderAttemptLatencySummary
                 .Create(
@@ -359,6 +363,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     metrics,
                     fieldScores,
                     providerScores,
+                    providerFieldScores,
                     providerAttemptLatency,
                     failureKindCounts);
     }
@@ -455,6 +460,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     BillStatementAiShadowReadinessMetrics? Metrics,
     IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
     IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
+    IReadOnlyList<BillStatementAiProviderFieldScore>? ProviderFieldScores,
     BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
     IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
@@ -494,6 +500,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             ProviderScores:
                 null,
 
+            ProviderFieldScores:
+                null,
+
             ProviderAttemptLatency:
                 null,
 
@@ -508,6 +517,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             BillStatementAiShadowReadinessMetrics metrics,
             IReadOnlyList<BillStatementAiFieldScore> fieldScores,
             IReadOnlyList<BillStatementAiProviderScore> providerScores,
+            IReadOnlyList<BillStatementAiProviderFieldScore> providerFieldScores,
             BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
             IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
@@ -525,6 +535,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
         ArgumentNullException.ThrowIfNull(
             providerScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerFieldScores);
 
         ArgumentNullException.ThrowIfNull(
             providerAttemptLatency);
@@ -554,6 +567,14 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             throw new ArgumentException(
                 "A completed provider evaluation requires one anonymous provider score per covered provider.",
                 nameof(providerScores));
+        }
+
+        if (providerFieldScores.Count !=
+            providerScores.Count)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires field scores for every anonymous provider.",
+                nameof(providerFieldScores));
         }
 
         var expectedOrdinal =
@@ -703,6 +724,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
             ProviderScores:
                 providerScores,
+
+            ProviderFieldScores:
+                providerFieldScores,
 
             ProviderAttemptLatency:
                 providerAttemptLatency,

@@ -324,15 +324,27 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed candidate prompt evaluation requires anonymous provider scores.");
 
+        var baselineProviderFields =
+            baselineRun.Result.ProviderFieldScores ??
+            throw new InvalidOperationException(
+                "A completed baseline prompt evaluation requires anonymous provider field scores.");
+
+        var candidateProviderFields =
+            candidateRun.Result.ProviderFieldScores ??
+            throw new InvalidOperationException(
+                "A completed candidate prompt evaluation requires anonymous provider field scores.");
+
         var comparison =
             new BillStatementAiPromptComparisonEvaluator()
-                .Compare(
+                .CompareWithProviderFields(
                     baselineRun.Result.Metrics,
                     baselineFieldScores,
                     baselineProviderScores,
+                    baselineProviderFields,
                     candidateRun.Result.Metrics,
                     candidateFieldScores,
-                    candidateProviderScores);
+                    candidateProviderScores,
+                    candidateProviderFields);
 
         var baselineLatency =
             baselineRun.Result.ProviderAttemptLatency ??
@@ -443,6 +455,8 @@ internal static class Program
                         comparison.CandidateHasNoAggregateRegression,
                         comparison.CandidateHasNoFieldRegression,
                         comparison.CandidateHasNoProviderRegression,
+                        comparison.CandidateHasNoProviderFieldRegression,
+                        comparison.RegressedProviderFieldCount,
                         comparison.CandidateHasStrictAggregateImprovement,
                         comparison.RegressedFieldKeys,
                         comparison.RegressedProviderOrdinals,
@@ -533,6 +547,18 @@ internal static class Program
                             true,
 
                         providerFailureRatePerBucketMustNotIncrease =
+                            true,
+
+                        requiresSameExpectedFactCountPerAnonymousProviderField =
+                            true,
+
+                        providerFieldCorrectCountMustNotDecrease =
+                            true,
+
+                        providerFieldIncorrectCountMustNotIncrease =
+                            true,
+
+                        providerFieldMissedCountMustNotIncrease =
                             true,
 
                         requiresAtLeastOneStrictAggregateImprovement =

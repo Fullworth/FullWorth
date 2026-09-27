@@ -90,13 +90,17 @@ A candidate qualifies only for **promotion review** when all of these are true:
 - every anonymous provider bucket has the same statement/attempt/expected-fact
   population in both runs;
 - no anonymous provider bucket loses correct facts, gains incorrect/missed
-  facts, loses precision/recall/readiness, or gains provider failures; and
+  facts, loses precision/recall/readiness, or gains provider failures;
+- within every anonymous provider bucket, each fixed field has the same
+  expected-fact population and cannot lose correct facts, gain incorrect or
+  missed facts, or lose precision/recall; and
 - at least one aggregate metric strictly improves.
 
 This means an overall improvement cannot hide a regression in a critical field
-such as TotalAmount or DueDate, or a regression concentrated in one provider.
-The report includes only fixed field keys, anonymous provider ordinals, and
-aggregate counts/rates needed to explain a veto.
+such as TotalAmount or DueDate, a regression concentrated in one provider, or
+a DueDate regression for one provider offset by a different field within that
+provider. The provider-field gate reports only the number of regressed
+combinations; provider identities and case-level outputs are never emitted.
 
 That flag does not promote a prompt automatically. It cannot enable runtime
 shadow mode, production inference, alerts, or AI-derived persistence.

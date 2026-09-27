@@ -93,6 +93,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             result.ProviderScores);
 
         Assert.Null(
+            result.ProviderFieldScores);
+
+        Assert.Null(
             result.ProviderAttemptLatency);
 
         Assert.Null(
@@ -265,6 +268,56 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             2,
             providerScores.Count);
+
+        var providerFieldScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderFieldScore>>(
+                result.ProviderFieldScores);
+
+        Assert.Equal(
+            providerScores.Count,
+            providerFieldScores.Count);
+
+        for (var index = 0;
+             index < providerScores.Count;
+             index++)
+        {
+            Assert.Equal(
+                providerScores[index].ProviderOrdinal,
+                providerFieldScores[index].ProviderOrdinal);
+
+            Assert.Equal(
+                BillStatementAiGroundTruthFieldKeys.All,
+                providerFieldScores[index].FieldScores.Select(
+                    field =>
+                        field.FieldKey));
+
+            Assert.Equal(
+                providerScores[index].CorrectFactCount,
+                providerFieldScores[index].FieldScores.Sum(
+                    field =>
+                        field.Correct));
+
+            Assert.Equal(
+                providerScores[index].MissedFactCount,
+                providerFieldScores[index].FieldScores.Sum(
+                    field =>
+                        field.Missed));
+        }
+
+        var serializedProviderFields =
+            System.Text.Json.JsonSerializer.Serialize(
+                providerFieldScores);
+
+        Assert.DoesNotContain(
+            "provider-a",
+            serializedProviderFields,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "provider-b",
+            serializedProviderFields,
+            StringComparison.OrdinalIgnoreCase);
 
         Assert.Equal(
             new[]
