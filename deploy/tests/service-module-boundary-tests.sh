@@ -17,6 +17,7 @@ modules = {
     "Bills",
     "Identity",
     "Plaid",
+    "Planning",
     "Statements",
     "Subscriptions",
 }
@@ -24,7 +25,7 @@ modules = {
 allowed_cross_module_references = set()
 
 reference_pattern = re.compile(
-    r"FullWorth\.API\.Services\.(Accounts|Bills|Identity|Plaid|Statements|Subscriptions)\b"
+    r"FullWorth\.API\.Services\.(Accounts|Bills|Identity|Plaid|Planning|Statements|Subscriptions)\b"
 )
 
 seen_allowed = set()
