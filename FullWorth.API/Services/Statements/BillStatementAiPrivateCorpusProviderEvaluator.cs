@@ -224,6 +224,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
         long maximumInferenceCallsPerStatement =
             0;
 
+        long chunkedExtractionRejectedStatementCount =
+            0;
+
         foreach (var corpusCase in
                  corpusCases)
         {
@@ -286,6 +289,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                                 request,
                                 maxCharactersPerInference.Value,
                                 cancellationToken);
+
+                    if (!chunkedResult.IsAccepted)
+                    {
+                        chunkedExtractionRejectedStatementCount =
+                            checked(
+                                chunkedExtractionRejectedStatementCount +
+                                1);
+                    }
 
                     candidate =
                         chunkedResult.IsAccepted
@@ -474,6 +485,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     inferenceCallCount,
                     multiInferenceStatementCount,
                     maximumInferenceCallsPerStatement,
+                    chunkedExtractionRejectedStatementCount,
                     providerAttemptLatency,
                     failureKindCounts);
     }
@@ -599,6 +611,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     long? InferenceCallCount,
     long? MultiInferenceStatementCount,
     long? MaximumInferenceCallsPerStatement,
+    long? ChunkedExtractionRejectedStatementCount,
     BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
     IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
@@ -650,6 +663,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             MaximumInferenceCallsPerStatement:
                 null,
 
+            ChunkedExtractionRejectedStatementCount:
+                null,
+
             ProviderAttemptLatency:
                 null,
 
@@ -668,6 +684,7 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             long inferenceCallCount,
             long multiInferenceStatementCount,
             long maximumInferenceCallsPerStatement,
+            long chunkedExtractionRejectedStatementCount,
             BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
             IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
@@ -829,6 +846,16 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 "Maximum inference calls per statement must fit within aggregate inference calls.");
         }
 
+        if (chunkedExtractionRejectedStatementCount <
+                0 ||
+            chunkedExtractionRejectedStatementCount >
+                metrics.ProviderAttemptCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(chunkedExtractionRejectedStatementCount),
+                "Chunked extraction rejection count must fit within provider attempts.");
+        }
+
         if (providerAttemptLatency.AttemptCount !=
                 metrics.ProviderAttemptCount ||
             providerAttemptLatency.MinimumMilliseconds <
@@ -914,6 +941,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
             MaximumInferenceCallsPerStatement:
                 maximumInferenceCallsPerStatement,
+
+            ChunkedExtractionRejectedStatementCount:
+                chunkedExtractionRejectedStatementCount,
 
             ProviderAttemptLatency:
                 providerAttemptLatency,

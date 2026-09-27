@@ -715,6 +715,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires maximum per-statement inference-call accounting.");
 
+        var chunkedExtractionRejectedStatementCount =
+            run.Result.ChunkedExtractionRejectedStatementCount ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires chunked extraction rejection accounting.");
+
         return new
         {
             promptVersion,
@@ -726,6 +731,7 @@ internal static class Program
             inferenceCallCount,
             multiInferenceStatementCount,
             maximumInferenceCallsPerStatement,
+            chunkedExtractionRejectedStatementCount,
             metrics.ProviderFailureCount,
             metrics.ReadyCandidateStatementCount,
             metrics.CorrectFactCount,

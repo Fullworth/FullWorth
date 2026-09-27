@@ -105,6 +105,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             result.MaximumInferenceCallsPerStatement);
 
         Assert.Null(
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.Null(
             result.ProviderAttemptLatency);
 
         Assert.Null(
@@ -221,6 +224,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             2L,
             result.MaximumInferenceCallsPerStatement);
+
+        Assert.Equal(
+            0L,
+            result.ChunkedExtractionRejectedStatementCount);
 
         Assert.Equal(
             0,
@@ -683,6 +690,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             4L,
             result.MaximumInferenceCallsPerStatement);
 
+        Assert.Equal(
+            0L,
+            result.ChunkedExtractionRejectedStatementCount);
+
         Assert.All(
             extractor.Requests,
             request =>
@@ -690,6 +701,73 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                     request.DocumentText.Length,
                     1,
                     40));
+    }
+
+    [Fact]
+    public async Task Evaluate_ChunkedCandidateRejection_IsCountedSeparately()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId:
+                "provider-a-001",
+            providerKey:
+                "provider-a",
+            totalAmount:
+                104.99m);
+
+        directory.WriteCase(
+            caseId:
+                "provider-b-001",
+            providerKey:
+                "provider-b",
+            totalAmount:
+                55m);
+
+        var result =
+            await CreateEvaluator(
+                    new RejectingChunkAiExtractor())
+                .EvaluateAsync(
+                    directory.Path,
+                    [
+                        "provider-a-001",
+                        "provider-b-001"
+                    ],
+                    promptVersion:
+                        "offline-test-v1",
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy:
+                        CreateReadinessPolicy(),
+                    maxCharactersPerInference:
+                        40);
+
+        var metrics =
+            Assert.IsType<
+                BillStatementAiShadowReadinessMetrics>(
+                    result.Metrics);
+
+        Assert.Equal(
+            2L,
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.Equal(
+            0,
+            metrics.ProviderFailureCount);
+
+        Assert.Equal(
+            0,
+            metrics.ReadyCandidateStatementCount);
+
+        Assert.Equal(
+            8,
+            metrics.MissedFactCount);
+
+        Assert.Empty(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                    result.FailureKindCounts));
     }
 
     [Fact]
@@ -1021,6 +1099,67 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 0.01m,
             MaximumProviderFailureRate:
                 0.50m);
+    }
+
+    private sealed class RejectingChunkAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
+    {
+        public long InferenceCallCount { get; private set; }
+
+        public Task<BillStatementAiCandidate> ExtractAsync(
+            BillStatementAiExtractionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                request);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    1);
+
+            return Task.FromResult(
+                new BillStatementAiCandidate(
+                    ProviderName:
+                        null,
+                    AccountIdentifierSuffix:
+                        null,
+                    BillingPeriodStart:
+                        null,
+                    BillingPeriodEnd:
+                        null,
+                    StatementDate:
+                        null,
+                    DueDate:
+                        null,
+                    PreviousBalance:
+                        null,
+                    Payments:
+                        null,
+                    CurrentCharges:
+                        null,
+                    TotalDue:
+                        null,
+                    CurrencyCode:
+                        null,
+                    PlanOrService:
+                        null,
+                    UsageSummary:
+                        null,
+                    LineItems:
+                        [],
+                    Evidence:
+                        [
+                            new BillStatementAiEvidence(
+                                "unsupportedFact",
+                                request.DocumentText[..1])
+                        ],
+                    ModelConfidence:
+                        BillStatementAiModelConfidence.High));
+        }
     }
 
     private sealed class ChunkAwareAiExtractor
