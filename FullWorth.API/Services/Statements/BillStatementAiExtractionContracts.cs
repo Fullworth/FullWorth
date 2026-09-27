@@ -162,7 +162,8 @@
         InvalidStructuredOutput = 7,
         IncompleteResponse = 8,
         MissingStructuredOutput = 9,
-        OversizedResponse = 10
+        OversizedResponse = 10,
+        InputTooLarge = 11
     }
 
     /*
