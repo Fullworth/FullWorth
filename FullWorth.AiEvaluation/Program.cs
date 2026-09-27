@@ -86,31 +86,21 @@ internal static class Program
             var loader =
                 new BillStatementAiPrivateCorpusLoader();
 
-            var catalog =
+            var selection =
                 await new BillStatementAiPrivateCorpusCatalogInspector(
                     loader)
-                    .InspectAsync(
+                    .InspectAndSelectAsync(
                         fullCorpusRoot);
 
             var caseIds =
-                Directory.GetDirectories(
-                        fullCorpusRoot,
-                        "*",
-                        SearchOption.TopDirectoryOnly)
-                    .Select(
-                        directory =>
-                            new DirectoryInfo(
-                                directory).Name)
-                    .Order(
-                        StringComparer.Ordinal)
-                    .ToArray();
+                selection.CaseIds;
 
             if (parsed.Mode ==
                 BaselineMode)
             {
                 return await RunDeterministicBaselineAsync(
                     loader,
-                    catalog,
+                    selection.Summary,
                     fullCorpusRoot,
                     caseIds);
             }

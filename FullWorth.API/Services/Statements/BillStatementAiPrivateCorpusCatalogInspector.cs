@@ -3,9 +3,10 @@ namespace FullWorth.API.Services.Statements;
 /*
  * Offline-only preflight for a private statement corpus.
  *
- * Every discovered case is loaded through the bounded corpus loader, but the
- * result contains aggregate coverage only. It never calls an AI provider and
- * is intentionally not registered in the API runtime.
+ * Every discovered case is loaded through the bounded corpus loader.
+ * InspectAsync returns aggregate coverage only; InspectAndSelectAsync also
+ * carries validated case identifiers in memory for the offline runner.
+ * Neither method calls an AI provider or is registered in the API runtime.
  */
 public sealed class BillStatementAiPrivateCorpusCatalogInspector
 {
@@ -25,6 +26,22 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
     }
 
     public async Task<BillStatementAiPrivateCorpusCatalogSummary> InspectAsync(
+        string corpusRootDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var selection =
+            await InspectAndSelectAsync(
+                corpusRootDirectory,
+                cancellationToken);
+
+        return selection.Summary;
+    }
+
+    /*
+     * The case identifiers stay in memory for the offline runner. They must
+     * never be included in its aggregate report or application logs.
+     */
+    public async Task<BillStatementAiPrivateCorpusCatalogSelection> InspectAndSelectAsync(
         string corpusRootDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -69,7 +86,7 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
         }
     }
 
-    private async Task<BillStatementAiPrivateCorpusCatalogSummary>
+    private async Task<BillStatementAiPrivateCorpusCatalogSelection>
         InspectCoreAsync(
             string corpusRootDirectory,
             CancellationToken cancellationToken)
@@ -183,13 +200,15 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
                 1;
         }
 
-        return new BillStatementAiPrivateCorpusCatalogSummary(
-            CaseCount:
-                caseIds.Count,
-            DistinctProviderCount:
-                providerCounts.Count,
-            MinimumCasesForAnyProvider:
-                providerCounts.Values.Min());
+        return new BillStatementAiPrivateCorpusCatalogSelection(
+            new BillStatementAiPrivateCorpusCatalogSummary(
+                CaseCount:
+                    caseIds.Count,
+                DistinctProviderCount:
+                    providerCounts.Count,
+                MinimumCasesForAnyProvider:
+                    providerCounts.Values.Min()),
+            caseIds);
     }
 }
 
@@ -197,3 +216,21 @@ public sealed record BillStatementAiPrivateCorpusCatalogSummary(
     long CaseCount,
     long DistinctProviderCount,
     long MinimumCasesForAnyProvider);
+
+public sealed class BillStatementAiPrivateCorpusCatalogSelection
+{
+    internal BillStatementAiPrivateCorpusCatalogSelection(
+        BillStatementAiPrivateCorpusCatalogSummary summary,
+        List<string> caseIds)
+    {
+        Summary =
+            summary;
+
+        CaseIds =
+            caseIds.AsReadOnly();
+    }
+
+    public BillStatementAiPrivateCorpusCatalogSummary Summary { get; }
+
+    public IReadOnlyList<string> CaseIds { get; }
+}
