@@ -1,17 +1,19 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 
-## Active AI evaluation checkpoint — 2026-09-26
+## Active AI evaluation checkpoint — 2026-09-27
 
-### Current local-AI recognition checkpoint — 2026-09-26
+### Current local-AI recognition checkpoint — 2026-09-27
 
 The selected path remains evaluation of externally trained local models, not training a FullWorth model from scratch. There is no OpenAI/cloud statement-extraction fallback in the API. PR #405 removed that provider and its selection/configuration code; PR #404 explicitly sets local inference, shadow mode, and shadow provider calls to false in production. These changes merged to development as `af193d1761c3531ea11518c9bb65f9fb2bb01b66` (after #404 merge `4761931fda8df9c3e9ae21679857cb52bd60a08a`). Exact PR heads passed FullWorth CI and dependency security before merge.
 
 Prompt evaluation now compares preserved v1 and v2 on the same sorted case population. PR #402 added fixed field-level accuracy metrics. PR #403 made the comparison field-aware: each of TotalAmount, BillingPeriodStart, BillingPeriodEnd, StatementDate, DueDate, CurrencyCode, and LineItems must have a matching expected-fact population, reconcile with aggregate counts, and show no regression in correct/incorrect/missed counts, precision, or recall before v2 qualifies for promotion review. An overall improvement cannot conceal a loss in one field. This is review evidence only; no automatic prompt promotion or production activation is possible.
 
 PR #403 exact head `95e2979252de68d1599784ec63c084b32a5ca984` passed FullWorth CI run `36287918706` and dependency security run `36287918783`, then merged to development as `7222be0fd61c67760393cbaed380c0ed53a27538`. The CI run also skipped the MAUI workload for these non-mobile AI changes. PR #406 introduced the safe-path MAUI skip rule and merged as `e9acaaed4497e83c17e9acd5aa3027400a065e05`; MAUI source and project changes still require the Android build. PR #404 exact head `89d6fcd9c5f1864b5a9a6893c715b4ec75aaea75` and PR #405 exact head `c99170193af80a99ce1caacbe3dcb2a9bc5983cb` each passed their exact-head FullWorth CI and dependency security checks.
+
+PR #408 tightened the offline candidate evidence validator after identifying substring-only citation matches. String and date values now require whole-value boundaries in their cited excerpts; complete date expressions are excluded from numeric money evidence; a short account suffix may still be cited from the end of a longer account identifier. Focused regression tests cover rejected provider/date/amount fragments and legitimate excerpt/suffix cases. Exact PR head `4ffd44622be32cd5401a086b9e5a0caab8d03d5f` passed FullWorth CI #1095 (run `36289147073`) across backend tests and the production-container gate, with the MAUI workload correctly skipped for this AI-only change. Dependency security #201 (run `36289147058`) passed, then PR #408 merged into development as `7b4f6eba01f38dabb826cb09f73dc6d072440f85`. This is citation-validation hardening; no real-model accuracy improvement is claimed.
 
 No real Qwen accuracy benchmark has been run. The next meaningful recognition-quality step is still the guarded local evaluation on an authorized host with the pinned Qwen3-4B Q4_K_M artifact and the private held-out corpus. The runner requires at least 100 cases across five providers, with at least 10 cases for each provider. Keep statement text, ground truth, secrets, and case-level outputs outside GitHub and logs. The current extraction-only benchmark does not measure false alerts and cannot establish full shadow readiness. Production AI and AI-derived persistence remain disabled.
 
