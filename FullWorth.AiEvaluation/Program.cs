@@ -667,6 +667,11 @@ internal static class Program
             throw new InvalidOperationException(
                 "A completed prompt summary requires aggregate provider-attempt latency metrics.");
 
+        var failureKindCounts =
+            run.Result.FailureKindCounts ??
+            throw new InvalidOperationException(
+                "A completed prompt summary requires aggregate provider failure-kind counts.");
+
         return new
         {
             promptVersion,
@@ -729,6 +734,17 @@ internal static class Program
                     providerAttemptLatency.P95Milliseconds,
                     providerAttemptLatency.MaximumMilliseconds
                 },
+
+            providerFailureKinds =
+                failureKindCounts.Select(
+                    failure =>
+                        new
+                        {
+                            failureKind =
+                                failure.FailureKind.ToString(),
+
+                            failure.Count
+                        }),
 
             meetsFullShadowAccuracyGate =
                 readiness.MeetsShadowAccuracyGate,
