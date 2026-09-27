@@ -27,6 +27,8 @@ public sealed class PlanningPaycheckAllocationEntity
 
     public DateOnly PaycheckPostedDate { get; set; }
 
+    public DateOnly BillPeriodEnd { get; set; }
+
     public DateOnly BillDueDate { get; set; }
 
     /*
