@@ -181,6 +181,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             new List<double>(
                 corpusCases.Count);
 
+        var providerFailureKinds =
+            new Dictionary<
+                BillStatementAiExtractionFailureKind,
+                long>();
+
         foreach (var corpusCase in
                  corpusCases)
         {
@@ -249,16 +254,23 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * the trust-boundary rejection as network instability.
                  */
             }
-            catch (BillStatementAiExtractionException)
+            catch (BillStatementAiExtractionException exception)
             {
                 /*
                  * Provider-specific failure details are intentionally dropped.
                  *
-                 * They must not become part of corpus output, logs, or
-                 * persistent evaluation data through this offline evaluator.
+                 * Only the coarse, vendor-neutral FailureKind is retained for
+                 * aggregate diagnostics. Messages and inner exceptions never
+                 * enter the evaluation result.
                  */
                 providerFailed =
                     true;
+
+                providerFailureKinds[
+                    exception.FailureKind] =
+                    providerFailureKinds.GetValueOrDefault(
+                        exception.FailureKind) +
+                    1;
             }
             finally
             {
@@ -324,6 +336,21 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                 .Create(
                     providerAttemptDurationsMilliseconds);
 
+        var failureKindCounts =
+            providerFailureKinds
+                .OrderBy(
+                    pair =>
+                        pair.Key)
+                .Select(
+                    pair =>
+                        new BillStatementAiExtractionFailureCount(
+                            FailureKind:
+                                pair.Key,
+
+                            Count:
+                                pair.Value))
+                .ToArray();
+
         return
             BillStatementAiPrivateCorpusProviderEvaluationResult
                 .Completed(
@@ -332,7 +359,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                     metrics,
                     fieldScores,
                     providerScores,
-                    providerAttemptLatency);
+                    providerAttemptLatency,
+                    failureKindCounts);
     }
 
     private static void ValidateCaseIds(
@@ -427,7 +455,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     BillStatementAiShadowReadinessMetrics? Metrics,
     IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
     IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
-    BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency)
+    BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
+    IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
     public bool MayEnableRuntimeShadowMode =>
         false;
@@ -466,6 +495,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 null,
 
             ProviderAttemptLatency:
+                null,
+
+            FailureKindCounts:
                 null);
     }
 
@@ -476,7 +508,8 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
             BillStatementAiShadowReadinessMetrics metrics,
             IReadOnlyList<BillStatementAiFieldScore> fieldScores,
             IReadOnlyList<BillStatementAiProviderScore> providerScores,
-            BillStatementAiProviderAttemptLatencySummary providerAttemptLatency)
+            BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
+            IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
         ArgumentNullException.ThrowIfNull(
             coverage);
@@ -495,6 +528,9 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
 
         ArgumentNullException.ThrowIfNull(
             providerAttemptLatency);
+
+        ArgumentNullException.ThrowIfNull(
+            failureKindCounts);
 
         if (fieldScores.Count !=
             BillStatementAiGroundTruthFieldKeys.All.Count)
@@ -612,6 +648,43 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 nameof(providerAttemptLatency));
         }
 
+        var seenFailureKinds =
+            new HashSet<
+                BillStatementAiExtractionFailureKind>();
+
+        long classifiedFailureCount =
+            0;
+
+        foreach (var failureKindCount in
+                 failureKindCounts)
+        {
+            ArgumentNullException.ThrowIfNull(
+                failureKindCount);
+
+            if (!Enum.IsDefined(
+                    failureKindCount.FailureKind) ||
+                !seenFailureKinds.Add(
+                    failureKindCount.FailureKind) ||
+                failureKindCount.Count <=
+                    0)
+            {
+                throw new ArgumentException(
+                    "Provider failure-kind counts contain an invalid or duplicate category.",
+                    nameof(failureKindCounts));
+            }
+
+            classifiedFailureCount +=
+                failureKindCount.Count;
+        }
+
+        if (classifiedFailureCount !=
+            metrics.ProviderFailureCount)
+        {
+            throw new ArgumentException(
+                "Provider failure-kind counts do not reconcile with aggregate provider failures.",
+                nameof(failureKindCounts));
+        }
+
         return new BillStatementAiPrivateCorpusProviderEvaluationResult(
             ProviderEvaluationStarted:
                 true,
@@ -632,9 +705,16 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 providerScores,
 
             ProviderAttemptLatency:
-                providerAttemptLatency);
+                providerAttemptLatency,
+
+            FailureKindCounts:
+                failureKindCounts);
     }
 }
+
+public sealed record BillStatementAiExtractionFailureCount(
+    BillStatementAiExtractionFailureKind FailureKind,
+    long Count);
 
 public sealed record BillStatementAiProviderAttemptLatencySummary(
     long AttemptCount,
