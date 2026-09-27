@@ -44,6 +44,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
     private readonly BillStatementAiGroundTruthScorer
         _groundTruthScorer;
 
+    private readonly BillStatementAiChunkedExtractionCoordinator
+        _chunkedExtractionCoordinator;
+
     public BillStatementAiPrivateCorpusProviderEvaluator(
         BillStatementAiPrivateCorpusLoader loader,
         BillStatementAiPrivateCorpusCoverageGate coverageGate,
@@ -80,6 +83,13 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         _groundTruthScorer =
             groundTruthScorer;
+
+        _chunkedExtractionCoordinator =
+            new BillStatementAiChunkedExtractionCoordinator(
+                _aiExtractor,
+                new BillStatementAiDocumentChunker(),
+                new BillStatementAiChunkCandidateReconciler(
+                    new BillStatementAiCandidateValidator()));
     }
 
     public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
@@ -89,7 +99,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             string promptVersion,
             bool providerCallsAuthorized,
             BillStatementAiShadowReadinessPolicy readinessPolicy,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            int? maxCharactersPerInference = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(
             corpusRootDirectory);
@@ -102,6 +113,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         ArgumentNullException.ThrowIfNull(
             readinessPolicy);
+
+        if (maxCharactersPerInference is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCharactersPerInference),
+                maxCharactersPerInference,
+                "Maximum characters per inference must be positive when configured.");
+        }
 
         ValidateCaseIds(
             caseIds);
@@ -227,23 +246,45 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                         extractorAttemptCount +
                         1);
 
-                var candidate =
-                    await _aiExtractor.ExtractAsync(
-                        new BillStatementAiExtractionRequest(
-                            DocumentText:
-                                corpusCase.StatementText,
+                var request =
+                    new BillStatementAiExtractionRequest(
+                        DocumentText:
+                            corpusCase.StatementText,
 
-                            Hints:
-                                new BillStatementExtractionHints(
-                                    ExpectedProviderName:
-                                        null,
+                        Hints:
+                            new BillStatementExtractionHints(
+                                ExpectedProviderName:
+                                    null,
 
-                                    ExpectedCategory:
-                                        null),
+                                ExpectedCategory:
+                                    null),
 
-                            PromptVersion:
-                                promptVersion),
-                        cancellationToken);
+                        PromptVersion:
+                            promptVersion);
+
+                BillStatementAiCandidate? candidate;
+
+                if (maxCharactersPerInference.HasValue)
+                {
+                    var chunkedResult =
+                        await _chunkedExtractionCoordinator
+                            .ExtractAsync(
+                                request,
+                                maxCharactersPerInference.Value,
+                                cancellationToken);
+
+                    candidate =
+                        chunkedResult.IsAccepted
+                            ? chunkedResult.Candidate
+                            : null;
+                }
+                else
+                {
+                    candidate =
+                        await _aiExtractor.ExtractAsync(
+                            request,
+                            cancellationToken);
+                }
 
                 /*
                  * A provider response is still untrusted candidate data.
@@ -251,16 +292,23 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * It must pass FullWorth's existing deterministic evidence
                  * and candidate validation boundary before it may count as
                  * an extraction result in the evaluation.
+                 *
+                 * Deterministic chunk reconciliation rejection is deliberately
+                 * treated like any other rejected candidate: missed truth,
+                 * not a provider transport failure.
                  */
-                var conversion =
-                    _conversionService.Convert(
-                        corpusCase.StatementText,
-                        candidate);
-
-                if (conversion.IsAccepted)
+                if (candidate is not null)
                 {
-                    extraction =
-                        conversion.Extraction;
+                    var conversion =
+                        _conversionService.Convert(
+                            corpusCase.StatementText,
+                            candidate);
+
+                    if (conversion.IsAccepted)
+                    {
+                        extraction =
+                            conversion.Extraction;
+                    }
                 }
 
                 /*

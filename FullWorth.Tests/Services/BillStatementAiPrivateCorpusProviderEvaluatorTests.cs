@@ -582,6 +582,95 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
     }
 
     [Fact]
+    public async Task Evaluate_OversizedStatements_UseChunkedInferenceAndReconcile()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId:
+                "provider-a-001",
+            providerKey:
+                "provider-a",
+            totalAmount:
+                104.99m);
+
+        directory.WriteCase(
+            caseId:
+                "provider-b-001",
+            providerKey:
+                "provider-b",
+            totalAmount:
+                55m);
+
+        var extractor =
+            new ChunkAwareAiExtractor();
+
+        var result =
+            await CreateEvaluator(
+                    extractor)
+                .EvaluateAsync(
+                    directory.Path,
+                    [
+                        "provider-a-001",
+                        "provider-b-001"
+                    ],
+                    promptVersion:
+                        "offline-test-v1",
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy:
+                        CreateReadinessPolicy(),
+                    maxCharactersPerInference:
+                        40);
+
+        var metrics =
+            Assert.IsType<
+                BillStatementAiShadowReadinessMetrics>(
+                    result.Metrics);
+
+        Assert.Equal(
+            2,
+            metrics.ProviderAttemptCount);
+
+        Assert.Equal(
+            0,
+            metrics.ProviderFailureCount);
+
+        Assert.Equal(
+            2,
+            metrics.ReadyCandidateStatementCount);
+
+        Assert.Equal(
+            8,
+            metrics.CorrectFactCount);
+
+        Assert.Equal(
+            0,
+            metrics.IncorrectFactCount);
+
+        Assert.Equal(
+            0,
+            metrics.MissedFactCount);
+
+        Assert.Equal(
+            8,
+            extractor.CallCount);
+
+        Assert.Equal(
+            8L,
+            result.InferenceCallCount);
+
+        Assert.All(
+            extractor.Requests,
+            request =>
+                Assert.InRange(
+                    request.DocumentText.Length,
+                    1,
+                    40));
+    }
+
+    [Fact]
     public async Task Evaluate_ProviderFailureIsCountedWithoutExposingFailureDetails()
     {
         using var directory =
@@ -910,6 +999,152 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 0.01m,
             MaximumProviderFailureRate:
                 0.50m);
+    }
+
+    private sealed class ChunkAwareAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
+    {
+        public int CallCount { get; private set; }
+
+        public long InferenceCallCount { get; private set; }
+
+        public List<BillStatementAiExtractionRequest> Requests
+        {
+            get;
+        } =
+            [];
+
+        public Task<BillStatementAiCandidate> ExtractAsync(
+            BillStatementAiExtractionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                request);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            CallCount++;
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    1);
+
+            Requests.Add(
+                request);
+
+            decimal? totalDue =
+                request.DocumentText.Contains(
+                    "$104.99",
+                    StringComparison.Ordinal)
+                    ? 104.99m
+                    : request.DocumentText.Contains(
+                        "$55.00",
+                        StringComparison.Ordinal)
+                        ? 55m
+                        : null;
+
+            DateOnly? billingPeriodStart =
+                request.DocumentText.Contains(
+                    "Billing Period Start: 08/01/2026",
+                    StringComparison.Ordinal)
+                    ? new DateOnly(
+                        2026,
+                        8,
+                        1)
+                    : null;
+
+            DateOnly? billingPeriodEnd =
+                request.DocumentText.Contains(
+                    "Billing Period End: 08/31/2026",
+                    StringComparison.Ordinal)
+                    ? new DateOnly(
+                        2026,
+                        8,
+                        31)
+                    : null;
+
+            string? currencyCode =
+                request.DocumentText.Contains(
+                    "Currency: USD",
+                    StringComparison.Ordinal)
+                    ? "USD"
+                    : null;
+
+            var evidence =
+                new List<BillStatementAiEvidence>();
+
+            if (totalDue.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.TotalDue,
+                        totalDue.Value ==
+                            104.99m
+                            ? "Total Due: $104.99"
+                            : "Total Due: $55.00"));
+            }
+
+            if (billingPeriodStart.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.BillingPeriodStart,
+                        "Billing Period Start: 08/01/2026"));
+            }
+
+            if (billingPeriodEnd.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.BillingPeriodEnd,
+                        "Billing Period End: 08/31/2026"));
+            }
+
+            if (currencyCode is not null)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.CurrencyCode,
+                        "Currency: USD"));
+            }
+
+            return Task.FromResult(
+                new BillStatementAiCandidate(
+                    ProviderName:
+                        null,
+                    AccountIdentifierSuffix:
+                        null,
+                    BillingPeriodStart:
+                        billingPeriodStart,
+                    BillingPeriodEnd:
+                        billingPeriodEnd,
+                    StatementDate:
+                        null,
+                    DueDate:
+                        null,
+                    PreviousBalance:
+                        null,
+                    Payments:
+                        null,
+                    CurrentCharges:
+                        null,
+                    TotalDue:
+                        totalDue,
+                    CurrencyCode:
+                        currencyCode,
+                    PlanOrService:
+                        null,
+                    UsageSummary:
+                        null,
+                    LineItems:
+                        [],
+                    Evidence:
+                        evidence,
+                    ModelConfidence:
+                        BillStatementAiModelConfidence.High));
+        }
     }
 
     private sealed class FakeAiExtractor
