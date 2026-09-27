@@ -217,6 +217,10 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Do not retain a caller-owned mutable collection during a run.
+        corpusCases =
+            corpusCases.ToArray();
+
         var seenCaseIds =
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
