@@ -392,7 +392,8 @@ namespace FullWorth.API.Services.Statements
                 candidate.AccountIdentifierSuffix,
                 BillStatementAiFactKeys.AccountIdentifierSuffix,
                 evidenceByFact,
-                errors);
+                errors,
+                allowAccountSuffix: true);
 
             RequireDateEvidence(
                 candidate.BillingPeriodStart,
@@ -538,7 +539,8 @@ namespace FullWorth.API.Services.Statements
             string? value,
             string factKey,
             IReadOnlyDictionary<string, List<string>> evidenceByFact,
-            ICollection<string> errors)
+            ICollection<string> errors,
+            bool allowAccountSuffix = false)
         {
             if (string.IsNullOrWhiteSpace(
                     value))
@@ -546,14 +548,21 @@ namespace FullWorth.API.Services.Statements
                 return;
             }
 
+            var normalizedValue =
+                NormalizeEvidenceText(
+                    value);
+
             RequireEvidenceValue(
                 factKey,
                 evidenceByFact,
                 excerpt =>
                     ContainsWholeEvidenceValue(
                         excerpt,
-                        NormalizeEvidenceText(
-                            value)),
+                        normalizedValue) ||
+                    allowAccountSuffix &&
+                    ContainsAccountSuffixEvidence(
+                        excerpt,
+                        normalizedValue),
                 errors);
         }
 
@@ -603,6 +612,58 @@ namespace FullWorth.API.Services.Statements
 
                 if (hasWholeLeadingBoundary &&
                     hasWholeTrailingBoundary)
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
+        }
+
+        private static bool ContainsAccountSuffixEvidence(
+            string excerpt,
+            string normalizedSuffix)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedSuffix) ||
+                normalizedSuffix.Any(
+                    character =>
+                        !char.IsLetterOrDigit(
+                            character)))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedSuffix,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedSuffix.Length;
+
+                if (endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]))
                 {
                     return true;
                 }
