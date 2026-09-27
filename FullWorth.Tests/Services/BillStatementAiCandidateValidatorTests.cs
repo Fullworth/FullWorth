@@ -235,6 +235,46 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void DateEvidence_RejectsDateEmbeddedInLongerDigits()
+    {
+        const string documentText =
+            "Due September 20, 20260";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        20),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            "September 20, 20260")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void InventedEvidence_IsRejected()
     {
         const string documentText =
