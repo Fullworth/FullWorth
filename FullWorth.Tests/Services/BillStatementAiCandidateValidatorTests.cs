@@ -443,6 +443,39 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void AccountSuffixEvidence_AcceptsSuffixOfLongerAccountNumber()
+    {
+        const string documentText =
+            "Account number 1234567890123456";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                AccountIdentifierSuffix =
+                    "3456",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.AccountIdentifierSuffix,
+                            "Account number 1234567890123456")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Fact]
     public void FullAccountNumberLikeValue_IsRejected()
     {
         const string documentText =
