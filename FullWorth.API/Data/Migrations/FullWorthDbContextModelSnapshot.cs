@@ -887,6 +887,9 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<DateOnly>("BillDueDate")
                         .HasColumnType("date");
 
+                    b.Property<DateOnly>("BillPeriodEnd")
+                        .HasColumnType("date");
+
                     b.Property<Guid>("BillStreamId")
                         .HasColumnType("uuid");
 
@@ -918,11 +921,11 @@ namespace FullWorth.API.Data.Migrations
 
                     b.HasAlternateKey("Id", "UserId");
 
-                    b.HasIndex("UserId", "BillStreamId", "BillDueDate");
+                    b.HasIndex("UserId", "BillStreamId", "BillPeriodEnd");
 
                     b.HasIndex("UserId", "PaycheckPostedDate");
 
-                    b.HasIndex("UserId", "PayrollTransactionId", "BillStreamId", "BillDueDate")
+                    b.HasIndex("UserId", "PayrollTransactionId", "BillStreamId", "BillPeriodEnd")
                         .IsUnique();
 
                     b.ToTable("PlanningPaycheckAllocations", null, t =>
