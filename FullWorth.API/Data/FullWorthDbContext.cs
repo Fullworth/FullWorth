@@ -57,6 +57,9 @@ public sealed class FullWorthDbContext
     public DbSet<PlanningBillFundingPreferenceEntity> PlanningBillFundingPreferences =>
         Set<PlanningBillFundingPreferenceEntity>();
 
+    public DbSet<PlanningPaycheckAllocationEntity> PlanningPaycheckAllocations =>
+        Set<PlanningPaycheckAllocationEntity>();
+
     public DbSet<PlaidLinkSessionEntity> PlaidLinkSessions =>
         Set<PlaidLinkSessionEntity>();
 
