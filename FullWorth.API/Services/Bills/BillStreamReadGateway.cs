@@ -8,6 +8,39 @@ public sealed class BillStreamReadGateway(
     FullWorthDbContext dbContext)
     : IBillStreamReadGateway
 {
+    public async Task<IReadOnlyList<BillStreamReadRecord>> ListOwnedActiveAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "User ID is required.",
+                nameof(userId));
+        }
+
+        return await dbContext.BillStreams
+            .AsNoTracking()
+            .Where(
+                stream =>
+                    stream.UserId == userId &&
+                    stream.IsActive)
+            .OrderBy(
+                stream =>
+                    stream.ProviderName)
+            .ThenBy(
+                stream =>
+                    stream.Id)
+            .Select(
+                stream =>
+                    new BillStreamReadRecord(
+                        stream.Id,
+                        stream.ProviderName,
+                        stream.Category))
+            .ToListAsync(
+                cancellationToken);
+    }
+
     public async Task<BillStreamReadRecord?> GetOwnedAsync(
         Guid userId,
         Guid billStreamId,
