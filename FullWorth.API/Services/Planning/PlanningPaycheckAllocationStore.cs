@@ -59,7 +59,8 @@ public sealed class PlanningPaycheckAllocationStore(
         GetPriorTotalsAsync(
             Guid userId,
             IReadOnlyCollection<Guid> billStreamIds,
-            DateOnly beforePaycheckPostedDate,
+            DateOnly throughPaycheckPostedDateInclusive,
+            Guid excludedPayrollTransactionId,
             CancellationToken cancellationToken = default)
     {
         ValidateUserId(
@@ -67,6 +68,10 @@ public sealed class PlanningPaycheckAllocationStore(
 
         ArgumentNullException.ThrowIfNull(
             billStreamIds);
+
+        ValidateOpaqueId(
+            excludedPayrollTransactionId,
+            nameof(excludedPayrollTransactionId));
 
         if (billStreamIds.Count ==
             0)
@@ -102,8 +107,10 @@ public sealed class PlanningPaycheckAllocationStore(
                 .Where(
                     allocation =>
                         allocation.UserId == userId &&
-                        allocation.PaycheckPostedDate <
-                            beforePaycheckPostedDate &&
+                        allocation.PaycheckPostedDate <=
+                            throughPaycheckPostedDateInclusive &&
+                        allocation.PayrollTransactionId !=
+                            excludedPayrollTransactionId &&
                         ids.Contains(
                             allocation.BillStreamId))
                 .Select(
@@ -369,9 +376,7 @@ public sealed class PlanningPaycheckAllocationStore(
         }
 
         var currency =
-            allocation.CurrencyCode?
-                .Trim()
-                .ToUpperInvariant();
+            allocation.CurrencyCode?.Trim().ToUpperInvariant();
 
         if (currency is null ||
             currency.Length !=
