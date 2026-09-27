@@ -76,9 +76,14 @@ dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --conf
 The comparison reports overall precision, recall, ready-candidate rate,
 provider-failure rate, raw count deltas, a fixed field-level breakdown for
 TotalAmount, BillingPeriodStart, BillingPeriodEnd, StatementDate, DueDate,
-CurrencyCode, and LineItems, plus anonymous provider-bucket comparisons. It
-never reports a case, provider identity, statement, evidence excerpt, or model
-response. Provider buckets use stable ordinals only.
+CurrencyCode, and LineItems, plus scored-document exact-match rates and
+anonymous provider-bucket comparisons. A scored-document exact match means all
+of these currently labeled fields and line items match, with no extra scored
+facts; it does not cover candidate fields that the ground-truth schema does not
+yet label. The prompt gate rejects aggregate and per-provider-bucket
+scored-document exact-match regressions. The report never includes a case,
+provider identity, statement, evidence excerpt, or model response. Provider
+buckets use stable ordinals only.
 
 A candidate qualifies only for **promotion review** when all of these are true:
 
@@ -86,6 +91,7 @@ A candidate qualifies only for **promotion review** when all of these are true:
 - aggregate fact recall does not decrease;
 - ready-candidate rate does not decrease;
 - provider-failure rate does not increase;
+- scored-document exact-match rate does not decrease;
 - every fixed field has the same expected-fact population in both runs;
 - for every fixed field, correct count does not decrease;
 - for every fixed field, incorrect count does not increase;
@@ -94,7 +100,8 @@ A candidate qualifies only for **promotion review** when all of these are true:
 - every anonymous provider bucket has the same statement/attempt/expected-fact
   population in both runs;
 - no anonymous provider bucket loses correct facts, gains incorrect/missed
-  facts, loses precision/recall/readiness, or gains provider failures;
+  facts, loses precision/recall/readiness, gains provider failures, or loses
+  scored-document exact matches;
 - within every anonymous provider bucket, each fixed field has the same
   expected-fact population and cannot lose correct facts, gain incorrect or
   missed facts, or lose precision/recall; and

@@ -76,6 +76,9 @@ public sealed class BillStatementAiGroundTruthScorer
         long falseAlertStatementCount =
             0;
 
+        long wholeDocumentExactMatchCount =
+            0;
+
         foreach (var observation in
                  observations)
         {
@@ -127,6 +130,13 @@ public sealed class BillStatementAiGroundTruthScorer
                     observation.ExpectedLineItems,
                     observation.ActualExtraction);
 
+            if (factCounts.Correct > 0 &&
+                factCounts.Incorrect == 0 &&
+                factCounts.Missed == 0)
+            {
+                wholeDocumentExactMatchCount++;
+            }
+
             correctFactCount +=
                 factCounts.Correct;
 
@@ -159,7 +169,11 @@ public sealed class BillStatementAiGroundTruthScorer
             AlertEvaluatedStatementCount:
                 alertEvaluatedStatementCount,
             FalseAlertStatementCount:
-                falseAlertStatementCount);
+                falseAlertStatementCount)
+        {
+            ScoredDocumentExactMatchCount =
+                wholeDocumentExactMatchCount
+        };
     }
 
     /*
@@ -244,7 +258,11 @@ public sealed class BillStatementAiGroundTruthScorer
                         metrics.IncorrectFactCount,
 
                     MissedFactCount:
-                        metrics.MissedFactCount));
+                        metrics.MissedFactCount)
+                {
+                    ScoredDocumentExactMatchCount =
+                        metrics.ScoredDocumentExactMatchCount
+                });
         }
 
         return scores.AsReadOnly();
@@ -780,6 +798,8 @@ public sealed record BillStatementAiProviderScore(
     long IncorrectFactCount,
     long MissedFactCount)
 {
+    public long ScoredDocumentExactMatchCount { get; init; }
+
     public decimal FactPrecision =>
         Divide(
             CorrectFactCount,

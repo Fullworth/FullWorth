@@ -109,12 +109,24 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 baseline.ProviderFailureCount,
                 baseline.ProviderAttemptCount);
 
+        var baselineScoredDocumentExactMatchRate =
+            Divide(
+                baseline.ScoredDocumentExactMatchCount,
+                baseline.EvaluatedStatementCount);
+
         var candidateProviderFailureRate =
             Divide(
                 candidate.ProviderFailureCount,
                 candidate.ProviderAttemptCount);
 
+        var candidateScoredDocumentExactMatchRate =
+            Divide(
+                candidate.ScoredDocumentExactMatchCount,
+                candidate.EvaluatedStatementCount);
+
         var noAggregateRegression =
+            candidateScoredDocumentExactMatchRate >=
+                baselineScoredDocumentExactMatchRate &&
             candidateFactPrecision >=
                 baselineFactPrecision &&
             candidateFactRecall >=
@@ -132,7 +144,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             candidateReadyCandidateRate >
                 baselineReadyCandidateRate ||
             candidateProviderFailureRate <
-                baselineProviderFailureRate;
+                baselineProviderFailureRate ||
+            candidate.ScoredDocumentExactMatchCount >
+                baseline.ScoredDocumentExactMatchCount;
 
         var noFieldRegression =
             fieldComparisons.All(
@@ -224,7 +238,26 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 hasStrictAggregateImprovement,
 
             CandidateQualifiesForPromotionReview:
-                false);
+                false)
+        {
+            BaselineScoredDocumentExactMatchRate =
+                baselineScoredDocumentExactMatchRate,
+
+            CandidateScoredDocumentExactMatchRate =
+                candidateScoredDocumentExactMatchRate,
+
+            ScoredDocumentExactMatchRateDelta =
+                candidateScoredDocumentExactMatchRate -
+                baselineScoredDocumentExactMatchRate,
+
+            ScoredDocumentExactMatchCountDelta =
+                candidate.ScoredDocumentExactMatchCount -
+                baseline.ScoredDocumentExactMatchCount,
+
+            CandidateHasNoScoredDocumentRegression =
+                candidate.ScoredDocumentExactMatchCount >=
+                baseline.ScoredDocumentExactMatchCount
+        };
     }
 
     /*
@@ -589,7 +622,18 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                         baseline.Recall,
 
                     CandidateHasNoRegression:
-                        noRegression));
+                        noRegression)
+                {
+                    BaselineScoredDocumentExactMatchCount =
+                        baseline.ScoredDocumentExactMatchCount,
+
+                    CandidateScoredDocumentExactMatchCount =
+                        candidate.ScoredDocumentExactMatchCount,
+
+                    ScoredDocumentExactMatchCountDelta =
+                        candidate.ScoredDocumentExactMatchCount -
+                        baseline.ScoredDocumentExactMatchCount
+                });
         }
 
         return comparisons.AsReadOnly();
@@ -654,7 +698,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 candidate.ProviderFailureCount <=
                     baseline.ProviderFailureCount &&
                 candidate.ProviderFailureRate <=
-                    baseline.ProviderFailureRate;
+                    baseline.ProviderFailureRate &&
+                candidate.ScoredDocumentExactMatchCount >=
+                    baseline.ScoredDocumentExactMatchCount;
 
             comparisons.Add(
                 new BillStatementAiPromptProviderComparison(
@@ -936,6 +982,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
         long missedFactCount =
             0;
 
+        long scoredDocumentExactMatchCount =
+            0;
+
         var expectedOrdinal =
             1;
 
@@ -961,6 +1010,10 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                     0 ||
                 provider.MissedFactCount <
                     0 ||
+                provider.ScoredDocumentExactMatchCount <
+                    0 ||
+                provider.ScoredDocumentExactMatchCount >
+                    provider.StatementCount ||
                 provider.ProviderAttemptCount >
                     provider.StatementCount ||
                 provider.ProviderFailureCount >
@@ -994,6 +1047,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             missedFactCount +=
                 provider.MissedFactCount;
 
+            scoredDocumentExactMatchCount +=
+                provider.ScoredDocumentExactMatchCount;
+
             expectedOrdinal++;
         }
 
@@ -1010,7 +1066,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             incorrectFactCount !=
                 metrics.IncorrectFactCount ||
             missedFactCount !=
-                metrics.MissedFactCount)
+                metrics.MissedFactCount ||
+            scoredDocumentExactMatchCount !=
+                metrics.ScoredDocumentExactMatchCount)
         {
             throw new ArgumentException(
                 "Prompt comparison provider scores do not reconcile with aggregate metrics.",
@@ -1046,7 +1104,8 @@ public sealed class BillStatementAiPromptComparisonEvaluator
                 metrics.IncorrectFactCount,
                 metrics.MissedFactCount,
                 metrics.AlertEvaluatedStatementCount,
-                metrics.FalseAlertStatementCount
+                metrics.FalseAlertStatementCount,
+                metrics.ScoredDocumentExactMatchCount
             };
 
         if (values.Any(
@@ -1066,7 +1125,9 @@ public sealed class BillStatementAiPromptComparisonEvaluator
             metrics.AlertEvaluatedStatementCount >
                 metrics.EvaluatedStatementCount ||
             metrics.FalseAlertStatementCount >
-                metrics.AlertEvaluatedStatementCount)
+                metrics.AlertEvaluatedStatementCount ||
+            metrics.ScoredDocumentExactMatchCount >
+                metrics.EvaluatedStatementCount)
         {
             throw new ArgumentOutOfRangeException(
                 parameterName,
@@ -1145,7 +1206,14 @@ public sealed record BillStatementAiPromptProviderComparison(
     decimal BaselineProviderFailureRate,
     decimal CandidateProviderFailureRate,
     decimal ProviderFailureRateDelta,
-    bool CandidateHasNoRegression);
+    bool CandidateHasNoRegression)
+{
+    public long BaselineScoredDocumentExactMatchCount { get; init; }
+
+    public long CandidateScoredDocumentExactMatchCount { get; init; }
+
+    public long ScoredDocumentExactMatchCountDelta { get; init; }
+}
 
 public sealed record BillStatementAiPromptComparisonResult(
     decimal BaselineFactPrecision,
@@ -1173,6 +1241,16 @@ public sealed record BillStatementAiPromptComparisonResult(
     bool CandidateHasStrictAggregateImprovement,
     bool CandidateQualifiesForPromotionReview)
 {
+    public decimal BaselineScoredDocumentExactMatchRate { get; init; }
+
+    public decimal CandidateScoredDocumentExactMatchRate { get; init; }
+
+    public decimal ScoredDocumentExactMatchRateDelta { get; init; }
+
+    public long ScoredDocumentExactMatchCountDelta { get; init; }
+
+    public bool CandidateHasNoScoredDocumentRegression { get; init; }
+
     public bool CandidateHasNoProviderFieldRegression { get; init; }
 
     public int RegressedProviderFieldCount { get; init; }
