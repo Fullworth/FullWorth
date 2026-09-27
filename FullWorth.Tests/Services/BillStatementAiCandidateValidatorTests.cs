@@ -313,6 +313,10 @@ public sealed class BillStatementAiCandidateValidatorTests
     [InlineData("09/2/2026")]
     [InlineData("9-02-2026")]
     [InlineData("09-2-2026")]
+    [InlineData("9.2.2026")]
+    [InlineData("09.02.2026")]
+    [InlineData("9.02.2026")]
+    [InlineData("09.2.2026")]
     public void DateEvidence_AcceptsMixedWidthMonthFirstNumericDate(
         string printedDate)
     {
