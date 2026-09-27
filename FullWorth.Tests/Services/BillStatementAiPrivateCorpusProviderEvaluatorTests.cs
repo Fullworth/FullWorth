@@ -145,7 +145,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 55m);
 
         var extractor =
-            new FakeAiExtractor();
+            new FakeAiExtractor(
+                inferenceCallsPerAttempt:
+                    2);
 
         var result =
             await CreateEvaluator(
@@ -203,7 +205,7 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             metrics.ProviderAttemptCount);
 
         Assert.Equal(
-            2L,
+            4L,
             result.InferenceCallCount);
 
         Assert.Equal(
@@ -911,7 +913,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
     }
 
     private sealed class FakeAiExtractor
-        : IBillStatementAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
     {
         private readonly string?
             _failWhenDocumentContains;
@@ -919,18 +922,33 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         private readonly bool
             _returnUnsupportedEvidence;
 
+        private readonly int
+            _inferenceCallsPerAttempt;
+
         public FakeAiExtractor(
             string? failWhenDocumentContains = null,
-            bool returnUnsupportedEvidence = false)
+            bool returnUnsupportedEvidence = false,
+            int inferenceCallsPerAttempt = 1)
         {
+            if (inferenceCallsPerAttempt <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(inferenceCallsPerAttempt));
+            }
+
             _failWhenDocumentContains =
                 failWhenDocumentContains;
 
             _returnUnsupportedEvidence =
                 returnUnsupportedEvidence;
+
+            _inferenceCallsPerAttempt =
+                inferenceCallsPerAttempt;
         }
 
         public int CallCount { get; private set; }
+
+        public long InferenceCallCount { get; private set; }
 
         public string? LastPromptVersion { get; private set; }
 
@@ -944,6 +962,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             cancellationToken.ThrowIfCancellationRequested();
 
             CallCount++;
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    _inferenceCallsPerAttempt);
 
             LastPromptVersion =
                 request.PromptVersion;
