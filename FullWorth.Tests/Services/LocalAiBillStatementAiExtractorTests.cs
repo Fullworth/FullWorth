@@ -49,7 +49,7 @@ public sealed class LocalAiBillStatementAiExtractorTests
     }
 
     [Fact]
-    public async Task EnabledLocalAi_UsesStrictSchemaAndBoundedDocument()
+    public async Task EnabledLocalAi_UsesStrictSchemaAndPreservesAcceptedDocument()
     {
         BillStatementAiCandidate responseCandidate =
             CreateCandidate();
@@ -74,17 +74,11 @@ public sealed class LocalAiBillStatementAiExtractorTests
                 handler,
                 options);
 
-        const string includedText =
-            "ACME Total due $10.00 USD ";
-
-        const string excludedMarker =
-            "MUST_NOT_BE_SENT";
+        const string documentEndMarker =
+            "DOCUMENT_END_MARKER";
 
         string documentText =
-            includedText.PadRight(
-                1_000,
-                'x') +
-            excludedMarker;
+            $"ACME Total due $10.00 USD {documentEndMarker}";
 
         BillStatementAiCandidate candidate =
             await extractor.ExtractAsync(
@@ -137,8 +131,8 @@ public sealed class LocalAiBillStatementAiExtractorTests
                 .GetProperty("type")
                 .GetString());
 
-        Assert.DoesNotContain(
-            excludedMarker,
+        Assert.Contains(
+            documentEndMarker,
             handler.RequestBody,
             StringComparison.Ordinal);
 
@@ -185,6 +179,52 @@ public sealed class LocalAiBillStatementAiExtractorTests
             options.ApiKey!,
             handler.RequestBody,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OversizedDocument_IsRejectedBeforeLocalModelRequest()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    throw new InvalidOperationException(
+                        "The local model must not be called."));
+
+        var options =
+            CreateEnabledOptions();
+
+        options.MaxDocumentCharacters =
+            1_000;
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            new string(
+                                'x',
+                                1_001))));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.InputTooLarge,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "input limit",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Null(
+            handler.RequestBody);
+
+        Assert.Null(
+            handler.RequestUri);
     }
 
     [Fact]
