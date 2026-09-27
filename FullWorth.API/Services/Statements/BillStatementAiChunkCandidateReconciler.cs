@@ -290,6 +290,25 @@ public sealed class BillStatementAiChunkCandidateReconciler
             var item =
                 chunkCandidates[index];
 
+            if (item is null ||
+                item.Chunk is null ||
+                item.Candidate is null ||
+                item.Chunk.Text is null)
+            {
+                errors.Add(
+                    $"Chunk {index} is missing source or candidate data.");
+
+                continue;
+            }
+
+            if (item.Chunk.Length == 0)
+            {
+                errors.Add(
+                    $"Chunk {index} has empty source text.");
+
+                continue;
+            }
+
             if (item.Chunk.Index !=
                 index)
             {
