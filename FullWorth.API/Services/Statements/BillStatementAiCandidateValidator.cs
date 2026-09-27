@@ -40,7 +40,19 @@ namespace FullWorth.API.Services.Statements
         private const decimal MaxAbsoluteMoneyValue =
             1_000_000m;
 
+        private static readonly Regex DateLikeEvidenceRegex =
+            new(
+                @"\b(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{4})\b",
+                RegexOptions.Compiled |
+                RegexOptions.CultureInvariant |
+                RegexOptions.IgnoreCase);
+
         private static readonly Regex MoneyValueRegex =
+            new(
+                @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
+                RegexOptions.Compiled |
+                RegexOptions.CultureInvariant |
+                RegexOptions.IgnoreCase);        private static readonly Regex MoneyValueRegex =
             new(
                 @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
                 RegexOptions.Compiled |
@@ -821,9 +833,18 @@ namespace FullWorth.API.Services.Statements
             var values =
                 new List<decimal>();
 
+            /*
+             * Date components are not monetary evidence. Remove complete
+             * date expressions before scanning their numeric tokens.
+             */
+            var excerptWithoutDates =
+                DateLikeEvidenceRegex.Replace(
+                    excerpt,
+                    " ");
+
             foreach (Match match in
                      MoneyValueRegex.Matches(
-                         excerpt))
+                         excerptWithoutDates))
             {
                 var numericText =
                     match.Groups["number"]
