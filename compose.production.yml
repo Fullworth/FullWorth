@@ -54,6 +54,7 @@ services:
       IdentityEmail__PublicWebBaseUrl: https://${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
       ReverseProxy__KnownProxies__0: 172.30.0.10
       StatementAi__OpenAI__Enabled: "false"
+      StatementAi__Local__Enabled: "false"
       StatementAi__Shadow__Enabled: "false"
       StatementAi__Shadow__AllowProviderCalls: "false"
     tmpfs:
