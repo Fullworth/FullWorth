@@ -272,6 +272,16 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * the trust-boundary rejection as network instability.
                  */
             }
+            catch (BillStatementAiDeterministicCandidateRejectionException)
+            {
+                /*
+                 * The model call completed, but deterministic chunk
+                 * reconciliation rejected the combined candidate. Keep this
+                 * aligned with ordinary candidate-validation rejection: it
+                 * contributes missed truth/readiness loss, not a provider
+                 * transport failure.
+                 */
+            }
             catch (BillStatementAiExtractionException exception)
             {
                 /*
