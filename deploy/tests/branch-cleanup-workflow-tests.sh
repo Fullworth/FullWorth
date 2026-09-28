@@ -27,6 +27,10 @@ grep -Fq 'contents: write' "$workflow" ||
     fail "workflow lacks the ref-deletion permission."
 grep -Fq 'pull-requests: read' "$workflow" ||
     fail "workflow cannot verify PR state."
+grep -Fq 'group: fullworth-branch-cleanup' "$workflow" ||
+    fail "cleanup runs are not serialized."
+grep -Fq 'cancel-in-progress: false' "$workflow" ||
+    fail "cleanup serialization may cancel an in-flight deletion run."
 
 grep -Fq 'master|development' "$workflow" ||
     fail "long-lived branches are not explicitly preserved."
@@ -34,21 +38,44 @@ grep -Fq 'if [[ "$protected" == "true" ]]' "$workflow" ||
     fail "protected branches are not preserved."
 grep -Fq 'state=open' "$workflow" ||
     fail "open pull requests are not checked."
-grep -Fq 'merged_at != null and .head.sha ==' "$workflow" ||
-    fail "branch head is not required to match a merged PR head exactly."
+grep -Fq 'state=closed' "$workflow" ||
+    fail "closed pull requests are not checked."
+grep -Fq 'select(.head.sha ==' "$workflow" ||
+    fail "branch head is not required to match a closed PR head exactly."
+if grep -Fq 'merged_at != null' "$workflow"; then
+    fail "closed unmerged PR branches must remain eligible for reviewed cleanup."
+fi
 
 if grep -Fq -- '--arg' "$workflow"; then
     fail "workflow uses jq flags that gh api does not support."
 fi
+grep -Fq 'delete_branch_if_present()' "$workflow" ||
+    fail "cleanup does not centralize race-safe ref deletion."
 grep -Fq 'git/refs/heads/$branch' "$workflow" ||
     fail "workflow does not delete branch refs."
+grep -Fq 'Branch already absent after concurrent cleanup' "$workflow" ||
+    fail "cleanup does not tolerate a ref removed by another cleanup run."
+grep -Fq 'Failed to delete branch that still exists' "$workflow" ||
+    fail "cleanup does not fail closed when deletion fails and the ref remains."
+grep -Fq 'repos/$REPOSITORY/branches?per_page=100' "$workflow" ||
+    fail "cleanup does not re-read branch state after a failed delete."
 
 grep -Fq 'current_sha" != "$expected_sha' "$workflow" ||
     fail "reviewed stale branches are not pinned to their reviewed SHA."
 grep -Fq 'Keeping reviewed stale branch with an open PR' "$workflow" ||
     fail "reviewed stale cleanup does not preserve newly active branches."
-grep -Fq 'feat/ui-foundation-primitives' "$workflow" &&
-    fail "unmerged reusable UI foundation work must remain preserved."
+grep -Fq 'feat/ui-foundation-primitives' "$workflow" ||
+    fail "reviewed no-PR UI branch is not listed for consolidation."
+grep -Fq '82e5d4fbc93390384f0d21cb90d91561d1d6a345' "$workflow" ||
+    fail "reviewed no-PR UI branch is not SHA-pinned for consolidation."
+grep -Fq 'ai/aggregate-inference-latency-metrics' "$workflow" ||
+    fail "reviewed no-PR AI branch is not listed for consolidation."
+grep -Fq 'e5509437220a7f96ddf2d2bee1c047cfbba8e82c' "$workflow" ||
+    fail "reviewed no-PR AI branch is not SHA-pinned for consolidation."
+grep -Fq 'security/single-use-refresh-tokens' "$workflow" ||
+    fail "reviewed no-PR security branch is not listed for consolidation."
+grep -Fq '67d3877a471d6a48d185135378c63cffc66fb054' "$workflow" ||
+    fail "reviewed no-PR security branch is not SHA-pinned for consolidation."
 
 if grep -Fq 'git push' "$workflow"; then
     fail "workflow should use the GitHub API instead of a repository push."
