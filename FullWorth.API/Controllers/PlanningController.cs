@@ -13,6 +13,7 @@ namespace FullWorth.API.Controllers;
 public sealed class PlanningController(
     PlanningSettingsService planningSettings,
     PlanningPaydayPlanService paydayPlanService,
+    PlanningBillChangeWatchService changeWatchService,
     UserManager<ApplicationUser> userManager)
     : ControllerBase
 {
@@ -207,6 +208,45 @@ public sealed class PlanningController(
     }
 
 
+    [HttpGet("upcoming-bill-changes")]
+    public async Task<ActionResult<IReadOnlyList<PlanningBillChangeWatchResponse>>>
+        GetUpcomingBillChanges(
+            CancellationToken cancellationToken = default)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var changes =
+            await changeWatchService.GetAsync(
+                userId,
+                cancellationToken);
+
+        return Ok(
+            changes
+                .Select(
+                    change =>
+                        new PlanningBillChangeWatchResponse(
+                            change.BillStreamId,
+                            change.ProviderName,
+                            change.ChangeId,
+                            change.PreviousStatementId,
+                            change.CurrentStatementId,
+                            change.BillPeriodEnd,
+                            change.BillDueDate,
+                            change.CurrencyCode,
+                            change.PreviousAmount,
+                            change.CurrentAmount,
+                            change.AmountDifference,
+                            change.AnnualizedImpact,
+                            change.Description,
+                            change.RecalculationStatus.ToString(),
+                            change.AlreadyPlanned,
+                            change.RemainingAmountToPlan))
+                .ToList());
+    }
+
     [HttpPut("payday-plans/{payrollTransactionId:guid}")]
     public async Task<ActionResult<PlanningPaydayPlanResponse>>
         PutPaydayPlan(
@@ -364,6 +404,24 @@ public sealed record PlanningBillFundingPreferenceResponse(
     Guid BillStreamId,
     int PaychecksAheadOverride);
 
+
+public sealed record PlanningBillChangeWatchResponse(
+    Guid BillStreamId,
+    string ProviderName,
+    Guid ChangeId,
+    Guid? PreviousStatementId,
+    Guid CurrentStatementId,
+    DateOnly BillPeriodEnd,
+    DateOnly? BillDueDate,
+    string? CurrencyCode,
+    decimal PreviousAmount,
+    decimal CurrentAmount,
+    decimal AmountDifference,
+    decimal AnnualizedImpact,
+    string Description,
+    string RecalculationStatus,
+    decimal? AlreadyPlanned,
+    decimal? RemainingAmountToPlan);
 
 public sealed record PlanningPaydayPlanRequest(
     DateOnly PostedDate);
