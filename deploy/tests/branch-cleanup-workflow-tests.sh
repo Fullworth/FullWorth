@@ -27,6 +27,10 @@ grep -Fq 'contents: write' "$workflow" ||
     fail "workflow lacks the ref-deletion permission."
 grep -Fq 'pull-requests: read' "$workflow" ||
     fail "workflow cannot verify PR state."
+grep -Fq 'group: fullworth-branch-cleanup' "$workflow" ||
+    fail "cleanup runs are not serialized."
+grep -Fq 'cancel-in-progress: false' "$workflow" ||
+    fail "cleanup serialization may cancel an in-flight deletion run."
 
 grep -Fq 'master|development' "$workflow" ||
     fail "long-lived branches are not explicitly preserved."
@@ -40,8 +44,16 @@ grep -Fq 'merged_at != null and .head.sha ==' "$workflow" ||
 if grep -Fq -- '--arg' "$workflow"; then
     fail "workflow uses jq flags that gh api does not support."
 fi
+grep -Fq 'delete_branch_if_present()' "$workflow" ||
+    fail "cleanup does not centralize race-safe ref deletion."
 grep -Fq 'git/refs/heads/$branch' "$workflow" ||
     fail "workflow does not delete branch refs."
+grep -Fq 'Branch already absent after concurrent cleanup' "$workflow" ||
+    fail "cleanup does not tolerate a ref removed by another cleanup run."
+grep -Fq 'Failed to delete branch that still exists' "$workflow" ||
+    fail "cleanup does not fail closed when deletion fails and the ref remains."
+grep -Fq 'repos/$REPOSITORY/branches?per_page=100' "$workflow" ||
+    fail "cleanup does not re-read branch state after a failed delete."
 
 grep -Fq 'current_sha" != "$expected_sha' "$workflow" ||
     fail "reviewed stale branches are not pinned to their reviewed SHA."
