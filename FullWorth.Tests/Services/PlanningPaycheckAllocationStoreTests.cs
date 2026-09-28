@@ -591,6 +591,207 @@ public sealed class PlanningPaycheckAllocationStoreTests
             total.PlannedAmount);
     }
 
+    [Fact]
+    public async Task SaveCompletePaycheckPlanAsync_PersistsRunAndAllocations_AndReplaysIdentically()
+    {
+        var options =
+            Options();
+
+        await using var dbContext =
+            new FullWorthDbContext(
+                options);
+
+        var store =
+            new PlanningPaycheckAllocationStore(
+                dbContext,
+                TimeProvider.System);
+
+        var userId =
+            Guid.NewGuid();
+
+        var payrollTransactionId =
+            Guid.NewGuid();
+
+        var allocations =
+            new[]
+            {
+                Draft(
+                    plannedAmount:
+                        125m)
+            };
+
+        var run =
+            new PlanningPaycheckPlanRunDraft(
+                new DateOnly(
+                    2026,
+                    9,
+                    25),
+                PaycheckAmount: 1000m,
+                CurrencyCode: " usd ",
+                RecommendedSetAside: 125m,
+                PaycheckRemainingAfterPlan: 875m,
+                Shortfall: 0m);
+
+        var first =
+            await store.SaveCompletePaycheckPlanAsync(
+                userId,
+                payrollTransactionId,
+                run,
+                allocations);
+
+        Assert.False(
+            first.WasExisting);
+
+        Assert.Equal(
+            "USD",
+            first.Run.CurrencyCode);
+
+        Assert.Equal(
+            125m,
+            Assert.Single(
+                first.Allocations)
+                .PlannedAmount);
+
+        Assert.Equal(
+            1,
+            await dbContext.PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            1,
+            await dbContext.PlanningPaycheckAllocations
+                .CountAsync());
+
+        var replay =
+            await store.SaveCompletePaycheckPlanAsync(
+                userId,
+                payrollTransactionId,
+                run,
+                allocations);
+
+        Assert.True(
+            replay.WasExisting);
+
+        Assert.Equal(
+            first.Run.Id,
+            replay.Run.Id);
+
+        Assert.Equal(
+            1,
+            await dbContext.PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            1,
+            await dbContext.PlanningPaycheckAllocations
+                .CountAsync());
+    }
+
+    [Fact]
+    public async Task SaveCompletePaycheckPlanAsync_PersistsZeroAllocationRun()
+    {
+        var options =
+            Options();
+
+        await using var dbContext =
+            new FullWorthDbContext(
+                options);
+
+        var store =
+            new PlanningPaycheckAllocationStore(
+                dbContext,
+                TimeProvider.System);
+
+        var userId =
+            Guid.NewGuid();
+
+        var payrollTransactionId =
+            Guid.NewGuid();
+
+        var saved =
+            await store.SaveCompletePaycheckPlanAsync(
+                userId,
+                payrollTransactionId,
+                new PlanningPaycheckPlanRunDraft(
+                    new DateOnly(
+                        2026,
+                        9,
+                        25),
+                    PaycheckAmount: 1000m,
+                    CurrencyCode: "USD",
+                    RecommendedSetAside: 0m,
+                    PaycheckRemainingAfterPlan: 1000m,
+                    Shortfall: 0m),
+                allocations: []);
+
+        Assert.False(
+            saved.WasExisting);
+
+        Assert.Empty(
+            saved.Allocations);
+
+        Assert.Equal(
+            1,
+            await dbContext.PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            0,
+            await dbContext.PlanningPaycheckAllocations
+                .CountAsync());
+
+        var replay =
+            await store.GetSavedPaycheckPlanAsync(
+                userId,
+                payrollTransactionId);
+
+        Assert.NotNull(
+            replay);
+
+        Assert.True(
+            replay.WasExisting);
+
+        Assert.Empty(
+            replay.Allocations);
+    }
+
+    [Fact]
+    public async Task SaveCompletePaycheckPlanAsync_RejectsAllocationTotalMismatch()
+    {
+        var options =
+            Options();
+
+        await using var dbContext =
+            new FullWorthDbContext(
+                options);
+
+        var store =
+            new PlanningPaycheckAllocationStore(
+                dbContext,
+                TimeProvider.System);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                store.SaveCompletePaycheckPlanAsync(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    new PlanningPaycheckPlanRunDraft(
+                        new DateOnly(
+                            2026,
+                            9,
+                            25),
+                        PaycheckAmount: 1000m,
+                        CurrencyCode: "USD",
+                        RecommendedSetAside: 100m,
+                        PaycheckRemainingAfterPlan: 900m,
+                        Shortfall: 0m),
+                    [
+                        Draft(
+                            plannedAmount:
+                                75m)
+                    ]));
+    }
+
     private static DbContextOptions<FullWorthDbContext> Options() =>
         new DbContextOptionsBuilder<FullWorthDbContext>()
             .UseInMemoryDatabase(
