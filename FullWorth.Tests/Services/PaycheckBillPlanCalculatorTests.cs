@@ -325,6 +325,42 @@ public sealed class PaycheckBillPlanCalculatorTests
     }
 
     [Fact]
+    public void BillDecreaseBelowAlreadyPlanned_NeedsNoAdditionalFunding()
+    {
+        var result =
+            PaycheckBillPlanCalculator.Calculate(
+                new PaycheckBillPlanRequest(
+                    AmountDue: 425m,
+                    AlreadySetAside: 500m,
+                    DueDate: new DateOnly(2026, 11, 20),
+                    CurrentPayDate: new DateOnly(2026, 10, 23),
+                    PaychecksAhead: 3,
+                    Schedule: new PayScheduleDefinition(
+                        PayScheduleFrequency.Biweekly,
+                        new DateOnly(2026, 10, 23))));
+
+        Assert.Equal(
+            BillFundingWindowStatus.FullyPlanned,
+            result.Status);
+
+        Assert.Equal(
+            425m,
+            result.AmountDue);
+
+        Assert.Equal(
+            500m,
+            result.AlreadySetAside);
+
+        Assert.Equal(
+            0m,
+            result.RemainingAmount);
+
+        Assert.Equal(
+            0m,
+            result.RecommendedSetAsideFromCurrentPaycheck);
+    }
+
+    [Fact]
     public void RejectsFractionsOfCent()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
