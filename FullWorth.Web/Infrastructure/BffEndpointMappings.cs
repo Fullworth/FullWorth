@@ -83,6 +83,11 @@ public static class BffEndpointMappings
         });
         bff.MapGet("/planning/upcoming-bill-changes", async (HttpContext context, FullWorthBffProxyService proxy) =>
             await proxy.ForwardGetAsync(context, "/api/planning/upcoming-bill-changes", context.RequestAborted));
+        bff.MapGet("/planning/payday-plans/recent", async (HttpContext context, FullWorthBffProxyService proxy, int? take) =>
+            await proxy.ForwardGetAsync(
+                context,
+                $"/api/planning/payday-plans/recent?take={Math.Clamp(take ?? 3, 1, 20)}",
+                context.RequestAborted));
 
         bff.MapPost("/bill-monitoring/refresh", async (HttpContext context, IAntiforgery antiforgery, FullWorthBffProxyService proxy) =>
         {
