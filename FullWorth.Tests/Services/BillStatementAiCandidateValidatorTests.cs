@@ -165,6 +165,316 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void StringEvidence_RejectsValueThatIsOnlyPartOfAnotherWord()
+    {
+        const string documentText =
+            "MIDCO total due $104.99";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                ProviderName =
+                    "MID",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.ProviderName,
+                            "MIDCO")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StringEvidence_AcceptsWholeValueInsideLongerExcerpt()
+    {
+        const string documentText =
+            "Internet service $20.00";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                PlanOrService =
+                    "Internet",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.PlanOrService,
+                            "Internet service $20.00")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Fact]
+    public void MoneyEvidence_DoesNotTreatDateYearAsAmount()
+    {
+        const string documentText =
+            "Statement date September 20, 2026";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                TotalDue =
+                    2026m,
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.TotalDue,
+                            "Statement date September 20, 2026")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Due Sep 20 2026")]
+    [InlineData("Due Sept 20 2026")]
+    [InlineData("Due September 20 2026")]
+    public void DateEvidence_AcceptsMonthFirstDateWithoutComma(
+        string documentText)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        20),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Theory]
+    [InlineData("9/02/2026")]
+    [InlineData("09/2/2026")]
+    [InlineData("9-02-2026")]
+    [InlineData("09-2-2026")]
+    [InlineData("9.2.2026")]
+    [InlineData("09.02.2026")]
+    [InlineData("9.02.2026")]
+    [InlineData("09.2.2026")]
+    public void DateEvidence_AcceptsMixedWidthMonthFirstNumericDate(
+        string printedDate)
+    {
+        var documentText =
+            $"Due {printedDate}";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        2),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Theory]
+    [InlineData("Due Sep 02 2026")]
+    [InlineData("Due September 02, 2026")]
+    [InlineData("Due 02 Sep 2026")]
+    [InlineData("Due Sept 02 2026")]
+    [InlineData("Due 02 Sept 2026")]
+    public void DateEvidence_AcceptsPaddedDayInMonthNameFormats(
+        string documentText)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        2),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Theory]
+    [InlineData("2026/9/2")]
+    [InlineData("2026/09/02")]
+    [InlineData("2026.9.2")]
+    [InlineData("2026.09.02")]
+    [InlineData("2026-9-2")]
+    public void DateEvidence_AcceptsYearFirstDateWithAlternateSeparators(
+        string printedDate)
+    {
+        var documentText =
+            $"Due {printedDate}";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        2),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            documentText)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Fact]
+    public void DateEvidence_RejectsDateEmbeddedInLongerDigits()
+    {
+        const string documentText =
+            "Due September 20, 20260";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                DueDate =
+                    new DateOnly(
+                        2026,
+                        9,
+                        20),
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.DueDate,
+                            "September 20, 20260")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    "does not contain the extracted value",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void InventedEvidence_IsRejected()
     {
         const string documentText =
@@ -333,6 +643,39 @@ public sealed class BillStatementAiCandidateValidatorTests
     }
 
     [Fact]
+    public void AccountSuffixEvidence_AcceptsSuffixOfLongerAccountNumber()
+    {
+        const string documentText =
+            "Account number 1234567890123456";
+
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                AccountIdentifierSuffix =
+                    "3456",
+
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.AccountIdentifierSuffix,
+                            "Account number 1234567890123456")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    documentText,
+                    candidate);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(
+                Environment.NewLine,
+                result.Errors));
+    }
+
+    [Fact]
     public void FullAccountNumberLikeValue_IsRejected()
     {
         const string documentText =
@@ -409,6 +752,110 @@ public sealed class BillStatementAiCandidateValidatorTests
             error =>
                 error.Contains(
                     "invalid monetary value",
+                    StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("", "does not contain a source excerpt")]
+    [InlineData("unrelated", "was not found in the source document")]
+    public void KnownFactKeyErrors_UseEvidenceOrdinal(
+        string sourceExcerpt,
+        string expectedError)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.TotalDue,
+                            sourceExcerpt)
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error =>
+                error.Contains(
+                    $"Evidence item 0 {expectedError}",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void LongKnownFactEvidence_UsesEvidenceOrdinal()
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            BillStatementAiFactKeys.TotalDue,
+                            new string(
+                                'x',
+                                501))
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            "Evidence item 0 is too long.",
+            result.Errors);
+    }
+
+    [Theory]
+    [InlineData("Private account 1234567890123456")]
+    [InlineData("lineItems[0].amount")]
+    public void UnsupportedFactKey_IsRejectedWithoutEchoingInput(
+        string untrustedFactKey)
+    {
+        var candidate =
+            CreateEmptyCandidate() with
+            {
+                Evidence =
+                    [
+                        new BillStatementAiEvidence(
+                            untrustedFactKey,
+                            "Statement total due $42.00")
+                    ]
+            };
+
+        var result =
+            new BillStatementAiCandidateValidator()
+                .Validate(
+                    "Statement total due $42.00",
+                    candidate);
+
+        Assert.False(
+            result.IsValid);
+
+        Assert.Contains(
+            "Evidence item 0 has an unsupported fact key.",
+            result.Errors);
+
+        Assert.All(
+            result.Errors,
+            error =>
+                Assert.DoesNotContain(
+                    untrustedFactKey,
+                    error,
                     StringComparison.Ordinal));
     }
 

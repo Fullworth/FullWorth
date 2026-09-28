@@ -11,7 +11,8 @@
  * - requires explicit authorization before any provider call
  * - validates every selected corpus case before any provider call
  * - requires the existing aggregate coverage gate to pass first
- * - makes at most one provider call per selected case
+ * - makes one extractor/provider attempt per selected case in this evaluator mode
+ * - reports aggregate inference-call count separately from statement attempts
  * - validates model output through FullWorth's deterministic trust boundary
  * - treats rejected AI candidates as unusable rather than trusted facts
  * - stores nothing
@@ -42,6 +43,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
     private readonly BillStatementAiGroundTruthScorer
         _groundTruthScorer;
+
+    private readonly BillStatementAiChunkedExtractionCoordinator
+        _chunkedExtractionCoordinator;
 
     public BillStatementAiPrivateCorpusProviderEvaluator(
         BillStatementAiPrivateCorpusLoader loader,
@@ -79,6 +83,13 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         _groundTruthScorer =
             groundTruthScorer;
+
+        _chunkedExtractionCoordinator =
+            new BillStatementAiChunkedExtractionCoordinator(
+                _aiExtractor,
+                new BillStatementAiDocumentChunker(),
+                new BillStatementAiChunkCandidateReconciler(
+                    new BillStatementAiCandidateValidator()));
     }
 
     public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
@@ -88,7 +99,8 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             string promptVersion,
             bool providerCallsAuthorized,
             BillStatementAiShadowReadinessPolicy readinessPolicy,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            int? maxCharactersPerInference = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(
             corpusRootDirectory);
@@ -101,6 +113,14 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         ArgumentNullException.ThrowIfNull(
             readinessPolicy);
+
+        if (maxCharactersPerInference is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCharactersPerInference),
+                maxCharactersPerInference,
+                "Maximum characters per inference must be positive when configured.");
+        }
 
         ValidateCaseIds(
             caseIds);
@@ -128,23 +148,94 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
          * from consuming provider spend for the cases that happened to come
          * before it.
          */
-        var corpusCases =
-            new List<BillStatementAiPrivateCorpusCase>(
-                caseIds.Count);
+        var corpusSnapshot =
+            await _loader.LoadSnapshotAsync(
+                corpusRootDirectory,
+                caseIds,
+                cancellationToken);
 
-        foreach (var caseId in
-                 caseIds)
+        return await EvaluateLoadedCasesAsync(
+            corpusSnapshot,
+            promptVersion,
+            providerCallsAuthorized,
+            readinessPolicy,
+            cancellationToken,
+            maxCharactersPerInference);
+    }
+
+    public async Task<BillStatementAiPrivateCorpusProviderEvaluationResult>
+        EvaluateLoadedCasesAsync(
+            BillStatementAiPrivateCorpusSnapshot corpusSnapshot,
+            string promptVersion,
+            bool providerCallsAuthorized,
+            BillStatementAiShadowReadinessPolicy readinessPolicy,
+            CancellationToken cancellationToken = default,
+            int? maxCharactersPerInference = null)
+    {
+        ArgumentNullException.ThrowIfNull(
+            corpusSnapshot);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            promptVersion);
+
+        ArgumentNullException.ThrowIfNull(
+            readinessPolicy);
+
+        if (maxCharactersPerInference is <= 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCharactersPerInference),
+                maxCharactersPerInference,
+                "Maximum characters per inference must be positive when configured.");
+        }
 
-            var corpusCase =
-                await _loader.LoadAsync(
-                    corpusRootDirectory,
-                    caseId,
-                    cancellationToken);
+        if (!providerCallsAuthorized)
+        {
+            throw new InvalidOperationException(
+                "Offline AI provider evaluation requires explicit provider-call authorization.");
+        }
 
-            corpusCases.Add(
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var corpusCases =
+            corpusSnapshot.Cases.ToArray();
+
+        if (corpusCases.Length is < 1 or > MaxCasesPerRun)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(corpusSnapshot),
+                $"An offline provider evaluation requires between 1 and {MaxCasesPerRun} cases.");
+        }
+
+        var seenCaseIds =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var corpusCase in
+                 corpusCases)
+        {
+            ArgumentNullException.ThrowIfNull(
                 corpusCase);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.CaseId);
+
+            if (!seenCaseIds.Add(
+                    corpusCase.CaseId))
+            {
+                throw new ArgumentException(
+                    "Private corpus case identifiers must be unique.",
+                    nameof(corpusCases));
+            }
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                corpusCase.ProviderKey);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedStatement);
+
+            ArgumentNullException.ThrowIfNull(
+                corpusCase.ExpectedLineItems);
         }
 
         var coverageSummary =
@@ -175,7 +266,37 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
 
         var observations =
             new List<BillStatementAiGroundTruthObservation>(
-                corpusCases.Count);
+                corpusCases.Length);
+
+        var providerAttemptDurationsMilliseconds =
+            new List<double>(
+                corpusCases.Length);
+
+        var providerFailureKinds =
+            new Dictionary<
+                BillStatementAiExtractionFailureKind,
+                long>();
+
+        var inferenceCallCounter =
+            _aiExtractor as
+                IBillStatementAiInferenceCallCounter;
+
+        var inferenceCallBaseline =
+            inferenceCallCounter?
+                .InferenceCallCount ??
+            0L;
+
+        long extractorAttemptCount =
+            0;
+
+        long multiInferenceStatementCount =
+            0;
+
+        long maximumInferenceCallsPerStatement =
+            0;
+
+        long chunkedExtractionRejectedStatementCount =
+            0;
 
         foreach (var corpusCase in
                  corpusCases)
@@ -188,6 +309,18 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             var providerFailed =
                 false;
 
+            var providerAttemptStarted =
+                global::System.Diagnostics.Stopwatch
+                    .GetTimestamp();
+
+            var caseInferenceBaseline =
+                inferenceCallCounter?
+                    .InferenceCallCount ??
+                0L;
+
+            var caseExtractorAttemptBaseline =
+                extractorAttemptCount;
+
             try
             {
                 /*
@@ -196,23 +329,58 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * The purpose of this evaluation is to measure the extractor,
                  * not help it by leaking approved answers into its context.
                  */
-                var candidate =
-                    await _aiExtractor.ExtractAsync(
-                        new BillStatementAiExtractionRequest(
-                            DocumentText:
-                                corpusCase.StatementText,
+                extractorAttemptCount =
+                    checked(
+                        extractorAttemptCount +
+                        1);
 
-                            Hints:
-                                new BillStatementExtractionHints(
-                                    ExpectedProviderName:
-                                        null,
+                var request =
+                    new BillStatementAiExtractionRequest(
+                        DocumentText:
+                            corpusCase.StatementText,
 
-                                    ExpectedCategory:
-                                        null),
+                        Hints:
+                            new BillStatementExtractionHints(
+                                ExpectedProviderName:
+                                    null,
 
-                            PromptVersion:
-                                promptVersion),
-                        cancellationToken);
+                                ExpectedCategory:
+                                    null),
+
+                        PromptVersion:
+                            promptVersion);
+
+                BillStatementAiCandidate? candidate;
+
+                if (maxCharactersPerInference.HasValue)
+                {
+                    var chunkedResult =
+                        await _chunkedExtractionCoordinator
+                            .ExtractAsync(
+                                request,
+                                maxCharactersPerInference.Value,
+                                cancellationToken);
+
+                    if (!chunkedResult.IsAccepted)
+                    {
+                        chunkedExtractionRejectedStatementCount =
+                            checked(
+                                chunkedExtractionRejectedStatementCount +
+                                1);
+                    }
+
+                    candidate =
+                        chunkedResult.IsAccepted
+                            ? chunkedResult.Candidate
+                            : null;
+                }
+                else
+                {
+                    candidate =
+                        await _aiExtractor.ExtractAsync(
+                            request,
+                            cancellationToken);
+                }
 
                 /*
                  * A provider response is still untrusted candidate data.
@@ -220,16 +388,23 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * It must pass FullWorth's existing deterministic evidence
                  * and candidate validation boundary before it may count as
                  * an extraction result in the evaluation.
+                 *
+                 * Deterministic chunk reconciliation rejection is deliberately
+                 * treated like any other rejected candidate: missed truth,
+                 * not a provider transport failure.
                  */
-                var conversion =
-                    _conversionService.Convert(
-                        corpusCase.StatementText,
-                        candidate);
-
-                if (conversion.IsAccepted)
+                if (candidate is not null)
                 {
-                    extraction =
-                        conversion.Extraction;
+                    var conversion =
+                        _conversionService.Convert(
+                            corpusCase.StatementText,
+                            candidate);
+
+                    if (conversion.IsAccepted)
+                    {
+                        extraction =
+                            conversion.Extraction;
+                    }
                 }
 
                 /*
@@ -241,16 +416,52 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
                  * the trust-boundary rejection as network instability.
                  */
             }
-            catch (BillStatementAiExtractionException)
+            catch (BillStatementAiExtractionException exception)
             {
                 /*
                  * Provider-specific failure details are intentionally dropped.
                  *
-                 * They must not become part of corpus output, logs, or
-                 * persistent evaluation data through this offline evaluator.
+                 * Only the coarse, vendor-neutral FailureKind is retained for
+                 * aggregate diagnostics. Messages and inner exceptions never
+                 * enter the evaluation result.
                  */
                 providerFailed =
                     true;
+
+                providerFailureKinds[
+                    exception.FailureKind] =
+                    providerFailureKinds.GetValueOrDefault(
+                        exception.FailureKind) +
+                    1;
+            }
+            finally
+            {
+                providerAttemptDurationsMilliseconds.Add(
+                    global::System.Diagnostics.Stopwatch
+                        .GetElapsedTime(
+                            providerAttemptStarted)
+                        .TotalMilliseconds);
+
+                var caseInferenceCalls =
+                    GetInferenceCallCount(
+                        inferenceCallCounter,
+                        caseInferenceBaseline,
+                        extractorAttemptCount -
+                            caseExtractorAttemptBaseline);
+
+                if (caseInferenceCalls >
+                    1)
+                {
+                    multiInferenceStatementCount =
+                        checked(
+                            multiInferenceStatementCount +
+                            1);
+                }
+
+                maximumInferenceCallsPerStatement =
+                    Math.Max(
+                        maximumInferenceCallsPerStatement,
+                        caseInferenceCalls);
             }
 
             observations.Add(
@@ -295,12 +506,84 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluator
             _groundTruthScorer.Score(
                 observations);
 
+        var fieldScores =
+            _groundTruthScorer.ScoreFields(
+                observations);
+
+        var providerScores =
+            _groundTruthScorer.ScoreProviders(
+                observations);
+
+        var providerFieldScores =
+            _groundTruthScorer.ScoreProviderFields(
+                observations);
+
+        var inferenceCallCount =
+            GetInferenceCallCount(
+                inferenceCallCounter,
+                inferenceCallBaseline,
+                extractorAttemptCount);
+
+        var providerAttemptLatency =
+            BillStatementAiProviderAttemptLatencySummary
+                .Create(
+                    providerAttemptDurationsMilliseconds);
+
+        var failureKindCounts =
+            providerFailureKinds
+                .OrderBy(
+                    pair =>
+                        pair.Key)
+                .Select(
+                    pair =>
+                        new BillStatementAiExtractionFailureCount(
+                            FailureKind:
+                                pair.Key,
+
+                            Count:
+                                pair.Value))
+                .ToArray();
+
         return
             BillStatementAiPrivateCorpusProviderEvaluationResult
                 .Completed(
                     coverageSummary,
                     coverageDecision,
-                    metrics);
+                    metrics,
+                    fieldScores,
+                    providerScores,
+                    providerFieldScores,
+                    inferenceCallCount,
+                    multiInferenceStatementCount,
+                    maximumInferenceCallsPerStatement,
+                    chunkedExtractionRejectedStatementCount,
+                    providerAttemptLatency,
+                    failureKindCounts);
+    }
+
+    private static long GetInferenceCallCount(
+        IBillStatementAiInferenceCallCounter? inferenceCallCounter,
+        long inferenceCallBaseline,
+        long extractorAttemptCount)
+    {
+        if (inferenceCallCounter is null)
+        {
+            return extractorAttemptCount;
+        }
+
+        var currentCount =
+            inferenceCallCounter.InferenceCallCount;
+
+        if (currentCount <
+            inferenceCallBaseline)
+        {
+            throw new InvalidOperationException(
+                "The aggregate inference-call counter moved backwards during evaluation.");
+        }
+
+        return checked(
+            currentCount -
+            inferenceCallBaseline);
     }
 
     private static void ValidateCaseIds(
@@ -392,7 +675,16 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
     bool ProviderEvaluationStarted,
     BillStatementAiPrivateCorpusCatalogSummary Coverage,
     BillStatementAiPrivateCorpusCoverageDecision CoverageDecision,
-    BillStatementAiShadowReadinessMetrics? Metrics)
+    BillStatementAiShadowReadinessMetrics? Metrics,
+    IReadOnlyList<BillStatementAiFieldScore>? FieldScores,
+    IReadOnlyList<BillStatementAiProviderScore>? ProviderScores,
+    IReadOnlyList<BillStatementAiProviderFieldScore>? ProviderFieldScores,
+    long? InferenceCallCount,
+    long? MultiInferenceStatementCount,
+    long? MaximumInferenceCallsPerStatement,
+    long? ChunkedExtractionRejectedStatementCount,
+    BillStatementAiProviderAttemptLatencySummary? ProviderAttemptLatency,
+    IReadOnlyList<BillStatementAiExtractionFailureCount>? FailureKindCounts)
 {
     public bool MayEnableRuntimeShadowMode =>
         false;
@@ -422,6 +714,33 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 coverageDecision,
 
             Metrics:
+                null,
+
+            FieldScores:
+                null,
+
+            ProviderScores:
+                null,
+
+            ProviderFieldScores:
+                null,
+
+            InferenceCallCount:
+                null,
+
+            MultiInferenceStatementCount:
+                null,
+
+            MaximumInferenceCallsPerStatement:
+                null,
+
+            ChunkedExtractionRejectedStatementCount:
+                null,
+
+            ProviderAttemptLatency:
+                null,
+
+            FailureKindCounts:
                 null);
     }
 
@@ -429,7 +748,16 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
         Completed(
             BillStatementAiPrivateCorpusCatalogSummary coverage,
             BillStatementAiPrivateCorpusCoverageDecision coverageDecision,
-            BillStatementAiShadowReadinessMetrics metrics)
+            BillStatementAiShadowReadinessMetrics metrics,
+            IReadOnlyList<BillStatementAiFieldScore> fieldScores,
+            IReadOnlyList<BillStatementAiProviderScore> providerScores,
+            IReadOnlyList<BillStatementAiProviderFieldScore> providerFieldScores,
+            long inferenceCallCount,
+            long multiInferenceStatementCount,
+            long maximumInferenceCallsPerStatement,
+            long chunkedExtractionRejectedStatementCount,
+            BillStatementAiProviderAttemptLatencySummary providerAttemptLatency,
+            IReadOnlyList<BillStatementAiExtractionFailureCount> failureKindCounts)
     {
         ArgumentNullException.ThrowIfNull(
             coverage);
@@ -440,12 +768,218 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
         ArgumentNullException.ThrowIfNull(
             metrics);
 
+        ArgumentNullException.ThrowIfNull(
+            fieldScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerFieldScores);
+
+        ArgumentNullException.ThrowIfNull(
+            providerAttemptLatency);
+
+        ArgumentNullException.ThrowIfNull(
+            failureKindCounts);
+
+        if (fieldScores.Count !=
+            BillStatementAiGroundTruthFieldKeys.All.Count)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires the fixed field-score set.",
+                nameof(fieldScores));
+        }
+
         if (!coverageDecision
                 .MayBeginOfflineProviderEvaluation)
         {
             throw new ArgumentException(
                 "A completed provider evaluation requires a passing corpus coverage decision.",
                 nameof(coverageDecision));
+        }
+
+        if (providerScores.Count !=
+            coverage.DistinctProviderCount)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires one anonymous provider score per covered provider.",
+                nameof(providerScores));
+        }
+
+        if (providerFieldScores.Count !=
+            providerScores.Count)
+        {
+            throw new ArgumentException(
+                "A completed provider evaluation requires field scores for every anonymous provider.",
+                nameof(providerFieldScores));
+        }
+
+        var expectedOrdinal =
+            1;
+
+        foreach (var providerScore in
+                 providerScores)
+        {
+            ArgumentNullException.ThrowIfNull(
+                providerScore);
+
+            if (providerScore.ProviderOrdinal !=
+                    expectedOrdinal ||
+                providerScore.StatementCount <=
+                    0 ||
+                providerScore.ProviderAttemptCount <
+                    0 ||
+                providerScore.ProviderFailureCount <
+                    0 ||
+                providerScore.ReadyCandidateStatementCount <
+                    0 ||
+                providerScore.CorrectFactCount <
+                    0 ||
+                providerScore.IncorrectFactCount <
+                    0 ||
+                providerScore.MissedFactCount <
+                    0 ||
+                providerScore.ProviderAttemptCount >
+                    providerScore.StatementCount ||
+                providerScore.ProviderFailureCount >
+                    providerScore.ProviderAttemptCount ||
+                providerScore.ReadyCandidateStatementCount >
+                    providerScore.ProviderAttemptCount)
+            {
+                throw new ArgumentException(
+                    "Completed provider evaluation contains an invalid anonymous provider score.",
+                    nameof(providerScores));
+            }
+
+            expectedOrdinal++;
+        }
+
+        if (providerScores.Sum(
+                    score =>
+                        score.StatementCount) !=
+                metrics.EvaluatedStatementCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ProviderAttemptCount) !=
+                metrics.ProviderAttemptCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ProviderFailureCount) !=
+                metrics.ProviderFailureCount ||
+            providerScores.Sum(
+                    score =>
+                        score.ReadyCandidateStatementCount) !=
+                metrics.ReadyCandidateStatementCount ||
+            providerScores.Sum(
+                    score =>
+                        score.CorrectFactCount) !=
+                metrics.CorrectFactCount ||
+            providerScores.Sum(
+                    score =>
+                        score.IncorrectFactCount) !=
+                metrics.IncorrectFactCount ||
+            providerScores.Sum(
+                    score =>
+                        score.MissedFactCount) !=
+                metrics.MissedFactCount)
+        {
+            throw new ArgumentException(
+                "Anonymous provider scores do not reconcile with aggregate evaluation metrics.",
+                nameof(providerScores));
+        }
+
+        if (inferenceCallCount <
+            0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(inferenceCallCount),
+                "Inference-call count cannot be negative.");
+        }
+
+        if (multiInferenceStatementCount <
+                0 ||
+            multiInferenceStatementCount >
+                metrics.ProviderAttemptCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(multiInferenceStatementCount),
+                "Multi-inference statement count must fit within provider attempts.");
+        }
+
+        if (maximumInferenceCallsPerStatement <
+                0 ||
+            maximumInferenceCallsPerStatement >
+                inferenceCallCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumInferenceCallsPerStatement),
+                "Maximum inference calls per statement must fit within aggregate inference calls.");
+        }
+
+        if (chunkedExtractionRejectedStatementCount <
+                0 ||
+            chunkedExtractionRejectedStatementCount >
+                metrics.ProviderAttemptCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(chunkedExtractionRejectedStatementCount),
+                "Chunked extraction rejection count must fit within provider attempts.");
+        }
+
+        if (providerAttemptLatency.AttemptCount !=
+                metrics.ProviderAttemptCount ||
+            providerAttemptLatency.MinimumMilliseconds <
+                0d ||
+            providerAttemptLatency.MeanMilliseconds <
+                providerAttemptLatency.MinimumMilliseconds ||
+            providerAttemptLatency.P50Milliseconds <
+                providerAttemptLatency.MinimumMilliseconds ||
+            providerAttemptLatency.P95Milliseconds <
+                providerAttemptLatency.P50Milliseconds ||
+            providerAttemptLatency.MaximumMilliseconds <
+                providerAttemptLatency.P95Milliseconds)
+        {
+            throw new ArgumentException(
+                "Provider-attempt latency summary does not reconcile with the completed evaluation.",
+                nameof(providerAttemptLatency));
+        }
+
+        var seenFailureKinds =
+            new HashSet<
+                BillStatementAiExtractionFailureKind>();
+
+        long classifiedFailureCount =
+            0;
+
+        foreach (var failureKindCount in
+                 failureKindCounts)
+        {
+            ArgumentNullException.ThrowIfNull(
+                failureKindCount);
+
+            if (!Enum.IsDefined(
+                    failureKindCount.FailureKind) ||
+                !seenFailureKinds.Add(
+                    failureKindCount.FailureKind) ||
+                failureKindCount.Count <=
+                    0)
+            {
+                throw new ArgumentException(
+                    "Provider failure-kind counts contain an invalid or duplicate category.",
+                    nameof(failureKindCounts));
+            }
+
+            classifiedFailureCount +=
+                failureKindCount.Count;
+        }
+
+        if (classifiedFailureCount !=
+            metrics.ProviderFailureCount)
+        {
+            throw new ArgumentException(
+                "Provider failure-kind counts do not reconcile with aggregate provider failures.",
+                nameof(failureKindCounts));
         }
 
         return new BillStatementAiPrivateCorpusProviderEvaluationResult(
@@ -459,6 +993,119 @@ public sealed record BillStatementAiPrivateCorpusProviderEvaluationResult(
                 coverageDecision,
 
             Metrics:
-                metrics);
+                metrics,
+
+            FieldScores:
+                fieldScores,
+
+            ProviderScores:
+                providerScores,
+
+            ProviderFieldScores:
+                providerFieldScores,
+
+            InferenceCallCount:
+                inferenceCallCount,
+
+            MultiInferenceStatementCount:
+                multiInferenceStatementCount,
+
+            MaximumInferenceCallsPerStatement:
+                maximumInferenceCallsPerStatement,
+
+            ChunkedExtractionRejectedStatementCount:
+                chunkedExtractionRejectedStatementCount,
+
+            ProviderAttemptLatency:
+                providerAttemptLatency,
+
+            FailureKindCounts:
+                failureKindCounts);
+    }
+}
+
+public sealed record BillStatementAiExtractionFailureCount(
+    BillStatementAiExtractionFailureKind FailureKind,
+    long Count);
+
+public sealed record BillStatementAiProviderAttemptLatencySummary(
+    long AttemptCount,
+    double MinimumMilliseconds,
+    double MeanMilliseconds,
+    double P50Milliseconds,
+    double P95Milliseconds,
+    double MaximumMilliseconds)
+{
+    public static BillStatementAiProviderAttemptLatencySummary Create(
+        IReadOnlyList<double> durationsMilliseconds)
+    {
+        ArgumentNullException.ThrowIfNull(
+            durationsMilliseconds);
+
+        if (durationsMilliseconds.Count ==
+            0)
+        {
+            throw new ArgumentException(
+                "At least one provider-attempt duration is required.",
+                nameof(durationsMilliseconds));
+        }
+
+        if (durationsMilliseconds.Any(
+                duration =>
+                    duration <
+                        0d ||
+                    double.IsNaN(
+                        duration) ||
+                    double.IsInfinity(
+                        duration)))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(durationsMilliseconds),
+                "Provider-attempt durations must be finite and non-negative.");
+        }
+
+        var ordered =
+            durationsMilliseconds
+                .Order()
+                .ToArray();
+
+        return new BillStatementAiProviderAttemptLatencySummary(
+            AttemptCount:
+                ordered.LongLength,
+
+            MinimumMilliseconds:
+                ordered[0],
+
+            MeanMilliseconds:
+                ordered.Average(),
+
+            P50Milliseconds:
+                Percentile(
+                    ordered,
+                    0.50d),
+
+            P95Milliseconds:
+                Percentile(
+                    ordered,
+                    0.95d),
+
+            MaximumMilliseconds:
+                ordered[^1]);
+    }
+
+    private static double Percentile(
+        IReadOnlyList<double> ordered,
+        double percentile)
+    {
+        var rank =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    ordered.Count *
+                    percentile));
+
+        return ordered[
+            rank -
+            1];
     }
 }

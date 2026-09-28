@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using System.Net;
 using FullWorth.API.Authorization;
@@ -12,6 +13,7 @@ using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Plaid;
+using FullWorth.API.Services.Planning;
 using FullWorth.API.Services.Statements;
 using FullWorth.API.Services.Subscriptions;
 using FullWorth.Core.Services;
@@ -263,6 +265,9 @@ builder.Services.AddSingleton<
 
 builder.Services.AddSingleton(
     TimeProvider.System);
+
+builder.Services.AddScoped<
+    PlanningSettingsService>();
 
 builder.Services.AddSingleton<
     SubscriptionAccessKeyGenerator>();
@@ -605,6 +610,10 @@ builder.Services.AddScoped<
     PlaidBankTransactionDiscoveryGateway>();
 
 builder.Services.AddScoped<
+    IPlanningPostedPayrollFactsGateway,
+    PlaidPlanningPostedPayrollFactsGateway>();
+
+builder.Services.AddScoped<
     IBillTransactionAssociationGateway,
     BillTransactionAssociationGateway>();
 
@@ -637,6 +646,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IBillStatementHistoryReadGateway,
     BillStatementHistoryReadGateway>();
+
+builder.Services.AddScoped<
+    IBillPlanningFactsGateway,
+    StatementBillPlanningFactsGateway>();
 
 builder.Services.AddScoped<
     IBillAlertReconciliationGateway,
@@ -720,15 +733,15 @@ builder.Services.AddSingleton<
     BillStatementAiCandidateConversionService>();
 
 builder.Services
-    .AddOptions<OpenAiBillStatementOptions>()
+    .AddOptions<LocalAiBillStatementOptions>()
     .Bind(
         builder.Configuration.GetSection(
-            OpenAiBillStatementOptions.SectionName))
+            LocalAiBillStatementOptions.SectionName))
     .ValidateOnStart();
 
 builder.Services.AddSingleton<
-    IValidateOptions<OpenAiBillStatementOptions>,
-    OpenAiBillStatementOptionsValidator>();
+    IValidateOptions<LocalAiBillStatementOptions>,
+    LocalAiBillStatementOptionsValidator>();
 
 builder.Services
     .AddOptions<BillStatementAiShadowOptions>()
@@ -742,15 +755,13 @@ builder.Services.AddSingleton<
     BillStatementAiShadowOptionsValidator>();
 
 /*
- * OpenAiBillStatementAiExtractor owns its request timeout with a linked
- * cancellation token.
- *
- * Disable HttpClient's independent 100-second timeout so two unrelated
- * timeout mechanisms cannot race each other and produce an unsanitized
- * cancellation path.
+ * The local extractor is intentionally limited by its validated configuration
+ * to a loopback llama.cpp-compatible endpoint. HttpClient does not own a
+ * separate timeout; the extractor links the caller token with its bounded
+ * inference timeout and sanitizes transport/model failures.
  */
 builder.Services.AddHttpClient<
-    OpenAiBillStatementAiExtractor>(
+    LocalAiBillStatementAiExtractor>(
     client =>
     {
         client.Timeout =
@@ -761,7 +772,7 @@ builder.Services.AddTransient<
     IBillStatementAiExtractor>(
     serviceProvider =>
         serviceProvider.GetRequiredService<
-            OpenAiBillStatementAiExtractor>());
+            LocalAiBillStatementAiExtractor>());
 
 builder.Services.AddSingleton<
     BillStatementValidationService>();
@@ -813,6 +824,52 @@ if (useForwardedHeaders)
 {
     app.UseForwardedHeaders();
 }
+
+/*
+ * Every request receives a server-generated correlation identifier.
+ *
+ * Do not accept a client-supplied request ID as authoritative: attacker-
+ * controlled correlation values could inject misleading log context or carry
+ * user data into telemetry. The fixed 128-bit value is safe to show to users
+ * and operators and is also used as the ASP.NET Core TraceIdentifier.
+ *
+ * Register this before exception handling so the same logging scope covers
+ * downstream failures and the generated error response.
+ */
+app.Use(
+    async (
+        context,
+        next) =>
+    {
+        var requestId =
+            Convert.ToHexString(
+                    RandomNumberGenerator.GetBytes(
+                        16))
+                .ToLowerInvariant();
+
+        context.TraceIdentifier =
+            requestId;
+
+        context.Response.OnStarting(
+            () =>
+            {
+                context.Response.Headers[
+                    "X-FullWorth-Request-Id"] =
+                    requestId;
+
+                return Task.CompletedTask;
+            });
+
+        using var requestScope =
+            app.Logger.BeginScope(
+                new Dictionary<string, object?>
+                {
+                    ["FullWorthRequestId"] =
+                        requestId
+                });
+
+        await next();
+    });
 
 if (app.Environment.IsDevelopment())
 {

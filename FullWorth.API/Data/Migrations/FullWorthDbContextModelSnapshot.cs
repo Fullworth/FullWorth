@@ -844,6 +844,86 @@ namespace FullWorth.API.Data.Migrations
                     b.ToTable("PlaidLinkSessions", (string)null);
                 });
 
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningBillFundingPreferenceEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BillStreamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PaychecksAheadOverride")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "UserId");
+
+                    b.HasIndex("UserId", "BillStreamId")
+                        .IsUnique();
+
+                    b.ToTable("PlanningBillFundingPreferences", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningBillFundingPreferences_PaychecksAheadOverride", "\"PaychecksAheadOverride\" IS NULL OR (\"PaychecksAheadOverride\" >= 1 AND \"PaychecksAheadOverride\" <= 26)");
+                        });
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPayScheduleEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("AnchorPayDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DefaultPaychecksAhead")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("SecondaryDayOfMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "UserId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PlanningPaySchedules", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningPaySchedules_Frequency", "\"Frequency\" IN ('Weekly', 'Biweekly', 'SemiMonthly', 'Monthly')");
+
+                            t.HasCheckConstraint("CK_PlanningPaySchedules_DefaultPaychecksAhead", "\"DefaultPaychecksAhead\" >= 1 AND \"DefaultPaychecksAhead\" <= 26");
+
+                            t.HasCheckConstraint("CK_PlanningPaySchedules_SecondaryDay", "(\"Frequency\" = 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NOT NULL AND \"SecondaryDayOfMonth\" >= 1 AND \"SecondaryDayOfMonth\" <= 31 AND \"SecondaryDayOfMonth\" <> EXTRACT(DAY FROM \"AnchorPayDate\")::integer) OR (\"Frequency\" <> 'SemiMonthly' AND \"SecondaryDayOfMonth\" IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("FullWorth.API.Data.Entities.SubscriptionAccessKeyEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1469,6 +1549,28 @@ namespace FullWorth.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("BankConnection");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningBillFundingPreferenceEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPayScheduleEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

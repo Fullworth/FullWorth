@@ -1,0 +1,821 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using FullWorth.API.Services.Statements;
+using Microsoft.Extensions.Options;
+
+namespace FullWorth.Tests.Services;
+
+public sealed class LocalAiBillStatementAiExtractorTests
+{
+    [Fact]
+    public async Task DisabledLocalAi_FailsWithoutSendingRequest()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    throw new InvalidOperationException(
+                        "The local model must not be called."));
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                new LocalAiBillStatementOptions
+                {
+                    Enabled =
+                        false
+                });
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "Total due $10.00")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Disabled,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "disabled",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Null(handler.RequestBody);
+    }
+
+    [Fact]
+    public async Task EnabledLocalAi_UsesStrictSchemaAndPreservesAcceptedDocument()
+    {
+        BillStatementAiCandidate responseCandidate =
+            CreateCandidate();
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    CreateModelResponse(
+                        responseCandidate));
+
+        var options =
+            CreateEnabledOptions();
+
+        options.ApiKey =
+            "local-test-key-not-a-secret";
+
+        options.MaxDocumentCharacters =
+            1_000;
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        const string documentEndMarker =
+            "DOCUMENT_END_MARKER";
+
+        string documentText =
+            $"ACME Total due $10.00 USD {documentEndMarker}";
+
+        BillStatementAiCandidate candidate =
+            await extractor.ExtractAsync(
+                CreateRequest(
+                    documentText));
+
+        Assert.Equal(
+            "ACME",
+            candidate.ProviderName);
+
+        Assert.NotNull(handler.RequestBody);
+
+        using JsonDocument requestJson =
+            JsonDocument.Parse(
+                handler.RequestBody);
+
+        JsonElement root =
+            requestJson.RootElement;
+
+        Assert.False(
+            root.GetProperty("stream")
+                .GetBoolean());
+
+        Assert.Equal(
+            0,
+            root.GetProperty("temperature")
+                .GetInt32());
+
+        JsonElement responseFormat =
+            root.GetProperty(
+                "response_format");
+
+        Assert.Equal(
+            "json_schema",
+            responseFormat
+                .GetProperty("type")
+                .GetString());
+
+        Assert.True(
+            responseFormat
+                .GetProperty("json_schema")
+                .GetProperty("strict")
+                .GetBoolean());
+
+        Assert.Equal(
+            "object",
+            responseFormat
+                .GetProperty("json_schema")
+                .GetProperty("schema")
+                .GetProperty("type")
+                .GetString());
+
+        Assert.Contains(
+            documentEndMarker,
+            handler.RequestBody,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            options.PromptVersion,
+            handler.RequestBody,
+            StringComparison.Ordinal);
+
+        JsonElement systemMessage =
+            root.GetProperty("messages")[0];
+
+        string systemInstructions =
+            systemMessage.GetProperty("content").GetString()!;
+
+        Assert.Contains(
+            "total amount due from current-period charges",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "previous balance, payments, credits",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "printed amount and sign",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "Do not calculate or reconcile totals",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal(
+            new Uri(options.Endpoint),
+            handler.RequestUri);
+
+        Assert.Equal(
+            $"Bearer {options.ApiKey}",
+            handler.Authorization);
+
+        Assert.DoesNotContain(
+            options.ApiKey!,
+            handler.RequestBody,
+            StringComparison.Ordinal);
+
+        Assert.Equal(
+            1L,
+            extractor.InferenceCallCount);
+    }
+
+    [Fact]
+    public async Task OversizedDocument_IsRejectedBeforeLocalModelRequest()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    throw new InvalidOperationException(
+                        "The local model must not be called."));
+
+        var options =
+            CreateEnabledOptions();
+
+        options.MaxDocumentCharacters =
+            1_000;
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            new string(
+                                'x',
+                                1_001))));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.InputTooLarge,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "input limit",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Null(
+            handler.RequestBody);
+
+        Assert.Null(
+            handler.RequestUri);
+
+        Assert.Equal(
+            0L,
+            extractor.InferenceCallCount);
+    }
+
+    [Fact]
+    public async Task PromptVersion1_PreservesBaselineInstructions()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    CreateModelResponse(
+                        CreateCandidate()));
+
+        var options =
+            CreateEnabledOptions();
+
+        options.PromptVersion =
+            LocalAiBillStatementPromptCatalog.Version1;
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                options);
+
+        await extractor.ExtractAsync(
+            CreateRequest(
+                "ACME Total due $10.00 USD",
+                LocalAiBillStatementPromptCatalog.Version1));
+
+        Assert.NotNull(
+            handler.RequestBody);
+
+        using JsonDocument requestJson =
+            JsonDocument.Parse(
+                handler.RequestBody);
+
+        string systemInstructions =
+            requestJson.RootElement
+                .GetProperty("messages")[0]
+                .GetProperty("content")
+                .GetString()!;
+
+        Assert.Contains(
+            "Return account suffixes only, never full account numbers. Do not",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            "calculate, reconcile, or invent amounts.",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "total amount due from current-period charges",
+            systemInstructions,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains(
+            LocalAiBillStatementPromptCatalog.Version1,
+            systemInstructions,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Options_RejectUnsupportedPromptVersion()
+    {
+        var validator =
+            new LocalAiBillStatementOptionsValidator();
+
+        var result =
+            validator.Validate(
+                null,
+                new LocalAiBillStatementOptions
+                {
+                    Enabled =
+                        true,
+
+                    PromptVersion =
+                        "bill-statement-extraction-unknown"
+                });
+
+        Assert.True(
+            result.Failed);
+
+        Assert.Contains(
+            result.Failures!,
+            failure =>
+                failure.Contains(
+                    "PromptVersion must be one of",
+                    StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HttpFailure_DoesNotExposeModelResponseBody()
+    {
+        const string sensitiveModelBody =
+            "local-model-internal-detail";
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    new HttpResponseMessage(
+                        HttpStatusCode.BadRequest)
+                    {
+                        Content =
+                            new StringContent(
+                                sensitiveModelBody)
+                    });
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.HttpStatus,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "HTTP 400",
+            exception.Message,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            sensitiveModelBody,
+            exception.ToString(),
+            StringComparison.Ordinal);
+
+        Assert.Equal(
+            1L,
+            extractor.InferenceCallCount);
+    }
+
+    [Fact]
+    public async Task IncompleteGeneration_IsRejected()
+    {
+        var response =
+            new JsonObject
+            {
+                ["choices"] =
+                    new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["finish_reason"] =
+                                "length",
+
+                            ["message"] =
+                                new JsonObject
+                                {
+                                    ["role"] =
+                                        "assistant",
+
+                                    ["content"] =
+                                        "{}"
+                                }
+                        }
+                    }
+            };
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    new HttpResponseMessage(
+                        HttpStatusCode.OK)
+                    {
+                        Content =
+                            new StringContent(
+                                response.ToJsonString(),
+                                Encoding.UTF8,
+                                "application/json")
+                    });
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.IncompleteResponse,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "did not complete",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "length",
+            exception.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task OversizedResponse_IsRejectedBeforeParsing()
+    {
+        var content =
+            new ByteArrayContent(
+                [123, 125]);
+
+        content.Headers.ContentLength =
+            1_048_577;
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    new HttpResponseMessage(
+                        HttpStatusCode.OK)
+                    {
+                        Content =
+                            content
+                    });
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.OversizedResponse,
+            exception.FailureKind);
+
+        Assert.Contains(
+            "oversized",
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InvalidStructuredOutput_IsClassifiedWithoutEchoingModelContent()
+    {
+        const string invalidCandidate =
+            "not-valid-json-sensitive-model-content";
+
+        var response =
+            new JsonObject
+            {
+                ["choices"] =
+                    new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["finish_reason"] =
+                                "stop",
+
+                            ["message"] =
+                                new JsonObject
+                                {
+                                    ["role"] =
+                                        "assistant",
+
+                                    ["content"] =
+                                        invalidCandidate
+                                }
+                        }
+                    }
+            };
+
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    new HttpResponseMessage(
+                        HttpStatusCode.OK)
+                    {
+                        Content =
+                            new StringContent(
+                                response.ToJsonString(),
+                                Encoding.UTF8,
+                                "application/json")
+                    });
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.InvalidStructuredOutput,
+            exception.FailureKind);
+
+        Assert.DoesNotContain(
+            invalidCandidate,
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TransportFailure_IsClassified()
+    {
+        var handler =
+            new RecordingHandler(
+                _ =>
+                    throw new HttpRequestException(
+                        "transport-detail-not-for-aggregate-output"));
+
+        var extractor =
+            CreateExtractor(
+                handler,
+                CreateEnabledOptions());
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiExtractionException>(
+                () =>
+                    extractor.ExtractAsync(
+                        CreateRequest(
+                            "ACME Total due $10.00 USD")));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Transport,
+            exception.FailureKind);
+
+        Assert.Equal(
+            "Local AI statement extraction could not reach the local model.",
+            exception.Message);
+    }
+
+    [Theory]
+    [InlineData(
+        "https://example.com/v1/chat/completions")]
+    [InlineData(
+        "http://192.168.1.50:8080/v1/chat/completions")]
+    [InlineData(
+        "http://127.0.0.1:8080/completion")]
+    public void Options_RejectNonLoopbackOrWrongPath(
+        string endpoint)
+    {
+        var validator =
+            new LocalAiBillStatementOptionsValidator();
+
+        var result =
+            validator.Validate(
+                null,
+                new LocalAiBillStatementOptions
+                {
+                    Enabled =
+                        true,
+
+                    Endpoint =
+                        endpoint
+                });
+
+        Assert.True(result.Failed);
+    }
+
+    [Theory]
+    [InlineData(
+        "http://127.0.0.1:8080/v1/chat/completions")]
+    [InlineData(
+        "http://localhost:8080/v1/chat/completions")]
+    [InlineData(
+        "https://localhost:8443/v1/chat/completions")]
+    public void Options_AcceptLoopbackChatCompletionsEndpoint(
+        string endpoint)
+    {
+        var validator =
+            new LocalAiBillStatementOptionsValidator();
+
+        var result =
+            validator.Validate(
+                null,
+                new LocalAiBillStatementOptions
+                {
+                    Enabled =
+                        true,
+
+                    Endpoint =
+                        endpoint
+                });
+
+        Assert.False(result.Failed);
+    }
+
+    private static LocalAiBillStatementAiExtractor CreateExtractor(
+        HttpMessageHandler handler,
+        LocalAiBillStatementOptions options)
+    {
+        return new LocalAiBillStatementAiExtractor(
+            new HttpClient(handler),
+            Options.Create(options));
+    }
+
+    private static LocalAiBillStatementOptions CreateEnabledOptions()
+    {
+        return new LocalAiBillStatementOptions
+        {
+            Enabled =
+                true
+        };
+    }
+
+    private static BillStatementAiExtractionRequest CreateRequest(
+        string documentText,
+        string promptVersion =
+            LocalAiBillStatementPromptCatalog.CurrentVersion)
+    {
+        return new BillStatementAiExtractionRequest(
+            DocumentText:
+                documentText,
+
+            Hints:
+                new BillStatementExtractionHints(
+                    ExpectedProviderName:
+                        "ACME",
+
+                    ExpectedCategory:
+                        "Internet"),
+
+            PromptVersion:
+                promptVersion);
+    }
+
+    private static BillStatementAiCandidate CreateCandidate()
+    {
+        return new BillStatementAiCandidate(
+            ProviderName:
+                "ACME",
+
+            AccountIdentifierSuffix:
+                null,
+
+            BillingPeriodStart:
+                null,
+
+            BillingPeriodEnd:
+                null,
+
+            StatementDate:
+                null,
+
+            DueDate:
+                null,
+
+            PreviousBalance:
+                null,
+
+            Payments:
+                null,
+
+            CurrentCharges:
+                null,
+
+            TotalDue:
+                10m,
+
+            CurrencyCode:
+                "USD",
+
+            PlanOrService:
+                null,
+
+            UsageSummary:
+                null,
+
+            LineItems:
+                [],
+
+            Evidence:
+                [
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.ProviderName,
+                        "ACME"),
+
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.TotalDue,
+                        "Total due $10.00"),
+
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.CurrencyCode,
+                        "USD")
+                ],
+
+            ModelConfidence:
+                BillStatementAiModelConfidence.High);
+    }
+
+    private static HttpResponseMessage CreateModelResponse(
+        BillStatementAiCandidate candidate)
+    {
+        var serializerOptions =
+            new JsonSerializerOptions(
+                JsonSerializerDefaults.Web);
+
+        serializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
+
+        string candidateJson =
+            JsonSerializer.Serialize(
+                candidate,
+                serializerOptions);
+
+        var response =
+            new JsonObject
+            {
+                ["choices"] =
+                    new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["finish_reason"] =
+                                "stop",
+
+                            ["message"] =
+                                new JsonObject
+                                {
+                                    ["role"] =
+                                        "assistant",
+
+                                    ["content"] =
+                                        candidateJson
+                                }
+                        }
+                    }
+            };
+
+        return new HttpResponseMessage(
+            HttpStatusCode.OK)
+        {
+            Content =
+                new StringContent(
+                    response.ToJsonString(),
+                    Encoding.UTF8,
+                    "application/json")
+        };
+    }
+
+    private sealed class RecordingHandler(
+        Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+        : HttpMessageHandler
+    {
+        public string? RequestBody { get; private set; }
+
+        public Uri? RequestUri { get; private set; }
+
+        public string? Authorization { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUri =
+                request.RequestUri;
+
+            RequestBody =
+                request.Content is null
+                    ? null
+                    : await request.Content.ReadAsStringAsync(
+                        cancellationToken);
+
+            Authorization =
+                request.Headers.Authorization?.ToString();
+
+            return responseFactory(request);
+        }
+    }
+}

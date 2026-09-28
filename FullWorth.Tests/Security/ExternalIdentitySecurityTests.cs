@@ -333,6 +333,24 @@ public sealed class ExternalIdentitySecurityTests
             HttpStatusCode.BadRequest,
             response.StatusCode);
 
+        var publicBody =
+            await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            "FullWorth could not create this account.",
+            publicBody,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "already exists",
+            publicBody,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            existingSession.Email,
+            publicBody,
+            StringComparison.OrdinalIgnoreCase);
+
         await using var scope =
             factory.Services.CreateAsyncScope();
 
@@ -351,6 +369,166 @@ public sealed class ExternalIdentitySecurityTests
         Assert.Empty(
             await userManager.GetLoginsAsync(
                 existingUser!));
+    }
+
+    [Fact]
+    public async Task ExternalRegister_ExistingLinkedIdentityUsesGenericPublicFailure()
+    {
+        const string email =
+            "existing-linked-external@fullworth.local";
+
+        const string subject =
+            "google-subject-linked-existing";
+
+        using var factory =
+            FullWorthApiFactory.WithExternalIdentityValidator(
+                new FixedExternalIdentityTokenValidator(
+                    new ExternalIdentity(
+                        ExternalIdentityProviders.Google,
+                        subject,
+                        email,
+                        EmailVerified:
+                            true)));
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        var existingSession =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                client,
+                email:
+                    email);
+
+        await using (
+            var scope =
+                factory.Services.CreateAsyncScope())
+        {
+            var userManager =
+                scope.ServiceProvider
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
+
+            var user =
+                await userManager.FindByEmailAsync(
+                    existingSession.Email);
+
+            Assert.NotNull(
+                user);
+
+            var addLoginResult =
+                await userManager.AddLoginAsync(
+                    user!,
+                    new UserLoginInfo(
+                        ExternalIdentityProviders.Google,
+                        subject,
+                        "Google"));
+
+            Assert.True(
+                addLoginResult.Succeeded);
+        }
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/register",
+                new
+                {
+                    provider =
+                        ExternalIdentityProviders.Google,
+
+                    idToken =
+                        "valid-test-token",
+
+                    password =
+                        TestPassword,
+
+                    acceptedTermsAndPrivacy =
+                        true,
+
+                    legalTermsVersion =
+                        FullWorthLegalDocuments.CurrentVersion
+                });
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        var publicBody =
+            await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            "FullWorth could not create this account.",
+            publicBody,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "already exists",
+            publicBody,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            email,
+            publicBody,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            subject,
+            publicBody,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExternalRegister_NonDuplicatePasswordFailureRemainsActionable()
+    {
+        using var factory =
+            FullWorthApiFactory.WithExternalIdentityValidator(
+                new FixedExternalIdentityTokenValidator(
+                    new ExternalIdentity(
+                        ExternalIdentityProviders.Google,
+                        "google-subject-weak-password",
+                        "external-weak-password@fullworth.local",
+                        EmailVerified:
+                            true)));
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var response =
+            await client.PostAsJsonAsync(
+                "/api/auth/external/register",
+                new
+                {
+                    provider =
+                        ExternalIdentityProviders.Google,
+
+                    idToken =
+                        "valid-test-token",
+
+                    password =
+                        "short",
+
+                    acceptedTermsAndPrivacy =
+                        true,
+
+                    legalTermsVersion =
+                        FullWorthLegalDocuments.CurrentVersion
+                });
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        var publicBody =
+            await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            "PasswordTooShort",
+            publicBody,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "ExternalRegistration",
+            publicBody,
+            StringComparison.Ordinal);
     }
 
     [Fact]

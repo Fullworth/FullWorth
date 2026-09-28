@@ -24,6 +24,8 @@ owners = {
     "BillChanges": "Statements",
     "BillStatementUploads": "Statements",
     "BillStatementAiEvaluations": "Statements",
+    "PlanningPaySchedules": "Planning",
+    "PlanningBillFundingPreferences": "Planning",
     "SubscriptionEntitlements": "Subscriptions",
     "UserProgramMemberships": "Subscriptions",
     "SubscriptionAccessKeys": "Subscriptions",
@@ -34,7 +36,7 @@ owners = {
     "UserRoles": "Identity",
 }
 
-modules = {"Accounts", "Admin", "Bills", "Plaid", "Statements", "Subscriptions"}
+modules = {"Accounts", "Admin", "Bills", "Plaid", "Planning", "Statements", "Subscriptions"}
 
 entity_owners = {
     "BillStreamEntity": "Bills",
@@ -48,6 +50,8 @@ entity_owners = {
     "BillChangeEntity": "Statements",
     "BillStatementUploadEntity": "Statements",
     "BillStatementAiEvaluationEntity": "Statements",
+    "PlanningPayScheduleEntity": "Planning",
+    "PlanningBillFundingPreferenceEntity": "Planning",
     "SubscriptionEntitlementEntity": "Subscriptions",
     "UserProgramMembershipEntity": "Subscriptions",
     "SubscriptionAccessKeyEntity": "Subscriptions",

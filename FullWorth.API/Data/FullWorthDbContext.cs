@@ -51,6 +51,12 @@ public sealed class FullWorthDbContext
     public DbSet<BillStatementAiEvaluationEntity> BillStatementAiEvaluations =>
         Set<BillStatementAiEvaluationEntity>();
 
+    public DbSet<PlanningPayScheduleEntity> PlanningPaySchedules =>
+        Set<PlanningPayScheduleEntity>();
+
+    public DbSet<PlanningBillFundingPreferenceEntity> PlanningBillFundingPreferences =>
+        Set<PlanningBillFundingPreferenceEntity>();
+
     public DbSet<PlaidLinkSessionEntity> PlaidLinkSessions =>
         Set<PlaidLinkSessionEntity>();
 

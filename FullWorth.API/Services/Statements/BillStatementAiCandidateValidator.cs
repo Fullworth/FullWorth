@@ -40,6 +40,13 @@ namespace FullWorth.API.Services.Statements
         private const decimal MaxAbsoluteMoneyValue =
             1_000_000m;
 
+        private static readonly Regex DateLikeEvidenceRegex =
+            new(
+                @"\b(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{4})\b",
+                RegexOptions.Compiled |
+                RegexOptions.CultureInvariant |
+                RegexOptions.IgnoreCase);
+
         private static readonly Regex MoneyValueRegex =
             new(
                 @"(?<open>\()?\s*(?<signBefore>[+-])?\s*(?:(?:USD|CAD|EUR|GBP)\s*)?[$€£]?\s*(?<signAfter>[+-])?\s*(?<number>\d[\d,]*(?:\.\d+)?)\s*(?<close>\))?",
@@ -328,11 +335,21 @@ namespace FullWorth.API.Services.Statements
                     continue;
                 }
 
+                if (!IsSupportedEvidenceFactKey(
+                        factKey,
+                        candidate.LineItems?.Count ?? 0))
+                {
+                    errors.Add(
+                        $"Evidence item {index} has an unsupported fact key.");
+
+                    continue;
+                }
+
                 if (string.IsNullOrWhiteSpace(
                         sourceExcerpt))
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' does not contain a source excerpt.");
+                        $"Evidence item {index} does not contain a source excerpt.");
 
                     continue;
                 }
@@ -341,7 +358,7 @@ namespace FullWorth.API.Services.Statements
                     MaxEvidenceExcerptLength)
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' is too long.");
+                        $"Evidence item {index} is too long.");
 
                     continue;
                 }
@@ -361,7 +378,7 @@ namespace FullWorth.API.Services.Statements
                         StringComparison.OrdinalIgnoreCase))
                 {
                     errors.Add(
-                        $"Evidence for '{factKey}' was not found in the source document.");
+                        $"Evidence item {index} was not found in the source document.");
 
                     continue;
                 }
@@ -392,7 +409,8 @@ namespace FullWorth.API.Services.Statements
                 candidate.AccountIdentifierSuffix,
                 BillStatementAiFactKeys.AccountIdentifierSuffix,
                 evidenceByFact,
-                errors);
+                errors,
+                allowAccountSuffix: true);
 
             RequireDateEvidence(
                 candidate.BillingPeriodStart,
@@ -496,6 +514,52 @@ namespace FullWorth.API.Services.Statements
             }
         }
 
+        private static bool IsSupportedEvidenceFactKey(
+            string factKey,
+            int lineItemCount)
+        {
+            if (factKey is
+                BillStatementAiFactKeys.ProviderName or
+                BillStatementAiFactKeys.AccountIdentifierSuffix or
+                BillStatementAiFactKeys.BillingPeriodStart or
+                BillStatementAiFactKeys.BillingPeriodEnd or
+                BillStatementAiFactKeys.StatementDate or
+                BillStatementAiFactKeys.DueDate or
+                BillStatementAiFactKeys.PreviousBalance or
+                BillStatementAiFactKeys.Payments or
+                BillStatementAiFactKeys.CurrentCharges or
+                BillStatementAiFactKeys.TotalDue or
+                BillStatementAiFactKeys.CurrencyCode or
+                BillStatementAiFactKeys.PlanOrService or
+                BillStatementAiFactKeys.UsageSummary)
+            {
+                return true;
+            }
+
+            for (var index = 0;
+                 index < Math.Min(
+                     lineItemCount,
+                     MaxLineItems);
+                 index++)
+            {
+                if (string.Equals(
+                        factKey,
+                        BillStatementAiFactKeys.LineItemDescription(
+                            index),
+                        StringComparison.Ordinal) ||
+                    string.Equals(
+                        factKey,
+                        BillStatementAiFactKeys.LineItemAmount(
+                            index),
+                        StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void ValidateOptionalLength(
             string? value,
             string fieldName,
@@ -538,7 +602,8 @@ namespace FullWorth.API.Services.Statements
             string? value,
             string factKey,
             IReadOnlyDictionary<string, List<string>> evidenceByFact,
-            ICollection<string> errors)
+            ICollection<string> errors,
+            bool allowAccountSuffix = false)
         {
             if (string.IsNullOrWhiteSpace(
                     value))
@@ -546,15 +611,132 @@ namespace FullWorth.API.Services.Statements
                 return;
             }
 
+            var normalizedValue =
+                NormalizeEvidenceText(
+                    value);
+
             RequireEvidenceValue(
                 factKey,
                 evidenceByFact,
                 excerpt =>
-                    excerpt.Contains(
-                        NormalizeEvidenceText(
-                            value),
-                        StringComparison.OrdinalIgnoreCase),
+                    ContainsWholeEvidenceValue(
+                        excerpt,
+                        normalizedValue) ||
+                    allowAccountSuffix &&
+                    ContainsAccountSuffixEvidence(
+                        excerpt,
+                        normalizedValue),
                 errors);
+        }
+
+        private static bool ContainsWholeEvidenceValue(
+            string excerpt,
+            string normalizedValue)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedValue))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedValue,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedValue.Length;
+
+                var hasWholeLeadingBoundary =
+                    index ==
+                        0 ||
+                    !char.IsLetterOrDigit(
+                        excerpt[index - 1]);
+
+                var hasWholeTrailingBoundary =
+                    endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]);
+
+                if (hasWholeLeadingBoundary &&
+                    hasWholeTrailingBoundary)
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
+        }
+
+        private static bool ContainsAccountSuffixEvidence(
+            string excerpt,
+            string normalizedSuffix)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    normalizedSuffix) ||
+                normalizedSuffix.Any(
+                    character =>
+                        !char.IsLetterOrDigit(
+                            character)))
+            {
+                return false;
+            }
+
+            var searchStart =
+                0;
+
+            while (searchStart <
+                   excerpt.Length)
+            {
+                var index =
+                    excerpt.IndexOf(
+                        normalizedSuffix,
+                        searchStart,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (index <
+                    0)
+                {
+                    return false;
+                }
+
+                var endIndex =
+                    index +
+                    normalizedSuffix.Length;
+
+                if (endIndex ==
+                        excerpt.Length ||
+                    !char.IsLetterOrDigit(
+                        excerpt[endIndex]))
+                {
+                    return true;
+                }
+
+                searchStart =
+                    index +
+                    1;
+            }
+
+            return false;
         }
 
         private static bool IsOutsideMoneyRange(
@@ -582,7 +764,7 @@ namespace FullWorth.API.Services.Statements
             }
 
             var supportedRepresentations =
-                new[]
+                new List<string>
                 {
                     value.Value.ToString(
                         "yyyy-MM-dd",
@@ -597,11 +779,43 @@ namespace FullWorth.API.Services.Statements
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
+                        "M/dd/yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM/d/yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
                         "M-d-yyyy",
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
                         "MM-dd-yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "M-dd-yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM-d-yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "M.d.yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM.dd.yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "M.dd.yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MM.d.yyyy",
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
@@ -613,13 +827,127 @@ namespace FullWorth.API.Services.Statements
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
+                        "MMMM d yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMM d yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
                         "d MMMM yyyy",
                         CultureInfo.InvariantCulture),
 
                     value.Value.ToString(
                         "d MMM yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMMM dd, yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMM dd, yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMMM dd yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "MMM dd yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "dd MMMM yyyy",
+                        CultureInfo.InvariantCulture),
+
+                    value.Value.ToString(
+                        "dd MMM yyyy",
                         CultureInfo.InvariantCulture)
                 };
+
+            /*
+             * The lexical date recognizer accepts year-first slash and dot
+             * forms, including single-digit month/day components. Match those
+             * full dates as values too, so valid evidence is not rejected.
+             */
+            var year =
+                value.Value.Year.ToString(
+                    "D4",
+                    CultureInfo.InvariantCulture);
+
+            var shortMonth =
+                value.Value.Month.ToString(
+                    CultureInfo.InvariantCulture);
+
+            var paddedMonth =
+                value.Value.Month.ToString(
+                    "D2",
+                    CultureInfo.InvariantCulture);
+
+            var shortDay =
+                value.Value.Day.ToString(
+                    CultureInfo.InvariantCulture);
+
+            var paddedDay =
+                value.Value.Day.ToString(
+                    "D2",
+                    CultureInfo.InvariantCulture);
+
+            foreach (var separator in
+                     new[]
+                     {
+                         '-',
+                         '/',
+                         '.'
+                     })
+            {
+                supportedRepresentations.Add(
+                    $"{year}{separator}{shortMonth}{separator}{shortDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{shortMonth}{separator}{paddedDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{paddedMonth}{separator}{shortDay}");
+
+                supportedRepresentations.Add(
+                    $"{year}{separator}{paddedMonth}{separator}{paddedDay}");
+            }
+
+            /*
+             * "Sept" is a common English abbreviation that DateOnly's
+             * invariant "MMM" format does not emit ("Sep"). The evidence
+             * recognizer already accepts both, so keep deterministic value
+             * matching consistent with that grammar.
+             */
+            if (value.Value.Month ==
+                9)
+            {
+                supportedRepresentations.Add(
+                    $"Sept {value.Value.Day}, {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"Sept {value.Value.Day} {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"{value.Value.Day} Sept {value.Value.Year}");
+
+                var paddedSeptDay =
+                    value.Value.Day.ToString(
+                        "D2",
+                        CultureInfo.InvariantCulture);
+
+                supportedRepresentations.Add(
+                    $"Sept {paddedSeptDay}, {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"Sept {paddedSeptDay} {value.Value.Year}");
+
+                supportedRepresentations.Add(
+                    $"{paddedSeptDay} Sept {value.Value.Year}");
+            }
 
             RequireEvidenceValue(
                 factKey,
@@ -627,9 +955,9 @@ namespace FullWorth.API.Services.Statements
                 excerpt =>
                     supportedRepresentations.Any(
                         representation =>
-                            excerpt.Contains(
-                                representation,
-                                StringComparison.OrdinalIgnoreCase)),
+                            ContainsWholeEvidenceValue(
+                                excerpt,
+                                representation)),
                 errors);
         }
 
@@ -702,9 +1030,18 @@ namespace FullWorth.API.Services.Statements
             var values =
                 new List<decimal>();
 
+            /*
+             * Date components are not monetary evidence. Remove complete
+             * date expressions before scanning their numeric tokens.
+             */
+            var excerptWithoutDates =
+                DateLikeEvidenceRegex.Replace(
+                    excerpt,
+                    " ");
+
             foreach (Match match in
                      MoneyValueRegex.Matches(
-                         excerpt))
+                         excerptWithoutDates))
             {
                 var numericText =
                     match.Groups["number"]

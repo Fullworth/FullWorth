@@ -116,6 +116,64 @@ public sealed class BillStatementDeterministicPrivateCorpusEvaluatorTests
                         ]));
     }
 
+    [Fact]
+    public async Task LoadedBaseline_UsesPreflightStatementAndLabelsAfterFilesChange()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-001",
+            """
+            Total Due: $104.99
+            Billing Period: 08/01/2026 - 08/31/2026
+            """,
+            totalAmount:
+                104.99m,
+            billingPeriodStart:
+                "2026-08-01",
+            billingPeriodEnd:
+                "2026-08-31");
+
+        var selection =
+            await new BillStatementAiPrivateCorpusCatalogInspector(
+                new BillStatementAiPrivateCorpusLoader())
+                .InspectAndSelectAsync(
+                    directory.Path);
+
+        var evaluator =
+            CreateEvaluator();
+
+        var expected =
+            await evaluator.EvaluateLoadedCasesAsync(
+                selection.Snapshot);
+
+        File.WriteAllText(
+            System.IO.Path.Combine(
+                directory.Path,
+                "case-001",
+                BillStatementAiPrivateCorpusPathPolicy.StatementTextFileName),
+            "Changed after preflight");
+
+        File.WriteAllText(
+            System.IO.Path.Combine(
+                directory.Path,
+                "case-001",
+                BillStatementAiPrivateCorpusPathPolicy.GroundTruthFileName),
+            "{}");
+
+        var actual =
+            await evaluator.EvaluateLoadedCasesAsync(
+                selection.Snapshot);
+
+        Assert.Equal(
+            expected,
+            actual);
+
+        Assert.True(
+            actual.CorrectFactCount > 0);
+    }
+
     private static BillStatementDeterministicPrivateCorpusEvaluator
         CreateEvaluator()
     {

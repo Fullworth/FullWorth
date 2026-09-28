@@ -40,6 +40,60 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
     }
 
     [Fact]
+    public async Task EvaluateLoadedCases_UsesTheValidatedInMemorySnapshot()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId: "provider-a-001",
+            providerKey: "provider-a",
+            totalAmount: 104.99m);
+        directory.WriteCase(
+            caseId: "provider-b-001",
+            providerKey: "provider-b",
+            totalAmount: 55m);
+
+        var loader =
+            new BillStatementAiPrivateCorpusLoader();
+        var snapshot =
+            await loader.LoadSnapshotAsync(
+                directory.Path,
+                [
+                    "provider-a-001",
+                    "provider-b-001"
+                ]);
+
+        // Simulate source changes between paired prompt runs. The second run
+        // must keep using the already-validated statement and labels.
+        directory.WriteCase(
+            caseId: "provider-a-001",
+            providerKey: "provider-a",
+            totalAmount: 999m);
+        directory.WriteCase(
+            caseId: "provider-b-001",
+            providerKey: "provider-b",
+            totalAmount: 888m);
+
+        var extractor =
+            new FakeAiExtractor();
+
+        var result =
+            await CreateEvaluator(extractor)
+                .EvaluateLoadedCasesAsync(
+                    snapshot,
+                    promptVersion: "offline-test-v1",
+                    providerCallsAuthorized: true,
+                    readinessPolicy: CreateReadinessPolicy());
+
+        Assert.True(result.ProviderEvaluationStarted);
+        Assert.Equal(2, extractor.CallCount);
+        Assert.Equal(0, result.Metrics!.ProviderFailureCount);
+        Assert.Equal(2, result.Metrics.EvaluatedStatementCount);
+        Assert.Equal(8, result.Metrics.CorrectFactCount);
+    }
+
+    [Fact]
     public async Task Evaluate_RejectsInsufficientCoverageBeforeProviderCall()
     {
         using var directory =
@@ -86,6 +140,33 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Null(
             result.Metrics);
 
+        Assert.Null(
+            result.FieldScores);
+
+        Assert.Null(
+            result.ProviderScores);
+
+        Assert.Null(
+            result.ProviderFieldScores);
+
+        Assert.Null(
+            result.InferenceCallCount);
+
+        Assert.Null(
+            result.MultiInferenceStatementCount);
+
+        Assert.Null(
+            result.MaximumInferenceCallsPerStatement);
+
+        Assert.Null(
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.Null(
+            result.ProviderAttemptLatency);
+
+        Assert.Null(
+            result.FailureKindCounts);
+
         Assert.False(
             result.CoverageDecision
                 .MayBeginOfflineProviderEvaluation);
@@ -127,7 +208,9 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 55m);
 
         var extractor =
-            new FakeAiExtractor();
+            new FakeAiExtractor(
+                inferenceCallsPerAttempt:
+                    2);
 
         var result =
             await CreateEvaluator(
@@ -185,6 +268,22 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             metrics.ProviderAttemptCount);
 
         Assert.Equal(
+            4L,
+            result.InferenceCallCount);
+
+        Assert.Equal(
+            2L,
+            result.MultiInferenceStatementCount);
+
+        Assert.Equal(
+            2L,
+            result.MaximumInferenceCallsPerStatement);
+
+        Assert.Equal(
+            0L,
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.Equal(
             0,
             metrics.ProviderFailureCount);
 
@@ -215,6 +314,301 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             0,
             metrics.FalseAlertStatementCount);
+
+        var fieldScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiFieldScore>>(
+                result.FieldScores);
+
+        Assert.Equal(
+            BillStatementAiGroundTruthFieldKeys.All,
+            fieldScores.Select(
+                field =>
+                    field.FieldKey));
+
+        Assert.Equal(
+            metrics.CorrectFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Correct));
+
+        Assert.Equal(
+            metrics.IncorrectFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Incorrect));
+
+        Assert.Equal(
+            metrics.MissedFactCount,
+            fieldScores.Sum(
+                field =>
+                    field.Missed));
+
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.Equal(
+            2,
+            providerScores.Count);
+
+        var providerFieldScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderFieldScore>>(
+                result.ProviderFieldScores);
+
+        Assert.Equal(
+            providerScores.Count,
+            providerFieldScores.Count);
+
+        for (var index = 0;
+             index < providerScores.Count;
+             index++)
+        {
+            Assert.Equal(
+                providerScores[index].ProviderOrdinal,
+                providerFieldScores[index].ProviderOrdinal);
+
+            Assert.Equal(
+                BillStatementAiGroundTruthFieldKeys.All,
+                providerFieldScores[index].FieldScores.Select(
+                    field =>
+                        field.FieldKey));
+
+            Assert.Equal(
+                providerScores[index].CorrectFactCount,
+                providerFieldScores[index].FieldScores.Sum(
+                    field =>
+                        field.Correct));
+
+            Assert.Equal(
+                providerScores[index].MissedFactCount,
+                providerFieldScores[index].FieldScores.Sum(
+                    field =>
+                        field.Missed));
+        }
+
+        var serializedProviderFields =
+            System.Text.Json.JsonSerializer.Serialize(
+                providerFieldScores);
+
+        Assert.DoesNotContain(
+            "provider-a",
+            serializedProviderFields,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "provider-b",
+            serializedProviderFields,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal(
+            new[]
+            {
+                1,
+                2
+            },
+            providerScores.Select(
+                score =>
+                    score.ProviderOrdinal));
+
+        Assert.All(
+            providerScores,
+            score =>
+            {
+                Assert.Equal(
+                    1,
+                    score.StatementCount);
+
+                Assert.Equal(
+                    1,
+                    score.ProviderAttemptCount);
+
+                Assert.Equal(
+                    0,
+                    score.ProviderFailureCount);
+
+                Assert.Equal(
+                    1,
+                    score.ReadyCandidateStatementCount);
+
+                Assert.Equal(
+                    4,
+                    score.CorrectFactCount);
+
+                Assert.Equal(
+                    0,
+                    score.IncorrectFactCount);
+
+                Assert.Equal(
+                    0,
+                    score.MissedFactCount);
+
+                Assert.Equal(
+                    1m,
+                    score.FactPrecision);
+
+                Assert.Equal(
+                    1m,
+                    score.FactRecall);
+
+                Assert.Equal(
+                    1m,
+                    score.ReadyCandidateRate);
+
+                Assert.Equal(
+                    0m,
+                    score.ProviderFailureRate);
+            });
+
+        Assert.Equal(
+            metrics.EvaluatedStatementCount,
+            providerScores.Sum(
+                score =>
+                    score.StatementCount));
+
+        Assert.Equal(
+            metrics.ProviderAttemptCount,
+            providerScores.Sum(
+                score =>
+                    score.ProviderAttemptCount));
+
+        Assert.Equal(
+            metrics.ProviderFailureCount,
+            providerScores.Sum(
+                score =>
+                    score.ProviderFailureCount));
+
+        Assert.Equal(
+            metrics.ReadyCandidateStatementCount,
+            providerScores.Sum(
+                score =>
+                    score.ReadyCandidateStatementCount));
+
+        Assert.Equal(
+            metrics.CorrectFactCount,
+            providerScores.Sum(
+                score =>
+                    score.CorrectFactCount));
+
+        Assert.Equal(
+            metrics.IncorrectFactCount,
+            providerScores.Sum(
+                score =>
+                    score.IncorrectFactCount));
+
+        Assert.Equal(
+            metrics.MissedFactCount,
+            providerScores.Sum(
+                score =>
+                    score.MissedFactCount));
+
+        Assert.DoesNotContain(
+            typeof(
+                    BillStatementAiProviderScore)
+                .GetProperties(),
+            property =>
+                property.Name.Contains(
+                    "Key",
+                    StringComparison.OrdinalIgnoreCase) ||
+                property.Name.Contains(
+                    "Name",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.DoesNotContain(
+            "provider-a",
+            string.Join(
+                "|",
+                providerScores),
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            "provider-b",
+            string.Join(
+                "|",
+                providerScores),
+            StringComparison.OrdinalIgnoreCase);
+
+        var latency =
+            Assert.IsType<
+                BillStatementAiProviderAttemptLatencySummary>(
+                result.ProviderAttemptLatency);
+
+        Assert.Equal(
+            metrics.ProviderAttemptCount,
+            latency.AttemptCount);
+
+        Assert.True(
+            latency.MinimumMilliseconds >=
+            0d);
+
+        Assert.InRange(
+            latency.MeanMilliseconds,
+            latency.MinimumMilliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.InRange(
+            latency.P50Milliseconds,
+            latency.MinimumMilliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.InRange(
+            latency.P95Milliseconds,
+            latency.P50Milliseconds,
+            latency.MaximumMilliseconds);
+
+        Assert.DoesNotContain(
+            typeof(
+                    BillStatementAiProviderAttemptLatencySummary)
+                .GetProperties(),
+            property =>
+                property.PropertyType !=
+                    typeof(long) &&
+                property.PropertyType !=
+                    typeof(double));
+
+        var failureKindCounts =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                result.FailureKindCounts);
+
+        Assert.Empty(
+            failureKindCounts);
+
+        var totalAmount =
+            Assert.Single(
+                fieldScores,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.TotalAmount);
+
+        Assert.Equal(
+            2,
+            totalAmount.Correct);
+
+        Assert.Equal(
+            1m,
+            totalAmount.Precision);
+
+        Assert.Equal(
+            1m,
+            totalAmount.Recall);
+
+        var statementDate =
+            Assert.Single(
+                fieldScores,
+                field =>
+                    field.FieldKey ==
+                    BillStatementAiGroundTruthFieldKeys.StatementDate);
+
+        Assert.Equal(
+            0,
+            statementDate.ExpectedFactCount);
+
+        Assert.Equal(
+            0,
+            statementDate.PredictedFactCount);
 
         Assert.Equal(
             2,
@@ -260,6 +654,174 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 name.Contains(
                     "Candidate",
                     StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Evaluate_OversizedStatements_UseChunkedInferenceAndReconcile()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId:
+                "provider-a-001",
+            providerKey:
+                "provider-a",
+            totalAmount:
+                104.99m);
+
+        directory.WriteCase(
+            caseId:
+                "provider-b-001",
+            providerKey:
+                "provider-b",
+            totalAmount:
+                55m);
+
+        var extractor =
+            new ChunkAwareAiExtractor();
+
+        var result =
+            await CreateEvaluator(
+                    extractor)
+                .EvaluateAsync(
+                    directory.Path,
+                    [
+                        "provider-a-001",
+                        "provider-b-001"
+                    ],
+                    promptVersion:
+                        "offline-test-v1",
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy:
+                        CreateReadinessPolicy(),
+                    maxCharactersPerInference:
+                        40);
+
+        var metrics =
+            Assert.IsType<
+                BillStatementAiShadowReadinessMetrics>(
+                    result.Metrics);
+
+        Assert.Equal(
+            2,
+            metrics.ProviderAttemptCount);
+
+        Assert.Equal(
+            0,
+            metrics.ProviderFailureCount);
+
+        Assert.Equal(
+            2,
+            metrics.ReadyCandidateStatementCount);
+
+        Assert.Equal(
+            8,
+            metrics.CorrectFactCount);
+
+        Assert.Equal(
+            0,
+            metrics.IncorrectFactCount);
+
+        Assert.Equal(
+            0,
+            metrics.MissedFactCount);
+
+        Assert.Equal(
+            8,
+            extractor.CallCount);
+
+        Assert.Equal(
+            8L,
+            result.InferenceCallCount);
+
+        Assert.Equal(
+            2L,
+            result.MultiInferenceStatementCount);
+
+        Assert.Equal(
+            4L,
+            result.MaximumInferenceCallsPerStatement);
+
+        Assert.Equal(
+            0L,
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.All(
+            extractor.Requests,
+            request =>
+                Assert.InRange(
+                    request.DocumentText.Length,
+                    1,
+                    40));
+    }
+
+    [Fact]
+    public async Task Evaluate_ChunkedCandidateRejection_IsCountedSeparately()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            caseId:
+                "provider-a-001",
+            providerKey:
+                "provider-a",
+            totalAmount:
+                104.99m);
+
+        directory.WriteCase(
+            caseId:
+                "provider-b-001",
+            providerKey:
+                "provider-b",
+            totalAmount:
+                55m);
+
+        var result =
+            await CreateEvaluator(
+                    new RejectingChunkAiExtractor())
+                .EvaluateAsync(
+                    directory.Path,
+                    [
+                        "provider-a-001",
+                        "provider-b-001"
+                    ],
+                    promptVersion:
+                        "offline-test-v1",
+                    providerCallsAuthorized:
+                        true,
+                    readinessPolicy:
+                        CreateReadinessPolicy(),
+                    maxCharactersPerInference:
+                        40);
+
+        var metrics =
+            Assert.IsType<
+                BillStatementAiShadowReadinessMetrics>(
+                    result.Metrics);
+
+        Assert.Equal(
+            2L,
+            result.ChunkedExtractionRejectedStatementCount);
+
+        Assert.Equal(
+            0,
+            metrics.ProviderFailureCount);
+
+        Assert.Equal(
+            0,
+            metrics.ReadyCandidateStatementCount);
+
+        Assert.Equal(
+            8,
+            metrics.MissedFactCount);
+
+        Assert.Empty(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                    result.FailureKindCounts));
     }
 
     [Fact]
@@ -335,6 +897,56 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             4,
             metrics.MissedFactCount);
+
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.Equal(
+            2,
+            providerScores.Count);
+
+        Assert.Single(
+            providerScores,
+            score =>
+                score.ProviderFailureCount ==
+                    1 &&
+                score.ProviderFailureRate ==
+                    1m &&
+                score.ReadyCandidateStatementCount ==
+                    0);
+
+        Assert.Single(
+            providerScores,
+            score =>
+                score.ProviderFailureCount ==
+                    0 &&
+                score.ProviderFailureRate ==
+                    0m &&
+                score.ReadyCandidateStatementCount ==
+                    1);
+
+        Assert.Equal(
+            2,
+            Assert.IsType<
+                    BillStatementAiProviderAttemptLatencySummary>(
+                    result.ProviderAttemptLatency)
+                .AttemptCount);
+
+        var failureKind =
+            Assert.Single(
+                Assert.IsAssignableFrom<
+                    IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                    result.FailureKindCounts));
+
+        Assert.Equal(
+            BillStatementAiExtractionFailureKind.Unknown,
+            failureKind.FailureKind);
+
+        Assert.Equal(
+            1,
+            failureKind.Count);
 
         Assert.Equal(
             2,
@@ -424,6 +1036,84 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         Assert.Equal(
             8,
             metrics.MissedFactCount);
+
+        var providerScores =
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiProviderScore>>(
+                result.ProviderScores);
+
+        Assert.All(
+            providerScores,
+            score =>
+            {
+                Assert.Equal(
+                    0,
+                    score.ReadyCandidateStatementCount);
+
+                Assert.Equal(
+                    0,
+                    score.CorrectFactCount);
+
+                Assert.Equal(
+                    4,
+                    score.MissedFactCount);
+
+                Assert.Equal(
+                    0m,
+                    score.FactRecall);
+            });
+
+        Assert.Equal(
+            2,
+            Assert.IsType<
+                    BillStatementAiProviderAttemptLatencySummary>(
+                    result.ProviderAttemptLatency)
+                .AttemptCount);
+
+        Assert.Empty(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<BillStatementAiExtractionFailureCount>>(
+                result.FailureKindCounts));
+    }
+
+    [Fact]
+    public void ProviderAttemptLatencySummary_UsesAggregateNearestRankPercentiles()
+    {
+        var summary =
+            BillStatementAiProviderAttemptLatencySummary
+                .Create(
+                    new[]
+                    {
+                        10d,
+                        20d,
+                        30d,
+                        40d,
+                        100d
+                    });
+
+        Assert.Equal(
+            5,
+            summary.AttemptCount);
+
+        Assert.Equal(
+            10d,
+            summary.MinimumMilliseconds);
+
+        Assert.Equal(
+            40d,
+            summary.MeanMilliseconds);
+
+        Assert.Equal(
+            30d,
+            summary.P50Milliseconds);
+
+        Assert.Equal(
+            100d,
+            summary.P95Milliseconds);
+
+        Assert.Equal(
+            100d,
+            summary.MaximumMilliseconds);
     }
 
     private static BillStatementAiPrivateCorpusProviderEvaluator
@@ -465,8 +1155,216 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
                 0.50m);
     }
 
+    private sealed class RejectingChunkAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
+    {
+        public long InferenceCallCount { get; private set; }
+
+        public Task<BillStatementAiCandidate> ExtractAsync(
+            BillStatementAiExtractionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                request);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    1);
+
+            return Task.FromResult(
+                new BillStatementAiCandidate(
+                    ProviderName:
+                        null,
+                    AccountIdentifierSuffix:
+                        null,
+                    BillingPeriodStart:
+                        null,
+                    BillingPeriodEnd:
+                        null,
+                    StatementDate:
+                        null,
+                    DueDate:
+                        null,
+                    PreviousBalance:
+                        null,
+                    Payments:
+                        null,
+                    CurrentCharges:
+                        null,
+                    TotalDue:
+                        null,
+                    CurrencyCode:
+                        null,
+                    PlanOrService:
+                        null,
+                    UsageSummary:
+                        null,
+                    LineItems:
+                        [],
+                    Evidence:
+                        [
+                            new BillStatementAiEvidence(
+                                "unsupportedFact",
+                                request.DocumentText[..1])
+                        ],
+                    ModelConfidence:
+                        BillStatementAiModelConfidence.High));
+        }
+    }
+
+    private sealed class ChunkAwareAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
+    {
+        public int CallCount { get; private set; }
+
+        public long InferenceCallCount { get; private set; }
+
+        public List<BillStatementAiExtractionRequest> Requests
+        {
+            get;
+        } =
+            [];
+
+        public Task<BillStatementAiCandidate> ExtractAsync(
+            BillStatementAiExtractionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                request);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            CallCount++;
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    1);
+
+            Requests.Add(
+                request);
+
+            decimal? totalDue =
+                request.DocumentText.Contains(
+                    "$104.99",
+                    StringComparison.Ordinal)
+                    ? 104.99m
+                    : request.DocumentText.Contains(
+                        "$55.00",
+                        StringComparison.Ordinal)
+                        ? 55m
+                        : null;
+
+            DateOnly? billingPeriodStart =
+                request.DocumentText.Contains(
+                    "Billing Period Start: 08/01/2026",
+                    StringComparison.Ordinal)
+                    ? new DateOnly(
+                        2026,
+                        8,
+                        1)
+                    : null;
+
+            DateOnly? billingPeriodEnd =
+                request.DocumentText.Contains(
+                    "Billing Period End: 08/31/2026",
+                    StringComparison.Ordinal)
+                    ? new DateOnly(
+                        2026,
+                        8,
+                        31)
+                    : null;
+
+            string? currencyCode =
+                request.DocumentText.Contains(
+                    "Currency: USD",
+                    StringComparison.Ordinal)
+                    ? "USD"
+                    : null;
+
+            var evidence =
+                new List<BillStatementAiEvidence>();
+
+            if (totalDue.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.TotalDue,
+                        totalDue.Value ==
+                            104.99m
+                            ? "Total Due: $104.99"
+                            : "Total Due: $55.00"));
+            }
+
+            if (billingPeriodStart.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.BillingPeriodStart,
+                        "Billing Period Start: 08/01/2026"));
+            }
+
+            if (billingPeriodEnd.HasValue)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.BillingPeriodEnd,
+                        "Billing Period End: 08/31/2026"));
+            }
+
+            if (currencyCode is not null)
+            {
+                evidence.Add(
+                    new BillStatementAiEvidence(
+                        BillStatementAiFactKeys.CurrencyCode,
+                        "Currency: USD"));
+            }
+
+            return Task.FromResult(
+                new BillStatementAiCandidate(
+                    ProviderName:
+                        null,
+                    AccountIdentifierSuffix:
+                        null,
+                    BillingPeriodStart:
+                        billingPeriodStart,
+                    BillingPeriodEnd:
+                        billingPeriodEnd,
+                    StatementDate:
+                        null,
+                    DueDate:
+                        null,
+                    PreviousBalance:
+                        null,
+                    Payments:
+                        null,
+                    CurrentCharges:
+                        null,
+                    TotalDue:
+                        totalDue,
+                    CurrencyCode:
+                        currencyCode,
+                    PlanOrService:
+                        null,
+                    UsageSummary:
+                        null,
+                    LineItems:
+                        [],
+                    Evidence:
+                        evidence,
+                    ModelConfidence:
+                        BillStatementAiModelConfidence.High));
+        }
+    }
+
     private sealed class FakeAiExtractor
-        : IBillStatementAiExtractor
+        : IBillStatementAiExtractor,
+          IBillStatementAiInferenceCallCounter
     {
         private readonly string?
             _failWhenDocumentContains;
@@ -474,18 +1372,33 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
         private readonly bool
             _returnUnsupportedEvidence;
 
+        private readonly int
+            _inferenceCallsPerAttempt;
+
         public FakeAiExtractor(
             string? failWhenDocumentContains = null,
-            bool returnUnsupportedEvidence = false)
+            bool returnUnsupportedEvidence = false,
+            int inferenceCallsPerAttempt = 1)
         {
+            if (inferenceCallsPerAttempt <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(inferenceCallsPerAttempt));
+            }
+
             _failWhenDocumentContains =
                 failWhenDocumentContains;
 
             _returnUnsupportedEvidence =
                 returnUnsupportedEvidence;
+
+            _inferenceCallsPerAttempt =
+                inferenceCallsPerAttempt;
         }
 
         public int CallCount { get; private set; }
+
+        public long InferenceCallCount { get; private set; }
 
         public string? LastPromptVersion { get; private set; }
 
@@ -499,6 +1412,11 @@ public sealed class BillStatementAiPrivateCorpusProviderEvaluatorTests
             cancellationToken.ThrowIfCancellationRequested();
 
             CallCount++;
+
+            InferenceCallCount =
+                checked(
+                    InferenceCallCount +
+                    _inferenceCallsPerAttempt);
 
             LastPromptVersion =
                 request.PromptVersion;

@@ -94,9 +94,16 @@ jobs:
         if: steps.backend_changes.outputs.required == 'true'
         run: dotnet restore FullWorth.Tests/FullWorth.Tests.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
 
+      - name: Restore offline AI evaluation runner
+        if: steps.backend_changes.outputs.required == 'true'
+        run: dotnet restore FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+
       - name: Build backend
         if: steps.backend_changes.outputs.required == 'true'
         run: dotnet build FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-restore
+      - name: Build offline AI evaluation runner
+        if: steps.backend_changes.outputs.required == 'true'
+        run: dotnet build FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release --no-restore
 
       - name: Install EF migration verifier
         if: steps.backend_changes.outputs.required == 'true'
@@ -149,6 +156,7 @@ jobs:
 
           $safePrefixes = @(
             "FullWorth.API/",
+            "FullWorth.AiEvaluation/",
             "FullWorth.Web/",
             "FullWorth.Tests/",
             "FullWorth.VisualTests/",
@@ -157,15 +165,19 @@ jobs:
 
           $safeExactFiles = @(
             ".dockerignore",
+            ".env.ai.example",
             ".env.production.example",
             "AI_SHADOW_CORPUS.md",
             "ARCHITECTURE.md",
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
+            "FULLWORTH_ROADMAP.md",
+            "IOS_INTERNAL_TESTING.md",
             "Dockerfile",
             "Dockerfile.web",
             "README.md",
             "REVENUE_READINESS.md",
+            "compose.ai-evaluation.yml",
             "compose.production.yml"
           )
 
@@ -276,9 +288,11 @@ jobs:
             ".github/workflows/branch-cleanup.yml",
             ".dockerignore",
             ".env.production.example",
+            ".env.ai.example",
             "Dockerfile",
             "Dockerfile.web",
-            "compose.production.yml"
+            "compose.production.yml",
+            "compose.ai-evaluation.yml"
           )
 
           $required = $false
@@ -367,6 +381,160 @@ jobs:
           sh deploy/tests/authenticated-api-smoke-tests.sh
           sh deploy/tests/internal-beta0-tests.sh
           sh deploy/tests/subscription-rollout-preflight-tests.sh
+
+      - name: Validate local AI evaluation runtime
+        if: steps.container_changes.outputs.required == 'true'
+        run: |
+          sh -n deploy/validate-ai-evaluation-env.sh
+          sh -n deploy/verify-approved-ai-model.sh
+          sh -n deploy/check-ai-evaluation-runtime.sh
+          sh -n deploy/start-ai-evaluation.sh
+
+          model_file="$(mktemp)"
+          env_file="$(mktemp)"
+          server_pid=""
+
+          cleanup_ai_runtime_test()
+          {
+            if [ -n "$server_pid" ]; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+
+            rm -f "$model_file" "$env_file"
+          }
+
+          trap cleanup_ai_runtime_test EXIT
+
+          printf '%s' 'fullworth-ci-model-fixture' > "$model_file"
+          model_sha="$(sha256sum "$model_file" | awk '{ print $1 }')"
+          chmod 600 "$env_file"
+
+          cat > "$env_file" <<EOF
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
+          FULLWORTH_LOCAL_AI_MODEL_PATH=$model_file
+          FULLWORTH_LOCAL_AI_MODEL_SHA256=$model_sha
+          FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum
+          FULLWORTH_LOCAL_AI_MODEL_ALIAS=fullworth-local
+          FULLWORTH_LOCAL_AI_CONTEXT_SIZE=8192
+          FULLWORTH_LOCAL_AI_MAX_PREDICT=4096
+          FULLWORTH_LOCAL_AI_THREADS=4
+          FULLWORTH_LOCAL_AI_GPU_LAYERS=0
+          EOF
+
+          sh deploy/validate-ai-evaluation-env.sh "$env_file"
+
+          cat > "$env_file" <<EOF
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af
+          FULLWORTH_LOCAL_AI_MODEL_PATH=$model_file
+          FULLWORTH_LOCAL_AI_MODEL_SHA256=7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5
+          FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum
+          FULLWORTH_LOCAL_AI_MODEL_ALIAS=fullworth-local
+          FULLWORTH_LOCAL_AI_CONTEXT_SIZE=8192
+          FULLWORTH_LOCAL_AI_MAX_PREDICT=4096
+          FULLWORTH_LOCAL_AI_THREADS=4
+          FULLWORTH_LOCAL_AI_GPU_LAYERS=0
+          EOF
+
+          sh deploy/verify-approved-ai-model.sh metadata-only "$env_file"
+
+          if sh deploy/verify-approved-ai-model.sh full "$env_file"; then
+            printf '%s\n' "Approved-model verifier accepted an unapproved file." >&2
+            exit 1
+          fi
+
+          FULLWORTH_LOCAL_AI_IMAGE=ghcr.io/ggml-org/llama.cpp:server-b11176@sha256:6257697a7f5d034b8fb499ddb07af3e250506352f94102054252a23f3b85e0af \
+          FULLWORTH_LOCAL_AI_API_KEY=ci-local-ai-key-32-characters-minimum \
+          FULLWORTH_LOCAL_AI_MODEL_PATH="$model_file" \
+          docker compose --file compose.ai-evaluation.yml config >/dev/null
+
+          python3 - <<'PY' &
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          import json
+
+          EXPECTED_AUTH = "Bearer ci-local-ai-key-32-characters-minimum"
+
+          class Handler(BaseHTTPRequestHandler):
+              def log_message(self, format, *args):
+                  return
+
+              def send_json(self, status, payload):
+                  body = json.dumps(payload).encode("utf-8")
+                  self.send_response(status)
+                  self.send_header("Content-Type", "application/json")
+                  self.send_header("Content-Length", str(len(body)))
+                  self.end_headers()
+                  self.wfile.write(body)
+
+              def do_GET(self):
+                  if self.path == "/health":
+                      self.send_json(200, {"status": "ok"})
+                      return
+
+                  self.send_json(404, {"error": "not_found"})
+
+              def do_POST(self):
+                  length = int(self.headers.get("Content-Length", "0"))
+                  raw_body = self.rfile.read(length) if length else b""
+
+                  if self.path != "/v1/chat/completions":
+                      self.send_json(404, {"error": "not_found"})
+                      return
+
+                  if self.headers.get("Authorization") != EXPECTED_AUTH:
+                      self.send_json(401, {"error": "unauthorized"})
+                      return
+
+                  try:
+                      request = json.loads(raw_body)
+                      response_format = request["response_format"]
+                      schema = response_format["json_schema"]
+                      schema_body = schema["schema"]
+                      valid_schema = (
+                          response_format["type"] == "json_schema"
+                          and schema["name"] == "fullworth_runtime_smoke"
+                          and schema["strict"] is True
+                          and schema_body["type"] == "object"
+                          and schema_body["properties"] == {
+                              "ok": {"type": "boolean"}
+                          }
+                          and schema_body["required"] == ["ok"]
+                          and schema_body["additionalProperties"] is False
+                      )
+                  except (ValueError, KeyError, TypeError):
+                      valid_schema = False
+
+                  if not valid_schema:
+                      self.send_json(400, {"error": "invalid_schema"})
+                      return
+
+                  self.send_json(
+                      200,
+                      {
+                          "choices": [
+                              {
+                                  "finish_reason": "stop",
+                                  "message": {
+                                      "role": "assistant",
+                                      "content": json.dumps(
+                                          {"ok": True},
+                                          separators=(",", ":"),
+                                      ),
+                                  },
+                              }
+                          ]
+                      },
+                  )
+
+          HTTPServer(("127.0.0.1", 8080), Handler).serve_forever()
+          PY
+          server_pid=$!
+
+          sh deploy/check-ai-evaluation-runtime.sh "$env_file"
+
+          kill "$server_pid"
+          wait "$server_pid" 2>/dev/null || true
+          server_pid=""
 
       - name: Configure container builder
         if: steps.container_changes.outputs.required == 'true'

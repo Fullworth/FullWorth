@@ -52,6 +52,44 @@ sh deploy/smoke-admin-api.sh https://api.billbeacon.net
 
 The admin smoke test proves that a fresh bearer session can satisfy `AdminOrOwner`; it does not mutate roles or access keys. Command-line smoke tests do not replace the guarded private-beta/BFF/Plaid/statement/Internal Beta 0 flows documented elsewhere in `deploy/`.
 
+## Host firewall policy
+
+FullWorth's host firewall is a separate defense layer from Docker network
+segmentation. Configure both the VPS/provider firewall and the host firewall to
+deny unsolicited inbound traffic by default.
+
+Required public ingress:
+
+- TCP 80 for HTTP-to-HTTPS redirection and ACME HTTP validation where used.
+- TCP 443 for FullWorth HTTPS.
+- UDP 443 only when HTTP/3 is intentionally enabled by the deployed Caddy
+  configuration.
+- SSH only from explicitly trusted operator source addresses or a private
+  administration network. Do not expose SSH broadly merely for convenience.
+
+Do not publish PostgreSQL, Redis, the ASP.NET Core API/Web container ports, the
+local AI runtime, backup/recovery services, or administrative/debug interfaces
+directly on the host. Public application traffic must enter through Caddy.
+
+Before beta and after firewall, Docker, or edge-network changes, inspect the
+actual host rather than assuming the policy is active:
+
+```sh
+sudo ss -lntup
+docker compose --env-file .env.production --file compose.production.yml ps
+sh deploy/verify-production-exposure.sh /opt/billwatch
+```
+
+Also inspect the active provider firewall/security-group rules and the host's
+firewall rules with the platform-appropriate administrative command. Record
+only ports, protocols, source ranges, and pass/fail metadata; do not copy
+credentials, tokens, financial data, or private statement content into
+evidence.
+
+The repository's exposure tests prove the intended container topology. They do
+not prove the real VPS or provider firewall configuration; that remains an
+operator verification step.
+
 ## Systemd production units
 
 Install the backup, runtime-watchdog, and alert units together so no `OnFailure` route can point at a missing template. Use the installer rather than raw `cp`: production checkout hardening may make source unit files mode `600`, while systemd unit files need to remain readable to non-root verification commands such as `systemctl cat`.

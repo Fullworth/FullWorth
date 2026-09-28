@@ -1,12 +1,12 @@
 # FullWorth Product & Engineering Roadmap
 
-Last updated: 2026-09-22
+Last updated: 2026-09-25
 
 Status: Active planning document
 
 Completion notation: `~~strikethrough~~` means the roadmap item is completed to the level of evidence the item requires. Unstruck items remain open, partial, or awaiting real-environment acceptance.
 
-Repository: `RealizmModz/FullWorth`
+Repository: `Fullworth/FullWorth`
 
 Integration branch: `development`
 
@@ -180,6 +180,8 @@ AI must not be the final authority for:
 - access control.
 
 A confident “we do not know yet” is preferable to an invented explanation.
+
+The current AI direction is to evaluate existing, externally trained models through FullWorth's bounded server-side candidate-extraction contract. The first local evaluation candidate is Qwen3-4B Q4_K_M served by the pinned llama.cpp runtime. This is an evaluation choice, not production approval and not a claim of extraction quality. Existing deterministic code remains responsible for evidence validation, financial arithmetic, ownership, persistence, historical comparison, thresholds, and alerts. The earlier from-scratch model-training plan is superseded.
 
 ## 3.6 Production safety
 
@@ -1622,62 +1624,100 @@ Do not introduce distributed complexity before metrics justify it.
 
 ---
 
-# 19. Milestone 13 — AI shadow evaluation
+# 19. AI-assisted bill intelligence and model evaluation
 
-Priority: P2/P3
+Priority: P2 for isolated evaluation; production use remains gated.
 
-Goal: Evaluate AI usefulness safely before any runtime authority increases.
+Status: Qwen3-4B is the first pinned local evaluation candidate. Runtime and quality acceptance are incomplete. No AI-derived persistence or production activation is approved.
 
-## 19.1 Private corpus
+Goal: Measure whether a locally served, externally trained model improves statement candidate extraction over FullWorth's deterministic parser while keeping all financial and security decisions deterministic.
 
-Keep outside Git.
+The active direction replaces the earlier plan to train a FullWorth model from scratch. The superseded first-party tokenizer/decoder/initializer/checkpoint/training implementation and its dedicated tests have been removed from the active product tree rather than carried into release. Do not reintroduce that path as product work without a new, evidence-backed architecture decision.
 
-Target representative corpus:
+The first evaluation artifact is recorded in `deploy/ai-models/qwen3-4b-q4_k_m.manifest`:
 
-- multiple providers;
-- clean PDFs;
-- scanned PDFs;
-- image statements;
-- utilities;
-- telecom;
-- insurance;
-- subscriptions;
-- promotions;
-- fees;
-- ambiguous line items.
+- Repository: `Qwen/Qwen3-4B-GGUF`
+- Revision: `a9a60d009fa7ff9606305047c2bf77ac25dbec49`
+- File: `Qwen3-4B-Q4_K_M.gguf`
+- Size: `2,497,280,256` bytes
+- SHA-256: `7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5`
+- License identifier recorded by the manifest: `Apache-2.0`
+- Runtime alias: `fullworth-local`
 
-## 19.2 Ground truth
+The model file is not committed to Git. Its manifest, exact hash/size verifier, and example configuration are repository-controlled. Artifact provenance and license notices must remain tied to the exact revision and file actually used.
 
-Reviewer-approved fields.
+## 19.1 Deterministic and security boundaries
 
-Measure:
+- Treat model output and all document text as untrusted candidate data. Source excerpts must match the supplied extracted/OCR text.
+- The model cannot choose a user, select resources, authorize access, perform arithmetic, write financial records, compare historical bills, set thresholds, or decide alerts.
+- Preserve module ownership contracts, `UserId + resource ID` checks, secure storage, no-store boundaries, and the absence of account/provider credentials and physical storage paths from model inputs and outputs.
+- Keep the API/BFF as the only product-facing path. Browser and MAUI clients must not call the model runtime directly.
+- Preserve explicit uncertainty and deterministic-only fallback. Never silently send a failed local inference request to another AI provider.
 
-- precision;
-- recall;
-- candidate coverage;
-- provider-specific failures;
-- false explanation candidates;
-- cost;
-- latency.
+Exit gate: contract and regression tests prove model output cannot cross ownership, persistence, arithmetic, or alert-decision boundaries.
 
-## 19.3 Deterministic baseline
+## 19.2 Isolated local runtime
 
-Always compare AI against deterministic parser baseline.
+- Run the pinned llama.cpp server only through the development/evaluation Compose profile, bound to host loopback and an internal container network.
+- Require the separate local API key, exact approved model SHA-256 and size, and the pinned runtime image digest before startup.
+- Keep model weights outside Git, mount them read-only, and retain the current container confinement and bounded-resource settings.
+- The runtime health/authentication smoke proves service availability and request protection only. It does not establish extraction accuracy.
+- Do not change production Compose or production AI flags as part of local evaluation setup.
 
-AI is justified only where it provides measurable incremental value.
+Exit gate: the exact model and runtime artifacts pass their manifests, and an authenticated local structured-output smoke succeeds without exposing output or secrets in logs.
 
-## 19.4 Runtime policy
+## 19.3 Private evaluation corpus and ground truth
 
-Even if shadow metrics pass:
+- Keep statement files, extracted text, labels, model responses, and case-level results outside Git.
+- Use synthetic or explicitly authorized representative documents. Product processing permission does not itself authorize model evaluation or training use.
+- Separate evaluation and held-out cases by document and provider to reduce leakage.
+- Preserve reviewer-approved expected fields, line items, supported evidence excerpts, ambiguity, and unknown labels.
+- Minimize identifiers before inference. Never include full account numbers, credentials, or unnecessary personal data.
 
-- do not automatically enable AI-derived persistence;
-- require separate architecture/security/product review;
-- validate cost controls;
-- preserve evidence requirement;
-- preserve deterministic final validation.
+Measure provider coverage, field precision/recall, unsupported candidate rate, evidence support, abstention/unknown behavior, deterministic-baseline comparison, failures, latency, and resource use. Do not publish case-level data in CI logs or repository artifacts.
 
----
+Exit gate: the corpus has documented authorization/provenance and reviewed ground truth; secret/private inputs remain outside GitHub.
 
+## 19.4 Evaluation thresholds
+
+Set numerical acceptance thresholds before running a held-out benchmark. Include at least:
+
+- correctness for amount, dates, currency, and supported line items;
+- precision/recall and candidate coverage;
+- source-excerpt fidelity and unsupported-claim rate;
+- uncertainty/abstention on absent or ambiguous facts;
+- false explanation/false alert behavior;
+- latency, memory, and CPU/GPU use.
+
+Compare the local model to the deterministic extraction baseline. A result is useful only if it improves a defined task without weakening evidence or safety. Do not claim model quality from a health check, a single hand-picked statement, a schema-valid response, or synthetic CI fixtures.
+
+## 19.5 Actual-model benchmark
+
+- First prove the pinned model starts and completes a synthetic structured-output smoke through the same schema-constrained API shape used by the extractor.
+- Then run the authorized private corpus offline with the pinned model/runtime and the committed deterministic scorer. Record only aggregate metrics, model/runtime manifest identifiers, and safe run metadata in repository-visible results.
+- Inspect representative field-level errors privately before changing prompts, schema, model size, or extraction behavior.
+- Consider a larger model only when the measured 4B errors justify its added storage, latency, and resource cost.
+
+Exit gate: reproducible held-out measurements meet the thresholds from 19.4 and show a useful improvement over deterministic extraction without unsupported evidence claims.
+
+## 19.6 Product integration and rollout
+
+- Keep local and external provider paths disabled by default unless explicitly configured for an isolated evaluation.
+- Shadow output remains non-persistent and cannot change the statement or bill state.
+- Any later user-facing explanation must be composed from validated evidence and deterministic amounts, with clear uncertainty and authorized evidence references.
+- Production serving requires a separately reviewed runtime, artifact integrity and provenance, least-privilege network boundaries, quotas/deadlines, overload behavior, monitoring, rollback, and kill switch.
+- Provider outages return deterministic results or a clear unavailable/unknown state. No provider fallback is allowed unless separately reviewed and deliberately implemented.
+
+Exit gate: exact-head CI, security review, held-out quality evidence, resource/load tests, failure/rollback drills, and separate product approval pass before production activation. Passing evaluation does not turn on AI-derived persistence.
+
+## 19.7 Privacy, retention, and observability
+
+- Define separate access and retention rules for raw documents, extracted text, candidates, explanations, evaluation results, caches, and backups.
+- Keep all model prompts/responses containing financial data out of logs. Emit metadata-only diagnostics such as model/runtime versions, safe correlation ID, latency, resource use, and rejection category.
+- Make account deletion, corpus withdrawal, retention expiry, backup reconciliation, and incident response cover AI evaluation artifacts.
+- Do not claim a deleted source document can be removed from an already-trained model; the active plan does not authorize training on customer financial data.
+
+Exit gate: reviewed privacy/retention controls and tests cover the full evaluation and inference lifecycle.
 # 20. Cross-cutting testing roadmap
 
 ## 20.1 Unit tests

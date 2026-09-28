@@ -13,6 +13,20 @@
             CancellationToken cancellationToken = default);
     }
 
+    /*
+     * Optional aggregate metering boundary for evaluation-only extractor
+     * compositions that may make more than one underlying model call per
+     * statement attempt.
+     *
+     * The counter must be monotonic for the lifetime of the extractor
+     * instance. Evaluators consume a start/end delta and never expose
+     * per-statement call counts.
+     */
+    public interface IBillStatementAiInferenceCallCounter
+    {
+        long InferenceCallCount { get; }
+    }
+
     public sealed record BillStatementAiExtractionRequest(
         string DocumentText,
         BillStatementExtractionHints Hints,
@@ -150,28 +164,75 @@
         }
     }
 
+    public enum BillStatementAiExtractionFailureKind
+    {
+        Unknown = 0,
+        Disabled = 1,
+        Configuration = 2,
+        HttpStatus = 3,
+        Timeout = 4,
+        Transport = 5,
+        ResponseRead = 6,
+        InvalidStructuredOutput = 7,
+        IncompleteResponse = 8,
+        MissingStructuredOutput = 9,
+        OversizedResponse = 10,
+        InputTooLarge = 11
+    }
+
     /*
      * Vendor-neutral provider failure.
      *
-     * Orchestration may safely fall back on this exception without
-     * depending on an OpenAI-specific implementation type.
+     * FailureKind is intentionally coarse and contains no provider response,
+     * statement content, endpoint, account information, or other sensitive
+     * detail. Offline evaluation may aggregate this enum safely without
+     * serializing exception messages or inner exceptions.
      */
     public sealed class BillStatementAiExtractionException
         : Exception
     {
         public BillStatementAiExtractionException(
             string message)
-            : base(message)
+            : this(
+                BillStatementAiExtractionFailureKind.Unknown,
+                message)
         {
         }
 
         public BillStatementAiExtractionException(
             string message,
             Exception innerException)
+            : this(
+                BillStatementAiExtractionFailureKind.Unknown,
+                message,
+                innerException)
+        {
+        }
+
+        public BillStatementAiExtractionException(
+            BillStatementAiExtractionFailureKind failureKind,
+            string message)
+            : base(message)
+        {
+            FailureKind =
+                failureKind;
+        }
+
+        public BillStatementAiExtractionException(
+            BillStatementAiExtractionFailureKind failureKind,
+            string message,
+            Exception innerException)
             : base(
                 message,
                 innerException)
         {
+            FailureKind =
+                failureKind;
+        }
+
+        public BillStatementAiExtractionFailureKind FailureKind
+        {
+            get;
         }
     }
 }
