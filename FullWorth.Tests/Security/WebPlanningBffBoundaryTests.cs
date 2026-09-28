@@ -58,8 +58,10 @@ public sealed class WebPlanningBffBoundaryTests
                     method),
                 route);
 
-        if (!HttpMethods.IsDelete(
-                method))
+        if (!string.Equals(
+                method,
+                "DELETE",
+                StringComparison.Ordinal))
         {
             request.Content =
                 new StringContent(
@@ -86,12 +88,17 @@ public sealed class WebPlanningBffBoundaryTests
         using var client =
             factory.CreateHttpsClient();
 
-        using var response =
-            await client.GetAsync(
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Delete,
                 "/bff/planning/bill-funding-preferences/00000000-0000-0000-0000-000000000000");
 
+        using var response =
+            await client.SendAsync(
+                request);
+
         Assert.Equal(
-            HttpStatusCode.MethodNotAllowed,
+            HttpStatusCode.NotFound,
             response.StatusCode);
     }
 }
