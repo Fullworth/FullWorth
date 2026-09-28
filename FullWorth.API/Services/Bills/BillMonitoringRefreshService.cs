@@ -7,12 +7,14 @@ public sealed class BillMonitoringRefreshService
     private readonly IBankDataSyncGateway _bankDataSyncGateway;
     private readonly RecurringBillDiscoveryPersistenceService _billDiscoveryService;
     private readonly BankConnectionHealthAlertService _connectionHealthAlertService;
+    private readonly IPlanningPaydayAlertRefreshGateway _paydayAlertRefreshGateway;
     private readonly ILogger<BillMonitoringRefreshService> _logger;
 
     public BillMonitoringRefreshService(
         IBankDataSyncGateway bankDataSyncGateway,
         RecurringBillDiscoveryPersistenceService billDiscoveryService,
         BankConnectionHealthAlertService connectionHealthAlertService,
+        IPlanningPaydayAlertRefreshGateway paydayAlertRefreshGateway,
         ILogger<BillMonitoringRefreshService> logger)
     {
         ArgumentNullException.ThrowIfNull(
@@ -25,6 +27,9 @@ public sealed class BillMonitoringRefreshService
             connectionHealthAlertService);
 
         ArgumentNullException.ThrowIfNull(
+            paydayAlertRefreshGateway);
+
+        ArgumentNullException.ThrowIfNull(
             logger);
 
         _bankDataSyncGateway =
@@ -35,6 +40,9 @@ public sealed class BillMonitoringRefreshService
 
         _connectionHealthAlertService =
             connectionHealthAlertService;
+
+        _paydayAlertRefreshGateway =
+            paydayAlertRefreshGateway;
 
         _logger =
             logger;
@@ -85,6 +93,16 @@ public sealed class BillMonitoringRefreshService
                     cancellationToken);
 
             /*
+             * Payday planning is secondary to the core bank/bill refresh.
+             * Its own persistence is replay-safe, so failures are retried by
+             * a later monitoring cycle instead of making a successful bank
+             * synchronization appear to have failed.
+             */
+            await TryRefreshPaydayAlertsAsync(
+                userId,
+                cancellationToken);
+
+            /*
              * Connection alerts are secondary to the core refresh.
              * Failure to create an Activity alert must never cause a
              * successful financial-data refresh to be reported as failed.
@@ -112,6 +130,33 @@ public sealed class BillMonitoringRefreshService
                 CancellationToken.None);
 
             throw;
+        }
+    }
+
+    private async Task TryRefreshPaydayAlertsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _paydayAlertRefreshGateway.RefreshAsync(
+                userId,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            /*
+             * Never log transaction IDs, paycheck amounts, bill amounts,
+             * provider names, alert content, or other financial details.
+             */
+            _logger.LogWarning(
+                "Payday alert refresh failed with {ExceptionType}.",
+                ex.GetType().Name);
         }
     }
 

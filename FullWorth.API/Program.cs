@@ -276,6 +276,10 @@ builder.Services.AddScoped<
     PlanningPaydayPlanService>();
 
 builder.Services.AddScoped<
+    IPlanningPaydayAlertRefreshGateway,
+    PlanningPaydayAlertRefreshService>();
+
+builder.Services.AddScoped<
     PlanningBillChangeWatchService>();
 
 builder.Services.AddSingleton<
