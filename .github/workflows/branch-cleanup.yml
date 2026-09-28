@@ -50,10 +50,9 @@ jobs:
               return 0
             fi
 
-            # Another serialized or previously-started cleanup run may have
-            # removed the ref after this run enumerated it. Re-read the branch
-            # collection and accept the failed DELETE only when the exact ref
-            # is now absent. Any surviving ref remains a hard failure.
+            # A run that started before serialization was added may have
+            # deleted this ref after enumeration. Accept the failed DELETE
+            # only after the repository confirms the branch is now absent.
             current_after="$(
               gh api --paginate \
                 "repos/$REPOSITORY/branches?per_page=100" \
