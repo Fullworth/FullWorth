@@ -96,23 +96,23 @@ jobs:
               continue
             fi
 
-            merged_match="$(
+            closed_head_match="$(
               gh api -X GET "repos/$REPOSITORY/pulls" \
                 -f state=closed \
                 -f head="$REPOSITORY_OWNER:$branch" \
                 -f per_page=100 \
-                --jq "[.[] | select(.merged_at != null and .head.sha == \"$sha\")] | length"
+                --jq "[.[] | select(.head.sha == \"$sha\")] | length"
             )"
 
-            if [[ "$merged_match" == "0" ]]; then
-              echo "Keeping unproven branch: $branch"
+            if [[ "$closed_head_match" == "0" ]]; then
+              echo "Keeping branch without a closed PR at its current head: $branch"
               skipped=$((skipped + 1))
               continue
             fi
 
             delete_branch_if_present "$branch"
 
-            echo "Deleted merged source branch: $branch"
+            echo "Deleted closed-PR source branch: $branch"
             deleted=$((deleted + 1))
           done < <(
             gh api --paginate \
@@ -180,14 +180,33 @@ jobs:
           perf/pwa-layout-startup	c097643b2a84bb6a14d5f1de0d3ca10046f6fa46
           perf/statement-batch-query	ac155821f246da96adc53a7b4c43b6a4d6f9caee
           ui/fullworth-premium-landing	e68de46f1ea7b0fdb7b3165922728f5ca3b6761f
+          ai/aggregate-inference-latency-metrics	e5509437220a7f96ddf2d2bee1c047cfbba8e82c
+          ai/aggregate-local-failure-kinds	25084bb4793d6d03af70c6e932a108911feadbe0
+          ai/bound-chunk-inference-fanout	7648695a510cff196826d67c0ef5a6d824ee1c74
+          ai/extraction-benchmark-gate	b752aca4fd37d484ee156785f8a016954a115272
+          ai/offline-chunked-evaluation-adapter	1bfa6f3c0fba7404880bbbd9488b3e30e0f633eb
+          ai/offline-inference-call-accounting	5b7ad14e7f95ccd324f61a7565ce8c418e0767ae
+          ai/provider-field-cross-regression	d48cb3113f24d2661bb382c8ae2e870ffab6ee2c
+          ai/typed-local-inference-failures	d437d5ac718416d026311f7f49e65c95f78bce0a
+          arch/move-bank-transaction-links-to-bills	d6583c64a38cca91c8c6d11a3f1b599ba070b10d
+          docs/current-planning-checkpoint	56f8103797e94182de7b321f426e008a9c1adc5d
+          feat/first-party-ai-token-loss	8532e30d1aa29bef4f1307b27187a8b9775cbf7b
+          feat/ui-foundation-primitives	82e5d4fbc93390384f0d21cb90d91561d1d6a345
+          fix/ios-simulator-boot-command-timeout-current	60edcb0c34d8bc9a45510f7a1451d9aa04de079d
+          fix/ios-simulator-container-readiness	15531201aa2cabcb9e787926f2846481730827ed
+          investigate/ios-pwa-install-258	7882ba12168e5939b33b7abf40ab996c94eeb1e8
+          security/refresh-token-family-rotation	77f5803696c32c6c6fdb0589b065ad8cde39a575
+          security/serialize-web-session-refresh	67d3877a471d6a48d185135378c63cffc66fb054
+          security/sign-out-all-devices	a7d8bc7d3e3eeae69f73be33aac66e5d7c9217e2
+          security/single-use-refresh-tokens	67d3877a471d6a48d185135378c63cffc66fb054
           REVIEWED_STALE_BRANCHES
 
           {
             echo "## FullWorth branch cleanup"
             echo
-            echo "- Deleted merged source branches: $deleted"
+            echo "- Deleted closed-PR source branches: $deleted"
             echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
-            echo "- Preserved merged-branch candidates: $skipped"
+            echo "- Preserved branches without a matching closed PR: $skipped"
             echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
             echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
           } >> "$GITHUB_STEP_SUMMARY"
