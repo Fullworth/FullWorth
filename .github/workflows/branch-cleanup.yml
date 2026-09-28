@@ -39,6 +39,7 @@ jobs:
           skipped=0
           reviewed_deleted=0
           reviewed_skipped=0
+          contained_deleted=0
 
           delete_branch_if_present()
           {
@@ -93,6 +94,25 @@ jobs:
             if [[ "$open_count" != "0" ]]; then
               echo "Skipping branch with open PR: $branch"
               skipped=$((skipped + 1))
+              continue
+            fi
+
+            containment="$(
+              gh api -X GET \
+                "repos/$REPOSITORY/compare/$sha...development" \
+                --jq '[.status, .behind_by] | @tsv'
+            )"
+
+            IFS=$'\t' read -r containment_status containment_behind <<< "$containment"
+
+            if [[ "$containment_behind" == "0" ]] &&
+              { [[ "$containment_status" == "ahead" ]] ||
+                [[ "$containment_status" == "identical" ]]; }
+            then
+              delete_branch_if_present "$branch"
+
+              echo "Deleted branch fully contained in development: $branch"
+              contained_deleted=$((contained_deleted + 1))
               continue
             fi
 
@@ -207,9 +227,10 @@ jobs:
           {
             echo "## FullWorth branch cleanup"
             echo
+            echo "- Deleted branches fully contained in development: $contained_deleted"
             echo "- Deleted closed-PR source branches: $deleted"
             echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
             echo "- Preserved branches without a matching closed PR: $skipped"
             echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
-            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
+            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and any branch with commits not contained in development unless separately reviewed"
           } >> "$GITHUB_STEP_SUMMARY"
