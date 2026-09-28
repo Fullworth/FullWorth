@@ -43,6 +43,7 @@
   <data name="Confirmed statement changes can affect what you plan to set aside." xml:space="preserve"><value>Los cambios confirmados en estados de cuenta pueden afectar lo que planeas apartar.</value></data>
   <data name="No confirmed upcoming changes" xml:space="preserve"><value>No hay cambios próximos confirmados</value></data>
   <data name="When a current bill change is supported by statement evidence, it will appear here." xml:space="preserve"><value>Cuando un cambio actual esté respaldado por evidencia del estado de cuenta, aparecerá aquí.</value></data>
+  <data name="Annual impact" xml:space="preserve"><value>Impacto anual</value></data>
   <data name="Due date" xml:space="preserve"><value>Fecha de vencimiento</value></data>
   <data name="Not available" xml:space="preserve"><value>No disponible</value></data>
   <data name="Still to plan" xml:space="preserve"><value>Aún por planificar</value></data>
