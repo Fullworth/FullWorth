@@ -658,6 +658,10 @@ builder.Services.AddScoped<
     StatementBillPlanningFactsGateway>();
 
 builder.Services.AddScoped<
+    IBillPlanningChangeFactsGateway,
+    StatementBillPlanningChangeFactsGateway>();
+
+builder.Services.AddScoped<
     IBillAlertReconciliationGateway,
     BillAlertReconciliationGateway>();
 
