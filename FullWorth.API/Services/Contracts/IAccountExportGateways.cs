@@ -70,6 +70,7 @@ public sealed record AccountBillAlertExportRecord(
     Guid Id,
     Guid? BillStreamId,
     Guid? BillChangeId,
+    Guid? SourceEventId,
     string AlertType,
     string Severity,
     string Title,

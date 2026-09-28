@@ -43,6 +43,49 @@ public sealed class CrossDomainSchemaBoundaryTests
     }
 
     [Fact]
+    public void BillAlert_SourceEventIsOpaqueAndOwnerScoped()
+    {
+        using var dbContext =
+            new FullWorthDbContext(
+                new DbContextOptionsBuilder<FullWorthDbContext>()
+                    .UseInMemoryDatabase(
+                        $"schema-boundary-{Guid.NewGuid():N}")
+                    .Options);
+
+        var alertEntity =
+            dbContext.Model.FindEntityType(
+                typeof(BillAlertEntity));
+
+        Assert.NotNull(
+            alertEntity);
+
+        Assert.NotNull(
+            alertEntity!.FindProperty(
+                nameof(BillAlertEntity.SourceEventId)));
+
+        Assert.Contains(
+            alertEntity.GetIndexes(),
+            index =>
+                index.IsUnique &&
+                index.Properties
+                    .Select(
+                        property =>
+                            property.Name)
+                    .SequenceEqual(
+                        [
+                            nameof(BillAlertEntity.UserId),
+                            nameof(BillAlertEntity.AlertType),
+                            nameof(BillAlertEntity.SourceEventId)
+                        ]));
+
+        Assert.DoesNotContain(
+            alertEntity.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(PlanningPaycheckPlanRunEntity));
+    }
+
+    [Fact]
     public void BillTransactionAssociation_OwnsBillLinkWithoutPlaidForeignKey()
     {
         using var dbContext =

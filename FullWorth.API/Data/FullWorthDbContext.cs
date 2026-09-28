@@ -717,6 +717,16 @@ public sealed class FullWorthDbContext
                 entity.HasIndex(alert => new
                 {
                     alert.UserId,
+                    alert.AlertType,
+                    alert.SourceEventId
+                })
+                .IsUnique()
+                .HasFilter(
+                    "\"SourceEventId\" IS NOT NULL");
+
+                entity.HasIndex(alert => new
+                {
+                    alert.UserId,
                     alert.IsDismissed,
                     alert.IsRead,
                     alert.CreatedAtUtc

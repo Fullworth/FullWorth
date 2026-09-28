@@ -669,6 +669,10 @@ builder.Services.AddScoped<
     BillAlertReconciliationGateway>();
 
 builder.Services.AddScoped<
+    IPlanningPaydayAlertGateway,
+    PlanningPaydayAlertGateway>();
+
+builder.Services.AddScoped<
     IAccountBillDeletionGateway,
     AccountBillDeletionGateway>();
 

@@ -370,6 +370,9 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<Guid?>("BillStreamId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceEventId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -409,6 +412,10 @@ namespace FullWorth.API.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("BillStreamId", "UserId");
+
+                    b.HasIndex("UserId", "AlertType", "SourceEventId")
+                        .IsUnique()
+                        .HasFilter("\"SourceEventId\" IS NOT NULL");
 
                     b.HasIndex("UserId", "IsDismissed", "IsRead", "CreatedAtUtc");
 
