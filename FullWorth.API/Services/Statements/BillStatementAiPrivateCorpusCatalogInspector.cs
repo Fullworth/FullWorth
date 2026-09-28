@@ -5,7 +5,7 @@ namespace FullWorth.API.Services.Statements;
  *
  * Every discovered case is loaded through the bounded corpus loader.
  * InspectAsync returns aggregate coverage only; InspectAndSelectAsync also
- * carries validated case identifiers in memory for the offline runner.
+ * carries validated cases in memory for the offline runner.
  * Neither method calls an AI provider or is registered in the API runtime.
  */
 public sealed class BillStatementAiPrivateCorpusCatalogInspector
@@ -38,8 +38,8 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
     }
 
     /*
-     * The case identifiers stay in memory for the offline runner. They must
-     * never be included in its aggregate report or application logs.
+     * The cases and identifiers stay in memory for the offline runner. They
+     * must never be included in its aggregate report or application logs.
      */
     public async Task<BillStatementAiPrivateCorpusCatalogSelection> InspectAndSelectAsync(
         string corpusRootDirectory,
@@ -178,6 +178,10 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
             new Dictionary<string, long>(
                 StringComparer.Ordinal);
 
+        var cases =
+            new List<BillStatementAiPrivateCorpusCase>(
+                caseIds.Count);
+
         foreach (var caseId in
                  caseIds)
         {
@@ -188,6 +192,9 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
                     corpusRootDirectory,
                     caseId,
                     cancellationToken);
+
+            cases.Add(
+                corpusCase);
 
             var providerKey =
                 corpusCase.ProviderKey
@@ -208,7 +215,9 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
                     providerCounts.Count,
                 MinimumCasesForAnyProvider:
                     providerCounts.Values.Min()),
-            caseIds);
+            caseIds,
+            new BillStatementAiPrivateCorpusSnapshot(
+                cases));
     }
 }
 
@@ -221,16 +230,22 @@ public sealed class BillStatementAiPrivateCorpusCatalogSelection
 {
     internal BillStatementAiPrivateCorpusCatalogSelection(
         BillStatementAiPrivateCorpusCatalogSummary summary,
-        List<string> caseIds)
+        List<string> caseIds,
+        BillStatementAiPrivateCorpusSnapshot snapshot)
     {
         Summary =
             summary;
 
         CaseIds =
             caseIds.AsReadOnly();
+
+        Snapshot =
+            snapshot;
     }
 
     public BillStatementAiPrivateCorpusCatalogSummary Summary { get; }
 
     public IReadOnlyList<string> CaseIds { get; }
+
+    public BillStatementAiPrivateCorpusSnapshot Snapshot { get; }
 }

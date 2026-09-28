@@ -92,17 +92,13 @@ internal static class Program
                     .InspectAndSelectAsync(
                         fullCorpusRoot);
 
-            var caseIds =
-                selection.CaseIds;
-
             if (parsed.Mode ==
                 BaselineMode)
             {
                 return await RunDeterministicBaselineAsync(
                     loader,
                     selection.Summary,
-                    fullCorpusRoot,
-                    caseIds);
+                    selection.Snapshot);
             }
 
             using var httpClient =
@@ -118,8 +114,7 @@ internal static class Program
                 return await RunPromptComparisonAsync(
                     loader,
                     httpClient,
-                    fullCorpusRoot,
-                    caseIds,
+                    selection.Snapshot,
                     apiKey,
                     readinessPolicy);
             }
@@ -127,8 +122,7 @@ internal static class Program
             return await RunSinglePromptEvaluationAsync(
                 loader,
                 httpClient,
-                fullCorpusRoot,
-                caseIds,
+                selection.Snapshot,
                 apiKey,
                 parsed.PromptVersion,
                 readinessPolicy);
@@ -150,8 +144,7 @@ internal static class Program
     private static async Task<int> RunDeterministicBaselineAsync(
         BillStatementAiPrivateCorpusLoader loader,
         BillStatementAiPrivateCorpusCatalogSummary catalog,
-        string fullCorpusRoot,
-        IReadOnlyList<string> caseIds)
+        BillStatementAiPrivateCorpusSnapshot snapshot)
     {
         var baseline =
             await new BillStatementDeterministicPrivateCorpusEvaluator(
@@ -159,9 +152,8 @@ internal static class Program
                 new DeterministicBillStatementExtractionService(
                     new DeterministicBillStatementParser(),
                     new DeterministicBillLineItemParser()))
-                .EvaluateAsync(
-                    fullCorpusRoot,
-                    caseIds);
+                .EvaluateLoadedCasesAsync(
+                    snapshot);
 
         WriteJson(
             new
@@ -190,8 +182,7 @@ internal static class Program
     private static async Task<int> RunSinglePromptEvaluationAsync(
         BillStatementAiPrivateCorpusLoader loader,
         HttpClient httpClient,
-        string fullCorpusRoot,
-        IReadOnlyList<string> caseIds,
+        BillStatementAiPrivateCorpusSnapshot snapshot,
         string apiKey,
         string promptVersion,
         BillStatementAiShadowReadinessPolicy readinessPolicy)
@@ -200,8 +191,7 @@ internal static class Program
             await EvaluatePromptAsync(
                 loader,
                 httpClient,
-                fullCorpusRoot,
-                caseIds,
+                snapshot,
                 apiKey,
                 promptVersion,
                 readinessPolicy);
@@ -257,29 +247,18 @@ internal static class Program
     private static async Task<int> RunPromptComparisonAsync(
         BillStatementAiPrivateCorpusLoader loader,
         HttpClient httpClient,
-        string fullCorpusRoot,
-        IReadOnlyList<string> caseIds,
+        BillStatementAiPrivateCorpusSnapshot snapshot,
         string apiKey,
         BillStatementAiShadowReadinessPolicy readinessPolicy)
     {
-        // Load once so v1 and v2 are scored against the same in-memory
-        // statements and reviewer-approved labels, even if source files change
-        // while the model calls are running.
-        var corpusSnapshot =
-            await loader.LoadSnapshotAsync(
-                fullCorpusRoot,
-                caseIds);
-
         var baselineRun =
             await EvaluatePromptAsync(
                 loader,
                 httpClient,
-                fullCorpusRoot,
-                caseIds,
+                snapshot,
                 apiKey,
                 LocalAiBillStatementPromptCatalog.Version1,
-                readinessPolicy,
-                corpusSnapshot);
+                readinessPolicy);
 
         if (baselineRun.Result.Metrics is null)
         {
@@ -295,12 +274,10 @@ internal static class Program
             await EvaluatePromptAsync(
                 loader,
                 httpClient,
-                fullCorpusRoot,
-                caseIds,
+                snapshot,
                 apiKey,
                 LocalAiBillStatementPromptCatalog.Version2,
-                readinessPolicy,
-                corpusSnapshot);
+                readinessPolicy);
 
         if (candidateRun.Result.Metrics is null)
         {
@@ -606,12 +583,10 @@ internal static class Program
     private static async Task<PromptEvaluationRun> EvaluatePromptAsync(
         BillStatementAiPrivateCorpusLoader loader,
         HttpClient httpClient,
-        string fullCorpusRoot,
-        IReadOnlyList<string> caseIds,
+        BillStatementAiPrivateCorpusSnapshot snapshot,
         string apiKey,
         string promptVersion,
-        BillStatementAiShadowReadinessPolicy readinessPolicy,
-        BillStatementAiPrivateCorpusSnapshot? corpusSnapshot = null)
+        BillStatementAiShadowReadinessPolicy readinessPolicy)
     {
         var options =
             new LocalAiBillStatementOptions
@@ -660,24 +635,14 @@ internal static class Program
                 new BillStatementAiGroundTruthScorer());
 
         var result =
-            corpusSnapshot is null
-                ? await evaluator.EvaluateAsync(
-                    fullCorpusRoot,
-                    caseIds,
-                    promptVersion,
-                    providerCallsAuthorized:
-                        true,
-                    readinessPolicy,
-                    maxCharactersPerInference:
-                        options.MaxDocumentCharacters)
-                : await evaluator.EvaluateLoadedCasesAsync(
-                    corpusSnapshot,
-                    promptVersion,
-                    providerCallsAuthorized:
-                        true,
-                    readinessPolicy,
-                    maxCharactersPerInference:
-                        options.MaxDocumentCharacters);
+            await evaluator.EvaluateLoadedCasesAsync(
+                snapshot,
+                promptVersion,
+                providerCallsAuthorized:
+                    true,
+                readinessPolicy,
+                maxCharactersPerInference:
+                    options.MaxDocumentCharacters);
 
         stopwatch.Stop();
 

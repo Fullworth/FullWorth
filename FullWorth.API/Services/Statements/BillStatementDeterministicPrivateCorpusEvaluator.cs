@@ -61,6 +61,34 @@ public sealed class BillStatementDeterministicPrivateCorpusEvaluator
                 nameof(caseIds));
         }
 
+        var snapshot =
+            await _loader.LoadSnapshotAsync(
+                corpusRootDirectory,
+                caseIds,
+                cancellationToken);
+
+        return await EvaluateLoadedCasesAsync(
+            snapshot,
+            cancellationToken);
+    }
+
+    public async Task<BillStatementDeterministicCorpusBaseline> EvaluateLoadedCasesAsync(
+        BillStatementAiPrivateCorpusSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            snapshot);
+
+        var cases =
+            snapshot.Cases;
+
+        if (cases.Count is < 1 or > MaxCasesPerRun)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(snapshot),
+                $"A deterministic corpus run requires between 1 and {MaxCasesPerRun} cases.");
+        }
+
         long readyStatementCount =
             0;
 
@@ -73,16 +101,10 @@ public sealed class BillStatementDeterministicPrivateCorpusEvaluator
         long missedFactCount =
             0;
 
-        foreach (var caseId in
-                 caseIds)
+        foreach (var corpusCase in
+                 cases)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var corpusCase =
-                await _loader.LoadAsync(
-                    corpusRootDirectory,
-                    caseId,
-                    cancellationToken);
 
             var extraction =
                 await _deterministicExtractor.ExtractAsync(
@@ -129,7 +151,7 @@ public sealed class BillStatementDeterministicPrivateCorpusEvaluator
 
         return new BillStatementDeterministicCorpusBaseline(
             EvaluatedStatementCount:
-                caseIds.Count,
+                cases.Count,
             ReadyStatementCount:
                 readyStatementCount,
             CorrectFactCount:
@@ -141,7 +163,7 @@ public sealed class BillStatementDeterministicPrivateCorpusEvaluator
             ReadyStatementRate:
                 Divide(
                     readyStatementCount,
-                    caseIds.Count),
+                    cases.Count),
             FactPrecision:
                 Divide(
                     correctFactCount,
