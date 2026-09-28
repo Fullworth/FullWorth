@@ -180,6 +180,9 @@
                             <div class="planning-change-values">
                                 <span>@FormatAmount(change.PreviousAmount, change.CurrencyCode) <span aria-hidden="true">→</span> @FormatAmount(change.CurrentAmount, change.CurrencyCode)</span>
                                 <strong>@FormatImpact(change.AmountDifference, change.CurrencyCode)</strong>
+                                <span class="planning-annual-impact">
+                                    @L["Annual impact"]: @FormatImpact(change.AnnualizedImpact, change.CurrencyCode)
+                                </span>
                             </div>
                             <p>
                                 @L["Due date"]: @(change.BillDueDate.HasValue ? FormatDate(change.BillDueDate.Value) : L["Not available"].Value)
@@ -424,7 +427,9 @@
         var currency = string.IsNullOrWhiteSpace(currencyCode)
             ? string.Empty
             : currencyCode.Trim().ToUpperInvariant();
-        return amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) +
+        return amount.ToString(
+                   "N2",
+                   System.Globalization.CultureInfo.CurrentCulture) +
                (currency.Length == 0 ? string.Empty : " " + currency);
     }
 
@@ -435,7 +440,9 @@
     }
 
     private static string FormatDate(DateOnly date) =>
-        date.ToString("MMM d, yyyy", System.Globalization.CultureInfo.GetCultureInfo("en-US"));
+        date.ToString(
+            "d",
+            System.Globalization.CultureInfo.CurrentCulture);
 
     private string GetStatusLabel(string? status) =>
         status == "Ready" ? L["Ready to replan"].Value : L["Needs review"].Value;
@@ -492,6 +499,7 @@
         public decimal PreviousAmount { get; set; }
         public decimal CurrentAmount { get; set; }
         public decimal AmountDifference { get; set; }
+        public decimal AnnualizedImpact { get; set; }
         public string Description { get; set; } = string.Empty;
         public string RecalculationStatus { get; set; } = string.Empty;
         public decimal? RemainingAmountToPlan { get; set; }
