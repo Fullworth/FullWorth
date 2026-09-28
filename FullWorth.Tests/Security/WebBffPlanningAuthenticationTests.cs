@@ -89,12 +89,24 @@ public sealed class WebBffPlanningAuthenticationTests
         using var client =
             factory.CreateHttpsClient();
 
-        var tokenResponse =
-            await client.GetFromJsonAsync<AntiforgeryPayload>(
+        using var tokenHttpResponse =
+            await client.GetAsync(
                 "/bff/antiforgery");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            tokenHttpResponse.StatusCode);
+
+        var tokenResponse =
+            await tokenHttpResponse.Content.ReadFromJsonAsync<AntiforgeryPayload>();
 
         Assert.NotNull(
             tokenResponse);
+
+        var antiforgeryCookies =
+            tokenHttpResponse.Headers
+                .GetValues("Set-Cookie")
+                .Select(cookie => cookie.Split(';', 2)[0]);
 
         using var request =
             new HttpRequestMessage(
@@ -104,6 +116,9 @@ public sealed class WebBffPlanningAuthenticationTests
         request.Headers.Add(
             "X-CSRF-TOKEN",
             tokenResponse!.RequestToken);
+        request.Headers.TryAddWithoutValidation(
+            "Cookie",
+            string.Join("; ", antiforgeryCookies));
 
         using var response =
             await client.SendAsync(
