@@ -24,6 +24,12 @@ public sealed class AdminBffWriteProxyService(
     private const string AccountSecurityPath =
         "/api/account/security";
 
+    private const string PlanningPaySchedulePath =
+        "/api/planning/pay-schedule";
+
+    private const string PlanningBillFundingPreferencesPath =
+        "/api/planning/bill-funding-preferences";
+
     private const string PasswordChangePath =
         "/api/account/security/password";
 
@@ -583,6 +589,15 @@ public sealed class AdminBffWriteProxyService(
                 AccountSecurityPath + "/",
                 StringComparison.Ordinal);
 
+        var isPlanningWritePath =
+            string.Equals(
+                requestUri,
+                PlanningPaySchedulePath,
+                StringComparison.Ordinal) ||
+            requestUri.StartsWith(
+                PlanningBillFundingPreferencesPath + "/",
+                StringComparison.Ordinal);
+
         var isExternalIdentityLinkPath =
             string.Equals(
                 requestUri,
@@ -612,6 +627,7 @@ public sealed class AdminBffWriteProxyService(
             !isSubscriptionRedemptionPath &&
             !isAccountPreferencesPath &&
             !isAccountSecurityPath &&
+            !isPlanningWritePath &&
             !isExternalIdentityLinkPath &&
             !isExternalIdentityUnlinkPath &&
             !isAccountDeletionPath &&
