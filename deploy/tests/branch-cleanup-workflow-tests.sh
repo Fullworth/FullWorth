@@ -64,32 +64,17 @@ grep -Fq 'current_sha" != "$expected_sha' "$workflow" ||
     fail "reviewed stale branches are not pinned to their reviewed SHA."
 grep -Fq 'Keeping reviewed stale branch with an open PR' "$workflow" ||
     fail "reviewed stale cleanup does not preserve newly active branches."
-grep -Fq 
-
-if grep -Fq 'git push' "$workflow"; then
-    fail "workflow should use the GitHub API instead of a repository push."
-fi
-
-printf '%s\n' "Guarded branch cleanup workflow regression passed."
-feat/ui-foundation-primitives\t82e5d4fbc93390384f0d21cb90d91561d1d6a345' "$workflow" ||
+grep -Fq 'feat/ui-foundation-primitives' "$workflow" ||
+    fail "reviewed no-PR UI branch is not listed for consolidation."
+grep -Fq '82e5d4fbc93390384f0d21cb90d91561d1d6a345' "$workflow" ||
     fail "reviewed no-PR UI branch is not SHA-pinned for consolidation."
-grep -Fq 
-
-if grep -Fq 'git push' "$workflow"; then
-    fail "workflow should use the GitHub API instead of a repository push."
-fi
-
-printf '%s\n' "Guarded branch cleanup workflow regression passed."
-ai/aggregate-inference-latency-metrics\te5509437220a7f96ddf2d2bee1c047cfbba8e82c' "$workflow" ||
+grep -Fq 'ai/aggregate-inference-latency-metrics' "$workflow" ||
+    fail "reviewed no-PR AI branch is not listed for consolidation."
+grep -Fq 'e5509437220a7f96ddf2d2bee1c047cfbba8e82c' "$workflow" ||
     fail "reviewed no-PR AI branch is not SHA-pinned for consolidation."
-grep -Fq 
-
-if grep -Fq 'git push' "$workflow"; then
-    fail "workflow should use the GitHub API instead of a repository push."
-fi
-
-printf '%s\n' "Guarded branch cleanup workflow regression passed."
-security/single-use-refresh-tokens\t67d3877a471d6a48d185135378c63cffc66fb054' "$workflow" ||
+grep -Fq 'security/single-use-refresh-tokens' "$workflow" ||
+    fail "reviewed no-PR security branch is not listed for consolidation."
+grep -Fq '67d3877a471d6a48d185135378c63cffc66fb054' "$workflow" ||
     fail "reviewed no-PR security branch is not SHA-pinned for consolidation."
 
 if grep -Fq 'git push' "$workflow"; then
