@@ -9,6 +9,10 @@ permissions:
   contents: write
   pull-requests: read
 
+concurrency:
+  group: fullworth-branch-cleanup
+  cancel-in-progress: false
+
 jobs:
   cleanup:
     name: Delete proven stale branches
@@ -35,6 +39,35 @@ jobs:
           skipped=0
           reviewed_deleted=0
           reviewed_skipped=0
+
+          delete_branch_if_present()
+          {
+            local branch="$1"
+
+            if gh api -X DELETE \
+              "repos/$REPOSITORY/git/refs/heads/$branch"
+            then
+              return 0
+            fi
+
+            # A run that started before serialization was added may have
+            # deleted this ref after enumeration. Accept the failed DELETE
+            # only after the repository confirms the branch is now absent.
+            current_after="$(
+              gh api --paginate \
+                "repos/$REPOSITORY/branches?per_page=100" \
+                --jq ".[] | select(.name == \"$branch\") | .name" |
+                head -n 1
+            )"
+
+            if [[ -z "$current_after" ]]; then
+              echo "Branch already absent after concurrent cleanup: $branch"
+              return 0
+            fi
+
+            echo "Failed to delete branch that still exists: $branch" >&2
+            return 1
+          }
 
           while IFS=$'\t' read -r branch sha protected; do
             case "$branch" in
@@ -77,8 +110,7 @@ jobs:
               continue
             fi
 
-            gh api -X DELETE \
-              "repos/$REPOSITORY/git/refs/heads/$branch"
+            delete_branch_if_present "$branch"
 
             echo "Deleted merged source branch: $branch"
             deleted=$((deleted + 1))
@@ -133,8 +165,7 @@ jobs:
               continue
             fi
 
-            gh api -X DELETE \
-              "repos/$REPOSITORY/git/refs/heads/$branch"
+            delete_branch_if_present "$branch"
 
             echo "Deleted reviewed stale branch: $branch"
             reviewed_deleted=$((reviewed_deleted + 1))
