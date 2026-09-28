@@ -1,6 +1,22 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
+
+## Repository consolidation / payday alert checkpoint — 2026-09-28
+
+The Planning payday path has advanced from manual generation to automatic, recovery-safe user alerts. PR #515 added the Bills-owned `PaydayPlan` alert persistence boundary with an opaque source-event ID and owner-scoped idempotency. PR #518 then connected Planning to recent posted payroll facts in the monitoring cycle: the service scans a bounded seven-day posted-payroll window, generates or replays the immutable payday plan, emits one idempotent user-level alert per payroll transaction, stops cleanly when pay-schedule configuration is missing, skips unsupported payroll facts rather than inventing evidence, and isolates alert failure from a successful bank/bill refresh. No part of this flow claims that money was moved, reserved, protected, held, or insured. Issue #293 now marks automatic alerts from actual posted paycheck events complete.
+
+PR #521 updated the existing Activity feed to present and localize `PaydayPlan` alerts. The broader Planning Web UX checkpoint intentionally remains open: there is still no dedicated Planning screen for pay-schedule/default funding settings, per-bill overrides, shortfall review, or Upcoming Bill Change Watch presentation. Real-world Plaid sandbox acceptance with posted payroll transactions also remains open before production use of this feature.
+
+Repository hygiene was completed with fail-closed branch cleanup. PRs #516/#517 hardened cleanup against overlapping-run deletion races and expanded cleanup to closed-PR source refs plus separately audited SHA-pinned stale refs while always preserving `master`, `development`, protected branches, and open-PR branches. PRs #525/#526 added the final three audited legacy refs to that SHA-pinned retirement set after current `development` was verified to contain the later statement-airlock, MFA/session-revocation, and refresh-token-replay semantics. The owner-triggered cleanup reduced the repository from roughly 100 branches to the two long-lived branches after this handoff branch was merged and retired. Closed PR history remains the review record for removed source branches.
+
+PR #522 exempts repository-maintenance-only workflow edits from unnecessary MAUI builds while changes to `.github/workflows/ci.yml` itself continue to exercise the Android gate. PR #527 refreshed `coverlet.collector` from 10.0.1 to 10.1.0 and the production Redis image from 8.2.9-alpine to 8.10.0-alpine with its pinned digest on the exact current `development` base after full CI/security validation.
+
+Current long-lived branch heads at this checkpoint are `development` = `908306a773f78b791c1b37148357c7fc0907ee65` and `master` = `47163a1490bf048e1a37768bb021e5e212c006f1` before this documentation-only merge. No production deployment is implied by these repository changes.
+
+`HUMAN-TODO.md` still contains exactly the genuinely human-only release prerequisites currently identified: configure GitHub branch protection/rulesets for `master` and `development`, and obtain qualified commercial legal/license review before commercial launch. The connected GitHub tooling can read protection state but still exposes no mutation for creating those rulesets.
+
+Next product checkpoint: complete the real Planning Web UX (settings, overrides, shortfall review, and Change Watch presentation), then perform Plaid sandbox acceptance with real posted payroll transactions. The local-Qwen/private-corpus benchmark also remains a separate release-readiness evidence gate; production AI remains disabled until real evaluation evidence supports enabling it.
 
 ## Planning / security continuation checkpoint — 2026-09-27
 
