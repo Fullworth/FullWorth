@@ -12,6 +12,7 @@ namespace FullWorth.API.Controllers;
 [Authorize]
 public sealed class PlanningController(
     PlanningSettingsService planningSettings,
+    PlanningPaydayPlanService paydayPlanService,
     UserManager<ApplicationUser> userManager)
     : ControllerBase
 {
@@ -205,6 +206,63 @@ public sealed class PlanningController(
         return NoContent();
     }
 
+
+    [HttpPut("payday-plans/{payrollTransactionId:guid}")]
+    public async Task<ActionResult<PlanningPaydayPlanResponse>>
+        PutPaydayPlan(
+            Guid payrollTransactionId,
+            PlanningPaydayPlanRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        if (payrollTransactionId == Guid.Empty)
+        {
+            return NotFound();
+        }
+
+        var plan =
+            await paydayPlanService.GenerateAsync(
+                userId,
+                payrollTransactionId,
+                request.PostedDate,
+                cancellationToken);
+
+        return plan.Status switch
+        {
+            PlanningPaydayPlanStatus.Ready =>
+                Ok(
+                    ToResponse(
+                        plan)),
+
+            PlanningPaydayPlanStatus.PayrollNotFound =>
+                NotFound(),
+
+            PlanningPaydayPlanStatus.PayScheduleRequired =>
+                Conflict(
+                    new
+                    {
+                        message =
+                            "Configure a pay schedule before generating a payday plan."
+                    }),
+
+            PlanningPaydayPlanStatus.PayrollFactUnsupported =>
+                UnprocessableEntity(
+                    new
+                    {
+                        message =
+                            "This payroll transaction cannot be used for payday planning."
+                    }),
+
+            _ =>
+                throw new InvalidOperationException(
+                    "Planning payday plan status is invalid.")
+        };
+    }
+
     private bool TryGetUserId(out Guid userId)
     {
         var userIdText =
@@ -251,6 +309,40 @@ public sealed class PlanningController(
             schedule.SecondaryDayOfMonth,
             schedule.DefaultPaychecksAhead);
     }
+
+    private static PlanningPaydayPlanResponse ToResponse(
+        PlanningPaydayPlanSnapshot plan)
+    {
+        return new PlanningPaydayPlanResponse(
+            plan.PayrollTransactionId,
+            plan.PaycheckPostedDate,
+            plan.PaycheckAmount,
+            plan.CurrencyCode!,
+            plan.IsReplay,
+            plan.RecommendedSetAside,
+            plan.PaycheckRemainingAfterPlan,
+            plan.Shortfall,
+            plan.Items
+                .Select(
+                    item =>
+                        new PlanningPaydayPlanItemResponse(
+                            item.BillStreamId,
+                            item.ProviderName,
+                            item.SourceStatementId,
+                            item.BillPeriodEnd,
+                            item.BillDueDate,
+                            item.PlannedAmount,
+                            item.CurrencyCode))
+                .ToList(),
+            plan.SkippedBills
+                .Select(
+                    item =>
+                        new PlanningPaydayPlanSkippedBillResponse(
+                            item.BillStreamId,
+                            item.ProviderName,
+                            item.Reason.ToString()))
+                .ToList());
+    }
 }
 
 public sealed record PlanningPayScheduleRequest(
@@ -271,3 +363,33 @@ public sealed record PlanningBillFundingPreferenceRequest(
 public sealed record PlanningBillFundingPreferenceResponse(
     Guid BillStreamId,
     int PaychecksAheadOverride);
+
+
+public sealed record PlanningPaydayPlanRequest(
+    DateOnly PostedDate);
+
+public sealed record PlanningPaydayPlanResponse(
+    Guid PayrollTransactionId,
+    DateOnly PaycheckPostedDate,
+    decimal PaycheckAmount,
+    string CurrencyCode,
+    bool IsReplay,
+    decimal RecommendedSetAside,
+    decimal PaycheckRemainingAfterPlan,
+    decimal Shortfall,
+    IReadOnlyList<PlanningPaydayPlanItemResponse> Items,
+    IReadOnlyList<PlanningPaydayPlanSkippedBillResponse> SkippedBills);
+
+public sealed record PlanningPaydayPlanItemResponse(
+    Guid BillStreamId,
+    string? ProviderName,
+    Guid SourceStatementId,
+    DateOnly BillPeriodEnd,
+    DateOnly BillDueDate,
+    decimal PlannedAmount,
+    string CurrencyCode);
+
+public sealed record PlanningPaydayPlanSkippedBillResponse(
+    Guid BillStreamId,
+    string ProviderName,
+    string Reason);
