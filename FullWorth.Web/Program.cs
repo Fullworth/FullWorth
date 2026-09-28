@@ -290,6 +290,7 @@ app.MapFullWorthBffEndpoints();
 app.MapFullWorthAdminBffEndpoints();
 app.MapFullWorthAccountPreferenceBffEndpoints();
 app.MapFullWorthAccountSecurityBffEndpoints();
+app.MapFullWorthPlanningBffEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
