@@ -269,6 +269,12 @@ builder.Services.AddSingleton(
 builder.Services.AddScoped<
     PlanningSettingsService>();
 
+builder.Services.AddScoped<
+    PlanningPaycheckAllocationStore>();
+
+builder.Services.AddScoped<
+    PlanningPaydayPlanService>();
+
 builder.Services.AddSingleton<
     SubscriptionAccessKeyGenerator>();
 
