@@ -38,6 +38,17 @@ grep -Fq 'if [[ "$protected" == "true" ]]' "$workflow" ||
     fail "protected branches are not preserved."
 grep -Fq 'state=open' "$workflow" ||
     fail "open pull requests are not checked."
+grep -Fq 'compare/$sha...development' "$workflow" ||
+    fail "cleanup does not prove whether a branch is fully contained in development."
+grep -Fq 'containment_behind" == "0"' "$workflow" ||
+    fail "contained-branch cleanup does not require zero commits missing from development."
+grep -Fq 'containment_status" == "ahead"' "$workflow" ||
+    fail "contained-branch cleanup does not accept an ancestor of development."
+grep -Fq 'containment_status" == "identical"' "$workflow" ||
+    fail "contained-branch cleanup does not accept a ref identical to development."
+grep -Fq 'Deleted branch fully contained in development' "$workflow" ||
+    fail "contained-branch cleanup is not surfaced in workflow output."
+
 grep -Fq 'state=closed' "$workflow" ||
     fail "closed pull requests are not checked."
 grep -Fq 'select(.head.sha ==' "$workflow" ||
