@@ -63,11 +63,11 @@ partial document as complete.
 
 Use the comparison mode to run the preserved v1 baseline and current v2 prompt
 against the exact same sorted case identifiers, model endpoint, deterministic
-candidate validator, and ground-truth scorer:
-For the paired inference runs, the runner loads and validates the selected cases
-into one in-memory snapshot before the first inference, then reuses it for both
-prompt versions. Editing or replacing corpus files during a run cannot silently
-change the paired comparison.
+candidate validator, and ground-truth scorer. Catalog preflight loads and
+validates the selected cases into one in-memory snapshot. The deterministic
+baseline, single-prompt evaluation, and paired prompt comparison each use that
+snapshot rather than reopening case files after preflight. Editing or replacing
+corpus files during a run cannot silently change its scored population.
 
 ```sh
 dotnet run --project FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj --configuration Release -- compare-prompts --corpus-root /absolute/path/to/private-corpus --authorize-local-model-inference
@@ -127,8 +127,8 @@ opening the private corpus, and call only the loopback runtime. The runner
 prints aggregate metrics and approved
 model/runtime identifiers; it never prints case identifiers, provider keys,
 statement text, ground truth, model output, evidence, secrets, or corpus paths.
-The runner evaluates the sorted case identifiers selected during catalog
-preflight; it does not discover a second case population afterward.
+The runner evaluates the sorted cases loaded during catalog preflight; it does
+not discover a second population or reread statement text and labels afterward.
 
 The report explicitly states that runtime provenance is not independently
 verified by the .NET runner. The guarded `deploy/start-ai-evaluation.sh` path

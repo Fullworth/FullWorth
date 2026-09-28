@@ -85,6 +85,20 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspectorTests
             "case-c",
             "provider-c");
 
+        File.WriteAllText(
+            System.IO.Path.Combine(
+                directory.Path,
+                "case-a",
+                BillStatementAiPrivateCorpusPathPolicy.StatementTextFileName),
+            "Changed after preflight");
+
+        File.WriteAllText(
+            System.IO.Path.Combine(
+                directory.Path,
+                "case-a",
+                BillStatementAiPrivateCorpusPathPolicy.GroundTruthFileName),
+            "{}");
+
         Assert.Equal(
             new[] { "case-a", "case-b" },
             selection.CaseIds);
@@ -92,6 +106,18 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspectorTests
         Assert.Equal(
             2,
             selection.Summary.CaseCount);
+
+        Assert.Equal(
+            2,
+            selection.Snapshot.Cases.Count);
+
+        Assert.Equal(
+            "Total due $1.00 USD",
+            selection.Snapshot.Cases[0].StatementText);
+
+        Assert.Equal(
+            1m,
+            selection.Snapshot.Cases[0].ExpectedStatement.TotalAmount);
     }
 
     [Fact]
