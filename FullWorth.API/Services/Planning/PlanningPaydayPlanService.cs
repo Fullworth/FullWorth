@@ -437,7 +437,8 @@ public sealed class PlanningPaydayPlanService(
                                 new
                                 {
                                     bill.BillStreamId,
-                                    fact.PeriodEnd
+                                    BillPeriodEnd =
+                                        fact.PeriodEnd
                                 }];
 
                         return new PlanningPaydayPlanItem(
