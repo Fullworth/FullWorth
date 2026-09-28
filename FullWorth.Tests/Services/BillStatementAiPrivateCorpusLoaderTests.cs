@@ -201,6 +201,139 @@ public sealed class BillStatementAiPrivateCorpusLoaderTests
                         "case-001"));
     }
 
+    [Theory]
+    [InlineData("provider name")]
+    [InlineData("prøvider")]
+    [InlineData("@provider")]
+    [InlineData("provider/one")]
+    public async Task ProviderKeyOutsideAsciiIdentifierFormat_IsRejected(
+        string providerKey)
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-001",
+            "Statement text",
+            MinimalGroundTruth()
+                .Replace(
+                    "provider-a",
+                    providerKey,
+                    StringComparison.Ordinal));
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiPrivateCorpusException>(
+                () =>
+                    new BillStatementAiPrivateCorpusLoader()
+                        .LoadAsync(
+                            directory.Path,
+                            "case-001"));
+
+        Assert.DoesNotContain(
+            providerKey,
+            exception.ToString(),
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("USK")]
+    [InlineData("US1")]
+    public async Task CurrencyCodeOutsideAsciiLetters_IsRejected(
+        string currencyCode)
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-001",
+            "Statement text",
+            MinimalGroundTruth()
+                .Replace(
+                    "USD",
+                    currencyCode,
+                    StringComparison.Ordinal));
+
+        await Assert.ThrowsAsync<
+            BillStatementAiPrivateCorpusException>(
+            () =>
+                new BillStatementAiPrivateCorpusLoader()
+                    .LoadAsync(
+                        directory.Path,
+                        "case-001"));
+    }
+
+    [Theory]
+    [InlineData("totalAmount")]
+    [InlineData("TOTALAMOUNT")]
+    public async Task DuplicateGroundTruthProperty_IsRejectedBeforeDeserialization(
+        string duplicateName)
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-001",
+            "Statement text",
+            MinimalGroundTruth()
+                .Replace(
+                    "\"totalAmount\": 1.00,",
+                    $"\"totalAmount\": 1.00, \"{duplicateName}\": 999.00,",
+                    StringComparison.Ordinal));
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiPrivateCorpusException>(
+                () =>
+                    new BillStatementAiPrivateCorpusLoader()
+                        .LoadAsync(
+                            directory.Path,
+                            "case-001"));
+
+        Assert.DoesNotContain(
+            directory.Path,
+            exception.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DuplicateLineItemProperty_IsRejectedBeforeDeserialization()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-001",
+            "Statement text",
+            """
+            {
+              "providerKey": "provider-a",
+              "totalAmount": 1.00,
+              "billingPeriodStart": null,
+              "billingPeriodEnd": null,
+              "statementDate": null,
+              "dueDate": null,
+              "currencyCode": "USD",
+              "lineItems": [
+                {
+                  "description": "Service",
+                  "amount": 1.00,
+                  "amount": 999.00,
+                  "category": null
+                }
+              ]
+            }
+            """);
+
+        await Assert.ThrowsAsync<
+            BillStatementAiPrivateCorpusException>(
+            () =>
+                new BillStatementAiPrivateCorpusLoader()
+                    .LoadAsync(
+                        directory.Path,
+                        "case-001"));
+    }
+
     private static string MinimalGroundTruth()
     {
         return """
