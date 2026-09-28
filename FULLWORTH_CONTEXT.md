@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-27
 
+## Planning / security continuation checkpoint — 2026-09-27
+
+The Planning payday stack is now integrated through immutable replay-safe plan persistence. PR #510 merged to `development` as `02c38f6c18237cf9f37745c61892c683b0d999c0` after exact head `66457ee0eed0ece7c8cf9229fc643aca6ad2ea8f` passed FullWorth CI run `36374917272` and dependency security run `36374917348`. Ready payday plans now persist the immutable paycheck-plan run and positive bill allocations through one Planning-owned save boundary; zero-allocation ready plans are replayable, and replay checks the frozen Planning snapshot before live payroll facts so later provider changes cannot rewrite an already-recorded recommendation. Planning still records guidance only and does not claim money was moved, reserved, protected, or held.
+
+The preceding Planning chain is also merged: recommendation-ledger persistence (#501), replay-safe allocation storage (#502), bill-decrease handling (#503), owner-validated posted-paycheck orchestration (#504), authenticated payday-plan API (#505), confirmed statement-backed bill-change facts (#506), deterministic Change Watch (#507), Change Watch API (#508), and immutable paycheck-plan-run persistence (#509). Issue #293 now records payday generation, Change Watch, and ownership/security ratchets as completed. The next functional checkpoint is automatic payday alert generation from actual posted wage transactions, followed by Web UX and Plaid sandbox acceptance.
+
+External-identity disclosure hardening was refreshed as PR #512 and merged after exact-head CI/security passed. Repository branch-protection detection is refreshed in PR #513; it is automation only and does not substitute for configuring protection. `master` and `development` still require human-admin branch protection and remain tracked in `HUMAN-TODO.md`.
+
+The prior proprietary-license draft PR #368 was deliberately closed rather than merged. Qualified legal review is now tracked in `HUMAN-TODO.md`; do not recreate or merge license language until that review is complete.
+
 
 ## CI simulator reliability / human handoff checkpoint — 2026-09-27
 
