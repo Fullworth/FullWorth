@@ -14,7 +14,8 @@ public enum BillAlertType
      * Keep new enum values appended so existing persisted numeric
      * values retain their meaning.
      */
-    NewBill = 7
+    NewBill = 7,
+    PaydayPlan = 8
 }
 
 public enum BillAlertSeverity
@@ -33,6 +34,14 @@ public sealed class BillAlertEntity
     public Guid? BillStreamId { get; set; }
 
     public Guid? BillChangeId { get; set; }
+
+    /*
+     * Opaque source-event identity for idempotent alerts that originate
+     * outside the Bills domain. It deliberately has no cross-domain foreign
+     * key; the owning module must validate the source before asking Bills to
+     * persist an alert.
+     */
+    public Guid? SourceEventId { get; set; }
 
     public BillAlertType AlertType { get; set; } =
         BillAlertType.Unknown;
