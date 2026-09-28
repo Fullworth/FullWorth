@@ -114,7 +114,7 @@ services:
       - web_egress
 
   web-session-cache:
-    image: redis:8.2.9-alpine@sha256:e957842a3e7962bfe3e5ab9814eab06e029a2f0d7b0f5d74178af12713b9ab4d
+    image: redis:8.10.0-alpine@sha256:978f0e01593e65eed801f2402944efcd936d43b5027e4908a7897baf88ed6241
     restart: unless-stopped
     stop_grace_period: 10s
     logging: *default-logging
