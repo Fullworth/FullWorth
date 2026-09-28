@@ -13,6 +13,7 @@ namespace FullWorth.API.Controllers;
 public sealed class PlanningController(
     PlanningSettingsService planningSettings,
     PlanningPaydayPlanService paydayPlanService,
+    PlanningPaycheckAllocationStore allocationStore,
     PlanningBillChangeWatchService changeWatchService,
     UserManager<ApplicationUser> userManager)
     : ControllerBase
@@ -247,6 +248,50 @@ public sealed class PlanningController(
                 .ToList());
     }
 
+    [HttpGet("payday-plans/recent")]
+    public async Task<ActionResult<IReadOnlyList<PlanningPaydayPlanSummaryResponse>>>
+        GetRecentPaydayPlans(
+            [FromQuery] int take = 5,
+            CancellationToken cancellationToken = default)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        if (take is < 1 or > 20)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        "Recent payday plan count must be between 1 and 20."
+                });
+        }
+
+        var runs =
+            await allocationStore
+                .GetRecentPaycheckPlanRunsAsync(
+                    userId,
+                    take,
+                    cancellationToken);
+
+        return Ok(
+            runs
+                .Select(
+                    run =>
+                        new PlanningPaydayPlanSummaryResponse(
+                            run.Id,
+                            run.PaycheckPostedDate,
+                            run.PaycheckAmount,
+                            run.CurrencyCode,
+                            run.RecommendedSetAside,
+                            run.PaycheckRemainingAfterPlan,
+                            run.Shortfall,
+                            run.CreatedAtUtc))
+                .ToList());
+    }
+
     [HttpPut("payday-plans/{payrollTransactionId:guid}")]
     public async Task<ActionResult<PlanningPaydayPlanResponse>>
         PutPaydayPlan(
@@ -422,6 +467,16 @@ public sealed record PlanningBillChangeWatchResponse(
     string RecalculationStatus,
     decimal? AlreadyPlanned,
     decimal? RemainingAmountToPlan);
+
+public sealed record PlanningPaydayPlanSummaryResponse(
+    Guid Id,
+    DateOnly PaycheckPostedDate,
+    decimal PaycheckAmount,
+    string CurrencyCode,
+    decimal RecommendedSetAside,
+    decimal PaycheckRemainingAfterPlan,
+    decimal Shortfall,
+    DateTimeOffset CreatedAtUtc);
 
 public sealed record PlanningPaydayPlanRequest(
     DateOnly PostedDate);
