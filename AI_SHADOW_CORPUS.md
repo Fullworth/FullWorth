@@ -4,12 +4,14 @@ This repository intentionally contains no real provider statements, OCR text, ac
 
 Keep any corpus in an encrypted, access-controlled location outside the repository. If a temporary local corpus must exist beneath the repository during development, use only `.private/FullWorth.AiShadowCorpus/`; Git ignores that directory. The legacy `.private/BillWatch.AiShadowCorpus/` path remains ignored during migration so an existing private corpus cannot be accidentally committed.
 
-Each case uses a non-sensitive identifier containing only letters, digits, hyphens, and underscores. A future offline-only runner accepts only these fixed names beneath that case directory:
+Each case uses a non-sensitive ASCII identifier containing only letters, digits, hyphens, and underscores. Case identifiers must be unique without regard to letter case. The offline-only runner accepts only these fixed names beneath that case directory:
 
 - `statement.txt` — extracted statement text
 - `ground-truth.json` — reviewer-approved expected structured facts
 
-The bounded loader rejects missing files, links/reparse points, oversized content, invalid text encoding, unknown JSON properties, invalid dates/currency/money, money beyond cent precision, more than 100 line items, and ground truth with no scored facts. Its errors do not include statement text, parser details, or physical corpus paths.
+Use a pseudonymous `providerKey` made from ASCII letters, digits, hyphens, and underscores, starting with a letter or digit. Reuse the same key for every case from that provider; it is grouped without regard to letter case. Currency codes may contain only three ASCII letters and are normalized to uppercase.
+
+The bounded loader rejects missing files, links/reparse points, oversized content, invalid text encoding, duplicate or unknown JSON properties, invalid provider keys, invalid dates/currency/money, money beyond cent precision, more than 100 line items, and ground truth with no scored facts. Its errors do not include statement text, parser details, or physical corpus paths.
 
 `ground-truth.json` uses this shape (fictional values only):
 
@@ -36,7 +38,7 @@ Never put API keys, production connection strings, full account numbers, storage
 
 The scorer compares cases in memory and produces aggregate metrics only. A passing readiness gate is not permission to route AI-derived facts into statement persistence.
 
-Before any provider evaluation, the offline catalog inspector validates every case through the bounded loader and reports only total cases, distinct-provider count, and the smallest provider sample. It makes no AI calls and exposes no case identifiers, provider keys, statement text, truth values, or physical paths in its result.
+Before any provider evaluation, the offline catalog inspector validates every case through the bounded loader. Its report contains only total cases, distinct-provider count, and the smallest provider sample. The runner keeps its validated case snapshot in memory; it makes no AI calls during preflight and does not print case identifiers, provider keys, statement text, truth values, or physical paths.
 
 The no-spend coverage gate then requires the catalog to satisfy the largest configured measurement population, provider diversity, and minimum-per-provider sample before an offline provider evaluation may begin. Passing coverage never enables runtime shadow mode or statement persistence.
 

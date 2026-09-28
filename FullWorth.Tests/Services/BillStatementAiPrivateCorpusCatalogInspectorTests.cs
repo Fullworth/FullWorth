@@ -139,6 +139,41 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspectorTests
     }
 
     [Fact]
+    public async Task CaseIdentifiersDifferingOnlyByCase_AreRejectedWhenFilesystemAllowsThem()
+    {
+        using var directory =
+            new TemporaryCorpusDirectory();
+
+        directory.WriteCase(
+            "case-a",
+            "provider-a");
+
+        directory.WriteCase(
+            "CASE-A",
+            "provider-b");
+
+        if (Directory.GetDirectories(
+                directory.Path).Length !=
+            2)
+        {
+            return;
+        }
+
+        var exception =
+            await Assert.ThrowsAsync<
+                BillStatementAiPrivateCorpusException>(
+                () =>
+                    CreateInspector()
+                        .InspectAndSelectAsync(
+                            directory.Path));
+
+        Assert.DoesNotContain(
+            directory.Path,
+            exception.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EmptyCatalog_IsRejectedWithoutPhysicalPathInFailure()
     {
         using var directory =

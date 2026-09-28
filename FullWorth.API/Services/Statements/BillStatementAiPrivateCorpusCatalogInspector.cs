@@ -138,6 +138,10 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
             new List<string>(
                 caseDirectories.Length);
 
+        var seenCaseIds =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
         foreach (var caseDirectory in
                  caseDirectories)
         {
@@ -166,6 +170,13 @@ public sealed class BillStatementAiPrivateCorpusCatalogInspector
                 .ResolveStatementTextPath(
                     corpusRootDirectory,
                     caseId);
+
+            if (!seenCaseIds.Add(
+                    caseId))
+            {
+                throw new BillStatementAiPrivateCorpusException(
+                    "The private corpus contains duplicate case identifiers.");
+            }
 
             caseIds.Add(
                 caseId);
