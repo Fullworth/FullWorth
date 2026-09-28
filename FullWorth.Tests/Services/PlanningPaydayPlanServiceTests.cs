@@ -103,6 +103,15 @@ public sealed class PlanningPaydayPlanServiceTests
                 .PlanningPaycheckAllocations
                 .CountAsync());
 
+        Assert.Equal(
+            1,
+            await harness.DbContext
+                .PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        var payrollCallsAfterFirst =
+            harness.PayrollFacts.CallCount;
+
         harness.BillFacts.Facts[billStreamId] =
             new BillPlanningFact(
                 billStreamId,
@@ -145,6 +154,16 @@ public sealed class PlanningPaydayPlanServiceTests
             await harness.DbContext
                 .PlanningPaycheckAllocations
                 .CountAsync());
+
+        Assert.Equal(
+            1,
+            await harness.DbContext
+                .PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            payrollCallsAfterFirst,
+            harness.PayrollFacts.CallCount);
     }
 
     [Fact]
@@ -238,6 +257,56 @@ public sealed class PlanningPaydayPlanServiceTests
             Assert.Single(
                 result.SkippedBills)
                 .Reason);
+
+        Assert.Equal(
+            1,
+            await harness.DbContext
+                .PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            0,
+            await harness.DbContext
+                .PlanningPaycheckAllocations
+                .CountAsync());
+
+        harness.BillFacts.Facts[billStreamId] =
+            Fact(
+                billStreamId);
+
+        var replay =
+            await harness.Service.GenerateAsync(
+                harness.UserId,
+                payrollTransactionId,
+                new DateOnly(
+                    2026,
+                    9,
+                    25));
+
+        Assert.True(
+            replay.IsReplay);
+
+        Assert.Equal(
+            0m,
+            replay.RecommendedSetAside);
+
+        Assert.Empty(
+            replay.Items);
+
+        Assert.Empty(
+            replay.SkippedBills);
+
+        Assert.Equal(
+            1,
+            await harness.DbContext
+                .PlanningPaycheckPlanRuns
+                .CountAsync());
+
+        Assert.Equal(
+            0,
+            await harness.DbContext
+                .PlanningPaycheckAllocations
+                .CountAsync());
     }
 
     [Fact]
@@ -450,6 +519,12 @@ public sealed class PlanningPaydayPlanServiceTests
             await harness.DbContext
                 .PlanningPaycheckAllocations
                 .CountAsync());
+
+        Assert.Equal(
+            0,
+            await harness.DbContext
+                .PlanningPaycheckPlanRuns
+                .CountAsync());
     }
 
     private static BillPlanningFact Fact(
@@ -486,7 +561,8 @@ public sealed class PlanningPaydayPlanServiceTests
             FullWorthDbContext dbContext,
             PlanningPaycheckAllocationStore store,
             PlanningPaydayPlanService service,
-            FakeBillPlanningFactsGateway billFacts)
+            FakeBillPlanningFactsGateway billFacts,
+            FakePayrollFactsGateway payrollFacts)
         {
             UserId =
                 userId;
@@ -502,6 +578,9 @@ public sealed class PlanningPaydayPlanServiceTests
 
             BillFacts =
                 billFacts;
+
+            PayrollFacts =
+                payrollFacts;
         }
 
         public Guid UserId { get; }
@@ -513,6 +592,8 @@ public sealed class PlanningPaydayPlanServiceTests
         public PlanningPaydayPlanService Service { get; }
 
         public FakeBillPlanningFactsGateway BillFacts { get; }
+
+        public FakePayrollFactsGateway PayrollFacts { get; }
 
         public static async Task<Harness> CreateAsync(
             Guid billStreamId,
@@ -596,7 +677,8 @@ public sealed class PlanningPaydayPlanServiceTests
                 dbContext,
                 store,
                 service,
-                billFacts);
+                billFacts,
+                payrollFacts);
         }
 
         public async ValueTask DisposeAsync()
@@ -675,12 +757,16 @@ public sealed class PlanningPaydayPlanServiceTests
         IReadOnlyList<PlanningPostedPayrollFact> facts)
         : IPlanningPostedPayrollFactsGateway
     {
+        public int CallCount { get; private set; }
+
         public Task<IReadOnlyList<PlanningPostedPayrollFact>> GetAsync(
             Guid userId,
             DateOnly fromInclusive,
             DateOnly throughInclusive,
             CancellationToken cancellationToken = default)
         {
+            CallCount++;
+
             IReadOnlyList<PlanningPostedPayrollFact> result =
                 userId ==
                     ownerUserId
