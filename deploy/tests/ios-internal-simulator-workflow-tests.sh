@@ -132,6 +132,16 @@ grep -Fq 'FullWorth could not be installed into the iOS Simulator after one boun
 
 grep -Fq 'run_with_timeout 60' "$smoke_script" ||
     fail "Simulator reset or app launch is not bounded."
+launch_function=$(
+    sed -n '/^launch_app()$/,/^}/p' "$smoke_script"
+)
+printf '%s\\n' "$launch_function" |
+    grep -Fq 'run_with_timeout 180' ||
+    fail "FullWorth app launch is not bounded to 180 seconds."
+printf '%s\\n' "$launch_function" |
+    grep -Fq 'xcrun simctl launch "$udid" "$expected_bundle_id"' ||
+    fail "bounded launch helper does not launch the expected FullWorth app."
+
 grep -Fq 'xcrun simctl launch' "$smoke_script" ||
     fail "smoke does not launch FullWorth."
 grep -Fq 'xcrun simctl get_app_container' "$smoke_script" ||
