@@ -88,6 +88,20 @@
                     </span>
                 </NavLink>
 
+                <NavLink href="/app/planning"
+                         class="app-nav-link">
+
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg class="bw-sprite">
+                            <use href="/assets/billwatch-sprites.svg#bill"></use>
+                        </svg>
+                    </span>
+
+                    <span>
+                        @L["Planning"]
+                    </span>
+                </NavLink>
+
                 <span class="fw-nav-label fw-nav-label-secondary">
                     @L["Manage"]
                 </span>
@@ -218,6 +232,16 @@
                             <div class="mobile-menu-links"
                                  @onclick="CloseMobileMenu">
                                 <AdminNavLink />
+
+                                <NavLink href="/app/planning"
+                                         class="app-nav-link">
+                                    <span class="nav-icon" aria-hidden="true">
+                                        <svg class="bw-sprite">
+                                            <use href="/assets/billwatch-sprites.svg#bill"></use>
+                                        </svg>
+                                    </span>
+                                    <span>@L["Planning"]</span>
+                                </NavLink>
 
                                 <NavLink href="/app/subscription"
                                          class="app-nav-link">
