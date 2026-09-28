@@ -127,16 +127,20 @@
             return;
         }
 
-        _releaseId =
+        var releaseId =
             Configuration["BILLWATCH_RELEASE_ID"];
 
-        if (!IsValidReleaseId(_releaseId))
+        if (releaseId is null ||
+            !IsValidReleaseId(releaseId))
         {
             return;
         }
 
+        _releaseId =
+            releaseId;
+
         _shortReleaseId =
-            _releaseId[..8];
+            releaseId[..8];
 
         try
         {
@@ -147,7 +151,7 @@
 
             if (!string.Equals(
                     seenRelease,
-                    _releaseId,
+                    releaseId,
                     StringComparison.Ordinal))
             {
                 _isOpen = true;
