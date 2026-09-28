@@ -61,4 +61,14 @@
   <data name="FullWorth could not save that bill preference. Please try again." xml:space="preserve"><value>FullWorth no pudo guardar esa preferencia. Inténtalo de nuevo.</value></data>
   <data name="Use a recent or upcoming payday as the anchor. You can change this any time." xml:space="preserve"><value>Usa una fecha de pago reciente o próxima como referencia. Puedes cambiarla en cualquier momento.</value></data>
   <data name="Something went wrong while loading your planning details." xml:space="preserve"><value>Ocurrió un error al cargar los detalles de planificación.</value></data>
+  <data name="Payday history" xml:space="preserve"><value>Historial de pagos</value></data>
+  <data name="Recent payday plans" xml:space="preserve"><value>Planes recientes del día de pago</value></data>
+  <data name="These are frozen recommendations from your recent posted paychecks. Later bank-data changes do not rewrite them." xml:space="preserve"><value>Estas son recomendaciones congeladas de tus pagos recientes registrados. Los cambios posteriores en los datos bancarios no las reescriben.</value></data>
+  <data name="No payday plans yet" xml:space="preserve"><value>Aún no hay planes del día de pago</value></data>
+  <data name="Once FullWorth sees a posted paycheck and your pay schedule is configured, the resulting plan will appear here." xml:space="preserve"><value>Cuando FullWorth detecte un pago registrado y tengas configurado tu calendario de pago, el plan aparecerá aquí.</value></data>
+  <data name="Paycheck" xml:space="preserve"><value>Pago</value></data>
+  <data name="Shortfall" xml:space="preserve"><value>Déficit</value></data>
+  <data name="On track" xml:space="preserve"><value>En buen camino</value></data>
+  <data name="Planned for bills" xml:space="preserve"><value>Planificado para facturas</value></data>
+  <data name="Unplanned" xml:space="preserve"><value>Sin planificar</value></data>
 </root>
