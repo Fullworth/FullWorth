@@ -89,6 +89,10 @@ public sealed class WebBffPlanningAuthenticationTests
         using var client =
             factory.CreateHttpsClient();
 
+        client.DefaultRequestHeaders.Add(
+            "X-FullWorth-Test-UserId",
+            "22222222-2222-2222-2222-222222222222");
+
         using var tokenHttpResponse =
             await client.GetAsync(
                 "/bff/antiforgery");
