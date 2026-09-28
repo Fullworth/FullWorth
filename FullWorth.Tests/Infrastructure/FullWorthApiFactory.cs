@@ -20,6 +20,9 @@ public sealed class FullWorthApiFactory
     private readonly IExternalIdentityTokenValidator?
         _externalIdentityTokenValidator;
 
+    private readonly Action<IServiceCollection>?
+        _additionalServices;
+
     public FullWorthApiFactory()
     {
     }
@@ -28,7 +31,9 @@ public sealed class FullWorthApiFactory
         bool subscriptionEnforcementEnabled,
         bool stripeBillingConfigured,
         IExternalIdentityTokenValidator?
-            externalIdentityTokenValidator = null)
+            externalIdentityTokenValidator = null,
+        Action<IServiceCollection>?
+            additionalServices = null)
     {
         _subscriptionEnforcementEnabled =
             subscriptionEnforcementEnabled;
@@ -38,6 +43,9 @@ public sealed class FullWorthApiFactory
 
         _externalIdentityTokenValidator =
             externalIdentityTokenValidator;
+
+        _additionalServices =
+            additionalServices;
     }
 
     public static FullWorthApiFactory WithSubscriptionEnforcement()
@@ -55,7 +63,8 @@ public sealed class FullWorthApiFactory
     }
 
     public static FullWorthApiFactory WithExternalIdentityValidator(
-        IExternalIdentityTokenValidator validator)
+        IExternalIdentityTokenValidator validator,
+        Action<IServiceCollection>? additionalServices = null)
     {
         ArgumentNullException.ThrowIfNull(
             validator);
@@ -64,7 +73,9 @@ public sealed class FullWorthApiFactory
             subscriptionEnforcementEnabled: false,
             stripeBillingConfigured: false,
             externalIdentityTokenValidator:
-                validator);
+                validator,
+            additionalServices:
+                additionalServices);
     }
 
     private readonly string _databaseName =
@@ -212,6 +223,9 @@ public sealed class FullWorthApiFactory
                     services.AddSingleton(
                         _externalIdentityTokenValidator);
                 }
+
+                _additionalServices?.Invoke(
+                    services);
             });
     }
 
