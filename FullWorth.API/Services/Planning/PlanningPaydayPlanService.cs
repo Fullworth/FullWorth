@@ -77,6 +77,30 @@ public sealed class PlanningPaydayPlanService(
                 nameof(payrollTransactionId));
         }
 
+        /*
+         * Replay from Planning's immutable snapshot before touching the live
+         * payroll source. A later provider correction/removal must not rewrite
+         * a recommendation that FullWorth already recorded for this paycheck.
+         */
+        var persistedPlan =
+            await allocationStore.GetSavedPaycheckPlanAsync(
+                userId,
+                payrollTransactionId,
+                cancellationToken);
+
+        if (persistedPlan is not null)
+        {
+            var replayBills =
+                await billStreamGateway.ListOwnedActiveAsync(
+                    userId,
+                    cancellationToken);
+
+            return ReadyFromSaved(
+                persistedPlan,
+                replayBills,
+                skippedBills: []);
+        }
+
         var payrollFacts =
             await payrollFactsGateway.GetAsync(
                 userId,
@@ -115,62 +139,10 @@ public sealed class PlanningPaydayPlanService(
                 payrollCurrency);
         }
 
-        var existing =
-            await allocationStore.GetForPaycheckAsync(
-                userId,
-                payrollTransactionId,
-                cancellationToken);
-
         var activeBills =
             await billStreamGateway.ListOwnedActiveAsync(
                 userId,
                 cancellationToken);
-
-        var activeBillMap =
-            activeBills.ToDictionary(
-                bill =>
-                    bill.BillStreamId);
-
-        if (existing.Count >
-            0)
-        {
-            var replayItems =
-                existing
-                    .Select(
-                        allocation =>
-                            new PlanningPaydayPlanItem(
-                                allocation.BillStreamId,
-                                activeBillMap.TryGetValue(
-                                    allocation.BillStreamId,
-                                    out var bill)
-                                    ? bill.ProviderName
-                                    : null,
-                                allocation.SourceStatementId,
-                                allocation.BillPeriodEnd,
-                                allocation.BillDueDate,
-                                allocation.PlannedAmount,
-                                allocation.CurrencyCode))
-                    .OrderBy(
-                        item =>
-                            item.BillDueDate)
-                    .ThenBy(
-                        item =>
-                            item.ProviderName,
-                        StringComparer.OrdinalIgnoreCase)
-                    .ThenBy(
-                        item =>
-                            item.BillStreamId)
-                    .ToList();
-
-            return Ready(
-                isReplay: true,
-                payrollTransactionId,
-                postedDate,
-                payroll.Amount,
-                payrollCurrency!,
-                replayItems,
-                skippedBills: []);
-        }
 
         var schedule =
             await settingsService.GetPayScheduleAsync(
@@ -190,13 +162,25 @@ public sealed class PlanningPaydayPlanService(
         if (activeBills.Count ==
             0)
         {
-            return Ready(
-                isReplay: false,
-                payrollTransactionId,
-                postedDate,
-                payroll.Amount,
-                payrollCurrency!,
-                items: [],
+            var savedEmptyPlan =
+                await allocationStore.SaveCompletePaycheckPlanAsync(
+                    userId,
+                    payrollTransactionId,
+                    new PlanningPaycheckPlanRunDraft(
+                        postedDate,
+                        payroll.Amount,
+                        payrollCurrency!,
+                        RecommendedSetAside: 0m,
+                        PaycheckRemainingAfterPlan:
+                            RoundMoney(
+                                payroll.Amount),
+                        Shortfall: 0m),
+                    allocations: [],
+                    cancellationToken);
+
+            return ReadyFromSaved(
+                savedEmptyPlan,
+                activeBills,
                 skippedBills: []);
         }
 
@@ -403,53 +387,54 @@ public sealed class PlanningPaydayPlanService(
                     })
                 .ToArray();
 
-        var saved =
-            await allocationStore.SavePaycheckPlanAsync(
+        var savedPlan =
+            await allocationStore.SaveCompletePaycheckPlanAsync(
                 userId,
                 payrollTransactionId,
-                postedDate,
+                new PlanningPaycheckPlanRunDraft(
+                    postedDate,
+                    plan.PaycheckAmount,
+                    plan.CurrencyCode,
+                    plan.RecommendedSetAside,
+                    plan.PaycheckRemainingAfterPlan,
+                    plan.Shortfall),
                 drafts,
                 cancellationToken);
 
-        var savedByCycle =
-            saved.ToDictionary(
-                allocation =>
-                    new
-                    {
-                        allocation.BillStreamId,
-                        allocation.BillPeriodEnd
-                    });
+        return ReadyFromSaved(
+            savedPlan,
+            activeBills,
+            savedPlan.WasExisting
+                ? []
+                : skipped);
+    }
+
+    private static PlanningPaydayPlanSnapshot ReadyFromSaved(
+        PlanningSavedPaycheckPlan savedPlan,
+        IReadOnlyList<BillStreamReadRecord> activeBills,
+        IReadOnlyList<PlanningPaydayPlanSkippedBill> skippedBills)
+    {
+        var billMap =
+            activeBills.ToDictionary(
+                bill =>
+                    bill.BillStreamId);
 
         var items =
-            plan.Bills
-                .Where(
-                    bill =>
-                        bill.RecommendedSetAsideFromCurrentPaycheck >
-                        0m)
+            savedPlan.Allocations
                 .Select(
-                    bill =>
-                    {
-                        var fact =
-                            usableFacts[bill.BillStreamId];
-
-                        var savedAllocation =
-                            savedByCycle[
-                                new
-                                {
-                                    bill.BillStreamId,
-                                    BillPeriodEnd =
-                                        fact.PeriodEnd
-                                }];
-
-                        return new PlanningPaydayPlanItem(
-                            bill.BillStreamId,
-                            bill.ProviderName,
-                            savedAllocation.SourceStatementId,
-                            savedAllocation.BillPeriodEnd,
-                            savedAllocation.BillDueDate,
-                            savedAllocation.PlannedAmount,
-                            savedAllocation.CurrencyCode);
-                    })
+                    allocation =>
+                        new PlanningPaydayPlanItem(
+                            allocation.BillStreamId,
+                            billMap.TryGetValue(
+                                allocation.BillStreamId,
+                                out var bill)
+                                ? bill.ProviderName
+                                : null,
+                            allocation.SourceStatementId,
+                            allocation.BillPeriodEnd,
+                            allocation.BillDueDate,
+                            allocation.PlannedAmount,
+                            allocation.CurrencyCode))
                 .OrderBy(
                     item =>
                         item.BillDueDate)
@@ -462,14 +447,21 @@ public sealed class PlanningPaydayPlanService(
                         item.BillStreamId)
                 .ToList();
 
-        return Ready(
-            isReplay: false,
-            payrollTransactionId,
-            postedDate,
-            payroll.Amount,
-            payrollCurrency!,
+        var run =
+            savedPlan.Run;
+
+        return new PlanningPaydayPlanSnapshot(
+            PlanningPaydayPlanStatus.Ready,
+            savedPlan.WasExisting,
+            run.PayrollTransactionId,
+            run.PaycheckPostedDate,
+            run.PaycheckAmount,
+            run.CurrencyCode,
+            run.RecommendedSetAside,
+            run.PaycheckRemainingAfterPlan,
+            run.Shortfall,
             items,
-            skipped);
+            skippedBills);
     }
 
     private static PlanningPaydayPlanSnapshot Ready(
