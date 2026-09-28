@@ -103,119 +103,7 @@ jobs:
                 --jq '[.status, .behind_by] | @tsv'
             )"
 
-            IFS=
-
-            if [[ "$closed_head_match" == "0" ]]; then
-              echo "Keeping branch without a closed PR at its current head: $branch"
-              skipped=$((skipped + 1))
-              continue
-            fi
-
-            delete_branch_if_present "$branch"
-
-            echo "Deleted closed-PR source branch: $branch"
-            deleted=$((deleted + 1))
-          done < <(
-            gh api --paginate \
-              "repos/$REPOSITORY/branches?per_page=100" \
-              --jq '.[] | [.name, .commit.sha, .protected] | @tsv'
-          )
-
-          # These refs were reviewed separately because they are intentionally
-          # superseded/stale rather than exact heads of merged PRs. Every
-          # deletion is pinned to the reviewed SHA and still fails closed if
-          # an open PR exists or the branch moved after review.
-          while IFS=$'\t' read -r branch expected_sha; do
-            current_row="$(
-              gh api --paginate \
-                "repos/$REPOSITORY/branches?per_page=100" \
-                --jq ".[] | select(.name == \"$branch\") | [.commit.sha, .protected] | @tsv" |
-                head -n 1
-            )"
-
-            if [[ -z "$current_row" ]]; then
-              echo "Reviewed stale branch is already absent: $branch"
-              continue
-            fi
-
-            IFS=$'\t' read -r current_sha protected <<< "$current_row"
-
-            if [[ "$current_sha" != "$expected_sha" ]]; then
-              echo "Keeping reviewed stale branch that moved after review: $branch"
-              reviewed_skipped=$((reviewed_skipped + 1))
-              continue
-            fi
-
-            if [[ "$protected" == "true" ]]; then
-              echo "Keeping protected reviewed stale branch: $branch"
-              reviewed_skipped=$((reviewed_skipped + 1))
-              continue
-            fi
-
-            open_count="$(
-              gh api -X GET "repos/$REPOSITORY/pulls" \
-                -f state=open \
-                -f head="$REPOSITORY_OWNER:$branch" \
-                -f per_page=100 \
-                --jq 'length'
-            )"
-
-            if [[ "$open_count" != "0" ]]; then
-              echo "Keeping reviewed stale branch with an open PR: $branch"
-              reviewed_skipped=$((reviewed_skipped + 1))
-              continue
-            fi
-
-            delete_branch_if_present "$branch"
-
-            echo "Deleted reviewed stale branch: $branch"
-            reviewed_deleted=$((reviewed_deleted + 1))
-          done <<'REVIEWED_STALE_BRANCHES'
-          auth/external-registration-web	9e89e782da77de4c4a03dfa9ec2e6570d54afe89
-          docs/refresh-context-after-session-acceptance	3370730ec37bad127072dfb5548ca36e69adcfdf
-          docs/refresh-fullworth-context-after-mobile-back	9a5c31dc9e065b80106ad6451ebbcb403fb8f398
-          docs/rename-fullworth-context	3bbd66475521adda3f41324ef6c6369c314f55bf
-          feature/apply-experience-focus	b3b8d1b2c26c49b4842671bb51fdb6bc6ff90e49
-          fix/web-smoke-secret-newline	0aecd721f4dedc7ec29a7ad143d28ebfca4e1e1b
-          ops/github-guarded-production-deploy	ddedbdb41ffc6cee5551199f3ed986b050cec63b
-          perf/pwa-layout-startup	c097643b2a84bb6a14d5f1de0d3ca10046f6fa46
-          perf/statement-batch-query	ac155821f246da96adc53a7b4c43b6a4d6f9caee
-          ui/fullworth-premium-landing	e68de46f1ea7b0fdb7b3165922728f5ca3b6761f
-          ai/aggregate-inference-latency-metrics	e5509437220a7f96ddf2d2bee1c047cfbba8e82c
-          ai/aggregate-local-failure-kinds	25084bb4793d6d03af70c6e932a108911feadbe0
-          ai/bound-chunk-inference-fanout	7648695a510cff196826d67c0ef5a6d824ee1c74
-          ai/extraction-benchmark-gate	b752aca4fd37d484ee156785f8a016954a115272
-          ai/offline-chunked-evaluation-adapter	1bfa6f3c0fba7404880bbbd9488b3e30e0f633eb
-          ai/offline-inference-call-accounting	5b7ad14e7f95ccd324f61a7565ce8c418e0767ae
-          ai/provider-field-cross-regression	d48cb3113f24d2661bb382c8ae2e870ffab6ee2c
-          ai/typed-local-inference-failures	d437d5ac718416d026311f7f49e65c95f78bce0a
-          arch/move-bank-transaction-links-to-bills	d6583c64a38cca91c8c6d11a3f1b599ba070b10d
-          docs/current-planning-checkpoint	56f8103797e94182de7b321f426e008a9c1adc5d
-          feat/first-party-ai-token-loss	8532e30d1aa29bef4f1307b27187a8b9775cbf7b
-          feat/ui-foundation-primitives	82e5d4fbc93390384f0d21cb90d91561d1d6a345
-          fix/ios-simulator-boot-command-timeout-current	60edcb0c34d8bc9a45510f7a1451d9aa04de079d
-          fix/ios-simulator-container-readiness	15531201aa2cabcb9e787926f2846481730827ed
-          investigate/ios-pwa-install-258	7882ba12168e5939b33b7abf40ab996c94eeb1e8
-          security/refresh-token-family-rotation	77f5803696c32c6c6fdb0589b065ad8cde39a575
-          security/serialize-web-session-refresh	67d3877a471d6a48d185135378c63cffc66fb054
-          security/sign-out-all-devices	a7d8bc7d3e3eeae69f73be33aac66e5d7c9217e2
-          security/single-use-refresh-tokens	67d3877a471d6a48d185135378c63cffc66fb054
-          arch/extract-bill-stream-read-contract	7a8cefde66f68e5b117dcd92754a99b3d87deb84
-          docs/mfa-disable-session-revocation	a83cf39055b61bbd4a2a1924a979ba909475c596
-          security/prevent-refresh-token-replay	11e87d1d715b589355e44e943eb4952ec09ecd6c
-          REVIEWED_STALE_BRANCHES
-
-          {
-            echo "## FullWorth branch cleanup"
-            echo
-            echo "- Deleted branches fully contained in development: $contained_deleted"
-            echo "- Deleted closed-PR source branches: $deleted"
-            echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
-            echo "- Preserved branches without a matching closed PR: $skipped"
-            echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
-            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and any branch with commits not contained in development unless separately reviewed"
-          } >> "$GITHUB_STEP_SUMMARY"
-\t' read -r containment_status containment_behind <<< "$containment"
+            IFS=$'\t' read -r containment_status containment_behind <<< "$containment"
 
             if [[ "$containment_behind" == "0" ]] &&
               { [[ "$containment_status" == "ahead" ]] ||
@@ -339,9 +227,10 @@ jobs:
           {
             echo "## FullWorth branch cleanup"
             echo
+            echo "- Deleted branches fully contained in development: $contained_deleted"
             echo "- Deleted closed-PR source branches: $deleted"
             echo "- Deleted separately reviewed stale branches: $reviewed_deleted"
             echo "- Preserved branches without a matching closed PR: $skipped"
             echo "- Preserved reviewed stale branches that changed or became active: $reviewed_skipped"
-            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and unreviewed unmerged work"
+            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and any branch with commits not contained in development unless separately reviewed"
           } >> "$GITHUB_STEP_SUMMARY"
