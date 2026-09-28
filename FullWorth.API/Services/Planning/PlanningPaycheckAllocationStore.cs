@@ -60,6 +60,55 @@ public sealed class PlanningPaycheckAllocationStore(
 {
     private const int MaximumBillsPerPaycheck = 500;
 
+    public async Task<IReadOnlyList<PlanningPaycheckPlanRunSnapshot>>
+        GetRecentPaycheckPlanRunsAsync(
+            Guid userId,
+            int take = 5,
+            CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(
+            userId);
+
+        if (take is < 1 or > 20)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(take),
+                "Recent paycheck-plan request size must be between 1 and 20.");
+        }
+
+        return await dbContext.PlanningPaycheckPlanRuns
+            .AsNoTracking()
+            .Where(
+                run =>
+                    run.UserId ==
+                        userId)
+            .OrderByDescending(
+                run =>
+                    run.PaycheckPostedDate)
+            .ThenByDescending(
+                run =>
+                    run.CreatedAtUtc)
+            .ThenByDescending(
+                run =>
+                    run.Id)
+            .Take(
+                take)
+            .Select(
+                run =>
+                    new PlanningPaycheckPlanRunSnapshot(
+                        run.Id,
+                        run.PayrollTransactionId,
+                        run.PaycheckPostedDate,
+                        run.PaycheckAmount,
+                        run.CurrencyCode,
+                        run.RecommendedSetAside,
+                        run.PaycheckRemainingAfterPlan,
+                        run.Shortfall,
+                        run.CreatedAtUtc))
+            .ToListAsync(
+                cancellationToken);
+    }
+
     public async Task<PlanningSavedPaycheckPlan?>
         GetSavedPaycheckPlanAsync(
             Guid userId,
