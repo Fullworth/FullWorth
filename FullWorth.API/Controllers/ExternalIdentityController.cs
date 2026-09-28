@@ -272,8 +272,12 @@ public sealed class ExternalIdentityController : ControllerBase
                         "FullWorth could not safely finish external account creation.");
             }
 
-            return IdentityValidationProblem(
-                addLoginResult);
+            /*
+             * A competing registration or link can claim the provider
+             * identity after the pre-check. Do not expose Identity's
+             * association error after the new user has been rolled back.
+             */
+            return ExternalRegistrationFailure();
         }
 
         _signInManager.AuthenticationScheme =
