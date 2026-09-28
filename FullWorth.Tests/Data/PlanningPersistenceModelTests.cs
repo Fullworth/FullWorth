@@ -197,5 +197,55 @@ public sealed class PlanningPersistenceModelTests
                 foreignKey.PrincipalEntityType.ClrType ==
                     typeof(
                         BillStatementEntity));
+
+        var paycheckPlanRun =
+            context.Model.FindEntityType(
+                typeof(
+                    PlanningPaycheckPlanRunEntity));
+
+        Assert.NotNull(
+            paycheckPlanRun);
+
+        Assert.Contains(
+            paycheckPlanRun.GetIndexes(),
+            index =>
+                index.IsUnique &&
+                index.Properties
+                    .Select(
+                        property =>
+                            property.Name)
+                    .SequenceEqual(
+                        [
+                            nameof(
+                                PlanningPaycheckPlanRunEntity.UserId),
+                            nameof(
+                                PlanningPaycheckPlanRunEntity.PayrollTransactionId)
+                        ]));
+
+        var planRunForeignKey =
+            Assert.Single(
+                paycheckPlanRun.GetForeignKeys());
+
+        Assert.Equal(
+            typeof(
+                ApplicationUser),
+            planRunForeignKey.PrincipalEntityType.ClrType);
+
+        Assert.Equal(
+            [
+                nameof(
+                    PlanningPaycheckPlanRunEntity.UserId)
+            ],
+            planRunForeignKey.Properties
+                .Select(
+                    property =>
+                        property.Name));
+
+        Assert.DoesNotContain(
+            paycheckPlanRun.GetForeignKeys(),
+            foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType ==
+                    typeof(
+                        BankTransactionEntity));
     }
 }

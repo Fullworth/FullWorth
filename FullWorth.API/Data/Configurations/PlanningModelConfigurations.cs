@@ -243,3 +243,100 @@ internal sealed class PlanningPaycheckAllocationEntityConfiguration
     }
 }
 
+
+internal sealed class PlanningPaycheckPlanRunEntityConfiguration
+    : IEntityTypeConfiguration<PlanningPaycheckPlanRunEntity>
+{
+    public void Configure(
+        EntityTypeBuilder<PlanningPaycheckPlanRunEntity> entity)
+    {
+        entity.ToTable(
+            "PlanningPaycheckPlanRuns",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckPlanRuns_Amounts",
+                    "\"PaycheckAmount\" >= 0 AND \"RecommendedSetAside\" >= 0 AND \"PaycheckRemainingAfterPlan\" >= 0 AND \"Shortfall\" >= 0");
+
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckPlanRuns_CurrencyCode",
+                    "char_length(\"CurrencyCode\") = 3");
+            });
+
+        entity.HasKey(
+            run => run.Id);
+
+        entity.HasAlternateKey(
+            run => new
+            {
+                run.Id,
+                run.UserId
+            });
+
+        entity.Property(
+                run => run.PayrollTransactionId)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckPostedDate)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckAmount)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.CurrencyCode)
+            .HasMaxLength(
+                3)
+            .IsRequired();
+
+        entity.Property(
+                run => run.RecommendedSetAside)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckRemainingAfterPlan)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.Shortfall)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.CreatedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(
+                run => new
+                {
+                    run.UserId,
+                    run.PayrollTransactionId
+                })
+            .IsUnique();
+
+        /*
+         * Deliberately no Planning -> Plaid foreign key.
+         * Payroll ownership/existence is verified by the Plaid owner contract.
+         */
+        entity.HasOne(
+                run => run.User)
+            .WithMany()
+            .HasForeignKey(
+                run => run.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+    }
+}

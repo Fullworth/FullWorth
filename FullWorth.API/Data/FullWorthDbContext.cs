@@ -60,6 +60,9 @@ public sealed class FullWorthDbContext
     public DbSet<PlanningPaycheckAllocationEntity> PlanningPaycheckAllocations =>
         Set<PlanningPaycheckAllocationEntity>();
 
+    public DbSet<PlanningPaycheckPlanRunEntity> PlanningPaycheckPlanRuns =>
+        Set<PlanningPaycheckPlanRunEntity>();
+
     public DbSet<PlaidLinkSessionEntity> PlaidLinkSessions =>
         Set<PlaidLinkSessionEntity>();
 
