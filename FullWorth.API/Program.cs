@@ -275,6 +275,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     PlanningPaydayPlanService>();
 
+builder.Services.AddScoped<
+    PlanningBillChangeWatchService>();
+
 builder.Services.AddSingleton<
     SubscriptionAccessKeyGenerator>();
 
