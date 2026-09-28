@@ -136,7 +136,7 @@
                             </label>
                             <button type="button"
                                     class="planning-secondary-button"
-                                    disabled="@(_savingBillId == bill.Id)"
+                                    disabled="@_savingBillId.HasValue"
                                     @onclick="() => SaveBillPreferenceAsync(bill)">
                                 @(_savingBillId == bill.Id ? L["Saving…"] : L["Save"])
                             </button>
@@ -205,7 +205,7 @@
     private string? _notice;
     private bool _noticeIsError;
     private string _frequency = "Biweekly";
-    private string _anchorPayDate = string.Empty;
+    private DateTime? _anchorPayDate;
     private string _secondaryDayOfMonth = "15";
     private string _defaultPaychecksAhead = "1";
     private List<PlanningBillViewModel> _bills = [];
@@ -264,7 +264,15 @@
             if (schedule is not null)
             {
                 _frequency = schedule.Frequency;
-                _anchorPayDate = schedule.AnchorPayDate;
+                _anchorPayDate =
+                    DateTime.TryParseExact(
+                        schedule.AnchorPayDate,
+                        "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out var parsedAnchorDate)
+                        ? parsedAnchorDate
+                        : null;
                 _secondaryDayOfMonth = schedule.SecondaryDayOfMonth?.ToString(
                     System.Globalization.CultureInfo.InvariantCulture) ?? "15";
                 _defaultPaychecksAhead = schedule.DefaultPaychecksAhead.ToString(
@@ -308,16 +316,15 @@
             return;
         }
 
-        if (!DateOnly.TryParseExact(
-                _anchorPayDate,
-                "yyyy-MM-dd",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None,
-                out var anchorDate))
+        if (!_anchorPayDate.HasValue)
         {
             SetNotice(L["Choose a valid anchor payday."].Value, isError: true);
             return;
         }
+
+        var anchorDate =
+            DateOnly.FromDateTime(
+                _anchorPayDate.Value);
 
         if (!int.TryParse(_defaultPaychecksAhead, out var ahead) || ahead is < 1 or > 26)
         {

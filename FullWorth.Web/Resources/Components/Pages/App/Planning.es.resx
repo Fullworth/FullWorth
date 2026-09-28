@@ -58,4 +58,6 @@
   <data name="Choose a value between 1 and 26 paychecks." xml:space="preserve"><value>Elige un valor entre 1 y 26 sueldos.</value></data>
   <data name="Bill planning preference saved." xml:space="preserve"><value>Se guardó la preferencia de planificación de la factura.</value></data>
   <data name="FullWorth could not save that bill preference. Please try again." xml:space="preserve"><value>FullWorth no pudo guardar esa preferencia. Inténtalo de nuevo.</value></data>
+  <data name="Use a recent or upcoming payday as the anchor. You can change this any time." xml:space="preserve"><value>Usa una fecha de pago reciente o próxima como referencia. Puedes cambiarla en cualquier momento.</value></data>
+  <data name="Something went wrong while loading your planning details." xml:space="preserve"><value>Ocurrió un error al cargar los detalles de planificación.</value></data>
 </root>
