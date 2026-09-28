@@ -733,6 +733,20 @@ export async function getUpcomingBillChanges() {
         "/bff/planning/upcoming-bill-changes");
 }
 
+export async function getRecentPaydayPlans(
+    take = 3) {
+
+    const safeTake =
+        Math.min(
+            Math.max(
+                Number(take) || 3,
+                1),
+            20);
+
+    return await getJson(
+        `/bff/planning/payday-plans/recent?take=${safeTake}`);
+}
+
 export async function downloadAccountExport(
     currentPassword,
     twoFactorCode) {

@@ -11,6 +11,7 @@ public sealed class WebBffPlanningAuthenticationTests
     [InlineData("/bff/planning/pay-schedule")]
     [InlineData("/bff/planning/bill-funding-preferences")]
     [InlineData("/bff/planning/upcoming-bill-changes")]
+    [InlineData("/bff/planning/payday-plans/recent")]
     public async Task PlanningReads_AnonymousSession_IsRejected(
         string route)
     {
