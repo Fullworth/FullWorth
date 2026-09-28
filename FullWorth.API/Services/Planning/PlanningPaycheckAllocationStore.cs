@@ -153,6 +153,95 @@ public sealed class PlanningPaycheckAllocationStore(
             .ToList();
     }
 
+    public async Task<IReadOnlyList<PlanningBillCyclePlannedTotal>>
+        GetCycleTotalsAsync(
+            Guid userId,
+            IReadOnlyCollection<Guid> billStreamIds,
+            CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(
+            userId);
+
+        ArgumentNullException.ThrowIfNull(
+            billStreamIds);
+
+        if (billStreamIds.Count ==
+            0)
+        {
+            return [];
+        }
+
+        var ids =
+            billStreamIds
+                .Distinct()
+                .ToArray();
+
+        if (ids.Length >
+            MaximumBillsPerPaycheck)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(billStreamIds),
+                $"At most {MaximumBillsPerPaycheck} bill streams may be requested at once.");
+        }
+
+        if (ids.Any(
+                id =>
+                    id == Guid.Empty))
+        {
+            throw new ArgumentException(
+                "Bill stream IDs must not be empty.",
+                nameof(billStreamIds));
+        }
+
+        var allocations =
+            await dbContext.PlanningPaycheckAllocations
+                .AsNoTracking()
+                .Where(
+                    allocation =>
+                        allocation.UserId ==
+                            userId &&
+                        ids.Contains(
+                            allocation.BillStreamId))
+                .Select(
+                    allocation =>
+                        new
+                        {
+                            allocation.BillStreamId,
+                            allocation.BillPeriodEnd,
+                            allocation.CurrencyCode,
+                            allocation.PlannedAmount
+                        })
+                .ToListAsync(
+                    cancellationToken);
+
+        return allocations
+            .GroupBy(
+                allocation =>
+                    new
+                    {
+                        allocation.BillStreamId,
+                        allocation.BillPeriodEnd,
+                        allocation.CurrencyCode
+                    })
+            .Select(
+                group =>
+                    new PlanningBillCyclePlannedTotal(
+                        group.Key.BillStreamId,
+                        group.Key.BillPeriodEnd,
+                        group.Key.CurrencyCode,
+                        RoundMoney(
+                            group.Sum(
+                                item =>
+                                    item.PlannedAmount))))
+            .OrderBy(
+                total =>
+                    total.BillPeriodEnd)
+            .ThenBy(
+                total =>
+                    total.BillStreamId)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<PlanningPaycheckAllocationSnapshot>>
         SavePaycheckPlanAsync(
             Guid userId,

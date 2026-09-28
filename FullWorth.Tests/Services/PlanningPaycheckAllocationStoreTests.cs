@@ -484,6 +484,113 @@ public sealed class PlanningPaycheckAllocationStoreTests
                 .CurrencyCode);
     }
 
+    [Fact]
+    public async Task GetCycleTotalsAsync_IsOwnershipScoped_AndAggregatesSameBillCycle()
+    {
+        var options =
+            Options();
+
+        await using var dbContext =
+            new FullWorthDbContext(
+                options);
+
+        var store =
+            new PlanningPaycheckAllocationStore(
+                dbContext,
+                TimeProvider.System);
+
+        var userId =
+            Guid.NewGuid();
+
+        var otherUserId =
+            Guid.NewGuid();
+
+        var billStreamId =
+            Guid.NewGuid();
+
+        var billPeriodEnd =
+            new DateOnly(
+                2026,
+                10,
+                31);
+
+        await store.SavePaycheckPlanAsync(
+            userId,
+            Guid.NewGuid(),
+            new DateOnly(
+                2026,
+                9,
+                11),
+            [
+                Draft(
+                    billStreamId:
+                        billStreamId,
+                    billPeriodEnd:
+                        billPeriodEnd,
+                    plannedAmount:
+                        80m)
+            ]);
+
+        await store.SavePaycheckPlanAsync(
+            userId,
+            Guid.NewGuid(),
+            new DateOnly(
+                2026,
+                9,
+                25),
+            [
+                Draft(
+                    billStreamId:
+                        billStreamId,
+                    billPeriodEnd:
+                        billPeriodEnd,
+                    plannedAmount:
+                        120m)
+            ]);
+
+        await store.SavePaycheckPlanAsync(
+            otherUserId,
+            Guid.NewGuid(),
+            new DateOnly(
+                2026,
+                9,
+                25),
+            [
+                Draft(
+                    billStreamId:
+                        billStreamId,
+                    billPeriodEnd:
+                        billPeriodEnd,
+                    plannedAmount:
+                        999m)
+            ]);
+
+        var totals =
+            await store.GetCycleTotalsAsync(
+                userId,
+                [billStreamId]);
+
+        var total =
+            Assert.Single(
+                totals);
+
+        Assert.Equal(
+            billStreamId,
+            total.BillStreamId);
+
+        Assert.Equal(
+            billPeriodEnd,
+            total.BillPeriodEnd);
+
+        Assert.Equal(
+            "USD",
+            total.CurrencyCode);
+
+        Assert.Equal(
+            200m,
+            total.PlannedAmount);
+    }
+
     private static DbContextOptions<FullWorthDbContext> Options() =>
         new DbContextOptionsBuilder<FullWorthDbContext>()
             .UseInMemoryDatabase(
