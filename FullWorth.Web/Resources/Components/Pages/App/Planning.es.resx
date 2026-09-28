@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Planning — FullWorth" xml:space="preserve"><value>Planificación — FullWorth</value></data>
+  <data name="Paycheck planning" xml:space="preserve"><value>Planificación de cada sueldo</value></data>
+  <data name="Plan ahead for your bills" xml:space="preserve"><value>Planifica tus facturas con anticipación</value></data>
+  <data name="Choose a pay schedule and tell FullWorth how many paychecks ahead to plan for each bill. Recommendations are guidance only; FullWorth does not move or reserve money." xml:space="preserve"><value>Elige un calendario de pago e indica a FullWorth cuántos sueldos antes debe planificar cada factura. Las recomendaciones son solo orientativas; FullWorth no mueve ni reserva dinero.</value></data>
+  <data name="View payday guidance" xml:space="preserve"><value>Ver orientación para el día de pago</value></data>
+  <data name="Loading planning" xml:space="preserve"><value>Cargando planificación</value></data>
+  <data name="We couldn't load your planning settings" xml:space="preserve"><value>No pudimos cargar tu configuración de planificación</value></data>
+  <data name="Try again" xml:space="preserve"><value>Intentar de nuevo</value></data>
+  <data name="Pay schedule" xml:space="preserve"><value>Calendario de pago</value></data>
+  <data name="Pay frequency" xml:space="preserve"><value>Frecuencia de pago</value></data>
+  <data name="Weekly" xml:space="preserve"><value>Semanal</value></data>
+  <data name="Every two weeks" xml:space="preserve"><value>Cada dos semanas</value></data>
+  <data name="Twice a month" xml:space="preserve"><value>Dos veces al mes</value></data>
+  <data name="Monthly" xml:space="preserve"><value>Mensual</value></data>
+  <data name="Anchor payday" xml:space="preserve"><value>Fecha de pago de referencia</value></data>
+  <data name="For twice-a-month schedules, this is the first pay date." xml:space="preserve"><value>Para calendarios de dos pagos al mes, esta es la primera fecha de pago.</value></data>
+  <data name="Second payday day" xml:space="preserve"><value>Día del segundo pago</value></data>
+  <data name="Choose a different day of the month. Short months are adjusted by the calculator." xml:space="preserve"><value>Elige otro día del mes. La calculadora ajusta los meses más cortos.</value></data>
+  <data name="Default paychecks ahead" xml:space="preserve"><value>Sueldos de anticipación predeterminados</value></data>
+  <data name="Bills can use this default or have their own override." xml:space="preserve"><value>Las facturas pueden usar este valor predeterminado o tener su propia excepción.</value></data>
+  <data name="Your rhythm" xml:space="preserve"><value>Tu ritmo</value></data>
+  <data name="Save schedule" xml:space="preserve"><value>Guardar calendario</value></data>
+  <data name="Saving…" xml:space="preserve"><value>Guardando…</value></data>
+  <data name="Recommendations are not transfers or reserved funds." xml:space="preserve"><value>Las recomendaciones no son transferencias ni fondos reservados.</value></data>
+  <data name="Bill preferences" xml:space="preserve"><value>Preferencias de facturas</value></data>
+  <data name="When should planning start?" xml:space="preserve"><value>¿Cuándo debe comenzar la planificación?</value></data>
+  <data name="Set how many paychecks ahead FullWorth should include each known bill." xml:space="preserve"><value>Indica cuántos sueldos antes debe incluir FullWorth cada factura conocida.</value></data>
+  <data name="No active bills to plan yet" xml:space="preserve"><value>Aún no hay facturas activas para planificar</value></data>
+  <data name="Once FullWorth identifies recurring bills, you can set a funding preference for each one." xml:space="preserve"><value>Cuando FullWorth identifique facturas recurrentes, podrás establecer una preferencia para cada una.</value></data>
+  <data name="Review bills" xml:space="preserve"><value>Revisar facturas</value></data>
+  <data name="Paychecks ahead" xml:space="preserve"><value>Sueldos de anticipación</value></data>
+  <data name="Use default" xml:space="preserve"><value>Usar predeterminado</value></data>
+  <data name="Save" xml:space="preserve"><value>Guardar</value></data>
+  <data name="Recurring bill" xml:space="preserve"><value>Factura recurrente</value></data>
+  <data name="Evidence watch" xml:space="preserve"><value>Seguimiento de evidencia</value></data>
+  <data name="Upcoming bill changes" xml:space="preserve"><value>Próximos cambios en facturas</value></data>
+  <data name="Confirmed statement changes can affect what you plan to set aside." xml:space="preserve"><value>Los cambios confirmados en estados de cuenta pueden afectar lo que planeas apartar.</value></data>
+  <data name="No confirmed upcoming changes" xml:space="preserve"><value>No hay cambios próximos confirmados</value></data>
+  <data name="When a current bill change is supported by statement evidence, it will appear here." xml:space="preserve"><value>Cuando un cambio actual esté respaldado por evidencia del estado de cuenta, aparecerá aquí.</value></data>
+  <data name="Annual impact" xml:space="preserve"><value>Impacto anual</value></data>
+  <data name="Due date" xml:space="preserve"><value>Fecha de vencimiento</value></data>
+  <data name="Not available" xml:space="preserve"><value>No disponible</value></data>
+  <data name="Still to plan" xml:space="preserve"><value>Aún por planificar</value></data>
+  <data name="Ready to replan" xml:space="preserve"><value>Listo para replanificar</value></data>
+  <data name="Needs review" xml:space="preserve"><value>Necesita revisión</value></data>
+  <data name="We couldn't load your planning details." xml:space="preserve"><value>No pudimos cargar los detalles de planificación.</value></data>
+  <data name="FullWorth could not reach the secure API." xml:space="preserve"><value>FullWorth no pudo conectarse a la API segura.</value></data>
+  <data name="Choose a valid anchor payday." xml:space="preserve"><value>Elige una fecha de pago de referencia válida.</value></data>
+  <data name="Default paychecks ahead must be between 1 and 26." xml:space="preserve"><value>El valor predeterminado debe estar entre 1 y 26 sueldos.</value></data>
+  <data name="Choose a different second payday day between 1 and 31." xml:space="preserve"><value>Elige otro día de pago entre 1 y 31.</value></data>
+  <data name="Your pay schedule is saved." xml:space="preserve"><value>Se guardó tu calendario de pago.</value></data>
+  <data name="FullWorth could not save your pay schedule. Please try again." xml:space="preserve"><value>FullWorth no pudo guardar tu calendario de pago. Inténtalo de nuevo.</value></data>
+  <data name="Choose a value between 1 and 26 paychecks." xml:space="preserve"><value>Elige un valor entre 1 y 26 sueldos.</value></data>
+  <data name="Bill planning preference saved." xml:space="preserve"><value>Se guardó la preferencia de planificación de la factura.</value></data>
+  <data name="FullWorth could not save that bill preference. Please try again." xml:space="preserve"><value>FullWorth no pudo guardar esa preferencia. Inténtalo de nuevo.</value></data>
+  <data name="Use a recent or upcoming payday as the anchor. You can change this any time." xml:space="preserve"><value>Usa una fecha de pago reciente o próxima como referencia. Puedes cambiarla en cualquier momento.</value></data>
+  <data name="Something went wrong while loading your planning details." xml:space="preserve"><value>Ocurrió un error al cargar los detalles de planificación.</value></data>
+</root>

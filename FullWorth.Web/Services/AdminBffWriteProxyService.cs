@@ -39,6 +39,12 @@ public sealed class AdminBffWriteProxyService(
     private const string AccountExportPath =
         "/api/account/export";
 
+    private const string PlanningPaySchedulePath =
+        "/api/planning/pay-schedule";
+
+    private const string PlanningBillFundingPreferencePrefix =
+        "/api/planning/bill-funding-preferences/";
+
     private static readonly TimeSpan RefreshBuffer =
         TimeSpan.FromMinutes(1);
 
@@ -607,6 +613,13 @@ public sealed class AdminBffWriteProxyService(
                 AccountExportPath,
                 StringComparison.Ordinal);
 
+        var isPlanningPath =
+            string.Equals(
+                requestUri,
+                PlanningPaySchedulePath,
+                StringComparison.Ordinal) ||
+            IsPlanningBillFundingPreferencePath(requestUri);
+
         if (!isAdminPath &&
             !isSubscriptionCheckoutPath &&
             !isSubscriptionRedemptionPath &&
@@ -615,7 +628,8 @@ public sealed class AdminBffWriteProxyService(
             !isExternalIdentityLinkPath &&
             !isExternalIdentityUnlinkPath &&
             !isAccountDeletionPath &&
-            !isAccountExportPath)
+            !isAccountExportPath &&
+            !isPlanningPath)
         {
             return false;
         }
@@ -626,6 +640,27 @@ public sealed class AdminBffWriteProxyService(
                !requestUri.Contains(
                    '\\',
                    StringComparison.Ordinal);
+    }
+
+    private static bool IsPlanningBillFundingPreferencePath(
+        string requestUri)
+    {
+        if (!requestUri.StartsWith(
+                PlanningBillFundingPreferencePrefix,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var resourceId =
+            requestUri[
+                PlanningBillFundingPreferencePrefix.Length..];
+
+        return Guid.TryParseExact(
+                   resourceId,
+                   "D",
+                   out var parsedId) &&
+               parsedId != Guid.Empty;
     }
 
     private static async Task<IResult> ToResultAsync(

@@ -297,6 +297,45 @@ async function mutateJson(
         response);
 }
 
+async function mutateJsonWithBody(
+    url,
+    method,
+    body) {
+
+    const requestToken =
+        await getAntiforgeryToken();
+
+    const response =
+        await fetch(
+            url,
+            {
+                method,
+
+                credentials:
+                    "same-origin",
+
+                headers: {
+                    "Accept":
+                        "application/json",
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRF-TOKEN":
+                        requestToken
+                },
+
+                body:
+                    JSON.stringify(body),
+
+                cache:
+                    "no-store"
+            });
+
+    return await handleResponse(
+        response);
+}
+
 function setConnectStatus(
     element,
     message,
@@ -629,6 +668,69 @@ export async function dismissAlert(
     return await mutateJson(
         `/bff/alerts/${encodeURIComponent(alertId)}/dismiss`,
         "POST");
+}
+
+export async function getPlanningPaySchedule() {
+    const response =
+        await fetch(
+            "/bff/planning/pay-schedule",
+            {
+                method: "GET",
+                credentials: "same-origin",
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            });
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    return await handleResponse(response);
+}
+
+export async function putPlanningPaySchedule(request) {
+    return await mutateJsonWithBody(
+        "/bff/planning/pay-schedule",
+        "PUT",
+        request);
+}
+
+export async function getPlanningBillFundingPreferences() {
+    return await getJson(
+        "/bff/planning/bill-funding-preferences");
+}
+
+export async function putPlanningBillFundingPreference(
+    billStreamId,
+    paychecksAheadOverride) {
+
+    if (!billStreamId) {
+        throw new Error("Bill ID is required.");
+    }
+
+    return await mutateJsonWithBody(
+        "/bff/planning/bill-funding-preferences/" +
+            encodeURIComponent(billStreamId),
+        "PUT",
+        { paychecksAheadOverride });
+}
+
+export async function deletePlanningBillFundingPreference(
+    billStreamId) {
+
+    if (!billStreamId) {
+        throw new Error("Bill ID is required.");
+    }
+
+    return await mutateJson(
+        "/bff/planning/bill-funding-preferences/" +
+            encodeURIComponent(billStreamId),
+        "DELETE");
+}
+
+export async function getUpcomingBillChanges() {
+    return await getJson(
+        "/bff/planning/upcoming-bill-changes");
 }
 
 export async function downloadAccountExport(

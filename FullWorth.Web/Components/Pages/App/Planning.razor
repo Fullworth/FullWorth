@@ -1,0 +1,508 @@
+@page "/app/planning"
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@layout AppLayout
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+@inject Microsoft.Extensions.Localization.IStringLocalizer<Planning> L
+
+<PageTitle>@L["Planning — FullWorth"]</PageTitle>
+
+<div class="app-page planning-page">
+    <header class="page-heading">
+        <div>
+            <span class="page-kicker">@L["Paycheck planning"]</span>
+            <h1>@L["Plan ahead for your bills"]</h1>
+            <p>@L["Choose a pay schedule and tell FullWorth how many paychecks ahead to plan for each bill. Recommendations are guidance only; FullWorth does not move or reserve money."]</p>
+        </div>
+        <a class="planning-activity-link" href="/app/activity">@L["View payday guidance"]</a>
+    </header>
+
+    @if (_isLoading)
+    {
+        <div class="planning-loading" aria-label="@L["Loading planning"]">
+            <div></div><div></div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <section class="planning-message planning-error" role="alert">
+            <strong>@L["We couldn't load your planning settings"]</strong>
+            <p>@_error</p>
+            <button type="button" class="planning-secondary-button" @onclick="LoadAsync">@L["Try again"]</button>
+        </section>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_notice))
+        {
+            <div class="planning-message @(_noticeIsError ? "planning-error" : "planning-success")"
+                 role="@(_noticeIsError ? "alert" : "status")"
+                 aria-live="polite">
+                @_notice
+            </div>
+        }
+
+        <section class="planning-card" aria-labelledby="planning-schedule-title">
+            <div class="planning-card-heading">
+                <div>
+                    <span class="planning-kicker">@L["Your rhythm"]</span>
+                    <h2 id="planning-schedule-title">@L["Pay schedule"]</h2>
+                    <p>@L["Use a recent or upcoming payday as the anchor. You can change this any time."]</p>
+                </div>
+            </div>
+
+            <div class="planning-fields">
+                <label>
+                    <span>@L["Pay frequency"]</span>
+                    <select @bind="_frequency">
+                        <option value="Weekly">@L["Weekly"]</option>
+                        <option value="Biweekly">@L["Every two weeks"]</option>
+                        <option value="SemiMonthly">@L["Twice a month"]</option>
+                        <option value="Monthly">@L["Monthly"]</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>@L["Anchor payday"]</span>
+                    <input type="date" @bind="_anchorPayDate" />
+                    <small>@L["For twice-a-month schedules, this is the first pay date."]</small>
+                </label>
+
+                @if (_frequency == "SemiMonthly")
+                {
+                    <label>
+                        <span>@L["Second payday day"]</span>
+                        <input type="number" min="1" max="31" @bind="_secondaryDayOfMonth" />
+                        <small>@L["Choose a different day of the month. Short months are adjusted by the calculator."]</small>
+                    </label>
+                }
+
+                <label>
+                    <span>@L["Default paychecks ahead"]</span>
+                    <input type="number" min="1" max="26" @bind="_defaultPaychecksAhead" />
+                    <small>@L["Bills can use this default or have their own override."]</small>
+                </label>
+            </div>
+
+            <div class="planning-card-actions">
+                <span class="planning-honesty-note">@L["Recommendations are not transfers or reserved funds."]</span>
+                <button type="button"
+                        class="planning-primary-button"
+                        disabled="@_isSavingSchedule"
+                        @onclick="SaveScheduleAsync">
+                    @(_isSavingSchedule ? L["Saving…"] : L["Save schedule"])
+                </button>
+            </div>
+        </section>
+
+        <section class="planning-card" aria-labelledby="planning-bills-title">
+            <div class="planning-card-heading">
+                <div>
+                    <span class="planning-kicker">@L["Bill preferences"]</span>
+                    <h2 id="planning-bills-title">@L["When should planning start?"]</h2>
+                    <p>@L["Set how many paychecks ahead FullWorth should include each known bill."]</p>
+                </div>
+            </div>
+
+            @if (_bills.Count == 0)
+            {
+                <div class="planning-empty">
+                    <strong>@L["No active bills to plan yet"]</strong>
+                    <p>@L["Once FullWorth identifies recurring bills, you can set a funding preference for each one."]</p>
+                    <a href="/app/bills">@L["Review bills"]</a>
+                </div>
+            }
+            else
+            {
+                <div class="planning-bill-list">
+                    @foreach (var bill in _bills)
+                    {
+                        <article class="planning-bill-row" @key="bill.Id">
+                            <div class="planning-bill-copy">
+                                <strong>@(string.IsNullOrWhiteSpace(bill.ProviderName) ? L["Recurring bill"].Value : bill.ProviderName)</strong>
+                                <span>@FormatAmount(bill.CurrentAmount, bill.CurrencyCode)</span>
+                            </div>
+                            <label>
+                                <span>@L["Paychecks ahead"]</span>
+                                <select @bind="bill.SelectedOverride">
+                                    <option value="">@L["Use default"]</option>
+                                    @for (var count = 1; count <= 26; count++)
+                                    {
+                                        <option value="@count">@count</option>
+                                    }
+                                </select>
+                            </label>
+                            <button type="button"
+                                    class="planning-secondary-button"
+                                    disabled="@_savingBillId.HasValue"
+                                    @onclick="() => SaveBillPreferenceAsync(bill)">
+                                @(_savingBillId == bill.Id ? L["Saving…"] : L["Save"])
+                            </button>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="planning-card" aria-labelledby="planning-changes-title">
+            <div class="planning-card-heading">
+                <div>
+                    <span class="planning-kicker">@L["Evidence watch"]</span>
+                    <h2 id="planning-changes-title">@L["Upcoming bill changes"]</h2>
+                    <p>@L["Confirmed statement changes can affect what you plan to set aside."]</p>
+                </div>
+            </div>
+
+            @if (_changes.Count == 0)
+            {
+                <div class="planning-empty">
+                    <strong>@L["No confirmed upcoming changes"]</strong>
+                    <p>@L["When a current bill change is supported by statement evidence, it will appear here."]</p>
+                </div>
+            }
+            else
+            {
+                <div class="planning-change-list">
+                    @foreach (var change in _changes)
+                    {
+                        <article class="planning-change-row" @key="change.ChangeId">
+                            <div class="planning-change-top">
+                                <div>
+                                    <strong>@(string.IsNullOrWhiteSpace(change.ProviderName) ? L["Recurring bill"].Value : change.ProviderName)</strong>
+                                    <span>@change.Description</span>
+                                </div>
+                                <span class="planning-change-status @GetStatusClass(change.RecalculationStatus)">
+                                    @GetStatusLabel(change.RecalculationStatus)
+                                </span>
+                            </div>
+                            <div class="planning-change-values">
+                                <span>@FormatAmount(change.PreviousAmount, change.CurrencyCode) <span aria-hidden="true">→</span> @FormatAmount(change.CurrentAmount, change.CurrencyCode)</span>
+                                <strong>@FormatImpact(change.AmountDifference, change.CurrencyCode)</strong>
+                                <span class="planning-annual-impact">
+                                    @L["Annual impact"]: @FormatImpact(change.AnnualizedImpact, change.CurrencyCode)
+                                </span>
+                            </div>
+                            <p>
+                                @L["Due date"]: @(change.BillDueDate.HasValue ? FormatDate(change.BillDueDate.Value) : L["Not available"].Value)
+                                @if (change.RemainingAmountToPlan.HasValue && change.RecalculationStatus == "Ready")
+                                {
+                                    <span> · @L["Still to plan"]: @FormatAmount(change.RemainingAmountToPlan.Value, change.CurrencyCode)</span>
+                                }
+                            </p>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private IJSObjectReference? _bffModule;
+    private bool _isLoading = true;
+    private bool _isSavingSchedule;
+    private Guid? _savingBillId;
+    private string? _error;
+    private string? _notice;
+    private bool _noticeIsError;
+    private string _frequency = "Biweekly";
+    private DateTime? _anchorPayDate;
+    private string _secondaryDayOfMonth = "15";
+    private string _defaultPaychecksAhead = "1";
+    private List<PlanningBillViewModel> _bills = [];
+    private List<PlanningBillChangeViewModel> _changes = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _bffModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./js/bff.js");
+            await LoadAsync();
+        }
+        catch
+        {
+            _error = L["FullWorth could not reach the secure API."].Value;
+            _isLoading = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (_bffModule is null)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        try
+        {
+            var scheduleTask =
+                _bffModule.InvokeAsync<PlanningPayScheduleViewModel?>(
+                    "getPlanningPaySchedule").AsTask();
+            var billTask =
+                _bffModule.InvokeAsync<PlanningBillViewModel[]>(
+                    "getBillStreams").AsTask();
+            var preferenceTask =
+                _bffModule.InvokeAsync<PlanningBillPreferenceViewModel[]>(
+                    "getPlanningBillFundingPreferences").AsTask();
+            var changesTask =
+                _bffModule.InvokeAsync<PlanningBillChangeViewModel[]>(
+                    "getUpcomingBillChanges").AsTask();
+
+            await Task.WhenAll(scheduleTask, billTask, preferenceTask, changesTask);
+
+            var schedule = scheduleTask.Result;
+            if (schedule is not null)
+            {
+                _frequency = schedule.Frequency;
+                _anchorPayDate =
+                    DateTime.TryParseExact(
+                        schedule.AnchorPayDate,
+                        "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out var parsedAnchorDate)
+                        ? parsedAnchorDate
+                        : null;
+                _secondaryDayOfMonth = schedule.SecondaryDayOfMonth?.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture) ?? "15";
+                _defaultPaychecksAhead = schedule.DefaultPaychecksAhead.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            var overrides = (preferenceTask.Result ?? [])
+                .ToDictionary(item => item.BillStreamId, item => item.PaychecksAheadOverride);
+
+            _bills = (billTask.Result ?? [])
+                .Where(item => item.IsActive)
+                .OrderBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+                .Select(item => new PlanningBillViewModel
+                {
+                    Id = item.Id,
+                    ProviderName = item.ProviderName,
+                    CurrentAmount = item.CurrentAmount,
+                    CurrencyCode = item.CurrencyCode,
+                    SelectedOverride = overrides.TryGetValue(item.Id, out var value)
+                        ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        : string.Empty
+                })
+                .ToList();
+
+            _changes = (changesTask.Result ?? []).ToList();
+        }
+        catch
+        {
+            _error = L["Something went wrong while loading your planning details."].Value;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveScheduleAsync()
+    {
+        if (_bffModule is null || _isSavingSchedule)
+        {
+            return;
+        }
+
+        if (!_anchorPayDate.HasValue)
+        {
+            SetNotice(L["Choose a valid anchor payday."].Value, isError: true);
+            return;
+        }
+
+        var anchorDate =
+            DateOnly.FromDateTime(
+                _anchorPayDate.Value);
+
+        if (!int.TryParse(_defaultPaychecksAhead, out var ahead) || ahead is < 1 or > 26)
+        {
+            SetNotice(L["Default paychecks ahead must be between 1 and 26."].Value, isError: true);
+            return;
+        }
+
+        int? secondaryDay = null;
+        if (_frequency == "SemiMonthly")
+        {
+            if (!int.TryParse(_secondaryDayOfMonth, out var parsedSecondary) ||
+                parsedSecondary is < 1 or > 31 ||
+                parsedSecondary == anchorDate.Day)
+            {
+                SetNotice(L["Choose a different second payday day between 1 and 31."].Value, isError: true);
+                return;
+            }
+
+            secondaryDay = parsedSecondary;
+        }
+
+        _isSavingSchedule = true;
+        _notice = null;
+        try
+        {
+            await _bffModule.InvokeAsync<object?>(
+                "putPlanningPaySchedule",
+                new
+                {
+                    frequency = _frequency,
+                    anchorPayDate = anchorDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                    secondaryDayOfMonth = secondaryDay,
+                    defaultPaychecksAhead = ahead
+                });
+            SetNotice(L["Your pay schedule is saved."].Value, isError: false);
+        }
+        catch
+        {
+            SetNotice(L["FullWorth could not save your pay schedule. Please try again."].Value, isError: true);
+        }
+        finally
+        {
+            _isSavingSchedule = false;
+        }
+    }
+
+    private async Task SaveBillPreferenceAsync(PlanningBillViewModel bill)
+    {
+        if (_bffModule is null || _savingBillId.HasValue)
+        {
+            return;
+        }
+
+        _savingBillId = bill.Id;
+        _notice = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(bill.SelectedOverride))
+            {
+                await _bffModule.InvokeAsync<object?>(
+                    "deletePlanningBillFundingPreference",
+                    bill.Id.ToString("D"));
+            }
+            else if (int.TryParse(bill.SelectedOverride, out var ahead) && ahead is >= 1 and <= 26)
+            {
+                await _bffModule.InvokeAsync<object?>(
+                    "putPlanningBillFundingPreference",
+                    bill.Id.ToString("D"),
+                    ahead);
+            }
+            else
+            {
+                SetNotice(L["Choose a value between 1 and 26 paychecks."].Value, isError: true);
+                return;
+            }
+
+            SetNotice(L["Bill planning preference saved."].Value, isError: false);
+        }
+        catch
+        {
+            SetNotice(L["FullWorth could not save that bill preference. Please try again."].Value, isError: true);
+        }
+        finally
+        {
+            _savingBillId = null;
+        }
+    }
+
+    private void SetNotice(string message, bool isError)
+    {
+        _notice = message;
+        _noticeIsError = isError;
+    }
+
+    private static string FormatAmount(decimal amount, string? currencyCode)
+    {
+        var currency = string.IsNullOrWhiteSpace(currencyCode)
+            ? string.Empty
+            : currencyCode.Trim().ToUpperInvariant();
+        return amount.ToString(
+                   "N2",
+                   System.Globalization.CultureInfo.CurrentCulture) +
+               (currency.Length == 0 ? string.Empty : " " + currency);
+    }
+
+    private static string FormatImpact(decimal amount, string? currencyCode)
+    {
+        var sign = amount > 0m ? "+" : amount < 0m ? "−" : string.Empty;
+        return sign + FormatAmount(Math.Abs(amount), currencyCode);
+    }
+
+    private static string FormatDate(DateOnly date) =>
+        date.ToString(
+            "d",
+            System.Globalization.CultureInfo.CurrentCulture);
+
+    private string GetStatusLabel(string? status) =>
+        status == "Ready" ? L["Ready to replan"].Value : L["Needs review"].Value;
+
+    private static string GetStatusClass(string? status) =>
+        status == "Ready" ? "is-ready" : "needs-review";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_bffModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _bffModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private sealed class PlanningPayScheduleViewModel
+    {
+        public string Frequency { get; set; } = "Biweekly";
+        public string AnchorPayDate { get; set; } = string.Empty;
+        public int? SecondaryDayOfMonth { get; set; }
+        public int DefaultPaychecksAhead { get; set; } = 1;
+    }
+
+    private sealed class PlanningBillViewModel
+    {
+        public Guid Id { get; set; }
+        public string ProviderName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public decimal CurrentAmount { get; set; }
+        public string? CurrencyCode { get; set; }
+        public string SelectedOverride { get; set; } = string.Empty;
+    }
+
+    private sealed class PlanningBillPreferenceViewModel
+    {
+        public Guid BillStreamId { get; set; }
+        public int PaychecksAheadOverride { get; set; }
+    }
+
+    private sealed class PlanningBillChangeViewModel
+    {
+        public Guid ChangeId { get; set; }
+        public string ProviderName { get; set; } = string.Empty;
+        public DateOnly? BillDueDate { get; set; }
+        public string? CurrencyCode { get; set; }
+        public decimal PreviousAmount { get; set; }
+        public decimal CurrentAmount { get; set; }
+        public decimal AmountDifference { get; set; }
+        public decimal AnnualizedImpact { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string RecalculationStatus { get; set; } = string.Empty;
+        public decimal? RemainingAmountToPlan { get; set; }
+    }
+}
+
