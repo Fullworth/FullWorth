@@ -231,6 +231,13 @@
     color: var(--bw-accent, #5265e8);
 }
 
+.planning-annual-impact {
+    color: var(--text-secondary);
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+
 .planning-change-row > p {
     margin: 8px 0 0;
     color: var(--bw-text-muted, #69778f);
