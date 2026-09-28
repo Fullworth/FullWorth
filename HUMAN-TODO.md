@@ -17,6 +17,20 @@ This file contains only work that cannot be completed safely through the current
 6. Block force pushes and branch deletion for both branches.
 7. Save/enable the ruleset.
 
-**Verify:** GitHub's branch API should report `protected: true` for both `master` and `development`, and the repository protection detector added by PR #443 should pass.
+**Verify:** GitHub's branch API should report `protected: true` for both `master` and `development`, and the repository protection detector refreshed by PR #513 should pass.
+
+## Commercial legal/license review — required before commercial launch
+
+**Status:** Human action required before commercial launch.
+
+**Why a human is needed:** Draft PR #368 contains proposed proprietary FullWorth license language and a third-party license policy. Selecting the legal entity/copyright holder, confirming commercial rights and obligations, and approving customer-facing legal terms require qualified legal judgment and cannot be established by CI or repository automation.
+
+**Action:**
+1. Review the closed draft PR #368 and the current dependency/model/runtime license inventory.
+2. Confirm the correct copyright holder/legal entity for FullWorth.
+3. Have qualified counsel review the proprietary source license, third-party notice obligations, and alignment with the Terms of Service and Privacy Policy.
+4. After approval, recreate the approved legal text from the then-current `development` head and send it through normal PR/CI review.
+
+**Verify:** The legally approved license/notice text is merged from a current-development PR before commercial launch, and no repository documentation claims legal approval before that review is complete.
 
 Do not put credentials, tokens, recovery codes, financial data, private statements, or other secrets in this file.
