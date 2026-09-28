@@ -132,3 +132,114 @@ internal sealed class PlanningBillFundingPreferenceEntityConfiguration
                 DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class PlanningPaycheckAllocationEntityConfiguration
+    : IEntityTypeConfiguration<PlanningPaycheckAllocationEntity>
+{
+    public void Configure(
+        EntityTypeBuilder<PlanningPaycheckAllocationEntity> entity)
+    {
+        entity.ToTable(
+            "PlanningPaycheckAllocations",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckAllocations_PlannedAmount",
+                    "\"PlannedAmount\" > 0");
+
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckAllocations_CurrencyCode",
+                    "char_length(\"CurrencyCode\") = 3");
+            });
+
+        entity.HasKey(
+            allocation => allocation.Id);
+
+        entity.HasAlternateKey(
+            allocation => new
+            {
+                allocation.Id,
+                allocation.UserId
+            });
+
+        entity.Property(
+                allocation => allocation.PayrollTransactionId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillStreamId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.SourceStatementId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.PaycheckPostedDate)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillPeriodEnd)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillDueDate)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.PlannedAmount)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.CurrencyCode)
+            .HasMaxLength(
+                3)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.CreatedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(
+            allocation => new
+            {
+                allocation.UserId,
+                allocation.PaycheckPostedDate
+            });
+
+        entity.HasIndex(
+            allocation => new
+            {
+                allocation.UserId,
+                allocation.BillStreamId,
+                allocation.BillPeriodEnd
+            });
+
+        entity.HasIndex(
+                allocation => new
+                {
+                    allocation.UserId,
+                    allocation.PayrollTransactionId,
+                    allocation.BillStreamId,
+                    allocation.BillPeriodEnd
+                })
+            .IsUnique();
+
+        /*
+         * Deliberately no Planning -> Plaid/Bills/Statements foreign keys.
+         * Cross-domain IDs remain opaque; the owning module contracts verify
+         * ownership and return the facts Planning is allowed to consume.
+         */
+        entity.HasOne(
+                allocation => allocation.User)
+            .WithMany()
+            .HasForeignKey(
+                allocation => allocation.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+    }
+}
+
