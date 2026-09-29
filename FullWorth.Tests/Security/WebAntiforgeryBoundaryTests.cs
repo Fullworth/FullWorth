@@ -442,7 +442,8 @@ public sealed class WebAntiforgeryBoundaryTests
 
         Assert.Contains(
             nonce,
-            importMapTag,
+            WebUtility.HtmlDecode(
+                importMapTag),
             StringComparison.Ordinal);
     }
 
