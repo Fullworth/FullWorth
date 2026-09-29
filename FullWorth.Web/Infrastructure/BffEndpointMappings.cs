@@ -59,6 +59,36 @@ public static class BffEndpointMappings
             await proxy.ForwardGetAsync(context, "/api/bank-connections", context.RequestAborted));
         bff.MapGet("/bank-transactions", async (HttpContext context, FullWorthBffProxyService proxy, int? take) =>
             await proxy.ForwardGetAsync(context, $"/api/bank-transactions?take={Math.Clamp(take ?? 100, 1, 500)}", context.RequestAborted));
+        bff.MapGet("/planning/pay-schedule", async (HttpContext context, FullWorthBffProxyService proxy) =>
+            await proxy.ForwardGetAsync(context, "/api/planning/pay-schedule", context.RequestAborted));
+        bff.MapPut("/planning/pay-schedule", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy, PlanningPayScheduleBffRequest request) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+            return await proxy.ForwardJsonAsync(context, HttpMethod.Put, "/api/planning/pay-schedule", request, context.RequestAborted);
+        });
+        bff.MapGet("/planning/bill-funding-preferences", async (HttpContext context, FullWorthBffProxyService proxy) =>
+            await proxy.ForwardGetAsync(context, "/api/planning/bill-funding-preferences", context.RequestAborted));
+        bff.MapPut("/planning/bill-funding-preferences/{billStreamId:guid}", async (HttpContext context, IAntiforgery antiforgery, AdminBffWriteProxyService proxy, Guid billStreamId, PlanningBillFundingPreferenceBffRequest request) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+            if (billStreamId == Guid.Empty) return Results.NotFound();
+            return await proxy.ForwardJsonAsync(context, HttpMethod.Put, $"/api/planning/bill-funding-preferences/{billStreamId:D}", request, context.RequestAborted);
+        });
+        bff.MapDelete("/planning/bill-funding-preferences/{billStreamId:guid}", async (HttpContext context, IAntiforgery antiforgery, FullWorthBffProxyService proxy, Guid billStreamId) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+            return billStreamId == Guid.Empty
+                ? Results.NotFound()
+                : await proxy.ForwardDeleteAsync(context, $"/api/planning/bill-funding-preferences/{billStreamId:D}", context.RequestAborted);
+        });
+        bff.MapGet("/planning/upcoming-bill-changes", async (HttpContext context, FullWorthBffProxyService proxy) =>
+            await proxy.ForwardGetAsync(context, "/api/planning/upcoming-bill-changes", context.RequestAborted));
+        bff.MapGet("/planning/payday-plans/recent", async (HttpContext context, FullWorthBffProxyService proxy, int? take) =>
+            await proxy.ForwardGetAsync(
+                context,
+                $"/api/planning/payday-plans/recent?take={Math.Clamp(take ?? 3, 1, 20)}",
+                context.RequestAborted));
+
         bff.MapPost("/bill-monitoring/refresh", async (HttpContext context, IAntiforgery antiforgery, FullWorthBffProxyService proxy) =>
         {
             await antiforgery.ValidateRequestAsync(context);
@@ -182,3 +212,5 @@ public sealed record SubscriptionCheckoutRequest(string BillingInterval);
 public sealed record SubscriptionRedemptionRequest(string AccessKey);
 public sealed record AccountExportBffRequest(string CurrentPassword, string? TwoFactorCode);
 public sealed record DeleteAccountBffRequest(string Confirmation, string CurrentPassword, string? TwoFactorCode);
+public sealed record PlanningPayScheduleBffRequest(string Frequency, DateOnly AnchorPayDate, int? SecondaryDayOfMonth, int DefaultPaychecksAhead);
+public sealed record PlanningBillFundingPreferenceBffRequest(int PaychecksAheadOverride);

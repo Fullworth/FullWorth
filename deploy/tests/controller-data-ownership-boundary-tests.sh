@@ -29,6 +29,8 @@ owners = {
     "BillStatementAiEvaluations": "Statements",
     "PlanningPaySchedules": "Planning",
     "PlanningBillFundingPreferences": "Planning",
+    "PlanningPaycheckAllocations": "Planning",
+    "PlanningPaycheckPlanRuns": "Planning",
     "SubscriptionEntitlements": "Subscriptions",
     "UserProgramMemberships": "Subscriptions",
     "SubscriptionAccessKeys": "Subscriptions",

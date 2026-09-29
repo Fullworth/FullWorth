@@ -50,14 +50,6 @@ public static class PaycheckBillPlanCalculator
             request.AlreadySetAside,
             nameof(request.AlreadySetAside));
 
-        if (request.AlreadySetAside >
-            request.AmountDue)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(request.AlreadySetAside),
-                "Already-set-aside amount cannot exceed the amount due.");
-        }
-
         if (request.PaychecksAhead is < 1 or > MaximumPaychecksAhead)
         {
             throw new ArgumentOutOfRangeException(

@@ -251,6 +251,7 @@ public sealed class AccountDataExportTests
         Guid lineItemId;
         Guid changeId;
         Guid alertId;
+        Guid alertSourceEventId;
         Guid uploadId;
         Guid evaluationId;
         Guid linkSessionId;
@@ -389,12 +390,16 @@ PlaidTransactionId = PlaidTransactionId,
                     UpdatedAtUtc = now
                 };
 
+            alertSourceEventId =
+                Guid.NewGuid();
+
             var alert =
                 new BillAlertEntity
                 {
                     UserId = exportingUserId,
                     BillStreamId = stream.Id,
                     BillChangeId = change.Id,
+                    SourceEventId = alertSourceEventId,
                     AlertType = BillAlertType.BillIncrease,
                     Severity = BillAlertSeverity.Warning,
                     Title = "Bill increased",
@@ -549,9 +554,17 @@ PlaidTransactionId = PlaidTransactionId,
         Assert.Equal(
             changeId,
             Assert.Single(export.BillChanges).Id);
+        var exportedAlert =
+            Assert.Single(export.BillAlerts);
+
         Assert.Equal(
             alertId,
-            Assert.Single(export.BillAlerts).Id);
+            exportedAlert.Id);
+
+        Assert.Equal(
+            alertSourceEventId,
+            exportedAlert.SourceEventId);
+
         var exportedUpload =
             Assert.Single(export.StatementUploads);
 

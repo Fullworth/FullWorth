@@ -269,6 +269,19 @@ builder.Services.AddSingleton(
 builder.Services.AddScoped<
     PlanningSettingsService>();
 
+builder.Services.AddScoped<
+    PlanningPaycheckAllocationStore>();
+
+builder.Services.AddScoped<
+    PlanningPaydayPlanService>();
+
+builder.Services.AddScoped<
+    IPlanningPaydayAlertRefreshGateway,
+    PlanningPaydayAlertRefreshService>();
+
+builder.Services.AddScoped<
+    PlanningBillChangeWatchService>();
+
 builder.Services.AddSingleton<
     SubscriptionAccessKeyGenerator>();
 
@@ -652,8 +665,16 @@ builder.Services.AddScoped<
     StatementBillPlanningFactsGateway>();
 
 builder.Services.AddScoped<
+    IBillPlanningChangeFactsGateway,
+    StatementBillPlanningChangeFactsGateway>();
+
+builder.Services.AddScoped<
     IBillAlertReconciliationGateway,
     BillAlertReconciliationGateway>();
+
+builder.Services.AddScoped<
+    IPlanningPaydayAlertGateway,
+    PlanningPaydayAlertGateway>();
 
 builder.Services.AddScoped<
     IAccountBillDeletionGateway,

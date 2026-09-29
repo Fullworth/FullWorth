@@ -1,0 +1,31 @@
+name: FullWorth Repository Governance
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: fullworth-repository-governance
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-protected-branches:
+    name: Verify protected branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Verify master and development protection
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash deploy/verify-github-branch-governance.sh

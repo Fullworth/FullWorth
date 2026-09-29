@@ -370,6 +370,9 @@ namespace FullWorth.API.Data.Migrations
                     b.Property<Guid?>("BillStreamId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceEventId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -409,6 +412,10 @@ namespace FullWorth.API.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.HasIndex("BillStreamId", "UserId");
+
+                    b.HasIndex("UserId", "AlertType", "SourceEventId")
+                        .IsUnique()
+                        .HasFilter("\"SourceEventId\" IS NOT NULL");
 
                     b.HasIndex("UserId", "IsDismissed", "IsRead", "CreatedAtUtc");
 
@@ -875,6 +882,118 @@ namespace FullWorth.API.Data.Migrations
                     b.ToTable("PlanningBillFundingPreferences", null, t =>
                         {
                             t.HasCheckConstraint("CK_PlanningBillFundingPreferences_PaychecksAheadOverride", "\"PaychecksAheadOverride\" IS NULL OR (\"PaychecksAheadOverride\" >= 1 AND \"PaychecksAheadOverride\" <= 26)");
+                        });
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPaycheckAllocationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("BillDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("BillPeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("BillStreamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateOnly>("PaycheckPostedDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("PlannedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("PayrollTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceStatementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "UserId");
+
+                    b.HasIndex("UserId", "BillStreamId", "BillPeriodEnd");
+
+                    b.HasIndex("UserId", "PaycheckPostedDate");
+
+                    b.HasIndex("UserId", "PayrollTransactionId", "BillStreamId", "BillPeriodEnd")
+                        .IsUnique();
+
+                    b.ToTable("PlanningPaycheckAllocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningPaycheckAllocations_PlannedAmount", "\"PlannedAmount\" > 0");
+
+                            t.HasCheckConstraint("CK_PlanningPaycheckAllocations_CurrencyCode", "char_length(\"CurrencyCode\") = 3");
+                        });
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPaycheckPlanRunEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("PaycheckAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateOnly>("PaycheckPostedDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("PaycheckRemainingAfterPlan")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("PayrollTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("RecommendedSetAside")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("Shortfall")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "UserId");
+
+                    b.HasIndex("UserId", "PayrollTransactionId")
+                        .IsUnique();
+
+                    b.ToTable("PlanningPaycheckPlanRuns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningPaycheckPlanRuns_Amounts", "\"PaycheckAmount\" >= 0 AND \"RecommendedSetAside\" >= 0 AND \"PaycheckRemainingAfterPlan\" >= 0 AND \"Shortfall\" >= 0");
+
+                            t.HasCheckConstraint("CK_PlanningPaycheckPlanRuns_CurrencyCode", "char_length(\"CurrencyCode\") = 3");
                         });
                 });
 
@@ -1554,6 +1673,28 @@ namespace FullWorth.API.Data.Migrations
                 });
 
             modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningBillFundingPreferenceEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPaycheckAllocationEntity", b =>
+                {
+                    b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FullWorth.API.Data.Entities.PlanningPaycheckPlanRunEntity", b =>
                 {
                     b.HasOne("FullWorth.API.Data.Entities.ApplicationUser", "User")
                         .WithMany()

@@ -53,6 +53,7 @@ public sealed class AccountBillExportGateway(
                     item.Id,
                     item.BillStreamId,
                     item.BillChangeId,
+                    item.SourceEventId,
                     item.AlertType.ToString(),
                     item.Severity.ToString(),
                     item.Title,

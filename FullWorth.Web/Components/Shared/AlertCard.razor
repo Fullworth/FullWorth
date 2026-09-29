@@ -221,6 +221,9 @@
                 "NewBill" =>
                     "bill",
 
+                "PaydayPlan" =>
+                    "document",
+
                 _ =>
                     "alert"
             };
@@ -261,6 +264,9 @@
             "NewBill" =>
                 "new-bill",
 
+            "PaydayPlan" =>
+                "due",
+
             _ =>
                 "unknown"
         };
@@ -297,6 +303,9 @@
 
             "NewBill" =>
                 L["New recurring bill"].Value,
+
+            "PaydayPlan" =>
+                L["Payday plan"].Value,
 
             _ =>
                 value

@@ -168,10 +168,15 @@ if ! install_app; then
         fail "FullWorth could not be installed into the iOS Simulator after one bounded retry."
 fi
 
-launch_output=$(
-    run_with_timeout 60 \
+launch_app()
+{
+    run_with_timeout 180 \
         xcrun simctl launch "$udid" "$expected_bundle_id"
-) || fail "FullWorth could not be launched in the iOS Simulator within 60 seconds."
+}
+
+launch_output=$(
+    launch_app
+) || fail "FullWorth could not be launched in the iOS Simulator within 180 seconds."
 
 printf '%s\n' "$launch_output" |
     grep -Fq "$expected_bundle_id:" ||

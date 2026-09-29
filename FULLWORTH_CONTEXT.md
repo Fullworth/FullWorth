@@ -1,6 +1,38 @@
 # FullWorth Current Context
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
+
+## Planning Web first-slice checkpoint — 2026-09-28
+
+PR #531 merged into `development` as `bbac208651766796d9064622d6bb46db5e52e427`. Exact head `b8830d02ffb3835e7f2ab44f7c0121545a699089` passed FullWorth CI #1263 (run `36469189607`) and dependency security #365 (run `36469189643`). The authenticated `/app/planning` experience covers pay-schedule configuration, default and per-bill planning horizons, and evidence-backed Upcoming Bill Change Watch presentation. It uses antiforgery-protected authenticated BFF writes and adds anonymous-access regression coverage. No money is moved or reserved.
+
+The first CI attempt exposed a test-fixture identity mismatch: the fake Web auth handler generated a new user ID for each request, invalidating the antiforgery token. The test now pins the same identity across the token and mutation requests; no authentication or antiforgery boundary was relaxed. The corrected exact head passed the full gate, including production-container visual checks and isolated encrypted backup/recovery. A detailed per-bill payday shortfall review remains unfinished; Activity currently carries summary payday alerts. Plaid sandbox acceptance with real posted payroll transactions remains a separate pre-production gate. No deployment is implied.
+
+## Repository consolidation / payday alert checkpoint — 2026-09-28
+
+The Planning payday path has advanced from manual generation to automatic, recovery-safe user alerts. PR #515 added the Bills-owned `PaydayPlan` alert persistence boundary with an opaque source-event ID and owner-scoped idempotency. PR #518 then connected Planning to recent posted payroll facts in the monitoring cycle: the service scans a bounded seven-day posted-payroll window, generates or replays the immutable payday plan, emits one idempotent user-level alert per payroll transaction, stops cleanly when pay-schedule configuration is missing, skips unsupported payroll facts rather than inventing evidence, and isolates alert failure from a successful bank/bill refresh. No part of this flow claims that money was moved, reserved, protected, held, or insured. Issue #293 now marks automatic alerts from actual posted paycheck events complete.
+
+PR #521 updated the existing Activity feed to present and localize `PaydayPlan` alerts. PR #531 then added the first dedicated authenticated Planning Web screen: users can configure pay frequency, anchor payday, semi-monthly timing, and default paychecks-ahead guidance; set or remove per-bill overrides; and review confirmed upcoming bill changes with per-period and annualized impact plus remaining-to-plan amounts. The screen links to Activity for generated payday guidance. The broader Planning Web UX checkpoint remains open because shortfalls are currently summarized in Activity rather than shown as a detailed per-bill payday review. Real-world Plaid sandbox acceptance with posted payroll transactions also remains open before production use of this feature.
+
+Repository hygiene was completed with fail-closed branch cleanup. PRs #516/#517 hardened cleanup against overlapping-run deletion races and expanded cleanup to closed-PR source refs plus separately audited SHA-pinned stale refs while always preserving `master`, `development`, protected branches, and open-PR branches. PRs #525/#526 added the final three audited legacy refs to that SHA-pinned retirement set after current `development` was verified to contain the later statement-airlock, MFA/session-revocation, and refresh-token-replay semantics. The owner-triggered cleanup reduced the repository from roughly 100 branches to the two long-lived branches after this handoff branch was merged and retired. Closed PR history remains the review record for removed source branches.
+
+PR #522 exempts repository-maintenance-only workflow edits from unnecessary MAUI builds while changes to `.github/workflows/ci.yml` itself continue to exercise the Android gate. PR #527 refreshed `coverlet.collector` from 10.0.1 to 10.1.0 and the production Redis image from 8.2.9-alpine to 8.10.0-alpine with its pinned digest on the exact current `development` base after full CI/security validation.
+
+Current long-lived branch heads at this checkpoint are `development` = `908306a773f78b791c1b37148357c7fc0907ee65` and `master` = `47163a1490bf048e1a37768bb021e5e212c006f1` before this documentation-only merge. No production deployment is implied by these repository changes.
+
+`HUMAN-TODO.md` still contains exactly the genuinely human-only release prerequisites currently identified: configure GitHub branch protection/rulesets for `master` and `development`, and obtain qualified commercial legal/license review before commercial launch. The connected GitHub tooling can read protection state but still exposes no mutation for creating those rulesets.
+
+Next product checkpoint: complete the real Planning Web UX (settings, overrides, shortfall review, and Change Watch presentation), then perform Plaid sandbox acceptance with real posted payroll transactions. The local-Qwen/private-corpus benchmark also remains a separate release-readiness evidence gate; production AI remains disabled until real evaluation evidence supports enabling it.
+
+## Planning / security continuation checkpoint — 2026-09-27
+
+The Planning payday stack is now integrated through immutable replay-safe plan persistence. PR #510 merged to `development` as `02c38f6c18237cf9f37745c61892c683b0d999c0` after exact head `66457ee0eed0ece7c8cf9229fc643aca6ad2ea8f` passed FullWorth CI run `36374917272` and dependency security run `36374917348`. Ready payday plans now persist the immutable paycheck-plan run and positive bill allocations through one Planning-owned save boundary; zero-allocation ready plans are replayable, and replay checks the frozen Planning snapshot before live payroll facts so later provider changes cannot rewrite an already-recorded recommendation. Planning still records guidance only and does not claim money was moved, reserved, protected, or held.
+
+The preceding Planning chain is also merged: recommendation-ledger persistence (#501), replay-safe allocation storage (#502), bill-decrease handling (#503), owner-validated posted-paycheck orchestration (#504), authenticated payday-plan API (#505), confirmed statement-backed bill-change facts (#506), deterministic Change Watch (#507), Change Watch API (#508), and immutable paycheck-plan-run persistence (#509). Issue #293 now records payday generation, Change Watch, and ownership/security ratchets as completed. The next functional checkpoint is automatic payday alert generation from actual posted wage transactions, followed by Web UX and Plaid sandbox acceptance.
+
+External-identity disclosure hardening was refreshed as PR #512 and merged after exact-head CI/security passed. Repository branch-protection detection is refreshed in PR #513; it is automation only and does not substitute for configuring protection. `master` and `development` still require human-admin branch protection and remain tracked in `HUMAN-TODO.md`.
+
+The prior proprietary-license draft PR #368 was deliberately closed rather than merged. Qualified legal review is now tracked in `HUMAN-TODO.md`; do not recreate or merge license language until that review is complete.
 
 
 ## CI simulator reliability / human handoff checkpoint — 2026-09-27

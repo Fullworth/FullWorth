@@ -57,6 +57,12 @@ public sealed class FullWorthDbContext
     public DbSet<PlanningBillFundingPreferenceEntity> PlanningBillFundingPreferences =>
         Set<PlanningBillFundingPreferenceEntity>();
 
+    public DbSet<PlanningPaycheckAllocationEntity> PlanningPaycheckAllocations =>
+        Set<PlanningPaycheckAllocationEntity>();
+
+    public DbSet<PlanningPaycheckPlanRunEntity> PlanningPaycheckPlanRuns =>
+        Set<PlanningPaycheckPlanRunEntity>();
+
     public DbSet<PlaidLinkSessionEntity> PlaidLinkSessions =>
         Set<PlaidLinkSessionEntity>();
 
@@ -707,6 +713,16 @@ public sealed class FullWorthDbContext
                 entity.HasIndex(alert => alert.BillStreamId);
 
                 entity.HasIndex(alert => alert.BillChangeId);
+
+                entity.HasIndex(alert => new
+                {
+                    alert.UserId,
+                    alert.AlertType,
+                    alert.SourceEventId
+                })
+                .IsUnique()
+                .HasFilter(
+                    "\"SourceEventId\" IS NOT NULL");
 
                 entity.HasIndex(alert => new
                 {

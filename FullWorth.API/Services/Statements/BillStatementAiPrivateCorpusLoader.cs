@@ -184,10 +184,17 @@ public sealed class BillStatementAiPrivateCorpusLoader
 
         try
         {
+            using var jsonDocument =
+                JsonDocument.Parse(
+                    groundTruthJson);
+
+            ValidateUniqueJsonProperties(
+                jsonDocument.RootElement);
+
             document =
                 JsonSerializer.Deserialize<
                     BillStatementAiGroundTruthDocument>(
-                    groundTruthJson,
+                    jsonDocument.RootElement,
                     JsonOptions)
                 ?? throw new JsonException(
                     "The ground-truth document was empty.");
@@ -333,10 +340,20 @@ public sealed class BillStatementAiPrivateCorpusLoader
     private static void ValidateGroundTruth(
         BillStatementAiGroundTruthDocument document)
     {
-        if (string.IsNullOrWhiteSpace(
-                document.ProviderKey) ||
-            document.ProviderKey.Trim().Length >
-                MaxProviderKeyLength)
+        var providerKey =
+            document.ProviderKey?.Trim();
+
+        if (string.IsNullOrEmpty(
+                providerKey) ||
+            providerKey.Length >
+                MaxProviderKeyLength ||
+            !IsAsciiLetterOrDigit(
+                providerKey[0]) ||
+            providerKey.Any(
+                character =>
+                    !IsAsciiLetterOrDigit(
+                        character) &&
+                    character is not ('-' or '_')))
         {
             throw new BillStatementAiPrivateCorpusException(
                 "The private corpus provider key is invalid.");
@@ -361,7 +378,7 @@ public sealed class BillStatementAiPrivateCorpusLoader
                 3 ||
                 document.CurrencyCode.Trim().Any(
                     character =>
-                        !char.IsLetter(
+                        !IsAsciiLetter(
                             character))))
         {
             throw new BillStatementAiPrivateCorpusException(
@@ -412,6 +429,56 @@ public sealed class BillStatementAiPrivateCorpusLoader
             throw new BillStatementAiPrivateCorpusException(
                 "The private corpus ground truth contains no scored facts.");
         }
+    }
+
+    private static void ValidateUniqueJsonProperties(
+        JsonElement element)
+    {
+        if (element.ValueKind ==
+            JsonValueKind.Object)
+        {
+            var names =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (var property in
+                     element.EnumerateObject())
+            {
+                if (!names.Add(
+                        property.Name))
+                {
+                    throw new JsonException(
+                        "Duplicate ground-truth property.");
+                }
+
+                ValidateUniqueJsonProperties(
+                    property.Value);
+            }
+        }
+        else if (element.ValueKind ==
+                 JsonValueKind.Array)
+        {
+            foreach (var item in
+                     element.EnumerateArray())
+            {
+                ValidateUniqueJsonProperties(
+                    item);
+            }
+        }
+    }
+
+    private static bool IsAsciiLetterOrDigit(
+        char character)
+    {
+        return IsAsciiLetter(
+                character) ||
+            character is >= '0' and <= '9';
+    }
+
+    private static bool IsAsciiLetter(
+        char character)
+    {
+        return character is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
     }
 
     private static void ValidateMoney(

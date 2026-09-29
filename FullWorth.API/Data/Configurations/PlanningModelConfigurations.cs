@@ -132,3 +132,211 @@ internal sealed class PlanningBillFundingPreferenceEntityConfiguration
                 DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class PlanningPaycheckAllocationEntityConfiguration
+    : IEntityTypeConfiguration<PlanningPaycheckAllocationEntity>
+{
+    public void Configure(
+        EntityTypeBuilder<PlanningPaycheckAllocationEntity> entity)
+    {
+        entity.ToTable(
+            "PlanningPaycheckAllocations",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckAllocations_PlannedAmount",
+                    "\"PlannedAmount\" > 0");
+
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckAllocations_CurrencyCode",
+                    "char_length(\"CurrencyCode\") = 3");
+            });
+
+        entity.HasKey(
+            allocation => allocation.Id);
+
+        entity.HasAlternateKey(
+            allocation => new
+            {
+                allocation.Id,
+                allocation.UserId
+            });
+
+        entity.Property(
+                allocation => allocation.PayrollTransactionId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillStreamId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.SourceStatementId)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.PaycheckPostedDate)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillPeriodEnd)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.BillDueDate)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.PlannedAmount)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.CurrencyCode)
+            .HasMaxLength(
+                3)
+            .IsRequired();
+
+        entity.Property(
+                allocation => allocation.CreatedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(
+            allocation => new
+            {
+                allocation.UserId,
+                allocation.PaycheckPostedDate
+            });
+
+        entity.HasIndex(
+            allocation => new
+            {
+                allocation.UserId,
+                allocation.BillStreamId,
+                allocation.BillPeriodEnd
+            });
+
+        entity.HasIndex(
+                allocation => new
+                {
+                    allocation.UserId,
+                    allocation.PayrollTransactionId,
+                    allocation.BillStreamId,
+                    allocation.BillPeriodEnd
+                })
+            .IsUnique();
+
+        /*
+         * Deliberately no Planning -> Plaid/Bills/Statements foreign keys.
+         * Cross-domain IDs remain opaque; the owning module contracts verify
+         * ownership and return the facts Planning is allowed to consume.
+         */
+        entity.HasOne(
+                allocation => allocation.User)
+            .WithMany()
+            .HasForeignKey(
+                allocation => allocation.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+    }
+}
+
+
+internal sealed class PlanningPaycheckPlanRunEntityConfiguration
+    : IEntityTypeConfiguration<PlanningPaycheckPlanRunEntity>
+{
+    public void Configure(
+        EntityTypeBuilder<PlanningPaycheckPlanRunEntity> entity)
+    {
+        entity.ToTable(
+            "PlanningPaycheckPlanRuns",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckPlanRuns_Amounts",
+                    "\"PaycheckAmount\" >= 0 AND \"RecommendedSetAside\" >= 0 AND \"PaycheckRemainingAfterPlan\" >= 0 AND \"Shortfall\" >= 0");
+
+                table.HasCheckConstraint(
+                    "CK_PlanningPaycheckPlanRuns_CurrencyCode",
+                    "char_length(\"CurrencyCode\") = 3");
+            });
+
+        entity.HasKey(
+            run => run.Id);
+
+        entity.HasAlternateKey(
+            run => new
+            {
+                run.Id,
+                run.UserId
+            });
+
+        entity.Property(
+                run => run.PayrollTransactionId)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckPostedDate)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckAmount)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.CurrencyCode)
+            .HasMaxLength(
+                3)
+            .IsRequired();
+
+        entity.Property(
+                run => run.RecommendedSetAside)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.PaycheckRemainingAfterPlan)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.Shortfall)
+            .HasPrecision(
+                18,
+                2)
+            .IsRequired();
+
+        entity.Property(
+                run => run.CreatedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(
+                run => new
+                {
+                    run.UserId,
+                    run.PayrollTransactionId
+                })
+            .IsUnique();
+
+        /*
+         * Deliberately no Planning -> Plaid foreign key.
+         * Payroll ownership/existence is verified by the Plaid owner contract.
+         */
+        entity.HasOne(
+                run => run.User)
+            .WithMany()
+            .HasForeignKey(
+                run => run.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
+    }
+}
