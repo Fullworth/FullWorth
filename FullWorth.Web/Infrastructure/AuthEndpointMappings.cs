@@ -467,6 +467,7 @@ public static class AuthEndpointMappings
                                   localizer,
                                   result.ErrorMessage,
                                   "Unable to confirm this email address.")));
+            });
 
         endpoints.MapPost(
             "/auth/logout",
