@@ -2,12 +2,16 @@ using FullWorth.Core.Legal;
 using FullWorth.Web.Components;
 using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Localization;
 
 namespace FullWorth.Web.Infrastructure;
 
 public static class AuthEndpointMappings
 {
+    public const string AuthenticationRateLimitPolicy =
+        "web-authentication";
+
     public static IEndpointRouteBuilder
         MapFullWorthAuthEndpoints(
             this IEndpointRouteBuilder endpoints)
@@ -118,7 +122,8 @@ public static class AuthEndpointMappings
 
                 return Results.Redirect(
                     "/app");
-            });
+            }).RequireRateLimiting(
+                AuthenticationRateLimitPolicy);
 
         endpoints.MapPost(
             "/auth/register",
@@ -236,7 +241,8 @@ public static class AuthEndpointMappings
                     Uri.EscapeDataString(
                         localizer[
                             "Registration request received. Sign in to continue."]));
-            });
+            }).RequireRateLimiting(
+                AuthenticationRateLimitPolicy);
 
         endpoints.MapPost(
             "/auth/forgot-password",
@@ -289,7 +295,8 @@ public static class AuthEndpointMappings
 
                 return Results.Redirect(
                     "/forgot-password?sent=true");
-            });
+            }).RequireRateLimiting(
+                AuthenticationRateLimitPolicy);
 
         endpoints.MapPost(
             "/auth/reset-password",
@@ -395,7 +402,8 @@ public static class AuthEndpointMappings
                     Uri.EscapeDataString(
                         localizer[
                             "Your password has been reset. Sign in with your new password."]));
-            });
+            }).RequireRateLimiting(
+                AuthenticationRateLimitPolicy);
 
         endpoints.MapGet(
             "/auth/confirm-email",
@@ -459,7 +467,6 @@ public static class AuthEndpointMappings
                                   localizer,
                                   result.ErrorMessage,
                                   "Unable to confirm this email address.")));
-            });
 
         endpoints.MapPost(
             "/auth/logout",
