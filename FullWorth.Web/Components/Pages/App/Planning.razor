@@ -160,7 +160,7 @@
                                     <ul class="planning-plan-items">
                                         @foreach (var item in plan.Items)
                                         {
-                                            <li @key="item.BillDueDate">
+                                            <li>
                                                 <span>
                                                     <strong>@(string.IsNullOrWhiteSpace(item.ProviderName) ? L["Recurring bill"].Value : item.ProviderName)</strong>
                                                     <small>@L["Due date"]: @FormatDate(item.BillDueDate)</small>
