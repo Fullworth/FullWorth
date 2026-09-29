@@ -1,3 +1,9 @@
+## Planning payday-history detail checkpoint — 2026-09-29
+
+PR #538 merged into `development` as `5cc0cee2eec15996fb35369b4c83c004e8083c2e`. Exact head `9071e5269320308a62a1f1120518efb6bf79464f` passed FullWorth CI #1273 (run `36504317342`) and dependency security #374 (run `36504317403`). Recent immutable payday history now includes owner-scoped per-bill recommendations, safe provider display names, due dates, amounts, and currencies. A paycheck-level shortfall is shown separately from those recommendations; the UI states that no money is moved or reserved. Tests exclude allocations owned by another user even when payroll transaction IDs match.
+
+Together with PR #531, the authenticated Planning Web slice now covers schedule settings, default/per-bill planning horizons, Change Watch, payday history, and shortfall detail. The Web UX checklist in issue #293 can be considered complete. Real Plaid sandbox acceptance with posted payroll transactions remains an external pre-production gate; no production deployment is implied.
+
 # FullWorth Current Context
 
 Last updated: 2026-09-28
