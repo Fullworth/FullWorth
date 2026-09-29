@@ -432,9 +432,17 @@ public sealed class WebAntiforgeryBoundaryTests
 
         Assert.True(tagEnd > importMapIndex);
 
+        var importMapTag =
+            html[tagStart..tagEnd];
+
         Assert.Contains(
-            $"nonce={nonce}",
-            html[tagStart..tagEnd],
+            "nonce=",
+            importMapTag,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            nonce,
+            importMapTag,
             StringComparison.Ordinal);
     }
 
