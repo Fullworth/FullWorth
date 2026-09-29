@@ -1,3 +1,9 @@
+## Planning payday-history release promotion — 2026-09-29
+
+Release PR #540 promoted the verified payday-history detail slice and current handoff from `development` to `master` at `f00e930cdbab4167f38796debd2e983f54cd152e`. Exact release head `77fd150e052df5623dde1029ad58815da27b3958` passed FullWorth CI #1275 (run `36528961096`), including backend/tests, Android, and Linux production-container validation, plus dependency security #376 (run `36528961112`). After merge, `development` was fast-forwarded to the same verified master commit. There are no open PRs at this checkpoint.
+
+This is a repository promotion only. No production deployment occurred. Plaid sandbox acceptance using posted payroll transactions and the authorized local-Qwen/private-corpus benchmark remain separate evidence gates. Production AI remains disabled pending benchmark results.
+
 ## Planning payday-history detail checkpoint — 2026-09-29
 
 PR #538 merged into `development` as `5cc0cee2eec15996fb35369b4c83c004e8083c2e`. Exact head `9071e5269320308a62a1f1120518efb6bf79464f` passed FullWorth CI #1273 (run `36504317342`) and dependency security #374 (run `36504317403`). Recent immutable payday history now includes owner-scoped per-bill recommendations, safe provider display names, due dates, amounts, and currencies. A paycheck-level shortfall is shown separately from those recommendations; the UI states that no money is moved or reserved. Tests exclude allocations owned by another user even when payroll transaction IDs match.
