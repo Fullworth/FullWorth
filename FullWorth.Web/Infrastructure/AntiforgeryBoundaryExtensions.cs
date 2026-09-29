@@ -109,13 +109,43 @@ public static class AntiforgeryBoundaryExtensions
             return true;
         }
 
+        var originValue =
+            originHeaders[0];
+
+        if (string.IsNullOrWhiteSpace(originValue))
+        {
+            rejectionReason =
+                "origin-empty";
+
+            return true;
+        }
+
+        if (string.Equals(
+                originValue.Trim(),
+                "null",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            rejectionReason =
+                "origin-opaque";
+
+            return true;
+        }
+
+        if (originValue.Contains(','))
+        {
+            rejectionReason =
+                "origin-combined-values";
+
+            return true;
+        }
+
         if (!Uri.TryCreate(
-                originHeaders[0],
+                originValue,
                 UriKind.Absolute,
                 out var origin))
         {
             rejectionReason =
-                "origin-unparseable";
+                "origin-syntax-invalid";
 
             return true;
         }
