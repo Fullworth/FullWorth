@@ -125,6 +125,20 @@ public static class AntiforgeryBoundaryExtensions
                 "null",
                 StringComparison.OrdinalIgnoreCase))
         {
+            var fetchSiteHeaders =
+                context.Request.Headers["Sec-Fetch-Site"];
+
+            if (fetchSiteHeaders.Count == 1 &&
+                string.Equals(
+                    fetchSiteHeaders[0]?.Trim(),
+                    "same-origin",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                // The opaque Origin is corroborated by browser-generated same-origin
+                // metadata. The caller must still pass normal antiforgery validation.
+                return false;
+            }
+
             rejectionReason =
                 "origin-opaque";
 
