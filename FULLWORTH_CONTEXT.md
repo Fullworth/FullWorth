@@ -519,6 +519,7 @@ Before trusted external beta invitations:
 12. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
 
 ## Immediate resume point
+- PR #542 added Fetch Metadata and strict same-origin checks for unsafe `/auth` and `/bff` requests while preserving antiforgery validation. Opaque `Origin: null` is accepted only with single-value `Sec-Fetch-Site: same-origin`, after which antiforgery still applies; regression tests cover blocked cross-site/missing metadata. Exact-head CI #1285 and dependency security #385 passed; merged to development as `9f1e60f5b085e470fd87437b22dfd2952ef76037`. No production deployment was performed.
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
