@@ -1,3 +1,13 @@
+## Web authentication request rate limits — 2026-09-29
+
+PR #555 applies an IP-partitioned 20-request-per-minute policy to Web login, registration, password recovery/reset, and external two-factor/registration-completion POSTs before body binding. The policy matches the API authentication limiter and ignores client-claimed account IDs. Regression coverage exercises all six routes and confirms request 21 receives HTTP 429 even when the test client changes its claimed user ID.
+
+Exact corrected PR #555 head `8b9d6cb27407685b727f52e7f8433d2d45a8512a` passed FullWorth CI #1301 (run `36646736845`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #401 (run `36646736922`). It was squash-merged into `development` as `9f9b9132dfc47ad063d9a0f27edfb560ddf4f82a`.
+
+Together with PR #553, Web/BFF statement uploads are rate-limited per user before multipart parsing at 12 per 10 minutes, matching the API policy. PR #553 exact head `a10e351e745b1b709992bb71aa2b0707969af717` passed CI #1298 (run `36645416390`) and dependency security #398 (run `36645416440`) before merge as `122859d100ef4d8a9c7b7144b052ee7c907c7973`.
+
+These changes close two pre-processing rate-limit gaps; the broader anonymous/authenticated endpoint cost and rate-limit inventory remains open in security issue #291. No production deployment occurred.
+
 ## Web/BFF statement-upload rate limit — 2026-09-29
 
 PR #553 closes the body-buffering gap before the API's existing statement-upload limiter. The Web/BFF route now applies a fixed-window limit of 12 uploads per authenticated user every 10 minutes before form parsing, matching the API policy. Rejected requests return HTTP 429 and include Retry-After when provided by the limiter. A Web integration test proves the thirteenth request is rejected and a second user receives an independent quota.
