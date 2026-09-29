@@ -11,7 +11,7 @@ public sealed class RequestBodyLimitConfigurationTests
         1L * 1024 * 1024;
 
     [Fact]
-    public void ApiHost_UsesOneMegabyteDefaultRequestBodyLimit()
+    public void ApiHost_UsesExplicitRequestSizeAndHeaderLimits()
     {
         using var factory =
             new FullWorthApiFactory();
@@ -28,10 +28,18 @@ public sealed class RequestBodyLimitConfigurationTests
         Assert.Equal(
             ExpectedDefaultRequestBodyLimit,
             options.Limits.MaxRequestBodySize);
+
+        Assert.Equal(
+            8 * 1024,
+            options.Limits.MaxRequestLineSize);
+
+        Assert.Equal(
+            32 * 1024,
+            options.Limits.MaxRequestHeadersTotalSize);
     }
 
     [Fact]
-    public void WebHost_UsesOneMegabyteDefaultRequestBodyLimit()
+    public void WebHost_UsesExplicitRequestSizeAndHeaderLimits()
     {
         using var factory =
             new FullWorthWebFactory();
