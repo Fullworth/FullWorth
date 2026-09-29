@@ -101,18 +101,46 @@ public static class AntiforgeryBoundaryExtensions
             return false;
         }
 
-        if (originHeaders.Count != 1 ||
-            !Uri.TryCreate(
-                originHeaders[0],
-                UriKind.Absolute,
-                out var origin) ||
-            !string.IsNullOrEmpty(origin.UserInfo) ||
-            !string.IsNullOrEmpty(origin.Query) ||
-            !string.IsNullOrEmpty(origin.Fragment) ||
-            origin.AbsolutePath != "/")
+        if (originHeaders.Count != 1)
         {
             rejectionReason =
-                "origin-invalid";
+                "origin-header-count";
+
+            return true;
+        }
+
+        if (!Uri.TryCreate(
+                originHeaders[0],
+                UriKind.Absolute,
+                out var origin))
+        {
+            rejectionReason =
+                "origin-unparseable";
+
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(origin.UserInfo))
+        {
+            rejectionReason =
+                "origin-has-user-info";
+
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(origin.Query) ||
+            !string.IsNullOrEmpty(origin.Fragment))
+        {
+            rejectionReason =
+                "origin-has-query-or-fragment";
+
+            return true;
+        }
+
+        if (origin.AbsolutePath != "/")
+        {
+            rejectionReason =
+                "origin-has-path";
 
             return true;
         }
