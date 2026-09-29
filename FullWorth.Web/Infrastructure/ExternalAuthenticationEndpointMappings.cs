@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
@@ -150,6 +151,8 @@ public static class ExternalAuthenticationEndpointMappings
         endpoints.MapPost(
                 "/auth/external/two-factor",
                 CompleteExternalSecondFactorAsync)
+            .RequireRateLimiting(
+                AuthEndpointMappings.AuthenticationRateLimitPolicy)
             .AllowAnonymous();
 
         endpoints.MapGet(
@@ -160,6 +163,8 @@ public static class ExternalAuthenticationEndpointMappings
         endpoints.MapPost(
                 "/auth/external/register/complete",
                 CompleteExternalRegistrationAsync)
+            .RequireRateLimiting(
+                AuthEndpointMappings.AuthenticationRateLimitPolicy)
             .AllowAnonymous();
 
         endpoints.MapGet(
