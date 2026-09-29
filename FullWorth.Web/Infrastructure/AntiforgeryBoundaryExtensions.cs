@@ -125,12 +125,12 @@ public static class AntiforgeryBoundaryExtensions
                 "null",
                 StringComparison.OrdinalIgnoreCase))
         {
-            var fetchSiteHeaders =
+            var opaqueOriginFetchSiteHeaders =
                 context.Request.Headers["Sec-Fetch-Site"];
 
-            if (fetchSiteHeaders.Count == 1 &&
+            if (opaqueOriginFetchSiteHeaders.Count == 1 &&
                 string.Equals(
-                    fetchSiteHeaders[0]?.Trim(),
+                    opaqueOriginFetchSiteHeaders[0]?.Trim(),
                     "same-origin",
                     StringComparison.OrdinalIgnoreCase))
             {
