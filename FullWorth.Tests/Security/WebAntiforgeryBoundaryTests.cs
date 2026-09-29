@@ -317,6 +317,106 @@ public sealed class WebAntiforgeryBoundaryTests
             response.StatusCode);
     }
 
+    [Fact]
+    public async Task WebDocument_UsesFreshCspNonceForImportMap()
+    {
+        using var factory =
+            new FullWorthWebFactory();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var firstResponse =
+            await client.GetAsync("/");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            firstResponse.StatusCode);
+
+        var firstPolicy =
+            Assert.Single(
+                firstResponse.Headers.GetValues(
+                    "Content-Security-Policy"));
+
+        Assert.Contains(
+            "default-src 'self'",
+            firstPolicy,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "script-src 'self' 'nonce-",
+            firstPolicy,
+            StringComparison.Ordinal);
+
+        var firstNonce =
+            ExtractCspNonce(firstPolicy);
+
+        var firstHtml =
+            await firstResponse.Content.ReadAsStringAsync();
+
+        AssertImportMapHasNonce(
+            firstHtml,
+            firstNonce);
+
+        using var secondResponse =
+            await client.GetAsync("/");
+
+        var secondPolicy =
+            Assert.Single(
+                secondResponse.Headers.GetValues(
+                    "Content-Security-Policy"));
+
+        Assert.NotEqual(
+            firstNonce,
+            ExtractCspNonce(secondPolicy));
+    }
+
+    private static string ExtractCspNonce(
+        string policy)
+    {
+        const string noncePrefix =
+            "'nonce-";
+
+        var nonceStart =
+            policy.IndexOf(
+                noncePrefix,
+                StringComparison.Ordinal);
+
+        Assert.True(nonceStart >= 0);
+
+        var valueStart =
+            nonceStart + noncePrefix.Length;
+
+        var valueEnd =
+            policy.IndexOf(\'\'\', valueStart);
+
+        Assert.True(valueEnd > valueStart);
+
+        return policy[valueStart..valueEnd];
+    }
+
+    private static void AssertImportMapHasNonce(
+        string html,
+        string nonce)
+    {
+        var importMapStart =
+            html.IndexOf(
+                "<script type=\\\"importmap\\\"",
+                StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(importMapStart >= 0);
+
+        var tagEnd =
+            html.IndexOf(\'>\', importMapStart);
+
+        Assert.True(tagEnd > importMapStart);
+
+        Assert.Contains(
+            $"nonce=\\\"{nonce}\\\"",
+            html[importMapStart..tagEnd],
+            StringComparison.Ordinal);
+    }
+
     private static void AssertSecurityHeaders(
         HttpResponseMessage response)
     {
