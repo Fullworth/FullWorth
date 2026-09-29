@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using FullWorth.Web.Components;
 using FullWorth.Web.Infrastructure;
 using FullWorth.Web.Services;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Localization.Routing;
+using Microsoft.AspNetCore.RateLimiting;
 
 const long StatementMultipartBodyLimit =
     16L * 1024 * 1024;
@@ -238,6 +241,49 @@ builder.Services.Configure<FormOptions>(
             StatementMultipartBodyLimit;
     });
 
+builder.Services.AddRateLimiter(
+    options =>
+    {
+        options.RejectionStatusCode =
+            StatusCodes.Status429TooManyRequests;
+
+        options.OnRejected =
+            static (
+                context,
+                _) =>
+            {
+                if (context.Lease.TryGetMetadata(
+                        MetadataName.RetryAfter,
+                        out var retryAfter))
+                {
+                    var seconds =
+                        Math.Max(
+                            1d,
+                            Math.Ceiling(
+                                retryAfter.TotalSeconds));
+
+                    context.HttpContext.Response.Headers[
+                        "Retry-After"] =
+                        seconds.ToString(
+                            CultureInfo.InvariantCulture);
+                }
+
+                return ValueTask.CompletedTask;
+            };
+
+        options.AddPolicy(
+            BffEndpointMappings.StatementUploadRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext),
+                    permitLimit:
+                        12,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+    });
+
 var hostingConfiguration =
     builder.ConfigureFullWorthWebHosting();
 
@@ -295,6 +341,7 @@ app.UseWhen(
         branch.UseHttpsRedirection());
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseFullWorthAntiforgeryBoundary();
 app.UseAntiforgery();
@@ -422,4 +469,82 @@ static (
         language,
         quality,
         index);
+}
+
+static string GetRateLimitPartitionKey(
+    HttpContext httpContext)
+{
+    ArgumentNullException.ThrowIfNull(
+        httpContext);
+
+    if (httpContext.User.Identity?.IsAuthenticated ==
+        true)
+    {
+        var userId =
+            httpContext.User.FindFirst(
+                    ClaimTypes.NameIdentifier)?
+                .Value;
+
+        if (!string.IsNullOrWhiteSpace(
+                userId))
+        {
+            return
+                $"user:{userId}";
+        }
+    }
+
+    var remoteIpAddress =
+        httpContext.Connection
+            .RemoteIpAddress?
+            .ToString();
+
+    return string.IsNullOrWhiteSpace(
+            remoteIpAddress)
+        ? "ip:unknown"
+        : $"ip:{remoteIpAddress}";
+}
+
+static RateLimitPartition<string>
+    CreateFixedWindowPartition(
+        string partitionKey,
+        int permitLimit,
+        TimeSpan window)
+{
+    ArgumentException.ThrowIfNullOrWhiteSpace(
+        partitionKey);
+
+    if (permitLimit <=
+        0)
+    {
+        throw new ArgumentOutOfRangeException(
+            nameof(permitLimit));
+    }
+
+    if (window <=
+        TimeSpan.Zero)
+    {
+        throw new ArgumentOutOfRangeException(
+            nameof(window));
+    }
+
+    return RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey:
+            partitionKey,
+
+        factory:
+            _ =>
+                new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit =
+                        permitLimit,
+
+                    Window =
+                        window,
+
+                    QueueLimit =
+                        0,
+
+                    AutoReplenishment =
+                        true
+                });
 }
