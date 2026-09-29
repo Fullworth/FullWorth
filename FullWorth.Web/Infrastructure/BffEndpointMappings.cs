@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FullWorth.Web.Infrastructure;
 
@@ -193,7 +194,12 @@ public static class BffEndpointMappings
             if (file.Length <= 0) return Results.BadRequest(new { message = "The selected statement is empty." });
             if (file.Length > StatementFileSizeLimit) return Results.BadRequest(new { message = "Bill statements must be 15 MB or smaller." });
             return await proxy.ForwardMultipartFileAsync(context, $"/api/bill-streams/{billStreamId}/statement-uploads", file, context.RequestAborted);
-        });
+        }).WithMetadata(
+            new RequestSizeLimitAttribute(StatementMultipartBodyLimit),
+            new RequestFormLimitsAttribute
+            {
+                MultipartBodyLengthLimit = StatementMultipartBodyLimit
+            });
 
         bff.MapGet("/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}", async (HttpContext context, FullWorthBffProxyService proxy, Guid billStreamId, Guid uploadId) =>
             billStreamId == Guid.Empty || uploadId == Guid.Empty
