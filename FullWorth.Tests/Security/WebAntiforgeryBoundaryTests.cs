@@ -388,7 +388,10 @@ public sealed class WebAntiforgeryBoundaryTests
             nonceStart + noncePrefix.Length;
 
         var valueEnd =
-            policy.IndexOf(\'\'\', valueStart);
+            policy.IndexOf(
+                "';",
+                valueStart,
+                StringComparison.Ordinal);
 
         Assert.True(valueEnd > valueStart);
 
@@ -399,21 +402,31 @@ public sealed class WebAntiforgeryBoundaryTests
         string html,
         string nonce)
     {
-        var importMapStart =
+        var importMapIndex =
             html.IndexOf(
-                "<script type=\\\"importmap\\\"",
+                "importmap",
                 StringComparison.OrdinalIgnoreCase);
 
-        Assert.True(importMapStart >= 0);
+        Assert.True(importMapIndex >= 0);
+
+        var tagStart =
+            html.LastIndexOf(
+                "<script",
+                importMapIndex,
+                StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(tagStart >= 0);
 
         var tagEnd =
-            html.IndexOf(\'>\', importMapStart);
+            html.IndexOf(
+                '>',
+                importMapIndex);
 
-        Assert.True(tagEnd > importMapStart);
+        Assert.True(tagEnd > importMapIndex);
 
         Assert.Contains(
-            $"nonce=\\\"{nonce}\\\"",
-            html[importMapStart..tagEnd],
+            $"nonce={nonce}",
+            html[tagStart..tagEnd],
             StringComparison.Ordinal);
     }
 
