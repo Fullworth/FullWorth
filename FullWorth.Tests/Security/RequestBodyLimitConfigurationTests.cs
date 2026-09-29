@@ -28,6 +28,14 @@ public sealed class RequestBodyLimitConfigurationTests
         Assert.Equal(
             ExpectedDefaultRequestBodyLimit,
             options.Limits.MaxRequestBodySize);
+
+        Assert.Equal(
+            8 * 1024,
+            options.Limits.MaxRequestLineSize);
+
+        Assert.Equal(
+            32 * 1024,
+            options.Limits.MaxRequestHeadersTotalSize);
     }
 
     [Fact]
