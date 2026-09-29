@@ -238,6 +238,101 @@
 }
 
 
+.planning-shortfall-note {
+    display: grid;
+    gap: 5px;
+    margin-top: 14px;
+    padding: 13px 15px;
+    border: 1px solid rgba(184, 126, 35, .24);
+    border-radius: 13px;
+    color: var(--bw-text, #17233a);
+    background: rgba(225, 160, 57, .1);
+}
+
+.planning-shortfall-note strong {
+    color: #875316;
+    font-size: .9rem;
+}
+
+.planning-shortfall-note span {
+    color: var(--bw-text-muted, #69778f);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.planning-plan-details {
+    margin-top: 14px;
+    border-top: 1px solid var(--bw-border, rgba(120, 136, 170, .18));
+}
+
+.planning-plan-details summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 2px 2px;
+    color: var(--bw-accent, #5265e8);
+    font-size: .84rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.planning-plan-count {
+    display: grid;
+    min-width: 25px;
+    min-height: 25px;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--bw-text-muted, #69778f);
+    background: rgba(120, 136, 170, .12);
+    font-size: .74rem;
+}
+
+.planning-plan-items {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.planning-plan-items li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(120, 136, 170, .06);
+}
+
+.planning-plan-items li > span {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.planning-plan-items strong {
+    color: var(--bw-text, #17233a);
+    font-size: .84rem;
+    overflow-wrap: anywhere;
+}
+
+.planning-plan-items small,
+.planning-plan-empty {
+    color: var(--bw-text-muted, #69778f);
+    font-size: .76rem;
+}
+
+.planning-plan-items li > strong {
+    text-align: right;
+}
+
+.planning-plan-empty {
+    margin: 12px 0 0;
+    line-height: 1.5;
+}
+
 .planning-change-row > p {
     margin: 8px 0 0;
     color: var(--bw-text-muted, #69778f);

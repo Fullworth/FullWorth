@@ -54,6 +54,10 @@ public sealed record PlanningSavedPaycheckPlan(
     IReadOnlyList<PlanningPaycheckAllocationSnapshot> Allocations,
     bool WasExisting);
 
+public sealed record PlanningPaycheckPlanHistorySnapshot(
+    PlanningPaycheckPlanRunSnapshot Run,
+    IReadOnlyList<PlanningPaycheckAllocationSnapshot> Allocations);
+
 public sealed class PlanningPaycheckAllocationStore(
     FullWorthDbContext dbContext,
     TimeProvider timeProvider)
@@ -107,6 +111,88 @@ public sealed class PlanningPaycheckAllocationStore(
                         run.CreatedAtUtc))
             .ToListAsync(
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PlanningPaycheckPlanHistorySnapshot>>
+        GetRecentPaycheckPlanHistoryAsync(
+            Guid userId,
+            int take = 5,
+            CancellationToken cancellationToken = default)
+    {
+        var runs =
+            await GetRecentPaycheckPlanRunsAsync(
+                userId,
+                take,
+                cancellationToken);
+
+        if (runs.Count == 0)
+        {
+            return [];
+        }
+
+        var payrollTransactionIds =
+            runs
+                .Select(
+                    run =>
+                        run.PayrollTransactionId)
+                .ToArray();
+
+        var allocations =
+            await dbContext.PlanningPaycheckAllocations
+                .AsNoTracking()
+                .Where(
+                    allocation =>
+                        allocation.UserId == userId &&
+                        payrollTransactionIds.Contains(
+                            allocation.PayrollTransactionId))
+                .OrderBy(
+                    allocation =>
+                        allocation.BillDueDate)
+                .ThenBy(
+                    allocation =>
+                        allocation.BillPeriodEnd)
+                .ThenBy(
+                    allocation =>
+                        allocation.BillStreamId)
+                .Select(
+                    allocation =>
+                        new PlanningPaycheckAllocationSnapshot(
+                            allocation.Id,
+                            allocation.PayrollTransactionId,
+                            allocation.BillStreamId,
+                            allocation.SourceStatementId,
+                            allocation.PaycheckPostedDate,
+                            allocation.BillPeriodEnd,
+                            allocation.BillDueDate,
+                            allocation.PlannedAmount,
+                            allocation.CurrencyCode,
+                            allocation.CreatedAtUtc))
+                .ToListAsync(
+                    cancellationToken);
+
+        var allocationsByPayroll =
+            allocations
+                .GroupBy(
+                    allocation =>
+                        allocation.PayrollTransactionId)
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        (IReadOnlyList<PlanningPaycheckAllocationSnapshot>)
+                            group.ToList());
+
+        return runs
+            .Select(
+                run =>
+                    new PlanningPaycheckPlanHistorySnapshot(
+                        run,
+                        allocationsByPayroll.TryGetValue(
+                            run.PayrollTransactionId,
+                            out var runAllocations)
+                            ? runAllocations
+                            : []))
+            .ToList();
     }
 
     public async Task<PlanningSavedPaycheckPlan?>

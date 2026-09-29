@@ -136,6 +136,41 @@
                                 <span>@L["Planned for bills"]: @FormatAmount(plan.RecommendedSetAside, plan.CurrencyCode)</span>
                                 <strong>@L["Unplanned"]: @FormatAmount(plan.PaycheckRemainingAfterPlan, plan.CurrencyCode)</strong>
                             </div>
+
+                            @if (plan.Shortfall > 0m)
+                            {
+                                <div class="planning-shortfall-note" role="note">
+                                    <strong>@L["Combined recommendations exceed this paycheck by"] @FormatAmount(plan.Shortfall, plan.CurrencyCode)</strong>
+                                    <span>@L["This is a paycheck-level gap. The bill amounts below are recommendations only; FullWorth has not moved or reserved money."]</span>
+                                </div>
+                            }
+
+                            <details class="planning-plan-details" open="@(plan.Shortfall > 0m)">
+                                <summary>
+                                    <span>@L["See bill recommendations"]</span>
+                                    <span class="planning-plan-count">@plan.Items.Count</span>
+                                </summary>
+
+                                @if (plan.Items.Count == 0)
+                                {
+                                    <p class="planning-plan-empty">@L["No bill recommendations were recorded for this paycheck."]</p>
+                                }
+                                else
+                                {
+                                    <ul class="planning-plan-items">
+                                        @foreach (var item in plan.Items)
+                                        {
+                                            <li>
+                                                <span>
+                                                    <strong>@(string.IsNullOrWhiteSpace(item.ProviderName) ? L["Recurring bill"].Value : item.ProviderName)</strong>
+                                                    <small>@L["Due date"]: @FormatDate(item.BillDueDate)</small>
+                                                </span>
+                                                <strong>@L["Recommended from this paycheck"]: @FormatAmount(item.PlannedAmount, item.CurrencyCode)</strong>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </details>
                         </article>
                     }
                 </div>
@@ -555,6 +590,15 @@
         public decimal RecommendedSetAside { get; set; }
         public decimal PaycheckRemainingAfterPlan { get; set; }
         public decimal Shortfall { get; set; }
+        public List<PlanningRecentPaydayPlanItemViewModel> Items { get; set; } = [];
+    }
+
+    private sealed class PlanningRecentPaydayPlanItemViewModel
+    {
+        public string? ProviderName { get; set; }
+        public DateOnly BillDueDate { get; set; }
+        public decimal PlannedAmount { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
     }
 
     private sealed class PlanningBillChangeViewModel

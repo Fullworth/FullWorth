@@ -71,4 +71,9 @@
   <data name="On track" xml:space="preserve"><value>En buen camino</value></data>
   <data name="Planned for bills" xml:space="preserve"><value>Planificado para facturas</value></data>
   <data name="Unplanned" xml:space="preserve"><value>Sin planificar</value></data>
+  <data name="Combined recommendations exceed this paycheck by" xml:space="preserve"><value>Las recomendaciones combinadas superan este sueldo por</value></data>
+  <data name="This is a paycheck-level gap. The bill amounts below are recommendations only; FullWorth has not moved or reserved money." xml:space="preserve"><value>Esta diferencia corresponde al sueldo completo. Los importes de las facturas son solo recomendaciones; FullWorth no ha movido ni reservado dinero.</value></data>
+  <data name="See bill recommendations" xml:space="preserve"><value>Ver recomendaciones para las facturas</value></data>
+  <data name="No bill recommendations were recorded for this paycheck." xml:space="preserve"><value>No se registraron recomendaciones de facturas para este sueldo.</value></data>
+  <data name="Recommended from this paycheck" xml:space="preserve"><value>Recomendado de este sueldo</value></data>
 </root>
