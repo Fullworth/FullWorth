@@ -348,6 +348,16 @@ public sealed class WebAntiforgeryBoundaryTests
             StringComparison.Ordinal);
 
         Assert.Contains(
+            "style-src 'self'",
+            firstPolicy,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "'unsafe-inline'",
+            firstPolicy,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
             "script-src 'self' 'nonce-",
             firstPolicy,
             StringComparison.Ordinal);
