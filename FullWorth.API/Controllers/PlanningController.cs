@@ -1,4 +1,5 @@
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Services.Contracts;
 using FullWorth.API.Services.Planning;
 using FullWorth.Core.Models.Planning;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,7 @@ public sealed class PlanningController(
     PlanningSettingsService planningSettings,
     PlanningPaydayPlanService paydayPlanService,
     PlanningPaycheckAllocationStore allocationStore,
+    IBillStreamReadGateway billStreamGateway,
     PlanningBillChangeWatchService changeWatchService,
     UserManager<ApplicationUser> userManager)
     : ControllerBase
@@ -269,26 +271,74 @@ public sealed class PlanningController(
                 });
         }
 
-        var runs =
+        var plans =
             await allocationStore
-                .GetRecentPaycheckPlanRunsAsync(
+                .GetRecentPaycheckPlanHistoryAsync(
                     userId,
                     take,
                     cancellationToken);
 
-        return Ok(
-            runs
+        var billIds =
+            plans
+                .SelectMany(
+                    plan =>
+                        plan.Allocations)
                 .Select(
-                    run =>
+                    allocation =>
+                        allocation.BillStreamId)
+                .Distinct()
+                .ToHashSet();
+
+        var billNameById =
+            new Dictionary<Guid, string>();
+
+        if (billIds.Count > 0)
+        {
+            var ownedBills =
+                await billStreamGateway.ListOwnedActiveAsync(
+                    userId,
+                    cancellationToken);
+
+            billNameById =
+                ownedBills
+                    .Where(
+                        bill =>
+                            billIds.Contains(
+                                bill.BillStreamId))
+                    .ToDictionary(
+                        bill =>
+                            bill.BillStreamId,
+                        bill =>
+                            bill.ProviderName);
+        }
+
+        return Ok(
+            plans
+                .Select(
+                    plan =>
                         new PlanningPaydayPlanSummaryResponse(
-                            run.Id,
-                            run.PaycheckPostedDate,
-                            run.PaycheckAmount,
-                            run.CurrencyCode,
-                            run.RecommendedSetAside,
-                            run.PaycheckRemainingAfterPlan,
-                            run.Shortfall,
-                            run.CreatedAtUtc))
+                            plan.Run.Id,
+                            plan.Run.PaycheckPostedDate,
+                            plan.Run.PaycheckAmount,
+                            plan.Run.CurrencyCode,
+                            plan.Run.RecommendedSetAside,
+                            plan.Run.PaycheckRemainingAfterPlan,
+                            plan.Run.Shortfall,
+                            plan.Run.CreatedAtUtc,
+                            plan.Allocations
+                                .Select(
+                                    allocation =>
+                                        new PlanningPaydayPlanHistoryItemResponse(
+                                            billNameById.TryGetValue(
+                                                allocation.BillStreamId,
+                                                out var providerName)
+                                                ? providerName
+                                                : null,
+                                            allocation.BillPeriodEnd,
+                                            allocation.BillDueDate,
+                                            allocation.PlannedAmount,
+                                            allocation.CurrencyCode))
+                                .ToList()))
                 .ToList());
     }
 
@@ -476,7 +526,15 @@ public sealed record PlanningPaydayPlanSummaryResponse(
     decimal RecommendedSetAside,
     decimal PaycheckRemainingAfterPlan,
     decimal Shortfall,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    IReadOnlyList<PlanningPaydayPlanHistoryItemResponse> Items);
+
+public sealed record PlanningPaydayPlanHistoryItemResponse(
+    string? ProviderName,
+    DateOnly BillPeriodEnd,
+    DateOnly BillDueDate,
+    decimal PlannedAmount,
+    string CurrencyCode);
 
 public sealed record PlanningPaydayPlanRequest(
     DateOnly PostedDate);
