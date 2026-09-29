@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using FullWorth.Web.Components;
 using FullWorth.Web.Infrastructure;
 using FullWorth.Web.Services;
@@ -282,6 +284,20 @@ builder.Services.AddRateLimiter(
                     window:
                         TimeSpan.FromMinutes(
                             10)));
+
+        options.AddPolicy(
+            AuthEndpointMappings.AuthenticationRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext,
+                        preferAuthenticatedUser:
+                            false),
+                    permitLimit:
+                        20,
+                    window:
+                        TimeSpan.FromMinutes(
+                            1)));
     });
 
 var hostingConfiguration =
@@ -472,13 +488,15 @@ static (
 }
 
 static string GetRateLimitPartitionKey(
-    HttpContext httpContext)
+    HttpContext httpContext,
+    bool preferAuthenticatedUser = true)
 {
     ArgumentNullException.ThrowIfNull(
         httpContext);
 
-    if (httpContext.User.Identity?.IsAuthenticated ==
-        true)
+    if (preferAuthenticatedUser &&
+        httpContext.User.Identity?.IsAuthenticated ==
+            true)
     {
         var userId =
             httpContext.User.FindFirst(
