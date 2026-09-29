@@ -73,7 +73,7 @@ public static class AntiforgeryBoundaryExtensions
         }
 
         var originHeaders =
-            context.Request.Headers.Origin;
+            context.Request.Headers["Origin"];
 
         if (originHeaders.Count == 0)
         {
