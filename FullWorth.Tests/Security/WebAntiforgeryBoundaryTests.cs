@@ -336,7 +336,11 @@ public sealed class WebAntiforgeryBoundaryTests
         var firstPolicy =
             Assert.Single(
                 firstResponse.Headers.GetValues(
-                    "Content-Security-Policy"));
+                    "Content-Security-Policy"),
+                value =>
+                    value.Contains(
+                        "script-src 'self' 'nonce-",
+                        StringComparison.Ordinal));
 
         Assert.Contains(
             "default-src 'self'",
@@ -364,7 +368,11 @@ public sealed class WebAntiforgeryBoundaryTests
         var secondPolicy =
             Assert.Single(
                 secondResponse.Headers.GetValues(
-                    "Content-Security-Policy"));
+                    "Content-Security-Policy"),
+                value =>
+                    value.Contains(
+                        "script-src 'self' 'nonce-",
+                        StringComparison.Ordinal));
 
         Assert.NotEqual(
             firstNonce,
