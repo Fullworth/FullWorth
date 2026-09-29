@@ -19,8 +19,20 @@ public static class AntiforgeryBoundaryExtensions
                     return;
                 }
 
-                if (IsCrossOriginUnsafeRequest(context))
+                if (IsCrossOriginUnsafeRequest(
+                        context,
+                        out var rejectionReason))
                 {
+                    var logger =
+                        context.RequestServices
+                            .GetRequiredService<
+                                ILogger<AntiforgeryBoundaryExtensions>>();
+
+                    logger.LogWarning(
+                        "Blocked unsafe Web request at the origin boundary. RequestId={RequestId}; Reason={Reason}",
+                        context.TraceIdentifier,
+                        rejectionReason);
+
                     context.Response.StatusCode =
                         StatusCodes.Status403Forbidden;
 
@@ -47,8 +59,12 @@ public static class AntiforgeryBoundaryExtensions
     }
 
     private static bool IsCrossOriginUnsafeRequest(
-        HttpContext context)
+        HttpContext context,
+        out string rejectionReason)
     {
+        rejectionReason =
+            string.Empty;
+
         var fetchSiteHeaders =
             context.Request.Headers["Sec-Fetch-Site"];
 
@@ -68,6 +84,9 @@ public static class AntiforgeryBoundaryExtensions
                     "cross-site",
                     StringComparison.OrdinalIgnoreCase)))
             {
+                rejectionReason =
+                    "fetch-metadata-cross-site";
+
                 return true;
             }
         }
@@ -90,6 +109,9 @@ public static class AntiforgeryBoundaryExtensions
             !string.IsNullOrEmpty(origin.Fragment) ||
             origin.AbsolutePath != "/")
         {
+            rejectionReason =
+                "origin-invalid";
+
             return true;
         }
 
@@ -105,15 +127,37 @@ public static class AntiforgeryBoundaryExtensions
                 ? 443
                 : 80);
 
-        return !string.Equals(
-                   origin.Scheme,
-                   request.Scheme,
-                   StringComparison.OrdinalIgnoreCase) ||
-               !string.Equals(
-                   origin.IdnHost,
-                   request.Host.Host,
-                   StringComparison.OrdinalIgnoreCase) ||
-               origin.Port != requestPort;
+        if (!string.Equals(
+                origin.Scheme,
+                request.Scheme,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            rejectionReason =
+                "origin-scheme-mismatch";
+
+            return true;
+        }
+
+        if (!string.Equals(
+                origin.IdnHost,
+                request.Host.Host,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            rejectionReason =
+                "origin-host-mismatch";
+
+            return true;
+        }
+
+        if (origin.Port != requestPort)
+        {
+            rejectionReason =
+                "origin-port-mismatch";
+
+            return true;
+        }
+
+        return false;
     }
 
     private static bool RequiresAntiforgeryValidation(
