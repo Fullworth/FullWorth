@@ -32,6 +32,7 @@ builder.WebHost.ConfigureKestrel(
         options.AddServerHeader =
             false;
 
+        // Keep ordinary API/BFF payloads bounded; statement uploads carry their own 16 MiB endpoint limit.
         options.Limits.MaxRequestBodySize =
             DefaultRequestBodyLimit;
     });
