@@ -1,3 +1,14 @@
+## API/Web inbound request bounds — 2026-09-29
+
+PR #548 applied route-level 16 MiB request and multipart limits to the Web/BFF statement upload, preserving the 15 MiB per-file limit. PR #550 set a 1 MiB Kestrel default request-body limit in both API and Web hosts, while statement upload endpoints retain their explicit 16 MiB overrides. PR #551 pinned Kestrel request-line limits at 8 KiB and aggregate header limits at 32 KiB. Together these bound ordinary JSON/form bodies and HTTP request metadata; tests verify API/Web Kestrel settings and BFF upload route metadata.
+
+Exact heads passed all required checks before merge:
+- PR #548 head `eb2626aa5dab2f2b50de1a641162a5d87cf05f5d`: FullWorth CI #1293 (run `36642741581`) and dependency security #393 (run `36642741583`); merged as `1a95e4dc2c590a1660b39ee3ccda4f5b3e9fc0cc`.
+- PR #550 head `07e5d74bcd30ea88111cf47b5f78654ff838c7eb`: FullWorth CI #1295 (run `36643714939`) and dependency security #395 (run `36643714919`); merged as `6aec7e897f0a4519a10fb9530df20dbe9cb2b0f1`.
+- PR #551 head `3f6e5f01d8d6a7b7ba9cb85f53a7d5405e2f7731`: FullWorth CI #1296 (run `36644294595`) and dependency security #396 (run `36644294660`); merged as `8ed9cbea6e89b92ae1f3a8904b2199a442220ecc`.
+
+The corresponding request-size bounds item is complete in security issue #291. Broader anonymous/authenticated endpoint cost and rate-limit inventory remains open. No production deployment occurred.
+
 ## BFF statement upload body bound — 2026-09-29
 
 PR #548 adds `RequestSizeLimit` and matching `RequestFormLimits` metadata of 16 MiB to the authenticated Web/BFF statement-upload endpoint. This enforces the total request limit at the server before form parsing, including requests without `Content-Length`, while preserving the existing 15 MiB individual-file limit and API-side request/form limits. A regression test verifies both route metadata values.
