@@ -71,23 +71,49 @@ public sealed class PlanningRecentPaycheckPlanTests
                     CurrencyCode: "USD")
             ]);
 
-        await SaveZeroPlanAsync(
-            store,
+        var otherBillStreamId =
+            Guid.NewGuid();
+
+        await store.SaveCompletePaycheckPlanAsync(
             otherUserId,
-            new DateOnly(
-                2026,
-                9,
-                27),
-            5000m);
+            latestPayrollId,
+            new PlanningPaycheckPlanRunDraft(
+                new DateOnly(
+                    2026,
+                    9,
+                    27),
+                PaycheckAmount: 5000m,
+                CurrencyCode: "USD",
+                RecommendedSetAside: 25m,
+                PaycheckRemainingAfterPlan: 4975m,
+                Shortfall: 0m),
+            [
+                new PlanningPaycheckAllocationDraft(
+                    otherBillStreamId,
+                    Guid.NewGuid(),
+                    new DateOnly(
+                        2026,
+                        10,
+                        31),
+                    new DateOnly(
+                        2026,
+                        10,
+                        15),
+                    PlannedAmount: 25m,
+                    CurrencyCode: "USD")
+            ]);
 
         var result =
-            await store.GetRecentPaycheckPlanRunsAsync(
+            await store.GetRecentPaycheckPlanHistoryAsync(
                 userId,
                 take: 1);
 
-        var run =
+        var history =
             Assert.Single(
                 result);
+
+        var run =
+            history.Run;
 
         Assert.Equal(
             latestPayrollId,
@@ -119,6 +145,22 @@ public sealed class PlanningRecentPaycheckPlanTests
         Assert.Equal(
             "USD",
             run.CurrencyCode);
+
+        var allocation =
+            Assert.Single(
+                history.Allocations);
+
+        Assert.Equal(
+            latestPayrollId,
+            allocation.PayrollTransactionId);
+
+        Assert.NotEqual(
+            otherBillStreamId,
+            allocation.BillStreamId);
+
+        Assert.Equal(
+            1200m,
+            allocation.PlannedAmount);
     }
 
     [Theory]
