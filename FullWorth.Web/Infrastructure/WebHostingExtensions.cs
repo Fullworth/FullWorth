@@ -7,6 +7,9 @@ namespace FullWorth.Web.Infrastructure;
 
 public static class WebHostingExtensions
 {
+    public const string CspNonceHttpContextItemKey =
+        "FullWorth.Web.CspNonce";
+
     public static FullWorthWebHostingConfiguration
         ConfigureFullWorthWebHosting(
             this WebApplicationBuilder builder)
@@ -258,6 +261,15 @@ public static class WebHostingExtensions
                 context,
                 next) =>
             {
+                var scriptNonce =
+                    Convert.ToBase64String(
+                        RandomNumberGenerator.GetBytes(
+                            32));
+
+                context.Items[
+                    CspNonceHttpContextItemKey] =
+                    scriptNonce;
+
                 context.Response.OnStarting(
                     () =>
                     {
@@ -279,7 +291,7 @@ public static class WebHostingExtensions
 
                         context.Response.Headers[
                             "Content-Security-Policy"] =
-                            "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'";
+                            $"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{scriptNonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google.com; font-src 'self' data:; connect-src 'self' wss:";
 
                         if (context.Request.Path
                                 .StartsWithSegments(
