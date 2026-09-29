@@ -26,7 +26,9 @@ public static class AntiforgeryBoundaryExtensions
                     var logger =
                         context.RequestServices
                             .GetRequiredService<
-                                ILogger<AntiforgeryBoundaryExtensions>>();
+                                ILoggerFactory>()
+                            .CreateLogger(
+                                "FullWorth.Web.Security.OriginBoundary");
 
                     logger.LogWarning(
                         "Blocked unsafe Web request at the origin boundary. RequestId={RequestId}; Reason={Reason}",
