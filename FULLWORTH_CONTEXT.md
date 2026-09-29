@@ -1,3 +1,9 @@
+## Web/BFF statement-upload rate limit — 2026-09-29
+
+PR #553 closes the body-buffering gap before the API's existing statement-upload limiter. The Web/BFF route now applies a fixed-window limit of 12 uploads per authenticated user every 10 minutes before form parsing, matching the API policy. Rejected requests return HTTP 429 and include Retry-After when provided by the limiter. A Web integration test proves the thirteenth request is rejected and a second user receives an independent quota.
+
+Exact PR #553 head `a10e351e745b1b709992bb71aa2b0707969af717` passed FullWorth CI #1298 (run `36645416390`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #398 (run `36645416440`). It was squash-merged into `development` as `122859d100ef4d8a9c7b7144b052ee7c907c7973`. No production deployment occurred. The broader anonymous/authenticated endpoint cost and rate-limit inventory remains open in security issue #291.
+
 ## API/Web inbound request bounds — 2026-09-29
 
 PR #548 applied route-level 16 MiB request and multipart limits to the Web/BFF statement upload, preserving the 15 MiB per-file limit. PR #550 set a 1 MiB Kestrel default request-body limit in both API and Web hosts, while statement upload endpoints retain their explicit 16 MiB overrides. PR #551 pinned Kestrel request-line limits at 8 KiB and aggregate header limits at 32 KiB. Together these bound ordinary JSON/form bodies and HTTP request metadata; tests verify API/Web Kestrel settings and BFF upload route metadata.
