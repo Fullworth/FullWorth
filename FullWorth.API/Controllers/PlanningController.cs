@@ -334,7 +334,6 @@ public sealed class PlanningController(
                                                 out var providerName)
                                                 ? providerName
                                                 : null,
-                                            allocation.BillPeriodEnd,
                                             allocation.BillDueDate,
                                             allocation.PlannedAmount,
                                             allocation.CurrencyCode))
@@ -531,7 +530,6 @@ public sealed record PlanningPaydayPlanSummaryResponse(
 
 public sealed record PlanningPaydayPlanHistoryItemResponse(
     string? ProviderName,
-    DateOnly BillPeriodEnd,
     DateOnly BillDueDate,
     decimal PlannedAmount,
     string CurrencyCode);
