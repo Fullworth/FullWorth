@@ -42,6 +42,9 @@ const string StatementDownloadRateLimitPolicy =
 const string SubscriptionRedemptionRateLimitPolicy =
     "subscription-redemption";
 
+const long DefaultRequestBodyLimit =
+    1L * 1024 * 1024;
+
 var builder =
     WebApplication.CreateBuilder(
         args);
@@ -54,6 +57,9 @@ builder.WebHost.ConfigureKestrel(
     {
         options.AddServerHeader =
             false;
+
+        options.Limits.MaxRequestBodySize =
+            DefaultRequestBodyLimit;
     });
 
 builder.Services.AddControllers(
