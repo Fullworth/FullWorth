@@ -11,7 +11,7 @@ public sealed class RequestBodyLimitConfigurationTests
         1L * 1024 * 1024;
 
     [Fact]
-    public void ApiHost_UsesOneMegabyteDefaultRequestBodyLimit()
+    public void ApiHost_UsesExplicitRequestSizeAndHeaderLimits()
     {
         using var factory =
             new FullWorthApiFactory();
@@ -39,7 +39,7 @@ public sealed class RequestBodyLimitConfigurationTests
     }
 
     [Fact]
-    public void WebHost_UsesOneMegabyteDefaultRequestBodyLimit()
+    public void WebHost_UsesExplicitRequestSizeAndHeaderLimits()
     {
         using var factory =
             new FullWorthWebFactory();
