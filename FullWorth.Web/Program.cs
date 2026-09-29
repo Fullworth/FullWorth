@@ -13,6 +13,12 @@ const long StatementMultipartBodyLimit =
 const long DefaultRequestBodyLimit =
     1L * 1024 * 1024;
 
+const int MaximumRequestLineBytes =
+    8 * 1024;
+
+const int MaximumRequestHeaderBytes =
+    32 * 1024;
+
 var webCulture =
     CultureInfo.GetCultureInfo(
         "en-US");
@@ -35,6 +41,12 @@ builder.WebHost.ConfigureKestrel(
         // Keep ordinary API/BFF payloads bounded; statement uploads carry their own 16 MiB endpoint limit.
         options.Limits.MaxRequestBodySize =
             DefaultRequestBodyLimit;
+
+        options.Limits.MaxRequestLineSize =
+            MaximumRequestLineBytes;
+
+        options.Limits.MaxRequestHeadersTotalSize =
+            MaximumRequestHeaderBytes;
     });
 
 builder.Services.AddLocalization(
