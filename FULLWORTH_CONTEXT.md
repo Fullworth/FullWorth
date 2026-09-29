@@ -1,3 +1,9 @@
+## Web Content Security Policy checkpoint — 2026-09-29
+
+PR #544 merged into `development` as `bc480de12ed9e422dcc0ee1ca1f2ee31165e7f04`. Exact head `14f5b06e3e53f2b3e69b3c411fdaed6dc13cfca9` passed FullWorth CI #1289 and dependency security #389, including backend/tests, production browser acceptance, Android gating, and isolated backup/recovery validation. The Web response policy now defaults to same-origin, restricts scripts to same-origin plus a fresh per-response nonce, and binds that nonce to Blazor's import map. Images allow same-origin, data URLs, and the Google favicon origin used by provider logos. Inline styles remain allowed for the two current provider-logo views that still use style attributes. No production deployment occurred; the verified live release remains `7e8571a26447538db249c862ad009487cce119bc`.
+
+The next release gates remain real Plaid sandbox acceptance using posted payroll transactions and the authorized local-Qwen/private-corpus benchmark. Production AI and AI-derived persistence remain disabled pending that evidence.
+
 ## Planning payday-history release promotion — 2026-09-29
 
 Release PR #540 promoted the verified payday-history detail slice and current handoff from `development` to `master` at `f00e930cdbab4167f38796debd2e983f54cd152e`. Exact release head `77fd150e052df5623dde1029ad58815da27b3958` passed FullWorth CI #1275 (run `36528961096`), including backend/tests, Android, and Linux production-container validation, plus dependency security #376 (run `36528961112`). After merge, `development` was fast-forwarded to the same verified master commit. There are no open PRs at this checkpoint.
