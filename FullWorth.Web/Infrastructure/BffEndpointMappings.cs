@@ -1,12 +1,17 @@
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using FullWorth.Web.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullWorth.Web.Infrastructure;
 
 public static class BffEndpointMappings
 {
+    public const string StatementUploadRateLimitPolicy =
+        "statement-upload";
+
     private const long StatementFileSizeLimit = 15L * 1024 * 1024;
     private const long StatementMultipartBodyLimit = 16L * 1024 * 1024;
 
@@ -199,7 +204,8 @@ public static class BffEndpointMappings
             new RequestFormLimitsAttribute
             {
                 MultipartBodyLengthLimit = StatementMultipartBodyLimit
-            });
+            }).RequireRateLimiting(
+                StatementUploadRateLimitPolicy);
 
         bff.MapGet("/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}", async (HttpContext context, FullWorthBffProxyService proxy, Guid billStreamId, Guid uploadId) =>
             billStreamId == Guid.Empty || uploadId == Guid.Empty
