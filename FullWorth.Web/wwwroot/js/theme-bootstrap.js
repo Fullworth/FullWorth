@@ -18,7 +18,6 @@
     }
 
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
 
     const themeColor =
         document.querySelector(

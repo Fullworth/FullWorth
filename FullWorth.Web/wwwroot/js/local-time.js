@@ -45,44 +45,6 @@ function resolveTheme(preference) {
         : "dark";
 }
 
-function ensureExperienceAccessibilityStyles() {
-    if (document.getElementById("fullworth-experience-preferences")) {
-        return;
-    }
-
-    const style = document.createElement("style");
-    style.id = "fullworth-experience-preferences";
-    style.textContent = `
-        html[data-fullworth-text-size="large"] { font-size: 112.5%; }
-        html[data-fullworth-text-size="extra-large"] { font-size: 125%; }
-
-        html[data-fullworth-high-contrast="true"][data-theme="dark"] {
-            --bw-text-muted: #c3ccda;
-            --bw-text-subtle: #aab7ca;
-            --bw-border: rgba(255, 255, 255, 0.18);
-            --bw-border-strong: rgba(255, 255, 255, 0.28);
-        }
-
-        html[data-fullworth-high-contrast="true"][data-theme="light"] {
-            --bw-text-muted: #475467;
-            --bw-text-subtle: #5d6878;
-            --bw-border: rgba(15, 23, 42, 0.18);
-            --bw-border-strong: rgba(15, 23, 42, 0.28);
-        }
-
-        html[data-fullworth-reduce-motion="true"] *,
-        html[data-fullworth-reduce-motion="true"] *::before,
-        html[data-fullworth-reduce-motion="true"] *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            scroll-behavior: auto !important;
-            transition-duration: 0.01ms !important;
-        }
-    `;
-
-    document.head.appendChild(style);
-}
-
 function applyThemePreference(preference, force = false) {
     if (!force &&
         window.localStorage.getItem(experienceThemeInitializedKey) === "1") {
@@ -95,7 +57,6 @@ function applyThemePreference(preference, force = false) {
     window.localStorage.setItem(experienceThemeInitializedKey, "1");
 
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
 
     const themeColor =
         document.querySelector('meta[name="theme-color"]');
@@ -127,8 +88,6 @@ export function applyExperiencePreferences(preference, forceTheme = false) {
     if (!preference?.experienceSetupComplete) {
         return;
     }
-
-    ensureExperienceAccessibilityStyles();
 
     const textSize =
         normalizeTextSizePreference(

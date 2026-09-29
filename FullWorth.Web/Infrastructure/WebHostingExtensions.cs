@@ -291,7 +291,7 @@ public static class WebHostingExtensions
 
                         context.Response.Headers[
                             "Content-Security-Policy"] =
-                            $"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{scriptNonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google.com; font-src 'self' data:; connect-src 'self' wss:";
+                            $"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{scriptNonce}'; style-src 'self'; img-src 'self' data: https://www.google.com; font-src 'self' data:; connect-src 'self' wss:";
 
                         if (context.Request.Path
                                 .StartsWithSegments(
