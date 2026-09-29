@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Localization.Routing;
 const long StatementMultipartBodyLimit =
     16L * 1024 * 1024;
 
+const long DefaultRequestBodyLimit =
+    1L * 1024 * 1024;
+
 var webCulture =
     CultureInfo.GetCultureInfo(
         "en-US");
@@ -28,6 +31,10 @@ builder.WebHost.ConfigureKestrel(
     {
         options.AddServerHeader =
             false;
+
+        // Keep ordinary API/BFF payloads bounded; statement uploads carry their own 16 MiB endpoint limit.
+        options.Limits.MaxRequestBodySize =
+            DefaultRequestBodyLimit;
     });
 
 builder.Services.AddLocalization(
