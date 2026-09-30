@@ -375,6 +375,7 @@ jobs:
           sh deploy/tests/runtime-release-tests.sh
           sh deploy/tests/http-security-boundary-tests.sh
           sh deploy/tests/runtime-watchdog-tests.sh
+          sh deploy/tests/production-auth-smoke-workflow-tests.sh
 
       - name: Validate beta readiness scripts
         if: steps.container_changes.outputs.required == 'true'
