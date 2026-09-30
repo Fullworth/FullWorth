@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using Microsoft.Extensions.Options;
 using TesseractOCR;
 using TesseractOCR.Enums;
@@ -53,6 +54,8 @@ public sealed class TesseractBillStatementOcrEngine
 
     private readonly float _minimumMeanConfidence;
 
+    private readonly TimeSpan _maximumProcessingDuration;
+
     private readonly ILogger<TesseractBillStatementOcrEngine>
         _logger;
 
@@ -80,6 +83,15 @@ public sealed class TesseractBillStatementOcrEngine
 
         _minimumMeanConfidence =
             configuredOptions.MinimumMeanConfidence;
+
+        _maximumProcessingDuration =
+            configuredOptions.MaximumProcessingDuration;
+
+        if (_maximumProcessingDuration <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "BillStatementOcr:MaximumProcessingDuration must be greater than zero.");
+        }
 
         if (_minimumMeanConfidence is
             < 0f or > 1f)
@@ -133,6 +145,10 @@ public sealed class TesseractBillStatementOcrEngine
                 nameof(fileExtension));
         }
 
+        var deadline =
+            new OcrProcessingDeadline(
+                _maximumProcessingDuration);
+
         lock (_engineLock)
         {
             var engine =
@@ -153,7 +169,8 @@ public sealed class TesseractBillStatementOcrEngine
                 {
                     return ExtractPdf(
                         engine,
-                        source);
+                        source,
+                        deadline);
                 }
 
                 if (IsImage(
@@ -162,7 +179,8 @@ public sealed class TesseractBillStatementOcrEngine
                 {
                     return ExtractImage(
                         engine,
-                        source);
+                        source,
+                        deadline);
                 }
 
                 return BillStatementOcrResult.Failure(
@@ -268,8 +286,11 @@ public sealed class TesseractBillStatementOcrEngine
 
     private BillStatementOcrResult ExtractImage(
         Engine engine,
-        Stream source)
+        Stream source,
+        OcrProcessingDeadline deadline)
     {
+        deadline.ThrowIfExpired();
+
         var bytes =
             ReadStreamWithLimit(
                 source,
@@ -286,6 +307,7 @@ public sealed class TesseractBillStatementOcrEngine
         if (!TryRecognizeImage(
                 engine,
                 bytes,
+                deadline,
                 out var text,
                 out var confidence))
         {
@@ -320,7 +342,8 @@ public sealed class TesseractBillStatementOcrEngine
 
     private BillStatementOcrResult ExtractPdf(
         Engine engine,
-        Stream source)
+        Stream source,
+        OcrProcessingDeadline deadline)
     {
         if (source.CanSeek)
         {
@@ -351,6 +374,7 @@ public sealed class TesseractBillStatementOcrEngine
         foreach (var page in
                  document.GetPages())
         {
+            deadline.ThrowIfExpired();
             pageCount++;
 
             if (pageCount >
@@ -510,6 +534,7 @@ public sealed class TesseractBillStatementOcrEngine
     private bool TryRecognizeImage(
         Engine engine,
         byte[] imageBytes,
+        OcrProcessingDeadline deadline,
         out string text,
         out float confidence)
     {
@@ -521,6 +546,8 @@ public sealed class TesseractBillStatementOcrEngine
 
         try
         {
+            deadline.ThrowIfExpired();
+
             using var image =
                 TesseractOCR.Pix.Image
                     .LoadFromMemory(
@@ -529,6 +556,9 @@ public sealed class TesseractBillStatementOcrEngine
             using var page =
                 engine.Process(
                     image);
+
+            // This is a soft deadline: it cannot interrupt native OCR already in progress.
+            deadline.ThrowIfExpired();
 
             text =
                 page.Text?
@@ -843,4 +873,39 @@ public sealed class BillStatementOcrOptions
 
     public float MinimumMeanConfidence { get; set; } =
         0.80f;
+
+    public TimeSpan MaximumProcessingDuration { get; set; } =
+        TimeSpan.FromSeconds(30);
+}
+
+internal sealed class OcrProcessingDeadline
+{
+    private readonly Stopwatch _stopwatch =
+        Stopwatch.StartNew();
+
+    private readonly TimeSpan _maximumDuration;
+
+    public OcrProcessingDeadline(TimeSpan maximumDuration)
+    {
+        if (maximumDuration <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumDuration),
+                "The OCR processing duration must be greater than zero.");
+        }
+
+        _maximumDuration = maximumDuration;
+    }
+
+    public void ThrowIfExpired()
+    {
+        if (_stopwatch.Elapsed >= _maximumDuration)
+        {
+            throw new BillStatementOcrTimeoutException();
+        }
+    }
+}
+
+internal sealed class BillStatementOcrTimeoutException : Exception
+{
 }
