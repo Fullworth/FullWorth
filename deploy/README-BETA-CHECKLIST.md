@@ -4,7 +4,7 @@ Do not enable subscription enforcement merely because this checklist exists. Enf
 
 ## Manual GitHub production auth smoke
 
-The repository also contains a manual-only `FullWorth Production Auth Smoke` workflow. It runs the existing non-destructive bearer-token and browser/BFF harnesses against the canonical production origins, including authenticated reads, logout, and post-logout invalidation. It never deploys and it disables mutation probes.
+The repository also contains a `FullWorth Production Auth Smoke` workflow. It runs the existing non-destructive bearer-token and browser/BFF harnesses against the canonical production origins, including authenticated reads, logout, and post-logout invalidation. It runs automatically after a successful guarded deployment to `master`, and remains available for manual dispatch. It never deploys and it disables mutation probes.
 
 Before using it, configure these secrets in the protected `production` GitHub Actions environment:
 
