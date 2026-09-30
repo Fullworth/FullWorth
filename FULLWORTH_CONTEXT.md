@@ -1,3 +1,11 @@
+## Cumulative PDF OCR work bound — 2026-09-29
+
+PR #557 adds a 500-million cumulative declared-image-pixel budget per PDF OCR operation. The budget is checked before image decoding and native OCR, and processing stops at the limit while retaining any already recognized text. Boundary tests cover exact limit, overflow, non-positive input, and overflow-safe accounting.
+
+Exact PR #557 head `83177bfb3e0c36a1dc038a32b5438064e416f4a3` passed FullWorth CI #1303 (run `36649099657`; backend/tests and isolated production-container encrypted-backup/restore verification passed; Android build job skipped as not applicable) and dependency security #403 (run `36649099693`). It was squash-merged into `development` as `3117d6d93ca274d0fea7a3f765837f9aea441b27`.
+
+This reduces cumulative OCR work but does not impose a hard CPU or memory timeout, sandbox PdfPig/Tesseract, cap peak native memory for one allowed 50-million-pixel image, or add a malicious/corrupt-document corpus. Those security issue #291 items remain open. No production deployment occurred.
+
 ## Web authentication request rate limits — 2026-09-29
 
 PR #555 applies an IP-partitioned 20-request-per-minute policy to Web login, registration, password recovery/reset, and external two-factor/registration-completion POSTs before body binding. The policy matches the API authentication limiter and ignores client-claimed account IDs. Regression coverage exercises all six routes and confirms request 21 receives HTTP 429 even when the test client changes its claimed user ID.
