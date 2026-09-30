@@ -82,7 +82,6 @@ public sealed class PdfBillStatementTextExtractorTests
                     pdfStream));
     }
 
-
     [Fact]
     public void Extract_RejectsPdfAbovePageLimit()
     {
@@ -159,7 +158,7 @@ public sealed class PdfBillStatementTextExtractorTests
                     StringComparison.Ordinal);
 
         var contentStream =
-            $"BT\\n/F1 12 Tf\\n72 720 Td\\n({escapedText}) Tj\\nET\\n";
+            $"BT\n/F1 12 Tf\n72 720 Td\n({escapedText}) Tj\nET\n";
 
         var fontObjectNumber =
             3 + pageCount;
@@ -190,9 +189,6 @@ public sealed class PdfBillStatementTextExtractorTests
              pageIndex < pageCount;
              pageIndex++)
         {
-            var pageObjectNumber =
-                3 + pageIndex;
-
             var contentObjectNumber =
                 firstContentObjectNumber +
                 pageIndex;
@@ -209,7 +205,7 @@ public sealed class PdfBillStatementTextExtractorTests
              pageIndex++)
         {
             objects.Add(
-                $"<< /Length {Encoding.ASCII.GetByteCount(contentStream)} >>\\nstream\\n{contentStream}endstream");
+                $"<< /Length {Encoding.ASCII.GetByteCount(contentStream)} >>\nstream\n{contentStream}endstream");
         }
 
         using var output =
@@ -217,7 +213,7 @@ public sealed class PdfBillStatementTextExtractorTests
 
         WriteAscii(
             output,
-            "%PDF-1.4\\n");
+            "%PDF-1.4\n");
 
         var offsets =
             new List<long>
@@ -234,7 +230,7 @@ public sealed class PdfBillStatementTextExtractorTests
 
             WriteAscii(
                 output,
-                $"{index + 1} 0 obj\\n{objects[index]}\\nendobj\\n");
+                $"{index + 1} 0 obj\n{objects[index]}\nendobj\n");
         }
 
         var crossReferenceOffset =
@@ -242,11 +238,11 @@ public sealed class PdfBillStatementTextExtractorTests
 
         WriteAscii(
             output,
-            $"xref\\n0 {objects.Count + 1}\\n");
+            $"xref\n0 {objects.Count + 1}\n");
 
         WriteAscii(
             output,
-            "0000000000 65535 f \\n");
+            "0000000000 65535 f \n");
 
         for (var index = 1;
              index < offsets.Count;
@@ -254,12 +250,12 @@ public sealed class PdfBillStatementTextExtractorTests
         {
             WriteAscii(
                 output,
-                $"{offsets[index].ToString("D10", CultureInfo.InvariantCulture)} 00000 n \\n");
+                $"{offsets[index].ToString("D10", CultureInfo.InvariantCulture)} 00000 n \n");
         }
 
         WriteAscii(
             output,
-            $"trailer\\n<< /Size {objects.Count + 1} /Root 1 0 R >>\\nstartxref\\n{crossReferenceOffset.ToString(CultureInfo.InvariantCulture)}\\n%%EOF\\n");
+            $"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{crossReferenceOffset.ToString(CultureInfo.InvariantCulture)}\n%%EOF\n");
 
         return output.ToArray();
     }
