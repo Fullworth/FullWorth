@@ -65,13 +65,14 @@ public sealed class PdfBillStatementTextExtractorTests
             result.RequiresOcr);
     }
 
-    [Fact]
-    public void Extract_RejectsMalformedPdf()
+    [Theory]
+    [MemberData(nameof(MalformedPdfCorpus))]
+    public void Extract_RejectsMalformedPdfCorpus(
+        byte[] pdfBytes)
     {
         using var pdfStream =
             new MemoryStream(
-                Encoding.ASCII.GetBytes(
-                    "%PDF-1.7\nThis is not a valid PDF document."));
+                pdfBytes);
 
         var extractor =
             new PdfBillStatementTextExtractor();
@@ -82,9 +83,109 @@ public sealed class PdfBillStatementTextExtractorTests
                     pdfStream));
     }
 
-    private static byte[] CreatePdf(
-        string text)
+    public static IEnumerable<object[]> MalformedPdfCorpus()
     {
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\nThis is not a valid PDF document.")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\nxref\n0 2\n0000000000 65535 f \n0000000000 00000 n \ntrailer\n<< /Size 2 /Root 99 0 R >>\nstartxref\n9\n%%EOF")
+        };
+    }
+
+    [Fact]
+    public void Extract_RejectsSeekablePdfAboveParserInputLimit()
+    {
+        using var pdfStream =
+            new MemoryStream(
+                new byte[(15 * 1024 * 1024) + 1]);
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        var exception =
+            Assert.Throws<BillStatementTextExtractionException>(
+                () =>
+                    extractor.Extract(
+                        pdfStream));
+
+        Assert.Contains(
+            "15 MiB parser input limit",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Extract_RejectsPdfAbovePageLimit()
+    {
+        using var pdfStream =
+            new MemoryStream(
+                CreatePdf(
+                    "Statement text",
+                    pageCount: 101));
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        var exception =
+            Assert.Throws<BillStatementTextExtractionException>(
+                () =>
+                    extractor.Extract(
+                        pdfStream));
+
+        Assert.Contains(
+            "100-page processing limit",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Extract_LimitsCharactersFromLargeTextPage()
+    {
+        using var pdfStream =
+            new MemoryStream(
+                CreatePdf(
+                    new string(
+                        'A',
+                        260_000)));
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        var result =
+            extractor.Extract(
+                pdfStream);
+
+        Assert.InRange(
+            result.Text.Length,
+            40,
+            250_000);
+
+        Assert.False(
+            result.RequiresOcr);
+    }
+
+    private static byte[] CreatePdf(
+        string text,
+        int pageCount = 1)
+    {
+        if (pageCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(pageCount));
+        }
+
         var escapedText =
             text
                 .Replace(
@@ -103,15 +204,53 @@ public sealed class PdfBillStatementTextExtractorTests
         var contentStream =
             $"BT\n/F1 12 Tf\n72 720 Td\n({escapedText}) Tj\nET\n";
 
+        var fontObjectNumber =
+            3 + pageCount;
+
+        var firstContentObjectNumber =
+            fontObjectNumber + 1;
+
+        var pageReferences =
+            string.Join(
+                " ",
+                Enumerable
+                    .Range(
+                        3,
+                        pageCount)
+                    .Select(
+                        objectNumber =>
+                            $"{objectNumber} 0 R"));
+
         var objects =
-            new[]
+            new List<string>
             {
                 "<< /Type /Catalog /Pages 2 0 R >>",
-                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-                $"<< /Length {Encoding.ASCII.GetByteCount(contentStream)} >>\nstream\n{contentStream}endstream"
+
+                $"<< /Type /Pages /Kids [{pageReferences}] /Count {pageCount} >>"
             };
+
+        for (var pageIndex = 0;
+             pageIndex < pageCount;
+             pageIndex++)
+        {
+            var contentObjectNumber =
+                firstContentObjectNumber +
+                pageIndex;
+
+            objects.Add(
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 {fontObjectNumber} 0 R >> >> /Contents {contentObjectNumber} 0 R >>");
+        }
+
+        objects.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
+        for (var pageIndex = 0;
+             pageIndex < pageCount;
+             pageIndex++)
+        {
+            objects.Add(
+                $"<< /Length {Encoding.ASCII.GetByteCount(contentStream)} >>\nstream\n{contentStream}endstream");
+        }
 
         using var output =
             new MemoryStream();
@@ -127,7 +266,7 @@ public sealed class PdfBillStatementTextExtractorTests
             };
 
         for (var index = 0;
-             index < objects.Length;
+             index < objects.Count;
              index++)
         {
             offsets.Add(
@@ -143,7 +282,7 @@ public sealed class PdfBillStatementTextExtractorTests
 
         WriteAscii(
             output,
-            $"xref\n0 {objects.Length + 1}\n");
+            $"xref\n0 {objects.Count + 1}\n");
 
         WriteAscii(
             output,
@@ -160,7 +299,7 @@ public sealed class PdfBillStatementTextExtractorTests
 
         WriteAscii(
             output,
-            $"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{crossReferenceOffset.ToString(CultureInfo.InvariantCulture)}\n%%EOF\n");
+            $"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{crossReferenceOffset.ToString(CultureInfo.InvariantCulture)}\n%%EOF\n");
 
         return output.ToArray();
     }

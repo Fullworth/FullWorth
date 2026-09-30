@@ -1,4 +1,6 @@
 ﻿@using System.Globalization
+@using Microsoft.AspNetCore.Http
+@using FullWorth.Web.Infrastructure
 
 <!DOCTYPE html>
 <html lang="@CultureInfo.CurrentUICulture.Name">
@@ -40,7 +42,7 @@
     <link rel="stylesheet" href="/bank-connections.css" />
     <link rel="stylesheet" href="/activity-alerts.css" />
     <link rel="stylesheet" href="/fullworth-v2.css" />
-    <ImportMap />
+    <ImportMap nonce="@CspNonce" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
@@ -52,3 +54,12 @@
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? CspNonce =>
+        HttpContext?.Items[
+            WebHostingExtensions.CspNonceHttpContextItemKey] as string;
+}

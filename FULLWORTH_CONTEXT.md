@@ -1,3 +1,66 @@
+## PDF parser bound regression tests — 2026-09-29
+
+PR #559 adds synthetic valid-PDF tests for the existing 100-page processing ceiling and 250,000-character extraction ceiling. A generated 101-page PDF is rejected with the page-limit error; a generated 260,000-character text page returns no more than 250,000 extracted characters. No user financial documents are used.
+
+Exact PR #559 head `fcd81e16266e8aa65b42e72205e812122e986312` passed FullWorth CI #1306 (run `36668488125`; backend/tests, model migration check, transaction regression, Linux production-container encrypted-backup/restore, and applicable jobs passed) and dependency security #406 (run `36668488148`). It was squash-merged into `development` as `03ae1be661801006ab707a805cb288edc2ff8311`.
+
+This verifies the existing page/text limits. Separate-process CPU/RAM containment, peak native memory for one image, parser sandboxing, and malicious/corrupt/decompression-bomb fixtures remain open in security issue #291. No production deployment occurred.
+
+## Cumulative PDF OCR work bound — 2026-09-29
+
+PR #557 adds a 500-million cumulative declared-image-pixel budget per PDF OCR operation. The budget is checked before image decoding and native OCR, and processing stops at the limit while retaining any already recognized text. Boundary tests cover exact limit, overflow, non-positive input, and overflow-safe accounting.
+
+Exact PR #557 head `83177bfb3e0c36a1dc038a32b5438064e416f4a3` passed FullWorth CI #1303 (run `36649099657`; backend/tests and isolated production-container encrypted-backup/restore verification passed; Android build job skipped as not applicable) and dependency security #403 (run `36649099693`). It was squash-merged into `development` as `3117d6d93ca274d0fea7a3f765837f9aea441b27`.
+
+This reduces cumulative OCR work but does not impose a hard CPU or memory timeout, sandbox PdfPig/Tesseract, cap peak native memory for one allowed 50-million-pixel image, or add a malicious/corrupt-document corpus. Those security issue #291 items remain open. No production deployment occurred.
+
+## Web authentication request rate limits — 2026-09-29
+
+PR #555 applies an IP-partitioned 20-request-per-minute policy to Web login, registration, password recovery/reset, and external two-factor/registration-completion POSTs before body binding. The policy matches the API authentication limiter and ignores client-claimed account IDs. Regression coverage exercises all six routes and confirms request 21 receives HTTP 429 even when the test client changes its claimed user ID.
+
+Exact corrected PR #555 head `8b9d6cb27407685b727f52e7f8433d2d45a8512a` passed FullWorth CI #1301 (run `36646736845`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #401 (run `36646736922`). It was squash-merged into `development` as `9f9b9132dfc47ad063d9a0f27edfb560ddf4f82a`.
+
+Together with PR #553, Web/BFF statement uploads are rate-limited per user before multipart parsing at 12 per 10 minutes, matching the API policy. PR #553 exact head `a10e351e745b1b709992bb71aa2b0707969af717` passed CI #1298 (run `36645416390`) and dependency security #398 (run `36645416440`) before merge as `122859d100ef4d8a9c7b7144b052ee7c907c7973`.
+
+These changes close two pre-processing rate-limit gaps; the broader anonymous/authenticated endpoint cost and rate-limit inventory remains open in security issue #291. No production deployment occurred.
+
+## Web/BFF statement-upload rate limit — 2026-09-29
+
+PR #553 closes the body-buffering gap before the API's existing statement-upload limiter. The Web/BFF route now applies a fixed-window limit of 12 uploads per authenticated user every 10 minutes before form parsing, matching the API policy. Rejected requests return HTTP 429 and include Retry-After when provided by the limiter. A Web integration test proves the thirteenth request is rejected and a second user receives an independent quota.
+
+Exact PR #553 head `a10e351e745b1b709992bb71aa2b0707969af717` passed FullWorth CI #1298 (run `36645416390`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #398 (run `36645416440`). It was squash-merged into `development` as `122859d100ef4d8a9c7b7144b052ee7c907c7973`. No production deployment occurred. The broader anonymous/authenticated endpoint cost and rate-limit inventory remains open in security issue #291.
+
+## API/Web inbound request bounds — 2026-09-29
+
+PR #548 applied route-level 16 MiB request and multipart limits to the Web/BFF statement upload, preserving the 15 MiB per-file limit. PR #550 set a 1 MiB Kestrel default request-body limit in both API and Web hosts, while statement upload endpoints retain their explicit 16 MiB overrides. PR #551 pinned Kestrel request-line limits at 8 KiB and aggregate header limits at 32 KiB. Together these bound ordinary JSON/form bodies and HTTP request metadata; tests verify API/Web Kestrel settings and BFF upload route metadata.
+
+Exact heads passed all required checks before merge:
+- PR #548 head `eb2626aa5dab2f2b50de1a641162a5d87cf05f5d`: FullWorth CI #1293 (run `36642741581`) and dependency security #393 (run `36642741583`); merged as `1a95e4dc2c590a1660b39ee3ccda4f5b3e9fc0cc`.
+- PR #550 head `07e5d74bcd30ea88111cf47b5f78654ff838c7eb`: FullWorth CI #1295 (run `36643714939`) and dependency security #395 (run `36643714919`); merged as `6aec7e897f0a4519a10fb9530df20dbe9cb2b0f1`.
+- PR #551 head `3f6e5f01d8d6a7b7ba9cb85f53a7d5405e2f7731`: FullWorth CI #1296 (run `36644294595`) and dependency security #396 (run `36644294660`); merged as `8ed9cbea6e89b92ae1f3a8904b2199a442220ecc`.
+
+The corresponding request-size bounds item is complete in security issue #291. Broader anonymous/authenticated endpoint cost and rate-limit inventory remains open. No production deployment occurred.
+
+## BFF statement upload body bound — 2026-09-29
+
+PR #548 adds `RequestSizeLimit` and matching `RequestFormLimits` metadata of 16 MiB to the authenticated Web/BFF statement-upload endpoint. This enforces the total request limit at the server before form parsing, including requests without `Content-Length`, while preserving the existing 15 MiB individual-file limit and API-side request/form limits. A regression test verifies both route metadata values.
+
+Exact PR #548 head `eb2626aa5dab2f2b50de1a641162a5d87cf05f5d` passed FullWorth CI #1293 (run `36642741581`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #393 (run `36642741583`). It was squash-merged into `development` as `1a95e4dc2c590a1660b39ee3ccda4f5b3e9fc0cc`. No production deployment occurred. The broader API/BFF endpoint input-bounds inventory remains open in security issue #291.
+
+## Web Content Security Policy checkpoint — 2026-09-29
+
+PR #544 established a response-scoped script nonce, nonce-bound Blazor import map, and same-origin policy. Follow-up PR #546 removed every audited inline-style dependency: experience preference rules now live in the static theme stylesheet; provider-logo styles use CSS classes; theme scripts no longer write CSSStyleDeclaration properties; and the Plaid about:blank popup no longer creates styled elements. The CSP now uses `style-src 'self'` with no `'unsafe-inline'`. Regression coverage verifies this strict style source and continues to verify a fresh per-response script nonce bound to Blazor's import map.
+
+Exact PR #546 head `a5271523078a525f06d414fec1c8e1e61317605a` passed FullWorth CI #1291 (run `36640645905`, including backend/tests, visual acceptance, and isolated backup/recovery) and dependency security #391 (run `36640645824`). It was squash-merged into `development` as `2ef2deaaba5b70f78615eb8e0f6bb100d29da289`. No production deployment occurred; the verified live release remains `7e8571a26447538db249c862ad009487cce119bc`.
+
+The next release gates remain real Plaid sandbox acceptance using posted payroll transactions and the authorized local-Qwen/private-corpus benchmark. Production AI and AI-derived persistence remain disabled pending that evidence.
+
+## Planning payday-history release promotion — 2026-09-29
+
+Release PR #540 promoted the verified payday-history detail slice and current handoff from `development` to `master` at `f00e930cdbab4167f38796debd2e983f54cd152e`. Exact release head `77fd150e052df5623dde1029ad58815da27b3958` passed FullWorth CI #1275 (run `36528961096`), including backend/tests, Android, and Linux production-container validation, plus dependency security #376 (run `36528961112`). After merge, `development` was fast-forwarded to the same verified master commit. There are no open PRs at this checkpoint.
+
+This is a repository promotion only. No production deployment occurred. Plaid sandbox acceptance using posted payroll transactions and the authorized local-Qwen/private-corpus benchmark remain separate evidence gates. Production AI remains disabled pending benchmark results.
+
 ## Planning payday-history detail checkpoint — 2026-09-29
 
 PR #538 merged into `development` as `5cc0cee2eec15996fb35369b4c83c004e8083c2e`. Exact head `9071e5269320308a62a1f1120518efb6bf79464f` passed FullWorth CI #1273 (run `36504317342`) and dependency security #374 (run `36504317403`). Recent immutable payday history now includes owner-scoped per-bill recommendations, safe provider display names, due dates, amounts, and currencies. A paycheck-level shortfall is shown separately from those recommendations; the UI states that no money is moved or reserved. Tests exclude allocations owned by another user even when payroll transaction IDs match.
@@ -513,6 +576,7 @@ Before trusted external beta invitations:
 12. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
 
 ## Immediate resume point
+- PR #542 added Fetch Metadata and strict same-origin checks for unsafe `/auth` and `/bff` requests while preserving antiforgery validation. Opaque `Origin: null` is accepted only with single-value `Sec-Fetch-Site: same-origin`, after which antiforgery still applies; regression tests cover blocked cross-site/missing metadata. Exact-head CI #1285 and dependency security #385 passed; merged to development as `9f1e60f5b085e470fd87437b22dfd2952ef76037`. No production deployment was performed.
 
 1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
 2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.

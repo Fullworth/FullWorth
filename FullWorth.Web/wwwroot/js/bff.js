@@ -413,12 +413,6 @@ function openPlaidWindow() {
             plaidWindow.document.createElement(
                 "p");
 
-        message.style.fontFamily =
-            "system-ui";
-
-        message.style.padding =
-            "30px";
-
         message.textContent =
             text.preparingWindow;
 
