@@ -15,6 +15,16 @@ fail()
 
 grep -Fq 'workflow_dispatch:' "$workflow" ||
     fail "workflow is not manual-dispatch only."
+grep -Fq 'workflow_run:' "$workflow" ||
+    fail "workflow is not connected to completed production deployments."
+grep -Fq 'FullWorth Production Deploy' "$workflow" ||
+    fail "workflow is not connected to the guarded production deploy workflow."
+grep -Fq "github.event.workflow_run.conclusion == 'success'" "$workflow" ||
+    fail "workflow does not require a successful deployment conclusion."
+grep -Fq "github.event.workflow_run.head_branch == 'master'" "$workflow" ||
+    fail "workflow does not restrict automatic runs to master deployments."
+grep -Fq 'github.event.workflow_run.head_sha' "$workflow" ||
+    fail "workflow does not check out the deployed commit."
 grep -Fq 'environment: production' "$workflow" ||
     fail "workflow does not use the production environment gate."
 grep -Fq 'contents: read' "$workflow" ||
