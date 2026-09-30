@@ -105,6 +105,28 @@ public sealed class PdfBillStatementTextExtractorTests
     }
 
     [Fact]
+    public void Extract_RejectsSeekablePdfAboveParserInputLimit()
+    {
+        using var pdfStream =
+            new MemoryStream(
+                new byte[(15 * 1024 * 1024) + 1]);
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        var exception =
+            Assert.Throws<BillStatementTextExtractionException>(
+                () =>
+                    extractor.Extract(
+                        pdfStream));
+
+        Assert.Contains(
+            "15 MiB parser input limit",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Extract_RejectsPdfAbovePageLimit()
     {
         using var pdfStream =
