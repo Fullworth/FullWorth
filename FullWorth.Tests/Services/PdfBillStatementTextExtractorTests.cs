@@ -102,6 +102,17 @@ public sealed class PdfBillStatementTextExtractorTests
             Encoding.ASCII.GetBytes(
                 "%PDF-1.7\nxref\n0 2\n0000000000 65535 f \n0000000000 00000 n \ntrailer\n<< /Size 2 /Root 99 0 R >>\nstartxref\n9\n%%EOF")
         };
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n3 0 obj\n<< /Length 2147483647 /Filter /FlateDecode >>\nstream\nx\nendstream\nendobj\n%%EOF")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n3 0 obj\n<< /Length 2 /Filter /ASCIIHexDecode >>\nstream\nGG\nendstream\nendobj\n%%EOF")
+        };
     }
 
     [Fact]
