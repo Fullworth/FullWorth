@@ -65,13 +65,14 @@ public sealed class PdfBillStatementTextExtractorTests
             result.RequiresOcr);
     }
 
-    [Fact]
-    public void Extract_RejectsMalformedPdf()
+    [Theory]
+    [MemberData(nameof(MalformedPdfCorpus))]
+    public void Extract_RejectsMalformedPdfCorpus(
+        byte[] pdfBytes)
     {
         using var pdfStream =
             new MemoryStream(
-                Encoding.ASCII.GetBytes(
-                    "%PDF-1.7\nThis is not a valid PDF document."));
+                pdfBytes);
 
         var extractor =
             new PdfBillStatementTextExtractor();
@@ -80,6 +81,27 @@ public sealed class PdfBillStatementTextExtractorTests
             () =>
                 extractor.Extract(
                     pdfStream));
+    }
+
+    public static IEnumerable<object[]> MalformedPdfCorpus()
+    {
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\nThis is not a valid PDF document.")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\nxref\n0 2\n0000000000 65535 f \n0000000000 00000 n \ntrailer\n<< /Size 2 /Root 99 0 R >>\nstartxref\n9\n%%EOF")
+        };
     }
 
     [Fact]
