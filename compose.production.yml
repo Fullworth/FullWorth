@@ -23,6 +23,9 @@ services:
       - no-new-privileges:true
     read_only: true
     pids_limit: 256
+    cpus: ${BILLWATCH_API_CPU_LIMIT:-2.0}
+    mem_limit: ${BILLWATCH_API_MEMORY_LIMIT:-1g}
+    memswap_limit: ${BILLWATCH_API_MEMORY_LIMIT:-1g}
     depends_on:
       database:
         condition: service_healthy
@@ -83,6 +86,9 @@ services:
       - no-new-privileges:true
     read_only: true
     pids_limit: 256
+    cpus: ${BILLWATCH_WEB_CPU_LIMIT:-1.0}
+    mem_limit: ${BILLWATCH_WEB_MEMORY_LIMIT:-512m}
+    memswap_limit: ${BILLWATCH_WEB_MEMORY_LIMIT:-512m}
     depends_on:
       api:
         condition: service_healthy
