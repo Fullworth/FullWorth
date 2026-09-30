@@ -1,3 +1,11 @@
+## PDF parser bound regression tests — 2026-09-29
+
+PR #559 adds synthetic valid-PDF tests for the existing 100-page processing ceiling and 250,000-character extraction ceiling. A generated 101-page PDF is rejected with the page-limit error; a generated 260,000-character text page returns no more than 250,000 extracted characters. No user financial documents are used.
+
+Exact PR #559 head `fcd81e16266e8aa65b42e72205e812122e986312` passed FullWorth CI #1306 (run `36668488125`; backend/tests, model migration check, transaction regression, Linux production-container encrypted-backup/restore, and applicable jobs passed) and dependency security #406 (run `36668488148`). It was squash-merged into `development` as `03ae1be661801006ab707a805cb288edc2ff8311`.
+
+This verifies the existing page/text limits. Separate-process CPU/RAM containment, peak native memory for one image, parser sandboxing, and malicious/corrupt/decompression-bomb fixtures remain open in security issue #291. No production deployment occurred.
+
 ## Cumulative PDF OCR work bound — 2026-09-29
 
 PR #557 adds a 500-million cumulative declared-image-pixel budget per PDF OCR operation. The budget is checked before image decoding and native OCR, and processing stops at the limit while retaining any already recognized text. Boundary tests cover exact limit, overflow, non-positive input, and overflow-safe accounting.
