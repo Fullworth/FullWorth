@@ -87,6 +87,14 @@ for name in ("api", "web"):
 
     if service.get("pids_limit") != 256:
         fail(f"{name} must enforce a 256 PID ceiling.")
+    expected_cpus = {"api": 2.0, "web": 1.0}[name]
+    expected_memory = {"api": 1024 * 1024 * 1024, "web": 512 * 1024 * 1024}[name]
+    if float(service.get("cpus", 0)) != expected_cpus:
+        fail(f"{name} must enforce the expected CPU ceiling.")
+    if int(service.get("mem_limit", 0)) != expected_memory:
+        fail(f"{name} must enforce the expected memory ceiling.")
+    if int(service.get("memswap_limit", 0)) != expected_memory:
+        fail(f"{name} must disable swap expansion beyond the memory ceiling.")
 
     if "ALL" not in service.get("cap_drop", []):
         fail(f"{name} must drop all Linux capabilities.")
