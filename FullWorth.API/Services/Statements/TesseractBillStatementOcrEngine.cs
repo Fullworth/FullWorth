@@ -441,6 +441,7 @@ public sealed class TesseractBillStatementOcrEngine
                 if (!TryRecognizeImage(
                         engine,
                         imageBytes,
+                        deadline,
                         out var imageText,
                         out var imageConfidence))
                 {
