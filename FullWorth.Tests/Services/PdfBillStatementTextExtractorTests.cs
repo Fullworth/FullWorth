@@ -318,3 +318,40 @@ public sealed class PdfBillStatementTextExtractorTests
             bytes.Length);
     }
 }
+
+
+public sealed class PdfBillStatementMalformedCompressionTests
+{
+    [Fact]
+    public void Extract_RejectsMalformedCompressedStream()
+    {
+        var pdfBytes =
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.4\n" +
+                "1 0 obj\n" +
+                "<< /Type /Catalog /Pages 2 0 R >>\n" +
+                "endobj\n" +
+                "2 0 obj\n" +
+                "<< /Type /Pages /Kids [] /Count 0 >>\n" +
+                "endobj\n" +
+                "3 0 obj\n" +
+                "<< /Length 4 /Filter /FlateDecode >>\n" +
+                "stream\n" +
+                "nope\n" +
+                "endstream\n" +
+                "endobj\n" +
+                "%%EOF");
+
+        using var pdfStream =
+            new MemoryStream(
+                pdfBytes);
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        Assert.Throws<BillStatementTextExtractionException>(
+            () =>
+                extractor.Extract(
+                    pdfStream));
+    }
+}
