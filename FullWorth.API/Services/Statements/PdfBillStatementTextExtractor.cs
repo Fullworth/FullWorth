@@ -6,6 +6,9 @@ namespace FullWorth.API.Services.Statements;
 
 public sealed class PdfBillStatementTextExtractor
 {
+    private const int MaxPdfBytes =
+        15 * 1024 * 1024;
+
     private const int MaxPages =
         100;
 
@@ -26,6 +29,14 @@ public sealed class PdfBillStatementTextExtractor
             throw new ArgumentException(
                 "The PDF stream is not readable.",
                 nameof(pdfStream));
+        }
+
+        if (pdfStream.CanSeek &&
+            pdfStream.Length - pdfStream.Position >
+            MaxPdfBytes)
+        {
+            throw new BillStatementTextExtractionException(
+                "The PDF exceeds the 15 MiB parser input limit.");
         }
 
         try
