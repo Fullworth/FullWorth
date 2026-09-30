@@ -25,6 +25,10 @@ public sealed class ParserWorkerProtocolTests
             set => throw new NotSupportedException();
         }
 
+        public override void Flush()
+        {
+        }
+
         public override int Read(byte[] buffer, int offset, int count) =>
             throw new NotSupportedException();
 
