@@ -39,4 +39,8 @@
 		<ProjectReference Include="..\FullWorth.Core\FullWorth.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="FullWorth.Tests" />
+	</ItemGroup>
+
 </Project>
