@@ -65,8 +65,7 @@ public sealed class PdfBillStatementTextExtractorTests
             result.RequiresOcr);
     }
 
-    [Fact]
-    public void     [Theory]
+    [Theory]
     [MemberData(nameof(MalformedPdfCorpus))]
     public void Extract_RejectsMalformedPdfCorpus(
         byte[] pdfBytes)
@@ -105,7 +104,8 @@ public sealed class PdfBillStatementTextExtractorTests
         };
     }
 
-Extract_RejectsPdfAbovePageLimit()
+    [Fact]
+    public void Extract_RejectsPdfAbovePageLimit()
     {
         using var pdfStream =
             new MemoryStream(
