@@ -31,6 +31,9 @@ public sealed class TesseractBillStatementOcrEngine
     private const long MaximumPdfImagePixels =
         50_000_000;
 
+    private const long MaximumTotalPdfImagePixels =
+        500_000_000;
+
     private const int MaxImageBytes =
         20 * 1024 * 1024;
 
@@ -341,6 +344,10 @@ public sealed class TesseractBillStatementOcrEngine
         var pageCount =
             0;
 
+        var pixelBudget =
+            new PdfOcrPixelBudget(
+                MaximumTotalPdfImagePixels);
+
         foreach (var page in
                  document.GetPages())
         {
@@ -375,9 +382,25 @@ public sealed class TesseractBillStatementOcrEngine
                         MaxImagesPerPdfPage)
                     .ToList();
 
+            var pixelBudgetExceeded =
+                false;
+
             foreach (var candidate in
                      candidates)
             {
+                /*
+                 * Count declared pixels before image decoding or native OCR.
+                 * This caps cumulative OCR work even when images yield no text.
+                 */
+                if (!pixelBudget.TryConsume(
+                        candidate.PixelCount))
+                {
+                    pixelBudgetExceeded =
+                        true;
+
+                    break;
+                }
+
                 var imageBytes =
                     GetPdfImageBytes(
                         candidate.Image);
@@ -430,8 +453,9 @@ public sealed class TesseractBillStatementOcrEngine
                 }
             }
 
-            if (textBuilder.Length >=
-                MaxExtractedCharacters)
+            if (pixelBudgetExceeded ||
+                textBuilder.Length >=
+                    MaxExtractedCharacters)
             {
                 break;
             }
