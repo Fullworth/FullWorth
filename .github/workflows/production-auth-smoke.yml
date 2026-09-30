@@ -1,0 +1,73 @@
+name: FullWorth Production Auth Smoke
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - FullWorth Production Deploy
+    types:
+      - completed
+
+concurrency:
+  group: fullworth-production-auth-smoke
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated-boundary:
+    name: Authenticated API and Web boundary
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'master'
+        )
+      }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Materialize protected smoke password
+        shell: bash
+        env:
+          FULLWORTH_SMOKE_EMAIL: ${{ secrets.FULLWORTH_PRODUCTION_SMOKE_EMAIL }}
+          FULLWORTH_SMOKE_PASSWORD: ${{ secrets.FULLWORTH_PRODUCTION_SMOKE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FULLWORTH_SMOKE_EMAIL"
+          test -n "$FULLWORTH_SMOKE_PASSWORD"
+          umask 077
+          printf '%s' "$FULLWORTH_SMOKE_PASSWORD" > "$RUNNER_TEMP/fullworth-production-smoke-password"
+          chmod 600 "$RUNNER_TEMP/fullworth-production-smoke-password"
+
+      - name: Exercise non-destructive bearer-token boundary
+        env:
+          BILLWATCH_SMOKE_EMAIL: ${{ secrets.FULLWORTH_PRODUCTION_SMOKE_EMAIL }}
+          BILLWATCH_SMOKE_PASSWORD_FILE: ${{ runner.temp }}/fullworth-production-smoke-password
+          BILLWATCH_SMOKE_ADMIN_EXPECTATION: deny
+          BILLWATCH_SMOKE_ALLOW_MUTATIONS: false
+        run: >-
+          sh deploy/smoke-private-beta.sh
+          https://api.fullworth.org
+          https://fullworth.org
+
+      - name: Exercise browser cookie and logout boundary
+        env:
+          BILLWATCH_WEB_SMOKE_EMAIL: ${{ secrets.FULLWORTH_PRODUCTION_SMOKE_EMAIL }}
+          BILLWATCH_WEB_SMOKE_PASSWORD_FILE: ${{ runner.temp }}/fullworth-production-smoke-password
+        run: sh deploy/smoke-web-bff.sh https://fullworth.org
+
+      - name: Remove protected smoke password
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          rm -f -- "$RUNNER_TEMP/fullworth-production-smoke-password"

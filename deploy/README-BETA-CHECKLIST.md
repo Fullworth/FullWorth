@@ -2,6 +2,17 @@
 
 Do not enable subscription enforcement merely because this checklist exists. Enforcement remains a separate deliberate rollout decision.
 
+## Manual GitHub production auth smoke
+
+The repository also contains a `FullWorth Production Auth Smoke` workflow. It runs the existing non-destructive bearer-token and browser/BFF harnesses against the canonical production origins, including authenticated reads, logout, and post-logout invalidation. It runs automatically after a successful guarded deployment to `master`, and remains available for manual dispatch. It never deploys and it disables mutation probes.
+
+Before using it, configure these secrets in the protected `production` GitHub Actions environment:
+
+- `FULLWORTH_PRODUCTION_SMOKE_EMAIL`: a dedicated, non-admin smoke account;
+- `FULLWORTH_PRODUCTION_SMOKE_PASSWORD`: that account's password.
+
+Do not use a personal, owner, administrator, or customer account. The workflow intentionally does not accept credentials or one-time codes from workflow inputs or repository files. It currently requires a login path without an interactive second factor; if production policy requires 2FA for every account, the workflow must be extended with a protected TOTP-seed mechanism before it can be used. This test proves one controlled account's boundary only; it is not a breach scan or proof of complete production security.
+
 ## Repeatable authenticated smoke gate
 
 Use `deploy/smoke-private-beta.sh` after a guarded deployment to exercise the non-destructive authenticated production boundary with one credential exchange instead of manually probing each API surface.
