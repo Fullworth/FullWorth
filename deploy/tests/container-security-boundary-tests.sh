@@ -140,8 +140,17 @@ if parser_worker.get("user") != "1654:1654":
 if parser_worker.get("ports"):
     fail("parser-worker must not publish host ports.")
 
-if parser_worker.get("volumes"):
-    fail("parser-worker must not mount persistent or application data.")
+parser_volumes = parser_worker.get("volumes", [])
+if len(parser_volumes) != 1:
+    fail("parser-worker must mount only the TLS public-certificate volume.")
+
+parser_tls_volume = parser_volumes[0]
+if (
+    parser_tls_volume.get("source") != "parser_worker_tls"
+    or parser_tls_volume.get("target") != "/var/run/fullworth-parser-tls"
+    or parser_tls_volume.get("read_only") is True
+):
+    fail("parser-worker TLS volume must be the only writable worker mount.")
 
 if parser_worker.get("pids_limit") != 64:
     fail("parser-worker must enforce a 64 PID ceiling.")
@@ -166,8 +175,31 @@ if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition
 
 api_environment = services["api"].get("environment", {})
 parser_url = api_environment.get("ParserWorker__BaseUrl")
-if parser_url != "http://parser-worker:8081":
-    fail("API must use the internal parser-worker endpoint.")
+if parser_url != "https://parser-worker:8081":
+    fail("API must use the encrypted internal parser-worker endpoint.")
+
+certificate_path = "/var/run/fullworth-parser-tls/parser-worker.cer.pem"
+if api_environment.get("ParserWorker__ServerCertificatePath") != certificate_path:
+    fail("API must pin the parser-worker public certificate path.")
+if parser_worker.get("environment", {}).get(
+    "ParserWorker__TlsCertificatePath"
+) != certificate_path:
+    fail("parser-worker must publish its ephemeral public certificate.")
+
+api_tls_volume = next(
+    (
+        volume
+        for volume in services["api"].get("volumes", [])
+        if volume.get("target") == "/var/run/fullworth-parser-tls"
+    ),
+    None,
+)
+if (
+    api_tls_volume is None
+    or api_tls_volume.get("source") != "parser_worker_tls"
+    or api_tls_volume.get("read_only") is not True
+):
+    fail("API must mount the parser-worker certificate volume read-only.")
 
 api_parser_token = api_environment.get("ParserWorker__AuthenticationToken")
 worker_parser_token = parser_worker.get("environment", {}).get(
