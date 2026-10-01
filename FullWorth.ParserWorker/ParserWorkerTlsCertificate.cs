@@ -67,10 +67,11 @@ public static class ParserWorkerTlsCertificate
         using var generated = request.CreateSelfSigned(
             now.AddMinutes(-5),
             now.AddDays(2));
-        var certificate = new X509Certificate2(
-            generated.Export(X509ContentType.Pfx),
-            (string?)null,
-            X509KeyStorageFlags.EphemeralKeySet);
+        var certificate =
+            X509CertificateLoader.LoadPkcs12(
+                generated.Export(X509ContentType.Pfx),
+                password: null,
+                X509KeyStorageFlags.EphemeralKeySet);
 
         var temporaryPath =
             $"{publicCertificatePath}.{Convert.ToHexString(
