@@ -55,6 +55,34 @@ var builder =
     WebApplication.CreateBuilder(
         args);
 
+var parserWorkerBaseUrl =
+    builder.Configuration["ParserWorker:BaseUrl"];
+
+if (!builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(parserWorkerBaseUrl))
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must be configured outside development.");
+}
+
+var resolvedParserWorkerBaseUrl =
+    parserWorkerBaseUrl
+    ?? "http://127.0.0.1:8189";
+
+if (!Uri.TryCreate(
+        resolvedParserWorkerBaseUrl,
+        UriKind.Absolute,
+        out var parserWorkerBaseUri) ||
+    parserWorkerBaseUri.Scheme is not ("http" or "https") ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.UserInfo) ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.Query) ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.Fragment))
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must be an absolute HTTP(S) endpoint without user information or query data.");
+}
+
+
 /*
  * Do not advertise the web server implementation.
  */
@@ -739,8 +767,18 @@ builder.Services.AddScoped<
     IAccountStatementExportGateway,
     AccountStatementExportGateway>();
 
-builder.Services.AddScoped<
-    PdfBillStatementTextExtractor>();
+builder.Services.AddHttpClient<
+    IPdfStatementTextExtractor,
+    ParserWorkerPdfStatementTextExtractor>(
+    client =>
+    {
+        client.BaseAddress =
+            parserWorkerBaseUri;
+
+        client.Timeout =
+            TimeSpan.FromSeconds(
+                25);
+    });
 
 builder.Services.AddSingleton<
     IBillStatementOcrEngine,
