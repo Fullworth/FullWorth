@@ -180,6 +180,7 @@ public sealed class TesseractBillStatementOcrEngine
                     return ExtractImage(
                         engine,
                         source,
+                        mediaType,
                         deadline);
                 }
 
@@ -287,6 +288,7 @@ public sealed class TesseractBillStatementOcrEngine
     private BillStatementOcrResult ExtractImage(
         Engine engine,
         Stream source,
+        string mediaType,
         OcrProcessingDeadline deadline)
     {
         deadline.ThrowIfExpired();
