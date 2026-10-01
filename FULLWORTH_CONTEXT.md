@@ -2,6 +2,8 @@
 
 The isolated parser now independently rejects bodies without the PDF file signature before invoking PdfPig. A generated, user-data-free regression corpus covers non-PDF payloads, truncated object graphs, dangling trailer roots, oversized declared streams, invalid ASCIIHex and Flate data, and a valid high-compression expansion fixture. Rejections return stable codes without parser diagnostics or document content; the compressed-expansion fixture proves extracted output remains capped at 250,000 characters.
 
+Exact PR #590 head `99eb783b99165ac73d3190b4a5116715269aa991` passed FullWorth CI #1383 (run `36847786316`: backend build/tests, MAUI Android, production images/Compose health, authenticated parser request path, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #480 (run `36847786269`). It was squash-merged to `development` as `e1339a4455dc723bbab58d9a0b558ceb29d2623a`.
+
 This closes the generated malicious/corrupt PDF corpus gap for text-layer parsing. It does not isolate scanned-document OCR, establish a distinct per-document cgroup, provide replay protection or transport encryption, or prove containment on the deployed production host. No production deployment occurred.
 
 ## Authenticated parser-worker boundary — 2026-10-01
