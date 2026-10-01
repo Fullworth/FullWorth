@@ -63,6 +63,61 @@ public sealed class ParserWorkerProtocolTests
         Assert.Equal("worker_not_ready", response.ErrorCode);
     }
 
+    [Fact]
+    public async Task DrainAsync_ConsumesLargeDiagnosticStreamWithoutMaterializingIt()
+    {
+        const int length = 32 * 1024 * 1024;
+        var source = new GeneratedDiagnosticStream(length);
+
+        await DiscardedProcessOutput.DrainAsync(source, CancellationToken.None);
+
+        Assert.Equal(length, source.BytesRead);
+    }
+
+    private sealed class GeneratedDiagnosticStream(int length) : Stream
+    {
+        private int _remaining = length;
+
+        public int BytesRead { get; private set; }
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => length;
+        public override long Position
+        {
+            get => BytesRead;
+            set => throw new NotSupportedException();
+        }
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var count = Math.Min(buffer.Length, _remaining);
+            buffer.Span[..count].Fill((byte)'x');
+            _remaining -= count;
+            BytesRead += count;
+            return ValueTask.FromResult(count);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException();
+
+        public override void SetLength(long value) =>
+            throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class BlockingReadStream : Stream
     {
         public override bool CanRead => true;

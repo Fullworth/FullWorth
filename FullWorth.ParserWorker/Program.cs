@@ -153,7 +153,7 @@ static async Task<byte[]> RunParserProcessAsync(
     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation);
     deadline.CancelAfter(TimeSpan.FromSeconds(20));
     var stdoutTask = ReadBoundedOutputAsync(process.StandardOutput.BaseStream, WorkerProtocol.MaxResponseBytes, deadline.Token);
-    var stderrTask = process.StandardError.ReadToEndAsync(deadline.Token);
+    var stderrTask = DiscardedProcessOutput.DrainAsync(process.StandardError.BaseStream, deadline.Token);
 
     try
     {
@@ -162,7 +162,7 @@ static async Task<byte[]> RunParserProcessAsync(
         await process.WaitForExitAsync(deadline.Token);
 
         var output = await stdoutTask;
-        _ = await stderrTask; // Drain without logging or retaining parser diagnostics.
+        await stderrTask; // Drain with a fixed-size buffer; never retain parser diagnostics.
         if (process.ExitCode != 0 || output is null || output.Length == 0)
         {
             throw new InvalidOperationException("The parser worker failed.");
