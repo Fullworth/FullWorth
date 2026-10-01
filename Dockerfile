@@ -71,7 +71,10 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
 
-RUN chown --recursive "$APP_UID:$APP_UID" /app
+RUN mkdir --parents /var/run/fullworth-parser-tls \
+    && chown --recursive "$APP_UID:$APP_UID" \
+        /app \
+        /var/run/fullworth-parser-tls
 
 ENV ASPNETCORE_HTTP_PORTS=8081 \
     DOTNET_EnableDiagnostics=0

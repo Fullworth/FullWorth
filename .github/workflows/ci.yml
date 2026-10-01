@@ -611,20 +611,30 @@ jobs:
         run: |
           unauthorized_status="$(
             docker compose --file compose.production.yml exec -T api \
-              curl --silent --output /dev/null --write-out '%{http_code}' \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --silent --output /dev/null --write-out '%{http_code}' \
                 --request POST --header 'Content-Type: application/pdf' \
-                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+                --data-binary '' https://parser-worker:8081/v1/pdf/extract
           )"
           test "$unauthorized_status" = "401"
 
           wrong_credential_status="$(
             docker compose --file compose.production.yml exec -T api \
-              curl --silent --output /dev/null --write-out '%{http_code}' \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --silent --output /dev/null --write-out '%{http_code}' \
                 --request POST --header 'Content-Type: application/pdf' \
                 --header 'Authorization: Bearer wrong-parser-worker-authentication-token' \
-                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+                --data-binary '' https://parser-worker:8081/v1/pdf/extract
           )"
           test "$wrong_credential_status" = "401"
+
+          if docker compose --file compose.production.yml exec -T api \
+              curl --fail --silent \
+                http://parser-worker:8081/health/live
+          then
+            echo "Parser worker accepted plaintext HTTP." >&2
+            exit 1
+          fi
 
           pdf_file="$(mktemp)"
           trap 'rm -f "$pdf_file"' EXIT
@@ -671,14 +681,15 @@ jobs:
 
           response="$(
             docker compose --file compose.production.yml exec -T api \
-              curl --fail --silent --show-error --request POST \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --fail --silent --show-error --request POST \
                 --header 'Content-Type: application/pdf' \
                 --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
                 --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
                 --header "X-FullWorth-Parser-Nonce: ${nonce}" \
                 --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
                 --header "X-FullWorth-Parser-Signature: ${signature}" \
-                --data-binary @- http://parser-worker:8081/v1/pdf/extract \
+                --data-binary @- https://parser-worker:8081/v1/pdf/extract \
               < "$pdf_file"
           )"
           printf '%s' "$response" | python3 -c '
@@ -694,14 +705,15 @@ jobs:
 
           replay_status="$(
             docker compose --file compose.production.yml exec -T api \
-              curl --silent --output /dev/null --write-out '%{http_code}' \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --silent --output /dev/null --write-out '%{http_code}' \
                 --request POST --header 'Content-Type: application/pdf' \
                 --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
                 --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
                 --header "X-FullWorth-Parser-Nonce: ${nonce}" \
                 --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
                 --header "X-FullWorth-Parser-Signature: ${signature}" \
-                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+                --data-binary '' https://parser-worker:8081/v1/pdf/extract
           )"
           test "$replay_status" = "401"
 
@@ -714,14 +726,15 @@ jobs:
           )"
           tampered_body_status="$(
             docker compose --file compose.production.yml exec -T api \
-              curl --silent --output /dev/null --write-out '%{http_code}' \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --silent --output /dev/null --write-out '%{http_code}' \
                 --request POST --header 'Content-Type: application/pdf' \
                 --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
                 --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
                 --header "X-FullWorth-Parser-Nonce: ${tampered_nonce}" \
                 --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
                 --header "X-FullWorth-Parser-Signature: ${tampered_signature}" \
-                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+                --data-binary '' https://parser-worker:8081/v1/pdf/extract
           )"
           test "$tampered_body_status" = "401"
 
