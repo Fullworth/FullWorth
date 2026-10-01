@@ -16,6 +16,17 @@ public sealed class ParserWorkerResourceLimitTests
     }
 
     [Theory]
+    [InlineData("0", true)]
+    [InlineData("1073741824", true)]
+    [InlineData("max", false)]
+    [InlineData("-1", false)]
+    [InlineData("not-a-number", false)]
+    public void SwapLimitParserRequiresFiniteNonNegativeBytes(string value, bool expected)
+    {
+        Assert.Equal(expected, WorkerResourceLimits.HasFiniteSwapLimit(value));
+    }
+
+    [Theory]
     [InlineData("200000 100000", true)]
     [InlineData("1 1", true)]
     [InlineData("max 100000", false)]
