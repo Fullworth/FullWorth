@@ -613,7 +613,7 @@ jobs:
                 --data-binary @- http://parser-worker:8081/v1/pdf/extract
           import sys
 
-          content = b"BT /F1 12 Tf 72 720 Td (FullWorth integration statement total due $92.17) Tj ET"
+          content = b"BT /F1 12 Tf 72 720 Td (FullWorth integration statement total due $92.17) Tj ET\\n"
           objects = [
               b"<< /Type /Catalog /Pages 2 0 R >>",
               b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
