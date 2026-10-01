@@ -49,9 +49,7 @@ public static class WorkerResourceLimits
                     return false;
                 }
 
-                childPath = Path.Combine(
-                    CgroupRoot,
-                    $"fullworth-parser-worker-{Environment.ProcessId.ToString(CultureInfo.InvariantCulture)}-{Guid.NewGuid():N}");
+                childPath = BuildWorkerCgroupPath(parentPath, Environment.ProcessId, Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(childPath);
 
                 File.WriteAllText(Path.Combine(childPath, CpuMaxPath), $"{limits.CpuQuota} {limits.CpuPeriod}");
@@ -117,6 +115,20 @@ public static class WorkerResourceLimits
                 return false;
             }
         }
+    }
+
+    public static string BuildWorkerCgroupPath(string parentPath, int processId, string instanceId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
+        if (processId <= 0 || instanceId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(processId));
+        }
+
+        return Path.GetFullPath(Path.Combine(
+            parentPath,
+            $"fullworth-parser-worker-{processId.ToString(CultureInfo.InvariantCulture)}-{instanceId}"));
     }
 
     public static bool HasValidWorkerLimitConfiguration(
