@@ -152,7 +152,7 @@ static async Task<byte[]> RunParserProcessAsync(
 
     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation);
     deadline.CancelAfter(TimeSpan.FromSeconds(20));
-    var stdoutTask = ReadBoundedAsync(process.StandardOutput.BaseStream, WorkerProtocol.MaxResponseBytes, deadline.Token);
+    var stdoutTask = ReadBoundedOutputAsync(process.StandardOutput.BaseStream, WorkerProtocol.MaxResponseBytes, deadline.Token);
     var stderrTask = process.StandardError.ReadToEndAsync(deadline.Token);
 
     try
@@ -198,7 +198,7 @@ static async Task<byte[]> RunParserProcessAsync(
     }
 }
 
-static async Task<byte[]?> ReadBoundedAsync(Stream stream, int maxBytes, CancellationToken cancellationToken)
+static async Task<byte[]?> ReadBoundedOutputAsync(Stream stream, int maxBytes, CancellationToken cancellationToken)
 {
     using var output = new MemoryStream();
     var buffer = new byte[8192];
