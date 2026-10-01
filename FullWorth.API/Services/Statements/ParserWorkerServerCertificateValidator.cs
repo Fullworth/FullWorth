@@ -50,8 +50,8 @@ public sealed class ParserWorkerServerCertificateValidator
         try
         {
             using var expected =
-                X509Certificate2.CreateFromPemFile(
-                    _certificatePath);
+                X509Certificate2.CreateFromPem(
+                    File.ReadAllText(_certificatePath));
             var expectedHash =
                 SHA256.HashData(expected.RawData);
             var actualHash =
