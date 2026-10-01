@@ -1,3 +1,9 @@
+## Parser worker diagnostic-memory hardening — 2026-10-01
+
+PR #586 replaces the API process's unbounded parser-subprocess stderr string with a fixed 8 KiB discard buffer. A generated 32 MiB diagnostic-stream regression test verifies complete draining without materializing the stream as a result; cancellation remains connected to the parser deadline. `PARSER_WORKER_BOUNDARY.md` records this bound. This closes diagnostic-output accumulation in the API process; it does not add parser/worker transport authentication or move OCR out of the API.
+
+PR #586 exact head `170fc4ee62badd776df639d7edb890127933f416` is awaiting exact-head FullWorth CI and Dependency Security. No production deployment occurred.
+
 ## Isolated PDF text parser worker — 2026-10-01
 
 PR #585 adds a dedicated production parser-worker service for PDF text-layer extraction. API uploads are streamed with a 15 MiB cap; the worker accepts one request at a time, runs PdfPig in a fresh bounded subprocess with a 20-second deadline, enforces 100 pages and 250,000 extracted characters, and limits its output. The production Compose worker is on an internal-only network with a read-only filesystem, dedicated unprivileged UID, no Linux capabilities, no-new-privileges, 64 PID cap, and 1 CPU / 512 MiB memory and swap limits. Readiness fails closed unless finite cgroup v2 limits are visible. OCR remains in the API process and is explicitly outside this isolation milestone.

@@ -6,7 +6,7 @@ This document records the security design contract and the partial implementatio
 
 ## Current implementation and residual gaps
 
-PR #585 adds a dedicated parser-worker container for PDF text-layer extraction. The API sends a bounded PDF body over the internal-only `parser_worker` Docker network. The worker accepts one request at a time, starts a fresh parser child with a sanitized environment, kills the process tree after a 20-second deadline, validates the protocol response, and returns no more than the configured response bound. Parser exceptions and stderr are not returned to the API caller or logged.
+PR #585 adds a dedicated parser-worker container for PDF text-layer extraction. The API sends a bounded PDF body over the internal-only `parser_worker` Docker network. The worker accepts one request at a time, starts a fresh parser child with a sanitized environment, kills the process tree after a 20-second deadline, validates the protocol response, and returns no more than the configured response bound. Parser exceptions and stderr are not returned to the API caller or logged. Stderr is drained through a fixed 8 KiB buffer and discarded; it is never accumulated in an unbounded string in the API process.
 
 The production Compose configuration gives the worker a read-only root filesystem, dedicated non-root user, no Linux capabilities, no published ports or mounted volumes, an internal-only network, a 64-process ceiling, and finite CPU, memory, and swap ceilings. Worker readiness fails closed unless the cgroup v2 CPU, memory, and swap limits are visible. Exact-head CI must still verify image build, stack readiness, and the full test suite before this change is merged. No production deployment is implied.
 
