@@ -35,8 +35,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
-      ParserWorker__BaseUrl: http://parser-worker:8081
+      ParserWorker__BaseUrl: https://parser-worker:8081
       ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
+      ParserWorker__ServerCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ConnectionStrings__BillWatchDatabase: Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
       Database__MigrateOnStartup: "true"
@@ -69,6 +70,7 @@ services:
     volumes:
       - data_protection_keys:/var/lib/billwatch/keys
       - statement_files:/var/lib/billwatch/statements
+      - parser_worker_tls:/var/run/fullworth-parser-tls:ro
     networks:
       - data
       - api_edge
@@ -102,15 +104,20 @@ services:
       ASPNETCORE_HTTP_PORTS: 8081
       DOTNET_EnableDiagnostics: "0"
       ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
+      ParserWorker__TlsCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1654,gid=1654,mode=0700
+    volumes:
+      - parser_worker_tls:/var/run/fullworth-parser-tls
     healthcheck:
       test:
         - CMD
         - curl
         - --fail
         - --silent
-        - http://localhost:8081/health/ready
+        - --cacert
+        - /var/run/fullworth-parser-tls/parser-worker.cer.pem
+        - https://localhost:8081/health/ready
       interval: 10s
       timeout: 3s
       retries: 5
@@ -370,6 +377,7 @@ volumes:
   caddy_config:
   caddy_data:
   data_protection_keys:
+  parser_worker_tls:
   postgres_data:
   statement_files:
   web_data_protection_keys:
