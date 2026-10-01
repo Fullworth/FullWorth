@@ -58,6 +58,33 @@ RUN dotnet publish FullWorth.API/FullWorth.API.csproj \
     --output /app/parser-worker-publish \
     /p:UseAppHost=false
 
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS parser-worker-final
+
+ARG BILLWATCH_RELEASE_ID=unknown
+
+LABEL org.opencontainers.image.revision="$BILLWATCH_RELEASE_ID"
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=build /app/parser-worker-publish/ ./
+
+RUN chown --recursive "$APP_UID:$APP_UID" /app
+
+ENV ASPNETCORE_HTTP_PORTS=8081 \
+    DOTNET_EnableDiagnostics=0
+
+EXPOSE 8081
+
+USER $APP_UID
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl --fail --silent http://localhost:8081/health/ready || exit 1
+
+ENTRYPOINT ["dotnet", "FullWorth.ParserWorker.dll"]
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
 ARG BILLWATCH_RELEASE_ID=unknown
@@ -93,29 +120,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl --fail --silent --header "Host: $AllowedHosts" http://localhost:8080/health/ready || exit 1
 
 ENTRYPOINT ["dotnet", "FullWorth.API.dll"]
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS parser-worker-final
-
-ARG BILLWATCH_RELEASE_ID=unknown
-
-LABEL org.opencontainers.image.revision="$BILLWATCH_RELEASE_ID"
-
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-COPY --from=build /app/parser-worker-publish/ ./
-
-RUN chown --recursive "$APP_UID:$APP_UID" /app
-
-ENV ASPNETCORE_HTTP_PORTS=8081 \
-    DOTNET_EnableDiagnostics=0
-
-EXPOSE 8081
-
-USER $APP_UID
-
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl --fail --silent http://localhost:8081/health/ready || exit 1
-
-ENTRYPOINT ["dotnet", "FullWorth.ParserWorker.dll"]
