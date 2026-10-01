@@ -626,11 +626,22 @@ jobs:
           )"
           test "$wrong_credential_status" = "401"
 
+          timestamp="$(date +%s)"
+          nonce="$(openssl rand -hex 16)"
+          signature="$(
+            printf 'POST\n/v1/pdf/extract\n%s\n%s' "$timestamp" "$nonce" |
+              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
+              awk '{ print $2 }'
+          )"
+
           response="$(
             python3 - <<'PY' | docker compose --file compose.production.yml exec -T api \
               curl --fail --silent --show-error --request POST \
                 --header 'Content-Type: application/pdf' \
                 --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
+                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
+                --header "X-FullWorth-Parser-Nonce: ${nonce}" \
+                --header "X-FullWorth-Parser-Signature: ${signature}" \
                 --data-binary @- http://parser-worker:8081/v1/pdf/extract
           import sys
 
@@ -671,6 +682,18 @@ jobs:
           assert result.get("pageCount") == 1, result
           assert "total due $92.17" in result.get("text", ""), result
           '
+
+          replay_status="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --silent --output /dev/null --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/pdf' \
+                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
+                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
+                --header "X-FullWorth-Parser-Nonce: ${nonce}" \
+                --header "X-FullWorth-Parser-Signature: ${signature}" \
+                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+          )"
+          test "$replay_status" = "401"
 
       - name: Install visual acceptance dependencies
         if: steps.visual_changes.outputs.required == 'true'

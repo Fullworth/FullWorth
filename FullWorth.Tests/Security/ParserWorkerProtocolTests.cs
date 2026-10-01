@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
 public sealed class ParserWorkerProtocolTests
@@ -64,19 +66,87 @@ public sealed class ParserWorkerProtocolTests
     }
 
     [Fact]
-    public void Authentication_AcceptsOnlyExactSingleBearerCredential()
+    public void Authentication_AcceptsSignedRequestExactlyOnce()
     {
         const string token =
             "worker-authentication-test-token-more-than-32-characters";
+        var now = DateTimeOffset.FromUnixTimeSeconds(1_790_000_000);
         var authentication =
-            new ParserWorkerAuthentication(token, isDevelopment: false);
+            new ParserWorkerAuthentication(
+                token,
+                isDevelopment: false,
+                new FixedTimeProvider(now));
+        var signed = CreateSignedRequest(token, now.ToUnixTimeSeconds());
 
-        Assert.True(authentication.IsAuthorized($"Bearer {token}"));
-        Assert.False(authentication.IsAuthorized("Bearer wrong-worker-authentication-token-more-than-32-characters"));
-        Assert.False(authentication.IsAuthorized(token));
+        Assert.True(authentication.IsAuthorized(
+            $"Bearer {token}",
+            signed.Timestamp,
+            signed.Nonce,
+            signed.Signature,
+            "POST",
+            "/v1/pdf/extract"));
         Assert.False(authentication.IsAuthorized(
-            new Microsoft.Extensions.Primitives.StringValues(
-                [$"Bearer {token}", $"Bearer {token}"])));
+            $"Bearer {token}",
+            signed.Timestamp,
+            signed.Nonce,
+            signed.Signature,
+            "POST",
+            "/v1/pdf/extract"));
+    }
+
+    [Fact]
+    public void Authentication_RejectsInvalidCredentialSignatureAndTimestamp()
+    {
+        const string token =
+            "worker-authentication-test-token-more-than-32-characters";
+        var now = DateTimeOffset.FromUnixTimeSeconds(1_790_000_000);
+        var authentication =
+            new ParserWorkerAuthentication(
+                token,
+                isDevelopment: false,
+                new FixedTimeProvider(now));
+        var signed = CreateSignedRequest(token, now.ToUnixTimeSeconds());
+
+        Assert.False(authentication.IsAuthorized(
+            "Bearer wrong-worker-authentication-token-more-than-32-characters",
+            signed.Timestamp,
+            signed.Nonce,
+            signed.Signature,
+            "POST",
+            "/v1/pdf/extract"));
+        Assert.False(authentication.IsAuthorized(
+            $"Bearer {token}",
+            signed.Timestamp,
+            signed.Nonce,
+            new string('0', 64),
+            "POST",
+            "/v1/pdf/extract"));
+
+        var expired =
+            CreateSignedRequest(
+                token,
+                now.ToUnixTimeSeconds() - 61,
+                nonce: "11111111111111111111111111111111");
+        Assert.False(authentication.IsAuthorized(
+            $"Bearer {token}",
+            expired.Timestamp,
+            expired.Nonce,
+            expired.Signature,
+            "POST",
+            "/v1/pdf/extract"));
+
+        var future =
+            CreateSignedRequest(
+                token,
+                now.ToUnixTimeSeconds() + 61,
+                nonce: "22222222222222222222222222222222");
+        Assert.False(authentication.IsAuthorized(
+            $"Bearer {token}",
+            future.Timestamp,
+            future.Nonce,
+            future.Signature,
+            "POST",
+            "/v1/pdf/extract"));
     }
 
     [Fact]
@@ -97,6 +167,34 @@ public sealed class ParserWorkerProtocolTests
         await DiscardedProcessOutput.DrainAsync(source, CancellationToken.None);
 
         Assert.Equal(length, source.BytesRead);
+    }
+
+    private static SignedRequest CreateSignedRequest(
+        string token,
+        long timestamp,
+        string nonce = "0123456789abcdef0123456789abcdef")
+    {
+        var timestampText =
+            timestamp.ToString(CultureInfo.InvariantCulture);
+        var canonical =
+            $"POST\n/v1/pdf/extract\n{timestampText}\n{nonce}";
+        var signature =
+            Convert.ToHexString(
+                    HMACSHA256.HashData(
+                        Encoding.UTF8.GetBytes(token),
+                        Encoding.UTF8.GetBytes(canonical)))
+                .ToLowerInvariant();
+        return new SignedRequest(timestampText, nonce, signature);
+    }
+
+    private sealed record SignedRequest(
+        string Timestamp,
+        string Nonce,
+        string Signature);
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     private sealed class GeneratedDiagnosticStream(int length) : Stream

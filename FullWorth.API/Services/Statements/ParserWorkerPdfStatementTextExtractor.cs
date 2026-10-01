@@ -48,8 +48,7 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
         };
         request.Content.Headers.ContentType =
             new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-        request.Headers.Authorization =
-            _authentication.CreateHeader();
+        _authentication.ApplyTo(request);
 
         try
         {
