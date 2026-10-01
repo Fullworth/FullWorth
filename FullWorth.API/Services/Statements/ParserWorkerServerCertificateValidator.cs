@@ -21,8 +21,8 @@ public sealed class ParserWorkerServerCertificateValidator
 
         _certificatePath = certificatePath;
         using var expected =
-            X509Certificate2.CreateFromPem(
-                File.ReadAllText(_certificatePath));
+            X509CertificateLoader.LoadCertificateFromFile(
+                _certificatePath);
         if (expected.HasPrivateKey)
         {
             throw new InvalidOperationException(
@@ -51,8 +51,8 @@ public sealed class ParserWorkerServerCertificateValidator
         try
         {
             using var expected =
-                X509Certificate2.CreateFromPem(
-                    File.ReadAllText(_certificatePath));
+                X509CertificateLoader.LoadCertificateFromFile(
+                    _certificatePath);
             var expectedHash =
                 SHA256.HashData(expected.RawData);
             var actualHash =
