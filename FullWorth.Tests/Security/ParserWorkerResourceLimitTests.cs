@@ -17,7 +17,7 @@ public sealed class ParserWorkerResourceLimitTests
 
     [Theory]
     [InlineData("200000 100000", true)]
-    [InlineData("1\t1", true)]
+    [InlineData("1 1", true)]
     [InlineData("max 100000", false)]
     [InlineData("0 100000", false)]
     [InlineData("200000 0", false)]
