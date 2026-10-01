@@ -13,6 +13,8 @@ public sealed class ParserWorkerAuthenticationOptions
         "X-FullWorth-Parser-Timestamp";
     internal const string NonceHeaderName =
         "X-FullWorth-Parser-Nonce";
+    internal const string ContentSha256HeaderName =
+        "X-FullWorth-Parser-Content-SHA256";
     internal const string SignatureHeaderName =
         "X-FullWorth-Parser-Signature";
 
@@ -28,9 +30,17 @@ public sealed class ParserWorkerAuthenticationOptions
 
     public string Token { get; }
 
-    public void ApplyTo(HttpRequestMessage request)
+    public void ApplyTo(
+        HttpRequestMessage request,
+        string contentSha256)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (!IsLowerHex(contentSha256, 64))
+        {
+            throw new ArgumentException(
+                "The parser request body hash is invalid.",
+                nameof(contentSha256));
+        }
 
         var timestamp =
             DateTimeOffset.UtcNow
@@ -47,12 +57,14 @@ public sealed class ParserWorkerAuthenticationOptions
             request.Method.Method,
             requestPath,
             timestamp,
-            nonce);
+            nonce,
+            contentSha256);
 
         request.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", Token);
         request.Headers.Add(TimestampHeaderName, timestamp);
         request.Headers.Add(NonceHeaderName, nonce);
+        request.Headers.Add(ContentSha256HeaderName, contentSha256);
         request.Headers.Add(SignatureHeaderName, signature);
     }
 
@@ -60,16 +72,22 @@ public sealed class ParserWorkerAuthenticationOptions
         string method,
         string path,
         string timestamp,
-        string nonce)
+        string nonce,
+        string contentSha256)
     {
         var canonicalRequest =
-            $"{method}\n{path}\n{timestamp}\n{nonce}";
+            $"{method}\n{path}\n{timestamp}\n{nonce}\n{contentSha256}";
         var signature =
             HMACSHA256.HashData(
                 Encoding.UTF8.GetBytes(Token),
                 Encoding.UTF8.GetBytes(canonicalRequest));
         return Convert.ToHexString(signature).ToLowerInvariant();
     }
+
+    private static bool IsLowerHex(string value, int expectedLength) =>
+        value.Length == expectedLength &&
+        value.All(character =>
+            character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     private static string Validate(string? token)
     {

@@ -52,6 +52,7 @@ app.MapPost("/v1/pdf/extract", async (HttpContext context) =>
             context.Request.Headers.Authorization,
             context.Request.Headers[ParserWorkerAuthentication.TimestampHeaderName],
             context.Request.Headers[ParserWorkerAuthentication.NonceHeaderName],
+            context.Request.Headers[ParserWorkerAuthentication.ContentSha256HeaderName],
             context.Request.Headers[ParserWorkerAuthentication.SignatureHeaderName],
             context.Request.Method,
             context.Request.Path.Value ?? string.Empty))
@@ -80,6 +81,14 @@ app.MapPost("/v1/pdf/extract", async (HttpContext context) =>
         if (input is null)
         {
             return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        if (!authentication.HasExpectedContentHash(
+                context.Request.Headers[
+                    ParserWorkerAuthentication.ContentSha256HeaderName],
+                input))
+        {
+            return Results.Unauthorized();
         }
 
         var result = await RunParserProcessAsync(input, context.RequestAborted, jsonOptions);
