@@ -278,6 +278,7 @@ jobs:
 
           $relevantPrefixes = @(
             "FullWorth.API/",
+            "FullWorth.ParserWorker/",
             "FullWorth.Core/",
             "FullWorth.Web/",
             "FullWorth.VisualTests/",
@@ -367,6 +368,7 @@ jobs:
           sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
           sh deploy/tests/ci-maui-change-detection-tests.sh
+          sh deploy/tests/ci-production-container-change-detection-tests.sh
           sh deploy/tests/repository-governance-workflow-tests.sh
           sh deploy/tests/production-deploy-workflow-tests.sh
           sh deploy/tests/production-operations-tests.sh
