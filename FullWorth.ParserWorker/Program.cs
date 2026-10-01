@@ -9,7 +9,7 @@ var payload = JsonSerializer.SerializeToUtf8Bytes(response);
 if (payload.Length > WorkerProtocol.MaxResponseBytes)
 {
     payload = JsonSerializer.SerializeToUtf8Bytes(
-        new WorkerResponse(1, "rejected", "worker_response_too_large"));
+        new WorkerProtocol.WorkerResponse(1, "rejected", "worker_response_too_large"));
 }
 await Console.OpenStandardOutput().WriteAsync(payload);
 await Console.Out.WriteLineAsync();
