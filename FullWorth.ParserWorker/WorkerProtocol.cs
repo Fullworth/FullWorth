@@ -1,6 +1,5 @@
 using System.Text.Json;
 
-
 public static class WorkerProtocol
 {
     public const int MaxRequestBytes = 64 * 1024;
@@ -9,12 +8,12 @@ public static class WorkerProtocol
     public static async Task<WorkerResponse> BuildResponseAsync(
         Stream input,
         int maxBytes,
-        TimeSpan requestTimeout)
+        TimeSpan requestTimeout,
+        Func<bool>? resourceLimitsVerified = null)
     {
         var buffer = new byte[4096];
         using var request = new MemoryStream();
         using var timeout = new CancellationTokenSource(requestTimeout);
-
         try
         {
             while (true)
@@ -48,6 +47,24 @@ public static class WorkerProtocol
                 return new WorkerResponse(1, "rejected", "unsupported_protocol");
             }
 
+            if (resourceLimitsVerified is not null)
+            {
+                bool limitsVerified;
+                try
+                {
+                    limitsVerified = resourceLimitsVerified();
+                }
+                catch
+                {
+                    limitsVerified = false;
+                }
+
+                if (!limitsVerified)
+                {
+                    return new WorkerResponse(1, "rejected", "worker_limits_unverified");
+                }
+            }
+
             // Parsing is intentionally not enabled until a supervisor and OS
             // resource ceilings are verified.
             return new WorkerResponse(1, "rejected", "worker_not_ready");
@@ -61,7 +78,6 @@ public static class WorkerProtocol
             return new WorkerResponse(1, "rejected", "worker_protocol_error");
         }
     }
+
+    public sealed record WorkerResponse(int ProtocolVersion, string Outcome, string ErrorCode);
 }
-
-
-public sealed record WorkerResponse(int ProtocolVersion, string Outcome, string ErrorCode);
