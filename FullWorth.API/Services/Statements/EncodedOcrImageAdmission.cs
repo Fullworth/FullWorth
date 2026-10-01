@@ -10,7 +10,7 @@ namespace FullWorth.API.Services.Statements;
 /// </summary>
 internal static class EncodedOcrImageAdmission
 {
-    private static ReadOnlySpan<byte> PngSignature =>
+    private static readonly byte[] PngSignature =
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     internal static bool TryAdmit(
@@ -68,6 +68,8 @@ internal static class EncodedOcrImageAdmission
 
         if (encodedImage.Length < 24 ||
             !encodedImage[..8].SequenceEqual(PngSignature) ||
+            BinaryPrimitives.ReadUInt32BigEndian(
+                encodedImage.Slice(8, 4)) != 13 ||
             !encodedImage.Slice(12, 4).SequenceEqual("IHDR"u8))
         {
             return false;
