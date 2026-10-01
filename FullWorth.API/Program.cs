@@ -87,6 +87,20 @@ if (!Uri.TryCreate(
         "ParserWorker:BaseUrl must be an absolute HTTP(S) endpoint without user information or query data.");
 }
 
+if (!builder.Environment.IsDevelopment() &&
+    parserWorkerBaseUri.Scheme != Uri.UriSchemeHttps)
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must use HTTPS outside development.");
+}
+
+var parserWorkerServerCertificateValidator =
+    builder.Environment.IsDevelopment()
+        ? null
+        : new ParserWorkerServerCertificateValidator(
+            builder.Configuration[
+                "ParserWorker:ServerCertificatePath"]);
+
 
 /*
  * Do not advertise the web server implementation.
@@ -776,17 +790,29 @@ builder.Services.AddSingleton(
     parserWorkerAuthentication);
 
 builder.Services.AddHttpClient<
-    IPdfStatementTextExtractor,
-    ParserWorkerPdfStatementTextExtractor>(
-    client =>
-    {
-        client.BaseAddress =
-            parserWorkerBaseUri;
+        IPdfStatementTextExtractor,
+        ParserWorkerPdfStatementTextExtractor>(
+        client =>
+        {
+            client.BaseAddress =
+                parserWorkerBaseUri;
 
-        client.Timeout =
-            TimeSpan.FromSeconds(
-                25);
-    });
+            client.Timeout =
+                TimeSpan.FromSeconds(
+                    25);
+        })
+    .ConfigurePrimaryHttpMessageHandler(
+        () =>
+        {
+            var handler = new HttpClientHandler();
+            if (parserWorkerServerCertificateValidator is not null)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    parserWorkerServerCertificateValidator.Validate;
+            }
+
+            return handler;
+        });
 
 builder.Services.AddSingleton<
     IBillStatementOcrEngine,
