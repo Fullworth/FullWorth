@@ -48,7 +48,13 @@ app.MapGet("/health/ready", () =>
 
 app.MapPost("/v1/pdf/extract", async (HttpContext context) =>
 {
-    if (!authentication.IsAuthorized(context.Request.Headers.Authorization))
+    if (!authentication.IsAuthorized(
+            context.Request.Headers.Authorization,
+            context.Request.Headers[ParserWorkerAuthentication.TimestampHeaderName],
+            context.Request.Headers[ParserWorkerAuthentication.NonceHeaderName],
+            context.Request.Headers[ParserWorkerAuthentication.SignatureHeaderName],
+            context.Request.Method,
+            context.Request.Path.Value ?? string.Empty))
     {
         return Results.Unauthorized();
     }

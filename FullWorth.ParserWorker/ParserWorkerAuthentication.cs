@@ -1,16 +1,33 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Primitives;
 
 public sealed class ParserWorkerAuthentication
 {
+    public const string TimestampHeaderName =
+        "X-FullWorth-Parser-Timestamp";
+    public const string NonceHeaderName =
+        "X-FullWorth-Parser-Nonce";
+    public const string SignatureHeaderName =
+        "X-FullWorth-Parser-Signature";
+
     private const string DevelopmentToken =
         "fullworth-parser-worker-development-only-token";
+    private const long MaxClockSkewSeconds = 60;
+    private const int MaxTrackedNonces = 4096;
+
     private readonly byte[] _expectedTokenHash;
+    private readonly byte[] _hmacKey;
+    private readonly TimeProvider _timeProvider;
+    private readonly object _replayGate = new();
+    private readonly Dictionary<string, long> _acceptedNonces =
+        new(StringComparer.Ordinal);
 
     public ParserWorkerAuthentication(
         string? configuredToken,
-        bool isDevelopment)
+        bool isDevelopment,
+        TimeProvider? timeProvider = null)
     {
         var token =
             string.IsNullOrEmpty(configuredToken) && isDevelopment
@@ -27,22 +44,26 @@ public sealed class ParserWorkerAuthentication
                 "Parser worker authentication is not configured securely.");
         }
 
-        _expectedTokenHash =
-            SHA256.HashData(
-                Encoding.UTF8.GetBytes(token));
+        _hmacKey = Encoding.UTF8.GetBytes(token);
+        _expectedTokenHash = SHA256.HashData(_hmacKey);
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public bool IsAuthorized(StringValues authorizationValues)
+    public bool IsAuthorized(
+        StringValues authorizationValues,
+        StringValues timestampValues,
+        StringValues nonceValues,
+        StringValues signatureValues,
+        string method,
+        string path)
     {
-        if (authorizationValues.Count != 1)
+        if (!TryGetSingle(authorizationValues, out var authorization))
         {
             return false;
         }
 
-        var authorization = authorizationValues[0];
         const string prefix = "Bearer ";
-        if (authorization is null ||
-            !authorization.StartsWith(prefix, StringComparison.Ordinal) ||
+        if (!authorization.StartsWith(prefix, StringComparison.Ordinal) ||
             authorization.Length <= prefix.Length ||
             authorization.Length - prefix.Length > 512)
         {
@@ -53,9 +74,89 @@ public sealed class ParserWorkerAuthentication
             SHA256.HashData(
                 Encoding.UTF8.GetBytes(
                     authorization[prefix.Length..]));
+        if (!CryptographicOperations.FixedTimeEquals(
+                candidateHash,
+                _expectedTokenHash))
+        {
+            return false;
+        }
 
-        return CryptographicOperations.FixedTimeEquals(
-            candidateHash,
-            _expectedTokenHash);
+        if (!TryGetSingle(timestampValues, out var timestampText) ||
+            timestampText.Length > 12 ||
+            !long.TryParse(
+                timestampText,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var timestamp) ||
+            !TryGetSingle(nonceValues, out var nonce) ||
+            !IsLowerHex(nonce, 32) ||
+            !TryGetSingle(signatureValues, out var signatureText) ||
+            !IsLowerHex(signatureText, 64))
+        {
+            return false;
+        }
+
+        var now = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
+        if (timestamp < now - MaxClockSkewSeconds ||
+            timestamp > now + MaxClockSkewSeconds)
+        {
+            return false;
+        }
+
+        var canonicalRequest =
+            $"{method}\n{path}\n{timestampText}\n{nonce}";
+        var expectedSignature =
+            HMACSHA256.HashData(
+                _hmacKey,
+                Encoding.UTF8.GetBytes(canonicalRequest));
+        var candidateSignature = Convert.FromHexString(signatureText);
+        if (!CryptographicOperations.FixedTimeEquals(
+                candidateSignature,
+                expectedSignature))
+        {
+            return false;
+        }
+
+        lock (_replayGate)
+        {
+            foreach (var expiredNonce in
+                _acceptedNonces
+                    .Where(entry => entry.Value < now)
+                    .Select(entry => entry.Key)
+                    .ToArray())
+            {
+                _acceptedNonces.Remove(expiredNonce);
+            }
+
+            if (_acceptedNonces.Count >= MaxTrackedNonces ||
+                !_acceptedNonces.TryAdd(
+                    nonce,
+                    timestamp + MaxClockSkewSeconds))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
+
+    private static bool TryGetSingle(
+        StringValues values,
+        out string value)
+    {
+        value = string.Empty;
+        if (values.Count != 1 ||
+            string.IsNullOrEmpty(values[0]))
+        {
+            return false;
+        }
+
+        value = values[0]!;
+        return true;
+    }
+
+    private static bool IsLowerHex(string value, int expectedLength) =>
+        value.Length == expectedLength &&
+        value.All(character =>
+            character is >= '0' and <= '9' or >= 'a' and <= 'f');
 }

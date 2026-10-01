@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using FullWorth.API.Services.Statements;
 
@@ -19,6 +21,36 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
             Assert.Equal("application/pdf", request.Content?.Headers.ContentType?.MediaType);
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
             Assert.Equal(AuthenticationToken, request.Headers.Authorization?.Parameter);
+
+            var timestamp =
+                request.Headers.GetValues(
+                    ParserWorkerAuthenticationOptions.TimestampHeaderName)
+                    .Single();
+            var nonce =
+                request.Headers.GetValues(
+                    ParserWorkerAuthenticationOptions.NonceHeaderName)
+                    .Single();
+            var signature =
+                request.Headers.GetValues(
+                    ParserWorkerAuthenticationOptions.SignatureHeaderName)
+                    .Single();
+
+            Assert.InRange(
+                long.Parse(timestamp, CultureInfo.InvariantCulture),
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 60,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 60);
+            Assert.Matches("^[0-9a-f]{32}$", nonce);
+            Assert.Matches("^[0-9a-f]{64}$", signature);
+
+            var canonical =
+                $"POST\\n/v1/pdf/extract\\n{timestamp}\\n{nonce}";
+            var expectedSignature =
+                Convert.ToHexString(
+                        HMACSHA256.HashData(
+                            Encoding.UTF8.GetBytes(AuthenticationToken),
+                            Encoding.UTF8.GetBytes(canonical)))
+                    .ToLowerInvariant();
+            Assert.Equal(expectedSignature, signature);
             Assert.Equal(new byte[] { 1, 2, 3 }, request.Content!.ReadAsByteArrayAsync().GetAwaiter().GetResult());
             return Json(HttpStatusCode.OK,
                 """{"protocolVersion":1,"outcome":"text","errorCode":"","pageCount":2,"text":"Provider statement total due $94.99","requiresOcr":false}""");

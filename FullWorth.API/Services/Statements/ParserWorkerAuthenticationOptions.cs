@@ -1,4 +1,7 @@
+using System.Globalization;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace FullWorth.API.Services.Statements;
 
@@ -6,6 +9,12 @@ public sealed class ParserWorkerAuthenticationOptions
 {
     internal const string DevelopmentToken =
         "fullworth-parser-worker-development-only-token";
+    internal const string TimestampHeaderName =
+        "X-FullWorth-Parser-Timestamp";
+    internal const string NonceHeaderName =
+        "X-FullWorth-Parser-Nonce";
+    internal const string SignatureHeaderName =
+        "X-FullWorth-Parser-Signature";
 
     public ParserWorkerAuthenticationOptions(
         string? configuredToken,
@@ -19,8 +28,44 @@ public sealed class ParserWorkerAuthenticationOptions
 
     public string Token { get; }
 
-    public AuthenticationHeaderValue CreateHeader() =>
-        new("Bearer", Token);
+    public void ApplyTo(HttpRequestMessage request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToUnixTimeSeconds()
+                .ToString(CultureInfo.InvariantCulture);
+        var nonce =
+            Convert.ToHexString(RandomNumberGenerator.GetBytes(16))
+                .ToLowerInvariant();
+        var signature = CreateSignature(
+            request.Method.Method,
+            request.RequestUri?.AbsolutePath ?? string.Empty,
+            timestamp,
+            nonce);
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", Token);
+        request.Headers.Add(TimestampHeaderName, timestamp);
+        request.Headers.Add(NonceHeaderName, nonce);
+        request.Headers.Add(SignatureHeaderName, signature);
+    }
+
+    private string CreateSignature(
+        string method,
+        string path,
+        string timestamp,
+        string nonce)
+    {
+        var canonicalRequest =
+            $"{method}\n{path}\n{timestamp}\n{nonce}";
+        var signature =
+            HMACSHA256.HashData(
+                Encoding.UTF8.GetBytes(Token),
+                Encoding.UTF8.GetBytes(canonicalRequest));
+        return Convert.ToHexString(signature).ToLowerInvariant();
+    }
 
     private static string Validate(string? token)
     {
