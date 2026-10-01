@@ -1,6 +1,6 @@
 # FullWorth Product & Engineering Roadmap
 
-Last updated: 2026-09-25
+Last updated: 2026-09-30
 
 Status: Active planning document
 
@@ -16,7 +16,13 @@ Primary product direction: **PWA-first**
 
 Primary product promise: **Your entire financial life. One app.**
 
+Strategic category: **Financial change intelligence**
+
 Core bill-intelligence promise: **Know when your bills change — and why.**
+
+Commercial objective: build toward a durable multi-million-dollar recurring-revenue business by earning trust, retention, and paid monitoring value rather than by maximizing feature count.
+
+Durable product strategy: `FULLWORTH_PRODUCT_STRATEGY.md`
 
 ---
 
@@ -70,6 +76,48 @@ The long-term customer experience should answer, with as little manual work as p
 - How confident is FullWorth in the explanation?
 
 The product should feel like premium consumer fintech, not enterprise administration software.
+
+## 2.1 Strategic category and commercial wedge
+
+FullWorth's category is **financial change intelligence**.
+
+The product should continuously:
+
+1. detect meaningful financial changes;
+2. explain why they happened;
+3. quantify current and longer-term impact;
+4. prioritize what deserves attention;
+5. show the evidence supporting the conclusion.
+
+Recurring bills remain the initial wedge because FullWorth can combine posted transaction facts, statement/provider evidence, deterministic comparison, and validated explanations into a concrete customer promise.
+
+Expansion into planning, cash-flow context, subscriptions, liabilities, net worth, and other financial domains should strengthen this monitoring relationship rather than turn FullWorth into a generic feature-parity dashboard.
+
+Competitive rule:
+
+- do not chase every feature offered by all-in-one finance products;
+- compete on earlier detection, stronger evidence, clearer explanation, lower false-alert rates, less manual work, and better trust;
+- require a new module to improve trust, time to value, retention, monetization, acquisition efficiency, or operational leverage before treating it as strategic work.
+
+The compounding product moat should come from:
+
+- normalized recurring financial history;
+- provider-specific bill/statement understanding;
+- evidence-linked change history;
+- deterministic financial validation;
+- user-specific corrections and outcomes;
+- high-quality evaluation and security regression coverage;
+- reliable alerting, ingestion, recovery, and provenance.
+
+The scale path is:
+
+trustworthy monitoring
+→ retained users
+→ paid recurring value
+→ repeatable acquisition
+→ scalable recurring revenue.
+
+Detailed positioning, monetization, growth, moat, and business-stage guidance lives in `FULLWORTH_PRODUCT_STRATEGY.md`.
 
 ### Experience principles
 
@@ -1053,7 +1101,9 @@ Priority: P2, after bill-intelligence trust
 
 Goal: Expand from bill monitoring into a broader financial-life overview without turning FullWorth into a generic cluttered budget dashboard.
 
-This milestone contains proposed product direction and should be validated with user feedback before every subfeature becomes a commitment.
+The Financial Home must remain change-first. Its primary job is to answer "What changed, what needs attention, and why?" before showing secondary balances or analytics.
+
+This milestone contains proposed product direction and should be validated with user feedback before every subfeature becomes a commitment. A proposed subfeature is not strategic merely because a competitor offers it; it should strengthen monitoring, understanding, retention, or paid value.
 
 ## 12.1 Financial Home
 
@@ -1475,6 +1525,40 @@ Permanent safety exemptions should remain for essential user rights such as:
 - bank disconnect;
 - data export;
 - subscription recovery.
+
+## 16.6 Business economics and scale proof
+
+Revenue readiness is not complete merely because checkout works.
+
+Once paid rollout begins, measure:
+
+- free → paid conversion;
+- trial → paid conversion if trials are used;
+- monthly and annual paid retention;
+- logo and revenue churn;
+- realized ARPU;
+- gross margin;
+- payment-processing cost;
+- Plaid/data-provider cost per active user;
+- compute/storage cost per active user;
+- support cost per active user;
+- customer acquisition cost by channel;
+- payback period;
+- lifetime-value assumptions using real cohort evidence.
+
+Translate the long-term business goal into subscriber economics:
+
+`gross ARR = paying subscribers × realized average monthly subscription revenue × 12`
+
+Illustrative scale only:
+
+- 10,000 payers at an $8 realized monthly average ≈ $960,000 gross ARR;
+- 25,000 payers at an $8 realized monthly average ≈ $2.4 million gross ARR;
+- 50,000 payers at an $8 realized monthly average ≈ $4.8 million gross ARR.
+
+These examples are not price targets or forecasts. They make clear that retention and repeatable acquisition matter more than raw registrations.
+
+Do not scale paid acquisition until FullWorth has evidence of trustworthy core value, meaningful retention, and acceptable unit economics.
 
 ### Exit gate for Milestone 10
 
@@ -2023,7 +2107,19 @@ Done only when:
 
 # 27. Product metrics roadmap
 
-Metrics should answer whether FullWorth is actually delivering value.
+Metrics should answer whether FullWorth is actually delivering value and whether that value can become a durable business.
+
+## Primary business scorecard
+
+Use a small set of outcomes rather than a wall of vanity metrics:
+
+1. **Activation to monitored state** — percentage of eligible new users who connect data and reach at least one trustworthy monitored recurring stream.
+2. **Trusted change coverage** — ability to detect and correctly explain meaningful financial changes using controlled ground truth, evidence support, and user-confirmed outcomes where available.
+3. **Monitored-user retention** — percentage of activated users who remain connected and meaningfully monitored over 30/90/180-day periods.
+
+For paid cohorts, also track retained subscription revenue.
+
+Cross-user disclosure incidents remain a zero-tolerance security guardrail and must never be traded for growth.
 
 ## Acquisition/setup
 
@@ -2060,9 +2156,29 @@ Metrics should answer whether FullWorth is actually delivering value.
 - account disconnect rate after false detection;
 - corrected/ignored alerts;
 - statement failure rate;
-- support contacts caused by incorrect financial facts.
+- support contacts caused by incorrect financial facts;
+- unsupported explanation rate;
+- user correction rate;
+- unresolved evidence-gap rate.
 
-Do not optimize vanity metrics at the expense of accuracy.
+## Monetization and growth
+
+After paid rollout begins, measure:
+
+- free → paid conversion;
+- trial → paid conversion if applicable;
+- paid retention;
+- logo churn;
+- revenue churn;
+- realized ARPU;
+- gross margin;
+- CAC by channel;
+- payback period;
+- provider/infrastructure/support cost per active user.
+
+Measure acquisition quality by downstream activation, retention, and paid conversion rather than by cheap registrations alone.
+
+Do not optimize vanity metrics at the expense of accuracy, trust, privacy, or cancellation fairness.
 
 ---
 

@@ -4,6 +4,14 @@ PR #586 replaces the API process's unbounded parser-subprocess stderr string wit
 
 Exact PR #586 head `17d532c5d569e7bca9f429fc67e210c81c2c8834` passed FullWorth CI #1375 (run `36834026029`; backend build/tests and MAUI Android passed, and the Linux production-container job completed with container-only steps skipped as not applicable) and Dependency Security #472 (run `36834025989`). It was squash-merged to `development` as `95c2d8daf029c3f70f0cffc2505a970bcb10bae2`. No production deployment occurred.
 
+## Product strategy consolidation — 2026-09-30
+
+FullWorth's durable product strategy is centered on **financial change intelligence**: detect meaningful financial changes, explain why they happened, quantify their impact, prioritize what deserves attention, and preserve the evidence behind the answer. The recurring-bill promise — **Know when your bills change — and why** — remains the acquisition/product wedge.
+
+`FULLWORTH_PRODUCT_STRATEGY.md` defines the change-intelligence hierarchy, moat, change-first Financial Home direction, time-to-value and calm-state experience, monetization discipline, illustrative ARR scale math, growth strategy, business scorecard, stage gates, and guardrails. `FULLWORTH_ROADMAP.md` now links that strategy into its north star, Financial Home, revenue-readiness, and metrics sections.
+
+This is planning documentation only. It does not enable subscription enforcement, production AI, money movement, new data collection, or production deployment. Release, security, and financial-correctness gates remain ahead of speculative feature expansion. The strategic sequence is: trustworthy monitoring → retention → paid recurring value → repeatable acquisition → scalable recurring revenue.
+
 ## Isolated PDF text parser worker — 2026-10-01
 
 PR #585 adds a dedicated production parser-worker service for PDF text-layer extraction. API uploads are streamed with a 15 MiB cap; the worker accepts one request at a time, runs PdfPig in a fresh bounded subprocess with a 20-second deadline, enforces 100 pages and 250,000 extracted characters, and limits its output. The production Compose worker is on an internal-only network with a read-only filesystem, dedicated unprivileged UID, no Linux capabilities, no-new-privileges, 64 PID cap, and 1 CPU / 512 MiB memory and swap limits. Readiness fails closed unless finite cgroup v2 limits are visible. OCR remains in the API process and is explicitly outside this isolation milestone.
