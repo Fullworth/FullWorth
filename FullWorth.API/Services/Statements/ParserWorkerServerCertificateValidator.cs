@@ -21,7 +21,7 @@ public sealed class ParserWorkerServerCertificateValidator
 
         _certificatePath = certificatePath;
         using var expected =
-            X509Certificate2.CreateFromPemFile(_certificatePath);
+            X509Certificate2.CreateFromPem(\n                File.ReadAllText(_certificatePath));
         if (expected.HasPrivateKey)
         {
             throw new InvalidOperationException(
