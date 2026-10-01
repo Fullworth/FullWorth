@@ -66,7 +66,7 @@ Deploy:
 sh deploy/validate-production-env.sh .env.production
 ```
 
-The preflight rejects linked or over-permissioned environment files, placeholders, weak database/backup passwords, local backup destinations, invalid Plaid environments, non-public hostnames, unsafe retention settings, non-HTTPS operations alert endpoints, and release identifiers that are not exact lowercase 40-character Git commits. It never prints secret values.
+The preflight rejects linked or over-permissioned environment files, placeholders, weak or reused database/Web-session/parser-worker credentials, local backup destinations, invalid Plaid environments, non-public hostnames, unsafe retention settings, non-HTTPS operations alert endpoints, and release identifiers that are not exact lowercase 40-character Git commits. It never prints secret values.
 4. Configure `RESTIC_REPOSITORY` as a private off-host destination and use a separate, randomly generated `RESTIC_PASSWORD`. Losing that password makes every backup unrecoverable.
 5. Keep all AI flags disabled. No OpenAI key is required for the current runtime.
 6. Initialize the encrypted repository once:
@@ -110,6 +110,7 @@ The application fails closed outside Development unless these settings are prese
 - `DataProtection__KeysPath`
 - `BillStatementStorage__RootPath`
 - `WebSession__RedisHost` / `BILLWATCH_WEB_SESSION_REDIS_PASSWORD`
+- `ParserWorker__AuthenticationToken` / `BILLWATCH_PARSER_AUTH_TOKEN`
 - `Plaid__ClientId`
 - `Plaid__Secret`
 - `Plaid__Environment`

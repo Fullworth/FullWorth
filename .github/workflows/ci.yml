@@ -245,6 +245,7 @@ jobs:
       BILLWATCH_BACKUP_WORK_SIZE: 1g
       BILLWATCH_BACKUP_CLIENT_MODE: append-only
       BILLWATCH_DATABASE_PASSWORD: ci-only-password
+      BILLWATCH_PARSER_AUTH_TOKEN: ci-parser-worker-authentication-token-more-than-32-characters
       BILLWATCH_WEB_SESSION_REDIS_PASSWORD: ci-web-session-password-more-than-32-characters
       BILLWATCH_HOST: localhost
       BILLWATCH_WEB_HOST: web.localhost
@@ -606,10 +607,28 @@ jobs:
         if: steps.container_changes.outputs.required == 'true'
         shell: bash
         run: |
+          unauthorized_status="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --silent --output /dev/null --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/pdf' \
+                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+          )"
+          test "$unauthorized_status" = "401"
+
+          wrong_credential_status="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --silent --output /dev/null --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/pdf' \
+                --header 'Authorization: Bearer wrong-parser-worker-authentication-token' \
+                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+          )"
+          test "$wrong_credential_status" = "401"
+
           response="$(
             python3 - <<'PY' | docker compose --file compose.production.yml exec -T api \
               curl --fail --silent --show-error --request POST \
                 --header 'Content-Type: application/pdf' \
+                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
                 --data-binary @- http://parser-worker:8081/v1/pdf/extract
           import sys
 

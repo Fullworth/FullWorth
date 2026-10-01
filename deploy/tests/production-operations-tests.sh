@@ -26,6 +26,7 @@ write_valid_env()
         -e 's/owner@example\.com/ops@fullworth.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
         -e 's/replace-with-a-separate-long-random-web-session-password/web-session-password-with-more-than-32-characters/' \
+        -e 's/replace-with-a-separate-random-parser-worker-token/parser-worker-token-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
         -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.fullworth.test/production#' \
@@ -179,6 +180,16 @@ reused_web_session_env="$temp_dir/reused-web-session.env"
 write_valid_env "$reused_web_session_env"
 sed -i 's/web-session-password-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_web_session_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_web_session_env"
+
+weak_parser_auth_env="$temp_dir/weak-parser-auth.env"
+write_valid_env "$weak_parser_auth_env"
+sed -i 's/parser-worker-token-with-more-than-32-characters/short/' "$weak_parser_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_parser_auth_env"
+
+reused_parser_auth_env="$temp_dir/reused-parser-auth.env"
+write_valid_env "$reused_parser_auth_env"
+sed -i 's/parser-worker-token-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_parser_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_parser_auth_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"

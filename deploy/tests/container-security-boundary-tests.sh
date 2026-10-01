@@ -17,6 +17,7 @@ env \
     BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true \
     BILLWATCH_BACKUP_WORK_SIZE=1g \
     BILLWATCH_DATABASE_PASSWORD=ci-database-password \
+    BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters \
     BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters \
     BILLWATCH_HOST=api.fullworth.test \
     BILLWATCH_RELEASE_ID=0123456789abcdef0123456789abcdef01234567 \
@@ -163,9 +164,19 @@ if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
 if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_healthy":
     fail("API must wait for parser-worker resource-limit readiness.")
 
-parser_url = services["api"].get("environment", {}).get("ParserWorker__BaseUrl")
+api_environment = services["api"].get("environment", {})
+parser_url = api_environment.get("ParserWorker__BaseUrl")
 if parser_url != "http://parser-worker:8081":
     fail("API must use the internal parser-worker endpoint.")
+
+api_parser_token = api_environment.get("ParserWorker__AuthenticationToken")
+worker_parser_token = parser_worker.get("environment", {}).get(
+    "ParserWorker__AuthenticationToken"
+)
+if not api_parser_token or len(api_parser_token) < 32:
+    fail("API must receive a strong parser-worker authentication token.")
+if api_parser_token != worker_parser_token:
+    fail("API and parser-worker must receive the same authentication token.")
 
 session_cache = services["web-session-cache"]
 

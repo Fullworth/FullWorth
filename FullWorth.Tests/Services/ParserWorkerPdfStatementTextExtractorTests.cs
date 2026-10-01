@@ -6,6 +6,9 @@ namespace FullWorth.Tests.Services;
 
 public sealed class ParserWorkerPdfStatementTextExtractorTests
 {
+    private const string AuthenticationToken =
+        "parser-worker-test-token-with-more-than-32-characters";
+
     [Fact]
     public void Extract_SendsPdfAndValidatesWorkerResponse()
     {
@@ -14,6 +17,8 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal("/v1/pdf/extract", request.RequestUri?.AbsolutePath);
             Assert.Equal("application/pdf", request.Content?.Headers.ContentType?.MediaType);
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal(AuthenticationToken, request.Headers.Authorization?.Parameter);
             Assert.Equal(new byte[] { 1, 2, 3 }, request.Content!.ReadAsByteArrayAsync().GetAwaiter().GetResult());
             return Json(HttpStatusCode.OK,
                 """{"protocolVersion":1,"outcome":"text","errorCode":"","pageCount":2,"text":"Provider statement total due $94.99","requiresOcr":false}""");
@@ -22,7 +27,7 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         {
             BaseAddress = new Uri("http://parser-worker:8081")
         };
-        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+        var extractor = CreateExtractor(client);
 
         var result = extractor.Extract(new MemoryStream(new byte[] { 1, 2, 3 }));
 
@@ -40,7 +45,7 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         {
             BaseAddress = new Uri("http://parser-worker:8081")
         };
-        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+        var extractor = CreateExtractor(client);
 
         var exception = Assert.Throws<BillStatementTextExtractionException>(
             () => extractor.Extract(new MemoryStream([1])));
@@ -57,7 +62,7 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         {
             BaseAddress = new Uri("http://parser-worker:8081")
         };
-        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+        var extractor = CreateExtractor(client);
 
         using var input = new MemoryStream(new byte[(15 * 1024 * 1024) + 1]);
 
@@ -79,7 +84,7 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         {
             BaseAddress = new Uri("http://parser-worker:8081")
         };
-        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+        var extractor = CreateExtractor(client);
 
         var exception = Assert.Throws<BillStatementTextExtractionException>(
             () => extractor.Extract(new MemoryStream([1])));
@@ -87,6 +92,25 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         Assert.DoesNotContain("stack trace", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("document content", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void AuthenticationOptions_RejectMissingProductionToken()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => new ParserWorkerAuthenticationOptions(
+                configuredToken: null,
+                isDevelopment: false));
+
+        Assert.Contains("not configured securely", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ParserWorkerPdfStatementTextExtractor CreateExtractor(
+        HttpClient client) =>
+        new(
+            client,
+            new ParserWorkerAuthenticationOptions(
+                AuthenticationToken,
+                isDevelopment: false));
 
     private static HttpResponseMessage Json(HttpStatusCode statusCode, string json) =>
         new(statusCode)

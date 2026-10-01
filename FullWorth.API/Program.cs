@@ -69,6 +69,11 @@ var resolvedParserWorkerBaseUrl =
     parserWorkerBaseUrl
     ?? "http://127.0.0.1:8189";
 
+var parserWorkerAuthentication =
+    new ParserWorkerAuthenticationOptions(
+        builder.Configuration["ParserWorker:AuthenticationToken"],
+        builder.Environment.IsDevelopment());
+
 if (!Uri.TryCreate(
         resolvedParserWorkerBaseUrl,
         UriKind.Absolute,
@@ -766,6 +771,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAccountStatementExportGateway,
     AccountStatementExportGateway>();
+
+builder.Services.AddSingleton(
+    parserWorkerAuthentication);
 
 builder.Services.AddHttpClient<
     IPdfStatementTextExtractor,
