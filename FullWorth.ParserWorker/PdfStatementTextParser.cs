@@ -49,6 +49,7 @@ public sealed class PdfStatementTextParser
             using var document = PdfDocument.Open(buffer);
             var text = new StringBuilder();
             var pageCount = 0;
+            var hasTextOrImage = false;
 
             foreach (var page in document.GetPages())
             {
@@ -62,8 +63,15 @@ public sealed class PdfStatementTextParser
                 var pageText = ContentOrderTextExtractor.GetText(page);
                 if (string.IsNullOrWhiteSpace(pageText))
                 {
+                    if (page.GetImages().Any())
+                    {
+                        hasTextOrImage = true;
+                    }
+
                     continue;
                 }
+
+                hasTextOrImage = true;
 
                 if (text.Length > 0)
                 {
@@ -82,6 +90,11 @@ public sealed class PdfStatementTextParser
                 {
                     break;
                 }
+            }
+
+            if (pageCount == 0 || !hasTextOrImage)
+            {
+                return Rejected("document_rejected");
             }
 
             var normalized = Normalize(text.ToString());
