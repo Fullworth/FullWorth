@@ -2,7 +2,7 @@
 
 PR #586 replaces the API process's unbounded parser-subprocess stderr string with a fixed 8 KiB discard buffer. A generated 32 MiB diagnostic-stream regression test verifies complete draining without materializing the stream as a result; cancellation remains connected to the parser deadline. `PARSER_WORKER_BOUNDARY.md` records this bound. This closes diagnostic-output accumulation in the API process; it does not add parser/worker transport authentication or move OCR out of the API.
 
-PR #586 exact head `170fc4ee62badd776df639d7edb890127933f416` is awaiting exact-head FullWorth CI and Dependency Security. No production deployment occurred.
+Exact PR #586 head `17d532c5d569e7bca9f429fc67e210c81c2c8834` passed FullWorth CI #1375 (run `36834026029`; backend build/tests and MAUI Android passed, and the Linux production-container job completed with container-only steps skipped as not applicable) and Dependency Security #472 (run `36834025989`). It was squash-merged to `development` as `95c2d8daf029c3f70f0cffc2505a970bcb10bae2`. No production deployment occurred.
 
 ## Isolated PDF text parser worker — 2026-10-01
 
