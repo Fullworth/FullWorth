@@ -4,6 +4,7 @@ public static class WorkerResourceLimits
 {
     private const string CpuMaxPath = "/sys/fs/cgroup/cpu.max";
     private const string MemoryMaxPath = "/sys/fs/cgroup/memory.max";
+    private const string MemorySwapMaxPath = "/sys/fs/cgroup/memory.swap.max";
 
     public static bool AreCurrentProcessLimitsEnforced()
     {
@@ -15,7 +16,8 @@ public static class WorkerResourceLimits
         try
         {
             return HasFiniteCpuLimit(File.ReadAllText(CpuMaxPath)) &&
-                   HasFiniteMemoryLimit(File.ReadAllText(MemoryMaxPath));
+                   HasFiniteMemoryLimit(File.ReadAllText(MemoryMaxPath)) &&
+                   HasFiniteSwapLimit(File.ReadAllText(MemorySwapMaxPath));
         }
         catch (IOException)
         {
@@ -38,6 +40,17 @@ public static class WorkerResourceLimits
         return TryParsePositive(value, out _);
     }
 
+    public static bool HasFiniteSwapLimit(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            value.Trim().Equals("max", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return TryParseNonNegative(value, out _);
+    }
+
     public static bool HasFiniteCpuLimit(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -57,11 +70,20 @@ public static class WorkerResourceLimits
 
     private static bool TryParsePositive(string value, out long parsed)
     {
+        return TryParse(value, out parsed) && parsed > 0;
+    }
+
+    private static bool TryParseNonNegative(string value, out long parsed)
+    {
+        return TryParse(value, out parsed) && parsed >= 0;
+    }
+
+    private static bool TryParse(string value, out long parsed)
+    {
         return long.TryParse(
-                   value.Trim(),
-                   NumberStyles.None,
-                   CultureInfo.InvariantCulture,
-                   out parsed) &&
-               parsed > 0;
+            value.Trim(),
+            NumberStyles.None,
+            CultureInfo.InvariantCulture,
+            out parsed);
     }
 }
