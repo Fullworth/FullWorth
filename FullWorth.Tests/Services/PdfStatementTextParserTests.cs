@@ -32,6 +32,19 @@ public sealed class PdfStatementTextParserTests
     }
 
     [Fact]
+    public void Extract_FlagsImageBackedPdfForOcr()
+    {
+        using var input = new MemoryStream(
+            TesseractScannedPdfSmokeTests.CreateImageOnlyPdf());
+
+        var response = new PdfStatementTextParser().Extract(input);
+
+        Assert.Equal("needs_ocr", response.Outcome);
+        Assert.Equal(1, response.PageCount);
+        Assert.True(response.RequiresOcr);
+    }
+
+    [Fact]
     public void Extract_RejectsPdfAbovePageLimitWithStableCode()
     {
         using var input = new MemoryStream(

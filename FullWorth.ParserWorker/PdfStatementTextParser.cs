@@ -38,9 +38,18 @@ public sealed class PdfStatementTextParser
             }
 
             buffer.Position = 0;
+            Span<byte> signature = stackalloc byte[5];
+            if (buffer.Read(signature) != signature.Length ||
+                !signature.SequenceEqual("%PDF-"u8))
+            {
+                return Rejected("invalid_pdf_signature");
+            }
+
+            buffer.Position = 0;
             using var document = PdfDocument.Open(buffer);
             var text = new StringBuilder();
             var pageCount = 0;
+            var hasTextOrImage = false;
 
             foreach (var page in document.GetPages())
             {
@@ -54,8 +63,15 @@ public sealed class PdfStatementTextParser
                 var pageText = ContentOrderTextExtractor.GetText(page);
                 if (string.IsNullOrWhiteSpace(pageText))
                 {
+                    if (page.GetImages().Any())
+                    {
+                        hasTextOrImage = true;
+                    }
+
                     continue;
                 }
+
+                hasTextOrImage = true;
 
                 if (text.Length > 0)
                 {
@@ -74,6 +90,11 @@ public sealed class PdfStatementTextParser
                 {
                     break;
                 }
+            }
+
+            if (pageCount == 0 || !hasTextOrImage)
+            {
+                return Rejected("document_rejected");
             }
 
             var normalized = Normalize(text.ToString());

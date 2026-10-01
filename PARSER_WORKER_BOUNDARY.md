@@ -12,6 +12,8 @@ The production Compose configuration gives the worker a read-only root filesyste
 
 Scope is limited to PDF text-layer extraction. Scanned-document OCR still runs inside the API process after the worker reports `needs_ocr`; therefore the API remains able to open the original statement for that path. The worker child shares the worker container's cgroup rather than receiving a distinct per-document cgroup. The shared bearer credential authenticates the calling service but does not provide per-request replay protection or transport encryption; the internal-only worker network must remain attached only to the API and parser-worker services. These limits do not meet the full-document isolation contract below.
 
+The worker independently requires the `%PDF-` file signature before invoking PdfPig, even though upload storage already verifies signatures. A generated adversarial corpus exercises non-PDF input, truncated object graphs, dangling roots, oversized declared streams, invalid ASCIIHex and Flate data, plus a valid high-compression expansion fixture whose extracted output is capped at 250,000 characters. Fixtures are synthetic and contain no user documents.
+
 ## Trust boundary
 
 The API process must remain the owner of authentication, authorization, database writes, statement storage, and structured extraction. A dedicated parser worker must be the only process allowed to open an uploaded PDF or image for document text extraction.
@@ -67,8 +69,8 @@ The API must never reuse a worker after a timeout, memory kill, protocol violati
 Before enabling the worker for production traffic, CI must cover:
 
 - valid text PDF and image happy paths;
-- malformed, truncated, corrupt, compressed, and decompression-bomb fixtures;
-- oversized declared streams and invalid filters;
+- malformed, truncated, corrupt, compressed, and decompression-bomb-shaped fixtures (covered by the generated worker corpus);
+- oversized declared streams and invalid filters (covered by the generated worker corpus);
 - protocol truncation, oversized frames, duplicate fields, and trailing bytes;
 - missing, malformed, duplicate, and incorrect worker authentication credentials;
 - deadline expiry with a worker that never exits;
@@ -80,4 +82,4 @@ The production container must run the worker with a read-only root filesystem, n
 
 ## Explicit current limitation
 
-Until the worker and its supervisor are implemented and enabled, FullWorth does not provide separate-process CPU/RAM isolation, a hard peak-memory bound for a permitted 50M-pixel image, parser/native-library sandboxing, or decompression-expansion containment. Existing PDF/OCR limits reduce exposure but must not be described as hard process or host resource isolation.
+The production topology and CI provide a separate parser process inside a resource-limited worker container, but scanned-document OCR still runs in the API. The worker child shares its container cgroup rather than receiving a distinct per-document cgroup, and no deployed-host containment evidence exists for the current release. FullWorth also lacks a hard peak-memory bound for one permitted image, per-request replay protection, and transport encryption on the internal worker channel.

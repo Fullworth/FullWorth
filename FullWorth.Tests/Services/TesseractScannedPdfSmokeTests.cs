@@ -50,7 +50,7 @@ public sealed class TesseractScannedPdfSmokeTests
             pngBytes);
     }
 
-    private static byte[] CreateImageOnlyPdf()
+    internal static byte[] CreateImageOnlyPdf()
     {
         const int width =
             64;
