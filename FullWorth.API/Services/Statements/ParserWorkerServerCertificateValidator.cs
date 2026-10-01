@@ -35,9 +35,14 @@ public sealed class ParserWorkerServerCertificateValidator
         X509Chain? __,
         SslPolicyErrors ___)
     {
-        if (certificate is null ||
-            DateTimeOffset.UtcNow < certificate.NotBefore ||
-            DateTimeOffset.UtcNow > certificate.NotAfter)
+        if (certificate is null)
+        {
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        if (now < certificate.NotBefore.ToUniversalTime() ||
+            now > certificate.NotAfter.ToUniversalTime())
         {
             return false;
         }
