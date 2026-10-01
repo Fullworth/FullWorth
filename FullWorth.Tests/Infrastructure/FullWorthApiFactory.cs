@@ -203,6 +203,17 @@ public sealed class FullWorthApiFactory
                             _databaseName));
 
                 /*
+                 * Integration tests exercise statement persistence and ownership;
+                 * the process boundary is verified by dedicated worker-client tests.
+                 */
+                services.RemoveAll<
+                    IPdfStatementTextExtractor>();
+
+                services.AddSingleton<
+                    IPdfStatementTextExtractor,
+                    TestPdfStatementTextExtractor>();
+
+                /*
                  * Routine tests do not load native Tesseract.
                  *
                  * Native OCR tests explicitly replace this fake with
@@ -255,6 +266,15 @@ public sealed class FullWorthApiFactory
         {
             // Test cleanup must not hide a real test failure.
         }
+    }
+
+    private sealed class TestPdfStatementTextExtractor
+        : IPdfStatementTextExtractor
+    {
+        private readonly PdfBillStatementTextExtractor _inner = new();
+
+        public BillStatementTextExtractionResult Extract(Stream pdfStream) =>
+            _inner.Extract(pdfStream);
     }
 
     private sealed class TestBillStatementOcrEngine
