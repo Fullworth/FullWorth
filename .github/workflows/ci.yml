@@ -552,6 +552,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          target: final
           load: true
           push: false
           tags: billwatch-api:${{ github.sha }}
