@@ -15,7 +15,8 @@ public sealed class ParserWorkerTlsTests
             new ParserWorkerServerCertificateValidator(path);
 
         using var published =
-            X509Certificate2.CreateFromPem(\n                File.ReadAllText(path));
+            X509Certificate2.CreateFromPem(
+                File.ReadAllText(path));
 
         Assert.True(certificate.HasPrivateKey);
         Assert.False(published.HasPrivateKey);
