@@ -16,6 +16,8 @@ Scope is limited to PDF text-layer extraction. Scanned-document OCR still runs i
 
 The worker independently requires the `%PDF-` file signature before invoking PdfPig, even though upload storage already verifies signatures. A generated adversarial corpus exercises non-PDF input, truncated object graphs, dangling roots, oversized declared streams, invalid ASCIIHex and Flate data, plus a valid high-compression expansion fixture whose extracted output is capped at 250,000 characters. Fixtures are synthetic and contain no user documents.
 
+The remaining in-process OCR fallback now parses only bounded PNG/JPEG headers before invoking native image decoding. PNG IHDR and JPEG start-of-frame dimensions must be positive, structurally valid, and fit the existing conservative 256 MiB encoded-plus-decoded working-set estimate; malformed, truncated, unsupported, or over-limit headers are rejected before Tesseract. This closes the standalone-image declared-dimension admission gap. It is not an operating-system-enforced peak-memory limit because native decoding and OCR still run inside the API process.
+
 ## Trust boundary
 
 The API process must remain the owner of authentication, authorization, database writes, statement storage, and structured extraction. A dedicated parser worker must be the only process allowed to open an uploaded PDF or image for document text extraction.
@@ -84,4 +86,4 @@ The production container must run the worker with a read-only root filesystem, n
 
 ## Explicit current limitation
 
-The production topology and CI provide an encrypted, authenticated, exact-body-bound request to a separate parser process inside a resource-limited worker container, but scanned-document OCR still runs in the API. The worker child shares its container cgroup rather than receiving a distinct per-document cgroup, and no deployed-host containment evidence exists for the current release. FullWorth also lacks a hard peak-memory bound for one permitted image.
+The production topology and CI provide an encrypted, authenticated, exact-body-bound request to a separate parser process inside a resource-limited worker container. Standalone PNG/JPEG dimensions are admitted before native decoding, but scanned-document OCR still runs in the API and therefore lacks an operating-system-enforced peak-memory limit. The worker child shares its container cgroup rather than receiving a distinct per-document cgroup, and no deployed-host containment evidence exists for the current release.

@@ -180,6 +180,7 @@ public sealed class TesseractBillStatementOcrEngine
                     return ExtractImage(
                         engine,
                         source,
+                        mediaType,
                         deadline);
                 }
 
@@ -287,6 +288,7 @@ public sealed class TesseractBillStatementOcrEngine
     private BillStatementOcrResult ExtractImage(
         Engine engine,
         Stream source,
+        string mediaType,
         OcrProcessingDeadline deadline)
     {
         deadline.ThrowIfExpired();
@@ -297,7 +299,11 @@ public sealed class TesseractBillStatementOcrEngine
                 MaxImageBytes);
 
         if (bytes.Length ==
-            0)
+                0 ||
+            !EncodedOcrImageAdmission.TryAdmit(
+                bytes,
+                mediaType,
+                out _))
         {
             return BillStatementOcrResult.Failure(
                 pageCount:
