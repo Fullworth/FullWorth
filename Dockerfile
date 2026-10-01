@@ -65,13 +65,21 @@ ARG BILLWATCH_RELEASE_ID=unknown
 LABEL org.opencontainers.image.revision="$BILLWATCH_RELEASE_ID"
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
+    && apt-get install --yes --no-install-recommends \
+        ca-certificates \
+        curl \
+        libtesseract-dev \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=native-build /native-root/usr/local/ /usr/local/
 
 WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
 
-RUN mkdir --parents /var/run/fullworth-parser-tls \
+RUN ldconfig \
+    && mkdir --parents /app/x64 /var/run/fullworth-parser-tls \
+    && ln --symbolic /usr/local/lib/libleptonica.so /app/x64/libleptonica-1.85.0.dll.so \
+    && ln --symbolic "$(find /usr/lib -type f -name 'libtesseract.so.*' -print -quit)" /app/x64/libtesseract55.dll.so \
     && chown --recursive "$APP_UID:$APP_UID" \
         /app \
         /var/run/fullworth-parser-tls

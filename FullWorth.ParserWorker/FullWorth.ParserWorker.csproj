@@ -6,5 +6,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="TesseractOCR" Version="5.5.2" />
+    <PackageReference Include="Tesseract.Data.English" Version="4.0.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../FullWorth.API/Services/Statements/TesseractBillStatementOcrEngine.cs" Link="Ocr/TesseractBillStatementOcrEngine.cs" />
+    <Compile Include="../FullWorth.API/Services/Statements/EncodedOcrImageAdmission.cs" Link="Ocr/EncodedOcrImageAdmission.cs" />
+    <Compile Include="../FullWorth.API/Services/Statements/PdfOcrPixelBudget.cs" Link="Ocr/PdfOcrPixelBudget.cs" />
   </ItemGroup>
 </Project>

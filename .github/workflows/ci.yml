@@ -738,6 +738,47 @@ jobs:
           )"
           test "$tampered_body_status" = "401"
 
+      - name: Verify isolated OCR worker path
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_file="$(mktemp)"
+          trap 'rm -f "$image_file"' EXIT
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' |
+            base64 --decode > "$image_file"
+          timestamp="$(date +%s)"
+          nonce="$(openssl rand -hex 16)"
+          content_sha256="$(sha256sum "$image_file" | awk '{ print $1 }')"
+          signature="$(
+            printf 'POST\n/v1/ocr/extract\n%s\n%s\n%s' \
+              "$timestamp" "$nonce" "$content_sha256" |
+              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
+              awk '{ print $2 }'
+          )"
+          response="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --fail --silent --show-error --request POST \
+                --header 'Content-Type: image/png' \
+                --header 'X-FullWorth-Ocr-Extension: .png' \
+                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
+                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
+                --header "X-FullWorth-Parser-Nonce: ${nonce}" \
+                --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
+                --header "X-FullWorth-Parser-Signature: ${signature}" \
+                --data-binary @- https://parser-worker:8081/v1/ocr/extract \
+              < "$image_file"
+          )"
+          printf '%s' "$response" | python3 -c '
+          import json
+          import sys
+          result = json.load(sys.stdin)
+          assert result.get("pageCount") == 1, result
+          assert result.get("isUsable") is False, result
+          assert result.get("text") == "", result
+          '
+
       - name: Install visual acceptance dependencies
         if: steps.visual_changes.outputs.required == 'true'
         run: npm --prefix FullWorth.VisualTests install --no-audit --no-fund
@@ -952,6 +993,7 @@ jobs:
           set -euo pipefail
           for image in \
             "billwatch-api:${BILLWATCH_RELEASE_ID}" \
+            "billwatch-parser-worker:${BILLWATCH_RELEASE_ID}" \
             "billwatch-web:${BILLWATCH_RELEASE_ID}" \
             "billwatch-backup:${BILLWATCH_RELEASE_ID}"
           do
