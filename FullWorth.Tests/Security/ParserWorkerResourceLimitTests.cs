@@ -64,6 +64,18 @@ public sealed class ParserWorkerResourceLimitTests
     }
 
     [Fact]
+    public void WorkerCgroupIsCreatedInsideTheDelegatedParent()
+    {
+        var parent = Path.Combine(Path.GetTempPath(), "fullworth-parser-parent");
+
+        var child = WorkerResourceLimits.BuildWorkerCgroupPath(parent, 1234, "test-instance");
+
+        Assert.Equal(
+            Path.Combine(parent, "fullworth-parser-worker-1234-test-instance"),
+            child);
+    }
+
+    [Fact]
     public async Task ProtocolRejectsWhenResourceLimitsAreUnverified()
     {
         var response = await WorkerProtocol.BuildResponseAsync(
