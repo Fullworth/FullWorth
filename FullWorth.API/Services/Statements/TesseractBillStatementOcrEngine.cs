@@ -297,7 +297,11 @@ public sealed class TesseractBillStatementOcrEngine
                 MaxImageBytes);
 
         if (bytes.Length ==
-            0)
+                0 ||
+            !EncodedOcrImageAdmission.TryAdmit(
+                bytes,
+                mediaType,
+                out _))
         {
             return BillStatementOcrResult.Failure(
                 pageCount:
