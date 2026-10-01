@@ -438,6 +438,14 @@ public sealed class TesseractBillStatementOcrEngine
                     continue;
                 }
 
+                if (!PdfImageMemoryAdmission.TryEstimate(
+                        candidate.PixelCount,
+                        imageBytes.Length,
+                        out _))
+                {
+                    continue;
+                }
+
                 if (!TryRecognizeImage(
                         engine,
                         imageBytes,
