@@ -1,3 +1,5 @@
+using System.Text;
+
 public sealed class ParserWorkerProtocolTests
 {
     [Fact]
@@ -11,6 +13,54 @@ public sealed class ParserWorkerProtocolTests
         Assert.Equal(1, response.ProtocolVersion);
         Assert.Equal("rejected", response.Outcome);
         Assert.Equal("request_timeout", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BuildResponseAsync_ReturnsRequestTooLarge_WhenInputExceedsBound()
+    {
+        var oversizedRequest = new byte[WorkerProtocol.MaxRequestBytes + 1];
+
+        var response = await WorkerProtocol.BuildResponseAsync(
+            new MemoryStream(oversizedRequest),
+            WorkerProtocol.MaxRequestBytes,
+            TimeSpan.FromSeconds(1));
+
+        Assert.Equal("request_too_large", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BuildResponseAsync_ReturnsInvalidRequest_WhenJsonIsMalformed()
+    {
+        var response = await WorkerProtocol.BuildResponseAsync(
+            new MemoryStream(Encoding.UTF8.GetBytes("{")),
+            WorkerProtocol.MaxRequestBytes,
+            TimeSpan.FromSeconds(1));
+
+        Assert.Equal("invalid_request", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BuildResponseAsync_ReturnsUnsupportedProtocol_WhenVersionIsNotOne()
+    {
+        var response = await WorkerProtocol.BuildResponseAsync(
+            new MemoryStream(Encoding.UTF8.GetBytes("{\"protocolVersion\":2}")),
+            WorkerProtocol.MaxRequestBytes,
+            TimeSpan.FromSeconds(1));
+
+        Assert.Equal("unsupported_protocol", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task BuildResponseAsync_RemainsFailClosed_WhenProtocolIsValidButWorkerIsNotReady()
+    {
+        var response = await WorkerProtocol.BuildResponseAsync(
+            new MemoryStream(Encoding.UTF8.GetBytes("{\"protocolVersion\":1}")),
+            WorkerProtocol.MaxRequestBytes,
+            TimeSpan.FromSeconds(1));
+
+        Assert.Equal(1, response.ProtocolVersion);
+        Assert.Equal("rejected", response.Outcome);
+        Assert.Equal("worker_not_ready", response.ErrorCode);
     }
 
     private sealed class BlockingReadStream : Stream
