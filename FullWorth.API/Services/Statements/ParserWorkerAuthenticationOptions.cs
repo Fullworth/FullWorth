@@ -39,9 +39,13 @@ public sealed class ParserWorkerAuthenticationOptions
         var nonce =
             Convert.ToHexString(RandomNumberGenerator.GetBytes(16))
                 .ToLowerInvariant();
+        var requestPath =
+            request.RequestUri is { IsAbsoluteUri: true } absoluteUri
+                ? absoluteUri.AbsolutePath
+                : request.RequestUri?.OriginalString ?? string.Empty;
         var signature = CreateSignature(
             request.Method.Method,
-            request.RequestUri?.AbsolutePath ?? string.Empty,
+            requestPath,
             timestamp,
             nonce);
 

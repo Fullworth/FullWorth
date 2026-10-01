@@ -177,7 +177,7 @@ public sealed class ParserWorkerProtocolTests
         var timestampText =
             timestamp.ToString(CultureInfo.InvariantCulture);
         var canonical =
-            $"POST\\n/v1/pdf/extract\\n{timestampText}\\n{nonce}";
+            $"POST\n/v1/pdf/extract\n{timestampText}\n{nonce}";
         var signature =
             Convert.ToHexString(
                     HMACSHA256.HashData(

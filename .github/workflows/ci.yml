@@ -629,7 +629,7 @@ jobs:
           timestamp="$(date +%s)"
           nonce="$(openssl rand -hex 16)"
           signature="$(
-            printf 'POST\\n/v1/pdf/extract\\n%s\\n%s' "$timestamp" "$nonce" |
+            printf 'POST\n/v1/pdf/extract\n%s\n%s' "$timestamp" "$nonce" |
               openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
               awk '{ print $2 }'
           )"

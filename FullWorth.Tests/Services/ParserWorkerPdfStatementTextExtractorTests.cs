@@ -43,7 +43,7 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
             Assert.Matches("^[0-9a-f]{64}$", signature);
 
             var canonical =
-                $"POST\\n/v1/pdf/extract\\n{timestamp}\\n{nonce}";
+                $"POST\n/v1/pdf/extract\n{timestamp}\n{nonce}";
             var expectedSignature =
                 Convert.ToHexString(
                         HMACSHA256.HashData(
