@@ -1,3 +1,11 @@
+## Parser-worker request-body integrity — 2026-10-01
+
+The API now computes a bounded SHA-256 digest of every PDF sent to the isolated parser worker and includes that digest in the nonce- and timestamp-bound HMAC canonical request. Seekable streams are hashed in a bounded pre-pass and restored to their original position; non-seekable streams are staged in an owned, bounded 15 MiB memory buffer. The worker reads the already bounded body, compares its actual digest with the signed digest using a fixed-time comparison, and rejects a mismatch before launching the parser child process.
+
+Exact PR #594 head `57e356ceea2ac3f587d2fb4ba246180c43255815` passed FullWorth CI #1388 (run `36866395277`: 1,111 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, valid digest-bound PDF extraction, replay rejection, body-substitution rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #485 (run `36866395299`). It was squash-merged to `development` as `2abfa8c11fca0f66323495014cfd3439f8db27ad`.
+
+This closes exact-byte message integrity for the PDF text-layer worker request. Transport encryption, OCR isolation, a distinct per-document cgroup, a hard peak-memory bound for one permitted image, and deployed-host containment evidence remain open. No production deployment occurred.
+
 ## Parser-worker per-request replay protection — 2026-10-01
 
 The API now signs every parser extraction request with HMAC-SHA-256 over the HTTP method, request path, Unix timestamp, and a fresh 128-bit random nonce while retaining the dedicated bearer credential. The worker rejects malformed, incorrectly signed, more-than-60-seconds stale or future, and previously consumed nonces before content-type validation or PDF body reads. Its process-local replay window is bounded at 4,096 entries and prunes expired entries.
