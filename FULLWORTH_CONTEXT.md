@@ -1,3 +1,13 @@
+## Parser-worker per-request replay protection — 2026-10-01
+
+The API now signs every parser extraction request with HMAC-SHA-256 over the HTTP method, request path, Unix timestamp, and a fresh 128-bit random nonce while retaining the dedicated bearer credential. The worker rejects malformed, incorrectly signed, more-than-60-seconds stale or future, and previously consumed nonces before content-type validation or PDF body reads. Its process-local replay window is bounded at 4,096 entries and prunes expired entries.
+
+The first exact-head CI run exposed two canonicalization defects: the API signer read `AbsolutePath` from a relative request URI, and independent test/probe strings encoded literal backslash-n text instead of newline separators. The corrected implementation preserves the relative path safely and uses identical newline-delimited canonical bytes across API, worker, tests, and the production probe; no authentication boundary was relaxed.
+
+Exact corrected PR #592 head `7fd0ffe81ef7ec11b688ff0be986cf473c02b992` passed FullWorth CI #1386 (run `36860264539`: 1,110 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, valid signed PDF extraction, duplicate signed-request rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #483 (run `36860264674`). It was squash-merged to `development` as `93c3dd8e509f788740b321d0eae072c44e97dfe6`.
+
+This closes per-request replay protection for a running worker instance. The replay cache resets on worker restart, but the 60-second timestamp window continues to bound accepted requests. The signed metadata does not encrypt the internal channel or bind the PDF body; transport confidentiality and full message integrity remain open. OCR isolation, distinct per-document cgroups, hard peak memory for one permitted image, and deployed-host containment evidence also remain open. No production deployment occurred.
+
 ## Adversarial parser-worker PDF corpus — 2026-10-01
 
 The isolated parser now independently rejects bodies without the PDF file signature before invoking PdfPig. A generated, user-data-free regression corpus covers non-PDF payloads, truncated object graphs, dangling trailer roots, oversized declared streams, invalid ASCIIHex and Flate data, and a valid high-compression expansion fixture. Rejections return stable codes without parser diagnostics or document content; the compressed-expansion fixture proves extracted output remains capped at 250,000 characters.
