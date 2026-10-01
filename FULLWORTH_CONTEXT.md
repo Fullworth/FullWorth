@@ -1,3 +1,9 @@
+## Isolated PDF text parser worker — 2026-10-01
+
+PR #585 adds a dedicated production parser-worker service for PDF text-layer extraction. API uploads are streamed with a 15 MiB cap; the worker accepts one request at a time, runs PdfPig in a fresh bounded subprocess with a 20-second deadline, enforces 100 pages and 250,000 extracted characters, and limits its output. The production Compose worker is on an internal-only network with a read-only filesystem, dedicated unprivileged UID, no Linux capabilities, no-new-privileges, 64 PID cap, and 1 CPU / 512 MiB memory and swap limits. Readiness fails closed unless finite cgroup v2 limits are visible. OCR remains in the API process and is explicitly outside this isolation milestone.
+
+Exact PR #585 head `23b8184e9f8f1dac90b4c162a2c906d80fa0bd07` passed FullWorth CI #1372 (run `36831039032`: backend build/tests, MAUI Android, production images/Compose health, API-to-worker synthetic PDF request, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #469 (run `36831038995`). No production deployment occurred. API-to-worker authentication is not yet implemented and relies on internal network membership; OCR isolation, malicious-document corpus testing, and deployed-host containment verification remain follow-ups.
+
 ## PDF parser bound regression tests — 2026-09-29
 
 PR #559 adds synthetic valid-PDF tests for the existing 100-page processing ceiling and 250,000-character extraction ceiling. A generated 101-page PDF is rejected with the page-limit error; a generated 260,000-character text page returns no more than 250,000 extracted characters. No user financial documents are used.
