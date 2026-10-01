@@ -25,11 +25,26 @@ if (args.Length == 1 && args[0] == "--parse-pdf")
 }
 
 var builder = WebApplication.CreateBuilder(args);
+var tlsCertificate =
+    builder.Environment.IsDevelopment()
+        ? null
+        : ParserWorkerTlsCertificate.CreateAndPublish(
+            builder.Configuration[
+                "ParserWorker:TlsCertificatePath"]);
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = WorkerProtocol.MaxRequestBytes;
     options.Limits.MaxRequestLineSize = 8 * 1024;
     options.Limits.MaxRequestHeadersTotalSize = 32 * 1024;
+
+    if (tlsCertificate is not null)
+    {
+        options.ListenAnyIP(
+            8081,
+            listenOptions =>
+                listenOptions.UseHttps(tlsCertificate));
+    }
 });
 
 var authentication =
