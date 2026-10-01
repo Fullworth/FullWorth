@@ -1,3 +1,11 @@
+## Pinned parser-worker transport encryption — 2026-10-01
+
+Production API-to-parser-worker traffic now requires HTTPS. The worker creates a fresh 3072-bit RSA certificate at startup, retains the private key only in memory, and atomically publishes only the public PEM certificate through a dedicated volume. The API mounts that volume read-only, requires an HTTPS worker endpoint outside development, and accepts a certificate only when its current DER bytes match the published pin through a fixed-time SHA-256 comparison. Reloading the public pin on each new TLS handshake permits certificate rotation after a worker restart without requiring an API restart.
+
+Exact corrected PR #596 head `578b7df2acd416ffd6c9998d7e883f6b372dbbf6` passed FullWorth CI #1394 (run `36874493467`: 1,115 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, pinned HTTPS extraction, replay rejection, body-substitution rejection, plaintext HTTP rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #491 (run `36874493170`). It was squash-merged to `development` as `40239ac793cb4ee32ee812a97e2fa3a0156e8e1c`.
+
+The first exact-head run correctly exposed use of a PEM loader that requires private-key material; the corrected implementation uses the certificate-only loader, preserving the design rule that the worker private key is never written or shared. This closes transport confidentiality for the production PDF text-layer worker channel. OCR isolation, a distinct per-document cgroup, a hard peak-memory bound for one permitted image, and deployed-host containment evidence remain open. No production deployment occurred.
+
 ## Parser-worker request-body integrity — 2026-10-01
 
 The API now computes a bounded SHA-256 digest of every PDF sent to the isolated parser worker and includes that digest in the nonce- and timestamp-bound HMAC canonical request. Seekable streams are hashed in a bounded pre-pass and restored to their original position; non-seekable streams are staged in an owned, bounded 15 MiB memory buffer. The worker reads the already bounded body, compares its actual digest with the signed digest using a fixed-time comparison, and rejects a mismatch before launching the parser child process.
