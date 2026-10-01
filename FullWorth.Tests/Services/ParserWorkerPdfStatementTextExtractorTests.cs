@@ -30,6 +30,10 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
                 request.Headers.GetValues(
                     ParserWorkerAuthenticationOptions.NonceHeaderName)
                     .Single();
+            var contentSha256 =
+                request.Headers.GetValues(
+                    ParserWorkerAuthenticationOptions.ContentSha256HeaderName)
+                    .Single();
             var signature =
                 request.Headers.GetValues(
                     ParserWorkerAuthenticationOptions.SignatureHeaderName)
@@ -40,10 +44,14 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 60,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 60);
             Assert.Matches("^[0-9a-f]{32}$", nonce);
+            Assert.Equal(
+                Convert.ToHexString(SHA256.HashData([1, 2, 3]))
+                    .ToLowerInvariant(),
+                contentSha256);
             Assert.Matches("^[0-9a-f]{64}$", signature);
 
             var canonical =
-                $"POST\n/v1/pdf/extract\n{timestamp}\n{nonce}";
+                $"POST\n/v1/pdf/extract\n{timestamp}\n{nonce}\n{contentSha256}";
             var expectedSignature =
                 Convert.ToHexString(
                         HMACSHA256.HashData(
@@ -106,6 +114,31 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
     }
 
     [Fact]
+    public void Extract_RejectsOversizedNonSeekableInputBeforeCallingWorker()
+    {
+        var handler = new RecordingHandler(_ =>
+            throw new InvalidOperationException("Worker must not be called."));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://parser-worker:8081")
+        };
+        var extractor = CreateExtractor(client);
+
+        using var input = new NonSeekableReadStream(
+            new MemoryStream(
+                new byte[(15 * 1024 * 1024) + 1]));
+
+        var exception = Assert.Throws<BillStatementTextExtractionException>(
+            () => extractor.Extract(input));
+
+        Assert.Contains(
+            "15 MiB parser input limit",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.False(handler.Called);
+    }
+
+    [Fact]
     public void Extract_DoesNotExposeWorkerDiagnostics()
     {
         using var client = new HttpClient(new RecordingHandler(_ =>
@@ -149,6 +182,47 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+
+    private sealed class NonSeekableReadStream(Stream source)
+        : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(
+            byte[] buffer,
+            int offset,
+            int count) =>
+            source.Read(buffer, offset, count);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                source.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException();
+        public override void SetLength(long value) =>
+            throw new NotSupportedException();
+        public override void Write(
+            byte[] buffer,
+            int offset,
+            int count) =>
+            throw new NotSupportedException();
+    }
 
     private sealed class RecordingHandler(
         Func<HttpRequestMessage, HttpResponseMessage> responseFactory)

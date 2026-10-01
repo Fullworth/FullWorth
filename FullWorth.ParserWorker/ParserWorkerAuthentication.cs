@@ -9,6 +9,8 @@ public sealed class ParserWorkerAuthentication
         "X-FullWorth-Parser-Timestamp";
     public const string NonceHeaderName =
         "X-FullWorth-Parser-Nonce";
+    public const string ContentSha256HeaderName =
+        "X-FullWorth-Parser-Content-SHA256";
     public const string SignatureHeaderName =
         "X-FullWorth-Parser-Signature";
 
@@ -53,6 +55,7 @@ public sealed class ParserWorkerAuthentication
         StringValues authorizationValues,
         StringValues timestampValues,
         StringValues nonceValues,
+        StringValues contentSha256Values,
         StringValues signatureValues,
         string method,
         string path)
@@ -90,6 +93,8 @@ public sealed class ParserWorkerAuthentication
                 out var timestamp) ||
             !TryGetSingle(nonceValues, out var nonce) ||
             !IsLowerHex(nonce, 32) ||
+            !TryGetSingle(contentSha256Values, out var contentSha256) ||
+            !IsLowerHex(contentSha256, 64) ||
             !TryGetSingle(signatureValues, out var signatureText) ||
             !IsLowerHex(signatureText, 64))
         {
@@ -104,7 +109,7 @@ public sealed class ParserWorkerAuthentication
         }
 
         var canonicalRequest =
-            $"{method}\n{path}\n{timestampText}\n{nonce}";
+            $"{method}\n{path}\n{timestampText}\n{nonce}\n{contentSha256}";
         var expectedSignature =
             HMACSHA256.HashData(
                 _hmacKey,
@@ -138,6 +143,25 @@ public sealed class ParserWorkerAuthentication
         }
 
         return true;
+    }
+
+    public bool HasExpectedContentHash(
+        StringValues contentSha256Values,
+        ReadOnlySpan<byte> content)
+    {
+        if (!TryGetSingle(
+                contentSha256Values,
+                out var contentSha256) ||
+            !IsLowerHex(contentSha256, 64))
+        {
+            return false;
+        }
+
+        var expectedHash = Convert.FromHexString(contentSha256);
+        var actualHash = SHA256.HashData(content);
+        return CryptographicOperations.FixedTimeEquals(
+            actualHash,
+            expectedHash);
     }
 
     private static bool TryGetSingle(

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace FullWorth.API.Services.Statements;
@@ -42,13 +43,14 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
                 "The PDF exceeds the 15 MiB parser input limit.");
         }
 
+        var preparedPdf = PrepareRequestBody(pdfStream);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/pdf/extract")
         {
-            Content = new StreamContent(new BoundedReadStream(pdfStream, MaxPdfBytes))
+            Content = new StreamContent(preparedPdf.Content)
         };
         request.Content.Headers.ContentType =
             new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-        _authentication.ApplyTo(request);
+        _authentication.ApplyTo(request, preparedPdf.Sha256);
 
         try
         {
@@ -109,6 +111,73 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
         }
     }
 
+    private static PreparedPdf PrepareRequestBody(Stream source)
+    {
+        if (source.CanSeek)
+        {
+            var originalPosition = source.Position;
+            try
+            {
+                var sha256 = ComputeBoundedSha256(source, destination: null);
+                return new PreparedPdf(
+                    new BoundedReadStream(source, MaxPdfBytes),
+                    sha256);
+            }
+            finally
+            {
+                source.Position = originalPosition;
+            }
+        }
+
+        var buffered = new MemoryStream();
+        try
+        {
+            var sha256 = ComputeBoundedSha256(source, buffered);
+            buffered.Position = 0;
+            return new PreparedPdf(
+                new BoundedReadStream(
+                    buffered,
+                    MaxPdfBytes,
+                    leaveOpen: false),
+                sha256);
+        }
+        catch
+        {
+            buffered.Dispose();
+            throw;
+        }
+    }
+
+    private static string ComputeBoundedSha256(
+        Stream source,
+        Stream? destination)
+    {
+        using var hash =
+            IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[81920];
+        long total = 0;
+
+        while (true)
+        {
+            var read = source.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                return Convert.ToHexString(hash.GetHashAndReset())
+                    .ToLowerInvariant();
+            }
+
+            if (read > MaxPdfBytes - total)
+            {
+                throw new BillStatementTextExtractionException(
+                    "The PDF exceeds the 15 MiB parser input limit.");
+            }
+
+            hash.AppendData(buffer, 0, read);
+            destination?.Write(buffer, 0, read);
+            total += read;
+        }
+    }
+
     private static byte[] ReadBoundedResponse(Stream source)
     {
         using var destination = new MemoryStream();
@@ -131,7 +200,10 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
         }
     }
 
-    private sealed class BoundedReadStream(Stream source, int maxBytes) : Stream
+    private sealed class BoundedReadStream(
+        Stream source,
+        int maxBytes,
+        bool leaveOpen = true) : Stream
     {
         private long _read;
 
@@ -171,7 +243,11 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
 
         protected override void Dispose(bool disposing)
         {
-            // The caller owns the source stream.
+            if (disposing && !leaveOpen)
+            {
+                source.Dispose();
+            }
+
             base.Dispose(disposing);
         }
 
@@ -180,6 +256,10 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
+    private sealed record PreparedPdf(
+        Stream Content,
+        string Sha256);
+
     private sealed record ParserWorkerResponse(
         int ProtocolVersion,
         string Outcome,

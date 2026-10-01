@@ -626,23 +626,10 @@ jobs:
           )"
           test "$wrong_credential_status" = "401"
 
-          timestamp="$(date +%s)"
-          nonce="$(openssl rand -hex 16)"
-          signature="$(
-            printf 'POST\n/v1/pdf/extract\n%s\n%s' "$timestamp" "$nonce" |
-              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
-              awk '{ print $2 }'
-          )"
+          pdf_file="$(mktemp)"
+          trap 'rm -f "$pdf_file"' EXIT
 
-          response="$(
-            python3 - <<'PY' | docker compose --file compose.production.yml exec -T api \
-              curl --fail --silent --show-error --request POST \
-                --header 'Content-Type: application/pdf' \
-                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
-                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
-                --header "X-FullWorth-Parser-Nonce: ${nonce}" \
-                --header "X-FullWorth-Parser-Signature: ${signature}" \
-                --data-binary @- http://parser-worker:8081/v1/pdf/extract
+          python3 - <<'PY' > "$pdf_file"
           import sys
 
           content = b"BT /F1 12 Tf 72 720 Td (FullWorth integration statement total due $92.17) Tj ET\n"
@@ -671,6 +658,28 @@ jobs:
           )
           sys.stdout.buffer.write(pdf)
           PY
+
+          timestamp="$(date +%s)"
+          nonce="$(openssl rand -hex 16)"
+          content_sha256="$(sha256sum "$pdf_file" | awk '{ print $1 }')"
+          signature="$(
+            printf 'POST\n/v1/pdf/extract\n%s\n%s\n%s' \
+              "$timestamp" "$nonce" "$content_sha256" |
+              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
+              awk '{ print $2 }'
+          )"
+
+          response="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --fail --silent --show-error --request POST \
+                --header 'Content-Type: application/pdf' \
+                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
+                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
+                --header "X-FullWorth-Parser-Nonce: ${nonce}" \
+                --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
+                --header "X-FullWorth-Parser-Signature: ${signature}" \
+                --data-binary @- http://parser-worker:8081/v1/pdf/extract \
+              < "$pdf_file"
           )"
           printf '%s' "$response" | python3 -c '
           import json
@@ -690,10 +699,31 @@ jobs:
                 --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
                 --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
                 --header "X-FullWorth-Parser-Nonce: ${nonce}" \
+                --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
                 --header "X-FullWorth-Parser-Signature: ${signature}" \
                 --data-binary '' http://parser-worker:8081/v1/pdf/extract
           )"
           test "$replay_status" = "401"
+
+          tampered_nonce="$(openssl rand -hex 16)"
+          tampered_signature="$(
+            printf 'POST\n/v1/pdf/extract\n%s\n%s\n%s' \
+              "$timestamp" "$tampered_nonce" "$content_sha256" |
+              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
+              awk '{ print $2 }'
+          )"
+          tampered_body_status="$(
+            docker compose --file compose.production.yml exec -T api \
+              curl --silent --output /dev/null --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/pdf' \
+                --header "Authorization: Bearer ${BILLWATCH_PARSER_AUTH_TOKEN}" \
+                --header "X-FullWorth-Parser-Timestamp: ${timestamp}" \
+                --header "X-FullWorth-Parser-Nonce: ${tampered_nonce}" \
+                --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
+                --header "X-FullWorth-Parser-Signature: ${tampered_signature}" \
+                --data-binary '' http://parser-worker:8081/v1/pdf/extract
+          )"
+          test "$tampered_body_status" = "401"
 
       - name: Install visual acceptance dependencies
         if: steps.visual_changes.outputs.required == 'true'

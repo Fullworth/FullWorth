@@ -82,13 +82,21 @@ public sealed class ParserWorkerProtocolTests
             $"Bearer {token}",
             signed.Timestamp,
             signed.Nonce,
+            signed.ContentSha256,
             signed.Signature,
             "POST",
             "/v1/pdf/extract"));
+        Assert.True(authentication.HasExpectedContentHash(
+            signed.ContentSha256,
+            new byte[] { 1, 2, 3 }));
+        Assert.False(authentication.HasExpectedContentHash(
+            signed.ContentSha256,
+            new byte[] { 1, 2, 4 }));
         Assert.False(authentication.IsAuthorized(
             $"Bearer {token}",
             signed.Timestamp,
             signed.Nonce,
+            signed.ContentSha256,
             signed.Signature,
             "POST",
             "/v1/pdf/extract"));
@@ -111,6 +119,7 @@ public sealed class ParserWorkerProtocolTests
             "Bearer wrong-worker-authentication-token-more-than-32-characters",
             signed.Timestamp,
             signed.Nonce,
+            signed.ContentSha256,
             signed.Signature,
             "POST",
             "/v1/pdf/extract"));
@@ -118,6 +127,7 @@ public sealed class ParserWorkerProtocolTests
             $"Bearer {token}",
             signed.Timestamp,
             signed.Nonce,
+            signed.ContentSha256,
             new string('0', 64),
             "POST",
             "/v1/pdf/extract"));
@@ -131,6 +141,7 @@ public sealed class ParserWorkerProtocolTests
             $"Bearer {token}",
             expired.Timestamp,
             expired.Nonce,
+            expired.ContentSha256,
             expired.Signature,
             "POST",
             "/v1/pdf/extract"));
@@ -144,6 +155,7 @@ public sealed class ParserWorkerProtocolTests
             $"Bearer {token}",
             future.Timestamp,
             future.Nonce,
+            future.ContentSha256,
             future.Signature,
             "POST",
             "/v1/pdf/extract"));
@@ -176,20 +188,29 @@ public sealed class ParserWorkerProtocolTests
     {
         var timestampText =
             timestamp.ToString(CultureInfo.InvariantCulture);
+        var contentSha256 =
+            Convert.ToHexString(
+                    SHA256.HashData(new byte[] { 1, 2, 3 }))
+                .ToLowerInvariant();
         var canonical =
-            $"POST\n/v1/pdf/extract\n{timestampText}\n{nonce}";
+            $"POST\n/v1/pdf/extract\n{timestampText}\n{nonce}\n{contentSha256}";
         var signature =
             Convert.ToHexString(
                     HMACSHA256.HashData(
                         Encoding.UTF8.GetBytes(token),
                         Encoding.UTF8.GetBytes(canonical)))
                 .ToLowerInvariant();
-        return new SignedRequest(timestampText, nonce, signature);
+        return new SignedRequest(
+            timestampText,
+            nonce,
+            contentSha256,
+            signature);
     }
 
     private sealed record SignedRequest(
         string Timestamp,
         string Nonce,
+        string ContentSha256,
         string Signature);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
