@@ -1,0 +1,119 @@
+using System.Net;
+using System.Text;
+using FullWorth.API.Services.Statements;
+
+namespace FullWorth.Tests.Services;
+
+public sealed class ParserWorkerPdfStatementTextExtractorTests
+{
+    [Fact]
+    public void Extract_SendsPdfAndValidatesWorkerResponse()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("/v1/pdf/extract", request.RequestUri?.AbsolutePath);
+            Assert.Equal("application/pdf", request.Content?.Headers.ContentType?.MediaType);
+            Assert.Equal(new byte[] { 1, 2, 3 }, request.Content!.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+            return Json(HttpStatusCode.OK,
+                """{"protocolVersion":1,"outcome":"text","errorCode":"","pageCount":2,"text":"Provider statement total due $94.99","requiresOcr":false}""");
+        });
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://parser-worker:8081")
+        };
+        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+
+        var result = extractor.Extract(new MemoryStream(new byte[] { 1, 2, 3 }));
+
+        Assert.Equal(2, result.PageCount);
+        Assert.Equal("Provider statement total due $94.99", result.Text);
+        Assert.False(result.RequiresOcr);
+    }
+
+    [Fact]
+    public void Extract_RejectsWorkerOutputAboveCharacterLimit()
+    {
+        using var client = new HttpClient(new RecordingHandler(_ =>
+            Json(HttpStatusCode.OK,
+                $$"""{"protocolVersion":1,"outcome":"text","errorCode":"","pageCount":1,"text":"{{new string('x', 250_001)}}","requiresOcr":false}""")))
+        {
+            BaseAddress = new Uri("http://parser-worker:8081")
+        };
+        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+
+        var exception = Assert.Throws<BillStatementTextExtractionException>(
+            () => extractor.Extract(new MemoryStream([1])));
+
+        Assert.Contains("could not safely read", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Extract_RejectsOversizedInputBeforeCallingWorker()
+    {
+        var handler = new RecordingHandler(_ =>
+            throw new InvalidOperationException("Worker must not be called."));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://parser-worker:8081")
+        };
+        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+
+        using var input = new MemoryStream(new byte[(15 * 1024 * 1024) + 1]);
+
+        var exception = Assert.Throws<BillStatementTextExtractionException>(
+            () => extractor.Extract(input));
+
+        Assert.Contains("15 MiB parser input limit", exception.Message, StringComparison.Ordinal);
+        Assert.False(handler.Called);
+    }
+
+    [Fact]
+    public void Extract_DoesNotExposeWorkerDiagnostics()
+    {
+        using var client = new HttpClient(new RecordingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.BadGateway)
+            {
+                Content = new StringContent("parser stack trace and document content")
+            }))
+        {
+            BaseAddress = new Uri("http://parser-worker:8081")
+        };
+        var extractor = new ParserWorkerPdfStatementTextExtractor(client);
+
+        var exception = Assert.Throws<BillStatementTextExtractionException>(
+            () => extractor.Extract(new MemoryStream([1])));
+
+        Assert.DoesNotContain("stack trace", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("document content", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static HttpResponseMessage Json(HttpStatusCode statusCode, string json) =>
+        new(statusCode)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+
+    private sealed class RecordingHandler(
+        Func<HttpRequestMessage, HttpResponseMessage> responseFactory)
+        : HttpMessageHandler
+    {
+        public bool Called { get; private set; }
+
+        protected override HttpResponseMessage Send(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Called = true;
+            return responseFactory(request);
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Called = true;
+            return Task.FromResult(responseFactory(request));
+        }
+    }
+}

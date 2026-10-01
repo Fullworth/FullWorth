@@ -187,7 +187,7 @@ public sealed class PdfBillStatementTextExtractorTests
             result.RequiresOcr);
     }
 
-    private static byte[] CreatePdf(
+    internal static byte[] CreatePdf(
         string text,
         int pageCount = 1)
     {

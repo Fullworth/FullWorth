@@ -131,6 +131,24 @@ public static class WorkerResourceLimits
             $"fullworth-parser-worker-{processId.ToString(CultureInfo.InvariantCulture)}-{instanceId}"));
     }
 
+    public static bool AreCurrentContainerLimitsEnforced()
+    {
+        try
+        {
+            return HasFiniteCpuLimit(File.ReadAllText(Path.Combine(CgroupRoot, CpuMaxPath))) &&
+                   HasFiniteMemoryLimit(File.ReadAllText(Path.Combine(CgroupRoot, MemoryMaxPath))) &&
+                   HasFiniteSwapLimit(File.ReadAllText(Path.Combine(CgroupRoot, MemorySwapMaxPath)));
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     public static bool HasValidWorkerLimitConfiguration(
         string cpuQuota,
         string cpuPeriod,

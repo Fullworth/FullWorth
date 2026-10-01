@@ -12,6 +12,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: final
       args:
         BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
     restart: unless-stopped
@@ -29,9 +30,12 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      parser-worker:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
+      ParserWorker__BaseUrl: http://parser-worker:8081
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ConnectionStrings__BillWatchDatabase: Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
       Database__MigrateOnStartup: "true"
@@ -69,6 +73,48 @@ services:
       - api_edge
       - web_api
       - api_egress
+      - parser_worker
+
+  parser-worker:
+    image: billwatch-parser-worker:${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: parser-worker-final
+      args:
+        BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
+    restart: unless-stopped
+    stop_grace_period: 10s
+    logging: *default-logging
+    user: "1654:1654"
+    read_only: true
+    pids_limit: 64
+    cpus: ${BILLWATCH_PARSER_CPU_LIMIT:-1.0}
+    mem_limit: ${BILLWATCH_PARSER_MEMORY_LIMIT:-512m}
+    memswap_limit: ${BILLWATCH_PARSER_MEMORY_LIMIT:-512m}
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8081
+      DOTNET_EnableDiagnostics: "0"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1654,gid=1654,mode=0700
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - http://localhost:8081/health/ready
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - parser_worker
 
   web:
     image: billwatch-web:${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
@@ -293,6 +339,8 @@ services:
         ipv4_address: 172.31.0.10
 
 networks:
+  parser_worker:
+    internal: true
   data:
     internal: true
   api_edge:

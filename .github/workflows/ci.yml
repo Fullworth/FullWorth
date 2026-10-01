@@ -552,6 +552,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          target: final
           load: true
           push: false
           tags: billwatch-api:${{ github.sha }}
@@ -559,6 +560,21 @@ jobs:
             BILLWATCH_RELEASE_ID=${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
+
+      - name: Build production parser worker image
+        if: steps.container_changes.outputs.required == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          target: parser-worker-final
+          load: true
+          push: false
+          tags: billwatch-parser-worker:${{ github.sha }}
+          build-args: |
+            BILLWATCH_RELEASE_ID=${{ github.sha }}
+          cache-from: type=gha,scope=parser-worker
+          cache-to: type=gha,mode=max,scope=parser-worker
 
       - name: Build production web image
         if: steps.container_changes.outputs.required == 'true'
@@ -585,6 +601,55 @@ jobs:
       - name: Verify web HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 --resolve web.localhost:443:127.0.0.1 https://web.localhost/health/ready
+
+      - name: Verify isolated PDF parser request path
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          response="$(
+            python3 - <<'PY' | docker compose --file compose.production.yml exec -T api \
+              curl --fail --silent --show-error --request POST \
+                --header 'Content-Type: application/pdf' \
+                --data-binary @- http://parser-worker:8081/v1/pdf/extract
+          import sys
+
+          content = b"BT /F1 12 Tf 72 720 Td (FullWorth integration statement total due $92.17) Tj ET\n"
+          objects = [
+              b"<< /Type /Catalog /Pages 2 0 R >>",
+              b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+              b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+              b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+              b"<< /Length " + str(len(content)).encode() + b" >>\nstream\n" + content + b"endstream",
+          ]
+
+          pdf = bytearray(b"%PDF-1.4\n")
+          offsets = [0]
+          for index, body in enumerate(objects, start=1):
+              offsets.append(len(pdf))
+              pdf.extend(f"{index} 0 obj\n".encode() + body + b"\nendobj\n")
+
+          xref = len(pdf)
+          pdf.extend(f"xref\n0 {len(offsets)}\n".encode())
+          pdf.extend(b"0000000000 65535 f \n")
+          for offset in offsets[1:]:
+              pdf.extend(f"{offset:010d} 00000 n \n".encode())
+          pdf.extend(
+              f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\n"
+              f"startxref\n{xref}\n%%EOF\n".encode()
+          )
+          sys.stdout.buffer.write(pdf)
+          PY
+          )"
+          printf '%s' "$response" | python3 -c '
+          import json
+          import sys
+
+          result = json.load(sys.stdin)
+          assert result.get("protocolVersion") == 1, result
+          assert result.get("outcome") == "text", result
+          assert result.get("pageCount") == 1, result
+          assert "total due $92.17" in result.get("text", ""), result
+          '
 
       - name: Install visual acceptance dependencies
         if: steps.visual_changes.outputs.required == 'true'

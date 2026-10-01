@@ -2,8 +2,8 @@ using System.Text.Json;
 
 public static class WorkerProtocol
 {
-    public const int MaxRequestBytes = 64 * 1024;
-    public const int MaxResponseBytes = 16 * 1024;
+    public const int MaxRequestBytes = 15 * 1024 * 1024;
+    public const int MaxResponseBytes = 1_100_000;
 
     public static async Task<WorkerResponse> BuildResponseAsync(
         Stream input,
@@ -79,5 +79,11 @@ public static class WorkerProtocol
         }
     }
 
-    public sealed record WorkerResponse(int ProtocolVersion, string Outcome, string ErrorCode);
+    public sealed record WorkerResponse(
+        int ProtocolVersion,
+        string Outcome,
+        string ErrorCode,
+        int PageCount = 0,
+        string Text = "",
+        bool RequiresOcr = false);
 }
