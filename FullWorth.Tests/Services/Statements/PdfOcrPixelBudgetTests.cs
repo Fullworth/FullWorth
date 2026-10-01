@@ -66,4 +66,86 @@ public sealed class PdfOcrPixelBudgetTests
             long.MaxValue - 1,
             budget.ConsumedPixels);
     }
+
+    [Fact]
+    public void TryEstimate_AllowsEstimateAtTheAdmissionLimit()
+    {
+        var encodedBytes =
+            1_024;
+
+        var pixelCount =
+            (PdfImageMemoryAdmission.MaximumEstimatedWorkingSetBytes -
+             encodedBytes) /
+            PdfImageMemoryAdmission.EstimatedBytesPerPixel;
+
+        Assert.True(
+            PdfImageMemoryAdmission.TryEstimate(
+                pixelCount,
+                encodedBytes,
+                out var estimatedBytes));
+
+        Assert.Equal(
+            PdfImageMemoryAdmission.MaximumEstimatedWorkingSetBytes,
+            estimatedBytes);
+    }
+
+    [Fact]
+    public void TryEstimate_RejectsEstimateAboveAdmissionLimit()
+    {
+        var encodedBytes =
+            1_024;
+
+        var pixelCount =
+            ((PdfImageMemoryAdmission.MaximumEstimatedWorkingSetBytes -
+              encodedBytes) /
+             PdfImageMemoryAdmission.EstimatedBytesPerPixel) +
+            1;
+
+        Assert.False(
+            PdfImageMemoryAdmission.TryEstimate(
+                pixelCount,
+                encodedBytes,
+                out var estimatedBytes));
+
+        Assert.Equal(
+            0,
+            estimatedBytes);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-1, 0)]
+    [InlineData(1, -1)]
+    public void TryEstimate_RejectsInvalidInputs(
+        long pixelCount,
+        long encodedBytes)
+    {
+        Assert.False(
+            PdfImageMemoryAdmission.TryEstimate(
+                pixelCount,
+                encodedBytes,
+                out var estimatedBytes));
+
+        Assert.Equal(
+            0,
+            estimatedBytes);
+    }
+
+    [Fact]
+    public void TryEstimate_AllowsAConservativeSubLimitImage()
+    {
+        Assert.True(
+            PdfImageMemoryAdmission.TryEstimate(
+                pixelCount:
+                    20_000_000,
+                encodedBytes:
+                    1_024,
+                out var estimatedBytes));
+
+        Assert.Equal(
+            (20_000_000 * PdfImageMemoryAdmission.EstimatedBytesPerPixel) +
+            1_024,
+            estimatedBytes);
+    }
+
 }
