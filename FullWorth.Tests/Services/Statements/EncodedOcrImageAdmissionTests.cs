@@ -138,6 +138,9 @@ public sealed class EncodedOcrImageAdmissionTests
         signature.CopyTo(
             image,
             0);
+        BinaryPrimitives.WriteUInt32BigEndian(
+            image.AsSpan(8, 4),
+            13);
         "IHDR"u8.CopyTo(
             image.AsSpan(12, 4));
         BinaryPrimitives.WriteUInt32BigEndian(
