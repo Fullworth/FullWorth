@@ -54,7 +54,8 @@ def service_networks(name):
     return set(configured.keys())
 
 expected_networks = {
-    "api": {"data", "api_edge", "web_api", "api_egress"},
+    "api": {"data", "api_edge", "web_api", "api_egress", "parser_worker"},
+    "parser-worker": {"parser_worker"},
     "web": {"web_edge", "web_api", "web_session", "web_egress"},
     "web-session-cache": {"web_session"},
     "database": {"data"},
@@ -71,7 +72,7 @@ for service, expected in expected_networks.items():
             f"expected {sorted(expected)}."
         )
 
-for name in ("data", "api_edge", "web_edge", "web_api", "web_session"):
+for name in ("data", "api_edge", "web_edge", "web_api", "web_session", "parser_worker"):
     if networks[name].get("internal") is not True:
         fail(f"{name} must be an internal-only Docker network.")
 
@@ -126,6 +127,45 @@ for name in ("api", "web"):
 
     if "size=256m" not in tmp_entry and "size=268435456" not in tmp_entry:
         fail(f"{name} /tmp must be capped at 256 MiB: {tmp_entry!r}")
+
+parser_worker = services["parser-worker"]
+
+if parser_worker.get("read_only") is not True:
+    fail("parser-worker root filesystem must be read-only.")
+
+if parser_worker.get("user") != "1654:1654":
+    fail("parser-worker must run as its dedicated unprivileged user.")
+
+if parser_worker.get("ports"):
+    fail("parser-worker must not publish host ports.")
+
+if parser_worker.get("volumes"):
+    fail("parser-worker must not mount persistent or application data.")
+
+if parser_worker.get("pids_limit") != 64:
+    fail("parser-worker must enforce a 64 PID ceiling.")
+
+if float(parser_worker.get("cpus", 0)) != 1.0:
+    fail("parser-worker must enforce a 1 CPU ceiling.")
+
+if int(parser_worker.get("mem_limit", 0)) != 512 * 1024 * 1024:
+    fail("parser-worker must enforce a 512 MiB memory ceiling.")
+
+if int(parser_worker.get("memswap_limit", 0)) != 512 * 1024 * 1024:
+    fail("parser-worker must disable swap expansion beyond its memory ceiling.")
+
+if "ALL" not in parser_worker.get("cap_drop", []):
+    fail("parser-worker must drop all Linux capabilities.")
+
+if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
+    fail("parser-worker must disable privilege escalation.")
+
+if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_healthy":
+    fail("API must wait for parser-worker resource-limit readiness.")
+
+parser_url = services["api"].get("environment", {}).get("ParserWorker__BaseUrl")
+if parser_url != "http://parser-worker:8081":
+    fail("API must use the internal parser-worker endpoint.")
 
 session_cache = services["web-session-cache"]
 
