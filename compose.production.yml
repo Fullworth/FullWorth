@@ -36,6 +36,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
       ParserWorker__BaseUrl: http://parser-worker:8081
+      ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ConnectionStrings__BillWatchDatabase: Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
       Database__MigrateOnStartup: "true"
@@ -100,6 +101,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8081
       DOTNET_EnableDiagnostics: "0"
+      ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1654,gid=1654,mode=0700
     healthcheck:

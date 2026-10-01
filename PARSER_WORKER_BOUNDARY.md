@@ -8,9 +8,9 @@ This document records the security design contract and the partial implementatio
 
 PR #585 adds a dedicated parser-worker container for PDF text-layer extraction. The API sends a bounded PDF body over the internal-only `parser_worker` Docker network. The worker accepts one request at a time, starts a fresh parser child with a sanitized environment, kills the process tree after a 20-second deadline, validates the protocol response, and returns no more than the configured response bound. Parser exceptions and stderr are not returned to the API caller or logged. Stderr is drained through a fixed 8 KiB buffer and discarded; it is never accumulated in an unbounded string in the API process.
 
-The production Compose configuration gives the worker a read-only root filesystem, dedicated non-root user, no Linux capabilities, no published ports or mounted volumes, an internal-only network, a 64-process ceiling, and finite CPU, memory, and swap ceilings. Worker readiness fails closed unless the cgroup v2 CPU, memory, and swap limits are visible. Exact-head CI must still verify image build, stack readiness, and the full test suite before this change is merged. No production deployment is implied.
+The production Compose configuration gives the worker a read-only root filesystem, dedicated non-root user, no Linux capabilities, no published ports or mounted volumes, an internal-only network, a 64-process ceiling, and finite CPU, memory, and swap ceilings. Worker readiness fails closed unless the cgroup v2 CPU, memory, and swap limits are visible. Extract requests also require a separate 32-character-or-longer bearer credential shared only by the API and worker. The worker validates the credential with a fixed-time hash comparison before content-type checks or body reads; liveness/readiness remain unauthenticated for local orchestration. Production configuration validation rejects a missing, short, placeholder, or reused parser credential. Exact-head CI verifies the authenticated request path. No production deployment is implied.
 
-Scope is limited to PDF text-layer extraction. Scanned-document OCR still runs inside the API process after the worker reports `needs_ocr`; therefore the API remains able to open the original statement for that path. The worker child shares the worker container's cgroup rather than receiving a distinct per-document cgroup. The API-to-worker transport relies on Docker network membership and has no application-layer authentication; the worker network must remain attached only to the API and parser-worker services. These limits do not meet the full-document isolation contract below.
+Scope is limited to PDF text-layer extraction. Scanned-document OCR still runs inside the API process after the worker reports `needs_ocr`; therefore the API remains able to open the original statement for that path. The worker child shares the worker container's cgroup rather than receiving a distinct per-document cgroup. The shared bearer credential authenticates the calling service but does not provide per-request replay protection or transport encryption; the internal-only worker network must remain attached only to the API and parser-worker services. These limits do not meet the full-document isolation contract below.
 
 ## Trust boundary
 
@@ -70,6 +70,7 @@ Before enabling the worker for production traffic, CI must cover:
 - malformed, truncated, corrupt, compressed, and decompression-bomb fixtures;
 - oversized declared streams and invalid filters;
 - protocol truncation, oversized frames, duplicate fields, and trailing bytes;
+- missing, malformed, duplicate, and incorrect worker authentication credentials;
 - deadline expiry with a worker that never exits;
 - worker abnormal exit and process-tree cleanup;
 - memory and CPU ceiling enforcement on the supported Linux container runtime;

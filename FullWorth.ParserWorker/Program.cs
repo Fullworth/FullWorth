@@ -32,6 +32,11 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestHeadersTotalSize = 32 * 1024;
 });
 
+var authentication =
+    new ParserWorkerAuthentication(
+        builder.Configuration["ParserWorker:AuthenticationToken"],
+        builder.Environment.IsDevelopment());
+
 var app = builder.Build();
 using var requestGate = new SemaphoreSlim(1, 1);
 
@@ -43,6 +48,11 @@ app.MapGet("/health/ready", () =>
 
 app.MapPost("/v1/pdf/extract", async (HttpContext context) =>
 {
+    if (!authentication.IsAuthorized(context.Request.Headers.Authorization))
+    {
+        return Results.Unauthorized();
+    }
+
     if (!string.Equals(context.Request.ContentType, PdfContentType, StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);

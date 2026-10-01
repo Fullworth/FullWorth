@@ -18,10 +18,14 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
+    private readonly ParserWorkerAuthenticationOptions _authentication;
 
-    public ParserWorkerPdfStatementTextExtractor(HttpClient httpClient)
+    public ParserWorkerPdfStatementTextExtractor(
+        HttpClient httpClient,
+        ParserWorkerAuthenticationOptions authentication)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _authentication = authentication ?? throw new ArgumentNullException(nameof(authentication));
     }
 
     public BillStatementTextExtractionResult Extract(Stream pdfStream)
@@ -44,6 +48,8 @@ public sealed class ParserWorkerPdfStatementTextExtractor : IPdfStatementTextExt
         };
         request.Content.Headers.ContentType =
             new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        request.Headers.Authorization =
+            _authentication.CreateHeader();
 
         try
         {

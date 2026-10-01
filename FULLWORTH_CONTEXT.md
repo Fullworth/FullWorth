@@ -1,3 +1,9 @@
+## Authenticated parser-worker boundary — 2026-10-01
+
+The API-to-parser-worker extract path now requires a dedicated bearer credential in addition to the internal-only Docker network. Production startup fails closed when the credential is missing or malformed; production environment validation requires at least 32 characters and rejects placeholder or reused database/Web-session credentials. The worker rejects missing, duplicate, malformed, and incorrect authorization before inspecting content type or reading the PDF body, using fixed-time comparison of SHA-256 token hashes. The API attaches the credential only to worker requests. CI exercises the authenticated production-container request path, unit tests cover exact/missing/wrong/duplicate credentials, and the container boundary test verifies both services receive the same strong credential.
+
+This is service authentication, not per-request replay protection or transport encryption. The worker network remains internal-only and attached only to the API and parser worker. No production deployment occurred.
+
 ## Parser worker diagnostic-memory hardening — 2026-10-01
 
 PR #586 replaces the API process's unbounded parser-subprocess stderr string with a fixed 8 KiB discard buffer. A generated 32 MiB diagnostic-stream regression test verifies complete draining without materializing the stream as a result; cancellation remains connected to the parser deadline. `PARSER_WORKER_BOUNDARY.md` records this bound. This closes diagnostic-output accumulation in the API process; it does not add parser/worker transport authentication or move OCR out of the API.

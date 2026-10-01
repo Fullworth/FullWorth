@@ -64,6 +64,31 @@ public sealed class ParserWorkerProtocolTests
     }
 
     [Fact]
+    public void Authentication_AcceptsOnlyExactSingleBearerCredential()
+    {
+        const string token =
+            "worker-authentication-test-token-more-than-32-characters";
+        var authentication =
+            new ParserWorkerAuthentication(token, isDevelopment: false);
+
+        Assert.True(authentication.IsAuthorized($"Bearer {token}"));
+        Assert.False(authentication.IsAuthorized("Bearer wrong-worker-authentication-token-more-than-32-characters"));
+        Assert.False(authentication.IsAuthorized(token));
+        Assert.False(authentication.IsAuthorized(
+            new Microsoft.Extensions.Primitives.StringValues(
+                [$"Bearer {token}", $"Bearer {token}"])));
+    }
+
+    [Fact]
+    public void Authentication_RejectsMissingProductionToken()
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => new ParserWorkerAuthentication(
+                configuredToken: null,
+                isDevelopment: false));
+    }
+
+    [Fact]
     public async Task DrainAsync_ConsumesLargeDiagnosticStreamWithoutMaterializingIt()
     {
         const int length = 32 * 1024 * 1024;
