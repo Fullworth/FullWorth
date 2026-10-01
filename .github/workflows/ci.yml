@@ -560,6 +560,21 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
+      - name: Build production parser worker image
+        if: steps.container_changes.outputs.required == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          target: parser-worker-final
+          load: true
+          push: false
+          tags: billwatch-parser-worker:${{ github.sha }}
+          build-args: |
+            BILLWATCH_RELEASE_ID=${{ github.sha }}
+          cache-from: type=gha,scope=parser-worker
+          cache-to: type=gha,mode=max,scope=parser-worker
+
       - name: Build production web image
         if: steps.container_changes.outputs.required == 'true'
         uses: docker/build-push-action@v7
