@@ -1,3 +1,9 @@
+## Adversarial parser-worker PDF corpus — 2026-10-01
+
+The isolated parser now independently rejects bodies without the PDF file signature before invoking PdfPig. A generated, user-data-free regression corpus covers non-PDF payloads, truncated object graphs, dangling trailer roots, oversized declared streams, invalid ASCIIHex and Flate data, and a valid high-compression expansion fixture. Rejections return stable codes without parser diagnostics or document content; the compressed-expansion fixture proves extracted output remains capped at 250,000 characters.
+
+This closes the generated malicious/corrupt PDF corpus gap for text-layer parsing. It does not isolate scanned-document OCR, establish a distinct per-document cgroup, provide replay protection or transport encryption, or prove containment on the deployed production host. No production deployment occurred.
+
 ## Authenticated parser-worker boundary — 2026-10-01
 
 The API-to-parser-worker extract path now requires a dedicated bearer credential in addition to the internal-only Docker network. Production startup fails closed when the credential is missing or malformed; production environment validation requires at least 32 characters and rejects placeholder or reused database/Web-session credentials. The worker rejects missing, duplicate, malformed, and incorrect authorization before inspecting content type or reading the PDF body, using fixed-time comparison of SHA-256 token hashes. The API attaches the credential only to worker requests. CI exercises the authenticated production-container request path, unit tests cover exact/missing/wrong/duplicate credentials, and the container boundary test verifies both services receive the same strong credential.

@@ -38,6 +38,14 @@ public sealed class PdfStatementTextParser
             }
 
             buffer.Position = 0;
+            Span<byte> signature = stackalloc byte[5];
+            if (buffer.Read(signature) != signature.Length ||
+                !signature.SequenceEqual("%PDF-"u8))
+            {
+                return Rejected("invalid_pdf_signature");
+            }
+
+            buffer.Position = 0;
             using var document = PdfDocument.Open(buffer);
             var text = new StringBuilder();
             var pageCount = 0;
