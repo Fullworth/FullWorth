@@ -17,6 +17,7 @@ projects = {
     "FullWorth.Web": os.path.join(root, "FullWorth.Web", "FullWorth.Web.csproj"),
     "FullWorth.MAUI": os.path.join(root, "FullWorth.csproj"),
     "FullWorth.Tests": os.path.join(root, "FullWorth.Tests", "FullWorth.Tests.csproj"),
+    "FullWorth.ParserWorker": os.path.join(root, "FullWorth.ParserWorker", "FullWorth.ParserWorker.csproj"),
 }
 
 allowed = {
@@ -24,7 +25,8 @@ allowed = {
     "FullWorth.API": {"FullWorth.Core"},
     "FullWorth.Web": {"FullWorth.Core"},
     "FullWorth.MAUI": {"FullWorth.Core"},
-    "FullWorth.Tests": {"FullWorth.API", "FullWorth.Core", "FullWorth.Web"},
+    "FullWorth.Tests": {"FullWorth.API", "FullWorth.Core", "FullWorth.Web", "FullWorth.ParserWorker"},
+    "FullWorth.ParserWorker": set(),
 }
 
 canonical = {}
