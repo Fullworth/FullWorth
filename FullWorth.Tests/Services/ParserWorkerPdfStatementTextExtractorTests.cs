@@ -100,6 +100,14 @@ public sealed class ParserWorkerPdfStatementTextExtractorTests
     {
         public bool Called { get; private set; }
 
+        protected override HttpResponseMessage Send(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Called = true;
+            return responseFactory(request);
+        }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
