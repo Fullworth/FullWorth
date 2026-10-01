@@ -39,6 +39,30 @@ public sealed class ParserWorkerResourceLimitTests
         Assert.Equal(expected, WorkerResourceLimits.HasFiniteCpuLimit(value));
     }
 
+    [Theory]
+    [InlineData("200000", "100000", "1073741824", "0", true)]
+    [InlineData("1", "1", "1", "1", true)]
+    [InlineData("max", "100000", "1073741824", "0", false)]
+    [InlineData("200000", "0", "1073741824", "0", false)]
+    [InlineData("200000", "100000", "max", "0", false)]
+    [InlineData("200000", "100000", "1073741824", "max", false)]
+    [InlineData("200000", "100000", "1073741824", "-1", false)]
+    public void WorkerConfigurationRequiresExplicitFiniteCpuAndMemoryLimits(
+        string cpuQuota,
+        string cpuPeriod,
+        string memoryMax,
+        string swapMax,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            WorkerResourceLimits.HasValidWorkerLimitConfiguration(
+                cpuQuota,
+                cpuPeriod,
+                memoryMax,
+                swapMax));
+    }
+
     [Fact]
     public async Task ProtocolRejectsWhenResourceLimitsAreUnverified()
     {
