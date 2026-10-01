@@ -79,5 +79,11 @@ public static class WorkerProtocol
         }
     }
 
-    public sealed record WorkerResponse(\n        int ProtocolVersion,\n        string Outcome,\n        string ErrorCode,\n        int PageCount = 0,\n        string Text = \"\",\n        bool RequiresOcr = false);
+    public sealed record WorkerResponse(
+        int ProtocolVersion,
+        string Outcome,
+        string ErrorCode,
+        int PageCount = 0,
+        string Text = "",
+        bool RequiresOcr = false);
 }
