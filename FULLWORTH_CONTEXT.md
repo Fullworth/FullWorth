@@ -2,6 +2,8 @@
 
 The API-to-parser-worker extract path now requires a dedicated bearer credential in addition to the internal-only Docker network. Production startup fails closed when the credential is missing or malformed; production environment validation requires at least 32 characters and rejects placeholder or reused database/Web-session credentials. The worker rejects missing, duplicate, malformed, and incorrect authorization before inspecting content type or reading the PDF body, using fixed-time comparison of SHA-256 token hashes. The API attaches the credential only to worker requests. CI exercises the authenticated production-container request path, unit tests cover exact/missing/wrong/duplicate credentials, and the container boundary test verifies both services receive the same strong credential.
 
+Exact PR #588 head `ce41a92784c61eba989122f983bf059eae091ffb` passed FullWorth CI #1379 (run `36840910131`: backend build/tests, MAUI Android, production images/Compose health, unauthenticated and incorrect-credential rejection, authenticated PDF extraction, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #476 (run `36840910005`). It was squash-merged to `development` as `52fd77c2cb405c9dc161d9bf822a41f7c6815173`.
+
 This is service authentication, not per-request replay protection or transport encryption. The worker network remains internal-only and attached only to the API and parser worker. No production deployment occurred.
 
 ## Parser worker diagnostic-memory hardening — 2026-10-01
