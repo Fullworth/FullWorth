@@ -1,3 +1,13 @@
+## Standalone OCR image pre-decode admission — 2026-10-01
+
+Standalone PNG and JPEG statement uploads now pass a bounded, allocation-light header inspection before any native Tesseract/Leptonica decode. PNG admission requires the exact signature and canonical 13-byte IHDR, while JPEG admission safely walks length-delimited marker segments to a supported start-of-frame marker. Malformed, truncated, unsupported, zero-dimension, and over-limit inputs fail closed. Accepted dimensions reuse the PDF OCR memory admission model: encoded bytes plus a conservative eight decoded bytes per pixel must remain within 256 MiB.
+
+Focused tests cover bounded PNG/JPEG acceptance, an oversized 50-million-pixel PNG, malformed and unsupported inputs, zero dimensions, missing JPEG SOF, and truncated JPEG segments; existing memory-estimate tests retain exact-limit, over-limit, invalid, and 20-million-pixel coverage. The boundary and its limitations are documented in `PARSER_WORKER_BOUNDARY.md`.
+
+The initial PR build exposed missing media-type plumbing and was corrected on the same branch. Exact corrected PR #598 head `f3fa8d70d43e12983b53e0f8eaa005a5c39c1b5a` passed FullWorth CI #1397 (run `36903617911`: backend build/tests, migrations, transaction regression, MAUI Android, production images and Compose health, isolated parser path, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #494 (run `36903618117`). It was squash-merged to `development` as `978f4729bc145f350c5467411517df709ac7c7e5`.
+
+This is defense-in-depth admission control, not hard native-memory containment. OCR still executes inside the API process; separate OCR isolation, a distinct per-document cgroup, a hard OS-enforced per-image peak-memory limit, and deployed-host containment evidence remain open. No production deployment occurred.
+
 ## Pinned parser-worker transport encryption — 2026-10-01
 
 Production API-to-parser-worker traffic now requires HTTPS. The worker creates a fresh 3072-bit RSA certificate at startup, retains the private key only in memory, and atomically publishes only the public PEM certificate through a dedicated volume. The API mounts that volume read-only, requires an HTTPS worker endpoint outside development, and accepts a certificate only when its current DER bytes match the published pin through a fixed-time SHA-256 comparison. Reloading the public pin on each new TLS handshake permits certificate rotation after a worker restart without requiring an API restart.
