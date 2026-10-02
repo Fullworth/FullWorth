@@ -20,9 +20,27 @@ expect_failure()
 }
 
 backup_script="$root_dir/deploy/backup/backup.sh"
+backup_runner="$root_dir/deploy/run-backup.sh"
 maintenance_runner="$root_dir/deploy/run-backup-maintenance.sh"
 sh -n "$backup_script" || fail "backup script has invalid POSIX shell syntax."
+sh -n "$backup_runner" || fail "backup runner has invalid POSIX shell syntax."
 sh -n "$maintenance_runner" || fail "maintenance runner has invalid POSIX shell syntax."
+
+if grep -Fq 'compose up --detach --wait --wait-timeout 120 api' "$backup_runner"; then
+    fail "backup restore must not require a Docker healthcheck on the delegated parser worker."
+fi
+
+grep -Fq 'compose up --detach --no-build api' "$backup_runner" ||
+    fail "backup restore must start the API without invoking Compose global wait semantics."
+
+grep -Fq -- "--format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}'" "$backup_runner" ||
+    fail "backup restore must wait for the API container's own health state."
+
+grep -Fq -- '--cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem' "$backup_runner" ||
+    fail "backup restore must verify parser readiness through the pinned TLS certificate."
+
+grep -Fq 'https://parser-worker:8081/health/ready' "$backup_runner" ||
+    fail "backup restore must verify parser readiness before restoring edge traffic."
 
 create_backup_body=$(awk '/^create_backup\(\)/,/^}/' "$backup_script")
 if printf '%s\n' "$create_backup_body" | grep -q 'apply_retention_policy'; then
