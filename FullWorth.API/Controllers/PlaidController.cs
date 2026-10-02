@@ -25,7 +25,8 @@ public sealed class PlaidController : ControllerBase
         PlaidAccountSyncService accountSyncService,
         PlaidTransactionSyncService transactionSyncService,
         FullWorthDbContext dbContext,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILoggerFactory loggerFactory)
     {
         _plaidLinkService = plaidLinkService;
         _exchangeService = exchangeService;
@@ -34,7 +35,8 @@ public sealed class PlaidController : ControllerBase
             new PlaidConnectionSyncCoordinator(
                 dbContext,
                 accountSyncService,
-                transactionSyncService);
+                transactionSyncService,
+                loggerFactory);
         _userManager = userManager;
     }
 
