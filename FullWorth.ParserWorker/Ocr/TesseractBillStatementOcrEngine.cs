@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TesseractOCR;
 using TesseractOCR.Enums;
@@ -58,12 +60,6 @@ public sealed class TesseractBillStatementOcrEngine
 
     private readonly ILogger<TesseractBillStatementOcrEngine>
         _logger;
-
-    private Engine?
-        _engine;
-
-    private bool
-        _engineInitializationAttempted;
 
     private bool
         _disposed;
@@ -151,16 +147,6 @@ public sealed class TesseractBillStatementOcrEngine
 
         lock (_engineLock)
         {
-            var engine =
-                GetOrCreateEngine();
-
-            if (engine is null)
-            {
-                return BillStatementOcrResult.Failure(
-                    pageCount:
-                        0);
-            }
-
             try
             {
                 if (IsPdf(
@@ -168,7 +154,6 @@ public sealed class TesseractBillStatementOcrEngine
                         fileExtension))
                 {
                     return ExtractPdf(
-                        engine,
                         source,
                         deadline);
                 }
@@ -178,7 +163,6 @@ public sealed class TesseractBillStatementOcrEngine
                         fileExtension))
                 {
                     return ExtractImage(
-                        engine,
                         source,
                         mediaType,
                         deadline);
@@ -221,72 +205,80 @@ public sealed class TesseractBillStatementOcrEngine
                 return;
             }
 
-            _engine?.Dispose();
-
-            _engine =
-                null;
-
             _disposed =
                 true;
         }
     }
 
-    private Engine? GetOrCreateEngine()
+    internal static BillStatementOcrResult RunImageWorker(
+        Stream source,
+        string mediaType,
+        string tessDataPath)
     {
-        if (_engine is not null)
-        {
-            return _engine;
-        }
-
-        if (_engineInitializationAttempted)
-        {
-            return null;
-        }
-
-        _engineInitializationAttempted =
-            true;
-
-        var englishModelPath =
-            Path.Combine(
-                _tessDataPath,
-                "eng.traineddata");
-
-        if (!File.Exists(
-                englishModelPath))
-        {
-            _logger.LogError(
-                "Local statement OCR could not start because the English OCR model is unavailable.");
-
-            return null;
-        }
-
         try
         {
-            /*
-             * Tesseract is deliberately initialized lazily.
-             *
-             * Text-based PDFs never pay this startup or memory cost.
-             */
-            _engine =
+            var bytes =
+                ReadStreamWithLimit(
+                    source,
+                    MaxImageBytes);
+
+            if (bytes.Length == 0 ||
+                !EncodedOcrImageAdmission.TryAdmit(
+                    bytes,
+                    mediaType,
+                    out _))
+            {
+                return BillStatementOcrResult.Failure(1);
+            }
+
+            var englishModelPath =
+                Path.Combine(
+                    tessDataPath,
+                    "eng.traineddata");
+
+            if (!File.Exists(englishModelPath))
+            {
+                return BillStatementOcrResult.Failure(1);
+            }
+
+            using var engine =
                 new Engine(
-                    _tessDataPath,
+                    tessDataPath,
                     Language.English,
                     EngineMode.Default);
 
-            return _engine;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                "Local statement OCR engine initialization failed with {ExceptionType}.",
-                ex.GetType().Name);
+            using var image =
+                TesseractOCR.Pix.Image.LoadFromMemory(bytes);
 
-            return null;
+            using var page =
+                engine.Process(image);
+
+            var text =
+                NormalizeAndLimit(
+                    page.Text ?? string.Empty);
+
+            var confidence =
+                Math.Clamp(
+                    page.MeanConfidence,
+                    0f,
+                    1f);
+
+            return new BillStatementOcrResult(
+                text,
+                1,
+                confidence,
+                text.Length >= MinimumUsefulCharacters &&
+                confidence >= MinimumPerImageConfidence);
+        }
+        catch
+        {
+            // The document supervisor treats all native image-worker failures
+            // identically and never receives native diagnostics or stack traces.
+            return BillStatementOcrResult.Failure(1);
         }
     }
 
     private BillStatementOcrResult ExtractImage(
-        Engine engine,
         Stream source,
         string mediaType,
         OcrProcessingDeadline deadline)
@@ -311,8 +303,8 @@ public sealed class TesseractBillStatementOcrEngine
         }
 
         if (!TryRecognizeImage(
-                engine,
                 bytes,
+                mediaType,
                 deadline,
                 out var text,
                 out var confidence))
@@ -347,7 +339,6 @@ public sealed class TesseractBillStatementOcrEngine
     }
 
     private BillStatementOcrResult ExtractPdf(
-        Engine engine,
         Stream source,
         OcrProcessingDeadline deadline)
     {
@@ -452,9 +443,14 @@ public sealed class TesseractBillStatementOcrEngine
                     continue;
                 }
 
-                if (!TryRecognizeImage(
-                        engine,
+                var imageMediaType =
+                    DetectEncodedImageMediaType(
+                        imageBytes);
+
+                if (imageMediaType is null ||
+                    !TryRecognizeImage(
                         imageBytes,
+                        imageMediaType,
                         deadline,
                         out var imageText,
                         out var imageConfidence))
@@ -547,62 +543,233 @@ public sealed class TesseractBillStatementOcrEngine
     }
 
     private bool TryRecognizeImage(
-        Engine engine,
         byte[] imageBytes,
+        string mediaType,
         OcrProcessingDeadline deadline,
         out string text,
         out float confidence)
     {
-        text =
-            string.Empty;
+        text = string.Empty;
+        confidence = 0f;
 
-        confidence =
-            0f;
+        Process? process = null;
+        OcrImageProcessCgroup? imageScope = null;
 
         try
         {
             deadline.ThrowIfExpired();
 
-            using var image =
-                TesseractOCR.Pix.Image
-                    .LoadFromMemory(
-                        imageBytes);
+            var dotnetPath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(dotnetPath) ||
+                !Path.IsPathFullyQualified(dotnetPath))
+            {
+                return false;
+            }
 
-            using var page =
-                engine.Process(
-                    image);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = dotnetPath,
+                WorkingDirectory = AppContext.BaseDirectory,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            startInfo.ArgumentList.Add(
+                Assembly.GetExecutingAssembly().Location);
+            startInfo.ArgumentList.Add("--ocr-image");
+            startInfo.ArgumentList.Add(mediaType);
+            startInfo.Environment.Clear();
 
-            // This is a soft deadline: it cannot interrupt native OCR already in progress.
+            var dotnetRoot = Path.GetDirectoryName(dotnetPath);
+            if (!string.IsNullOrWhiteSpace(dotnetRoot))
+            {
+                startInfo.Environment["DOTNET_ROOT"] = dotnetRoot;
+            }
+
+            startInfo.Environment["DOTNET_EnableDiagnostics"] = "0";
+
+            process = new Process { StartInfo = startInfo };
+            if (!process.Start())
+            {
+                return false;
+            }
+
+            /*
+             * The image worker inherits the document cgroup but blocks on
+             * stdin. Attach it to its one-shot image cgroup before releasing
+             * any encoded image bytes or initializing native Tesseract state.
+             */
+            if (OperatingSystem.IsLinux() &&
+                (!OcrImageProcessCgroup.TryAttachProcess(
+                    process.Id,
+                    out imageScope) ||
+                 imageScope is null))
+            {
+                TryKillImageWorker(process);
+                return false;
+            }
+
+            try
+            {
+                File.WriteAllText(
+                    $"/proc/{process.Id}/oom_score_adj",
+                    "1000");
+            }
+            catch
+            {
+                // The image cgroup remains authoritative when proc tuning is unavailable.
+            }
+
+            var stdoutTask =
+                ReadBoundedImageWorkerOutputAsync(
+                    process.StandardOutput.BaseStream);
+            var stderrTask =
+                DiscardedProcessOutput.DrainAsync(
+                    process.StandardError.BaseStream);
+
+            process.StandardInput.BaseStream.Write(
+                imageBytes,
+                0,
+                imageBytes.Length);
+            process.StandardInput.Close();
+
+            while (!process.WaitForExit(25))
+            {
+                deadline.ThrowIfExpired();
+            }
+
+            var output =
+                stdoutTask.GetAwaiter().GetResult();
+
+            stderrTask.GetAwaiter().GetResult();
+
+            if (process.ExitCode != 0 ||
+                output is null ||
+                output.Length == 0)
+            {
+                return false;
+            }
+
+            var parsed =
+                JsonSerializer.Deserialize<BillStatementOcrResult>(
+                    output,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+            if (parsed is null ||
+                parsed.PageCount != 1 ||
+                parsed.Text is null ||
+                parsed.Text.Length > MaxExtractedCharacters ||
+                parsed.MeanConfidence is < 0f or > 1f)
+            {
+                return false;
+            }
+
             deadline.ThrowIfExpired();
 
-            text =
-                page.Text?
-                    .Trim()
-                ?? string.Empty;
+            text = parsed.Text;
+            confidence = parsed.MeanConfidence;
 
-            confidence =
-                Math.Clamp(
-                    page.MeanConfidence,
-                    0f,
-                    1f);
+            return text.Length > 0;
+        }
+        catch (BillStatementOcrTimeoutException)
+        {
+            if (process is not null)
+            {
+                TryKillImageWorker(process);
+            }
 
-            return text.Length >
-                0;
+            throw;
         }
         catch (Exception ex)
         {
-            /*
-             * A PDF can contain logos, masks, decorative graphics, and
-             * unsupported image encodings.
-             *
-             * One bad image must not invalidate the entire statement.
-             */
             _logger.LogDebug(
-                "A statement image could not be OCR'd with {ExceptionType}.",
+                "A statement image worker failed with {ExceptionType}.",
                 ex.GetType().Name);
 
             return false;
         }
+        finally
+        {
+            if (process is not null)
+            {
+                if (!process.HasExited)
+                {
+                    TryKillImageWorker(process);
+                }
+
+                process.Dispose();
+            }
+
+            imageScope?.Dispose();
+        }
+    }
+
+    private static async Task<byte[]?> ReadBoundedImageWorkerOutputAsync(
+        Stream source)
+    {
+        using var output = new MemoryStream();
+        var buffer = new byte[8192];
+
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory());
+            if (read == 0)
+            {
+                return output.ToArray();
+            }
+
+            if (read > WorkerProtocol.MaxResponseBytes - output.Length)
+            {
+                return null;
+            }
+
+            await output.WriteAsync(buffer.AsMemory(0, read));
+        }
+    }
+
+    private static void TryKillImageWorker(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+
+            process.WaitForExit(5_000);
+        }
+        catch
+        {
+            // The outer document supervisor still owns the document deadline.
+        }
+    }
+
+    private static string? DetectEncodedImageMediaType(byte[] bytes)
+    {
+        if (bytes.Length >= 8 &&
+            bytes[0] == 0x89 &&
+            bytes[1] == 0x50 &&
+            bytes[2] == 0x4E &&
+            bytes[3] == 0x47 &&
+            bytes[4] == 0x0D &&
+            bytes[5] == 0x0A &&
+            bytes[6] == 0x1A &&
+            bytes[7] == 0x0A)
+        {
+            return "image/png";
+        }
+
+        if (bytes.Length >= 3 &&
+            bytes[0] == 0xFF &&
+            bytes[1] == 0xD8 &&
+            bytes[2] == 0xFF)
+        {
+            return "image/jpeg";
+        }
+
+        return null;
     }
 
     private static byte[]? GetPdfImageBytes(
