@@ -18,6 +18,8 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
+  attestations: read
   contents: read
 
 jobs:
@@ -77,6 +79,82 @@ jobs:
           fi
 
           echo "release_sha=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Download and verify exact release image artifacts
+        id: release_artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          artifact_name="fullworth-production-image-artifacts-$RELEASE_SHA"
+          run_id="$(
+            gh api \
+              --method GET \
+              -f branch=master \
+              -f event=push \
+              -f head_sha="$RELEASE_SHA" \
+              -f status=success \
+              -f per_page=100 \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              --jq '.workflow_runs | map(select(.head_sha == env.RELEASE_SHA and .conclusion == "success")) | first | .id // empty'
+          )"
+
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "No successful FullWorth CI run exists for the exact approved master release." >&2
+            exit 65
+          fi
+
+          mkdir -p release-artifacts
+          gh run download "$run_id" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$artifact_name" \
+            --dir release-artifacts
+
+          expected_files=(
+            billwatch-api.tar
+            billwatch-api.spdx.json
+            billwatch-parser-worker.tar
+            billwatch-parser-worker.spdx.json
+            billwatch-web.tar
+            billwatch-web.spdx.json
+          )
+
+          actual_count="$(find release-artifacts -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
+          [[ "$actual_count" == "${#expected_files[@]}" ]] || {
+            echo "The release artifact contains an unexpected file set." >&2
+            exit 65
+          }
+
+          if find release-artifacts -mindepth 1 -maxdepth 1 -type l | grep -q .; then
+            echo "The release artifact contains a symbolic link." >&2
+            exit 65
+          fi
+
+          for file in "${expected_files[@]}"; do
+            [[ -f "release-artifacts/$file" && ! -L "release-artifacts/$file" ]] || {
+              echo "Required release artifact is missing or unsafe: $file" >&2
+              exit 65
+            }
+          done
+
+          for image in billwatch-api billwatch-parser-worker billwatch-web; do
+            gh attestation verify "release-artifacts/$image.tar" \
+              --repo "$GITHUB_REPOSITORY" \
+              --predicate-type https://slsa.dev/provenance/v1
+            gh attestation verify "release-artifacts/$image.tar" \
+              --repo "$GITHUB_REPOSITORY" \
+              --predicate-type https://spdx.dev/Document
+          done
+
+          (
+            cd release-artifacts
+            sha256sum "${expected_files[@]}" > SHA256SUMS
+          )
+          tar -C release-artifacts -cf release-images.tar .
+          echo "ci_run_id=$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Configure pinned production SSH transport
         shell: bash
@@ -145,11 +223,28 @@ jobs:
         run: |
           set -euo pipefail
 
-          ssh fullworth-production sh -s -- "$RELEASE_SHA" <<'REMOTE'
+          remote_bundle=".fullworth-release-$RELEASE_SHA.tar"
+          scp -q release-images.tar "fullworth-production:$remote_bundle"
+
+          ssh fullworth-production sh -s -- "$RELEASE_SHA" "$remote_bundle" <<'REMOTE'
           set -eu
 
           release=$1
+          remote_bundle=$2
           root=/opt/billwatch
+          artifact_dir=
+          bundle="$HOME/$remote_bundle"
+
+          cleanup_release_artifacts()
+          {
+              status=$?
+              trap - EXIT HUP INT TERM
+              [ -z "$artifact_dir" ] || rm -rf "$artifact_dir"
+              rm -f "$bundle"
+              exit "$status"
+          }
+
+          trap cleanup_release_artifacts EXIT HUP INT TERM
 
           case "$release" in
               *[!0-9a-f]*|'')
@@ -201,8 +296,42 @@ jobs:
 
           sed -i "s/^BILLWATCH_RELEASE_ID=.*/BILLWATCH_RELEASE_ID=$release/" .env.production
 
+          [ -f "$bundle" ] && [ ! -L "$bundle" ] || {
+              printf '%s\n' "Remote deployment refused: verified release image bundle is missing or unsafe." >&2
+              exit 66
+          }
+
+          artifact_dir="$(mktemp -d)"
+          tar -xf "$bundle" -C "$artifact_dir"
+
+          [ -f "$artifact_dir/SHA256SUMS" ] &&
+          [ ! -L "$artifact_dir/SHA256SUMS" ] || {
+              printf '%s\n' "Remote deployment refused: release image checksums are missing or unsafe." >&2
+              exit 66
+          }
+
+          (
+              cd "$artifact_dir"
+              sha256sum -c SHA256SUMS
+          )
+
+          for image_name in billwatch-api billwatch-parser-worker billwatch-web
+          do
+              image_archive="$artifact_dir/$image_name.tar"
+              image_sbom="$artifact_dir/$image_name.spdx.json"
+
+              [ -f "$image_archive" ] && [ ! -L "$image_archive" ] &&
+              [ -f "$image_sbom" ] && [ ! -L "$image_sbom" ] || {
+                  printf '%s\n' "Remote deployment refused: verified release image material is incomplete." >&2
+                  exit 66
+              }
+
+              docker load --input "$image_archive" >/dev/null
+          done
+
           sh deploy/validate-production-env.sh .env.production
-          sh deploy/deploy-production.sh .env.production
+          FULLWORTH_USE_PREBUILT_RELEASE_IMAGES=1 \
+              sh deploy/deploy-production.sh .env.production
           sh deploy/verify-production.sh /opt/billwatch
           sh deploy/verify-beta-readiness.sh /opt/billwatch
 
@@ -238,6 +367,8 @@ jobs:
             echo "- API readiness: verified from GitHub runner"
             echo "- Web readiness: verified from GitHub runner"
             echo "- Server-side production and beta-readiness verifiers: passed"
+            echo "- Release image CI run: \`${{ steps.release_artifacts.outputs.ci_run_id }}\`"
+            echo "- API/parser/Web images: downloaded, provenance/SBOM-attested, and runtime identity verified"
             echo
             echo "Installed-device, Plaid provider observation, backup immutability, and qualified legal-review gates remain separate."
           } >> "$GITHUB_STEP_SUMMARY"

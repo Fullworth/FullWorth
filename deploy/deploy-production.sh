@@ -9,6 +9,10 @@ release_file="$root_dir/.billwatch-release"
 release_temp=
 deployment_started=false
 candidate_runtime_started=false
+use_prebuilt_release_images=${FULLWORTH_USE_PREBUILT_RELEASE_IMAGES:-0}
+expected_api_image_id=
+expected_parser_image_id=
+expected_web_image_id=
 
 fail()
 {
@@ -53,6 +57,11 @@ cleanup()
 
 trap cleanup EXIT
 trap 'exit 130' HUP INT TERM
+
+case "$use_prebuilt_release_images" in
+    0|1) ;;
+    *) fail "FULLWORTH_USE_PREBUILT_RELEASE_IMAGES must be 0 or 1." ;;
+esac
 
 [ -f "$root_dir/compose.production.yml" ] ||
     fail "compose.production.yml is missing."
@@ -150,13 +159,36 @@ if [ "$running_public_count" -eq 3 ]; then
         "$env_file"
 fi
 
-compose \
-    --profile operations \
-    build \
-    api \
-    parser-worker \
-    web \
-    backup
+if [ "$use_prebuilt_release_images" = 1 ]; then
+    for image_name in api parser-worker web
+    do
+        case "$image_name" in
+            api) image="billwatch-api:$release_id" ;;
+            parser-worker) image="billwatch-parser-worker:$release_id" ;;
+            web) image="billwatch-web:$release_id" ;;
+        esac
+
+        docker image inspect "$image" >/dev/null 2>&1 ||
+            fail "the verified prebuilt $image_name image is unavailable."
+    done
+
+    expected_api_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-api:$release_id")"
+    expected_parser_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-parser-worker:$release_id")"
+    expected_web_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-web:$release_id")"
+
+    compose \
+        --profile operations \
+        build \
+        backup
+else
+    compose \
+        --profile operations \
+        build \
+        api \
+        parser-worker \
+        web \
+        backup
+fi
 
 for image_name in api parser-worker web backup
 do
@@ -221,6 +253,27 @@ compose up \
     api \
     web \
     edge
+
+if [ "$use_prebuilt_release_images" = 1 ]; then
+    verify_running_image()
+    {
+        service_name=$1
+        expected_image_id=$2
+        container_id="$(compose ps -q "$service_name")"
+
+        [ -n "$container_id" ] ||
+            fail "the $service_name container could not be resolved for release-image verification."
+
+        running_image_id="$(docker inspect --format '{{.Image}}' "$container_id")"
+
+        [ "$running_image_id" = "$expected_image_id" ] ||
+            fail "the running $service_name container does not use the verified CI image."
+    }
+
+    verify_running_image api "$expected_api_image_id"
+    verify_running_image parser-worker "$expected_parser_image_id"
+    verify_running_image web "$expected_web_image_id"
+fi
 
 parser_ready=false
 parser_attempt=1
