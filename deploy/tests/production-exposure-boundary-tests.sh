@@ -107,6 +107,13 @@ case "$*" in
     *".HostConfig.ReadonlyRootfs"*api-id)
         printf '%s\n' 'true 256'
         ;;
+    *".HostConfig.ReadonlyRootfs"*parser-worker-id)
+        if [ "${BILLWATCH_TEST_WRITABLE_PARSER:-false}" = true ]; then
+            printf '%s\n' 'false 64'
+        else
+            printf '%s\n' 'true 64'
+        fi
+        ;;
     *".HostConfig.ReadonlyRootfs"*web-id)
         if [ "${BILLWATCH_TEST_WRITABLE_WEB:-false}" = true ]; then
             printf '%s\n' 'false 256'
@@ -140,6 +147,8 @@ chmod 755     "$fake_bin/docker"     "$deployment/deploy/verify-production-expos
 PATH="$fake_bin:$PATH"     "$deployment/deploy/verify-production-exposure.sh"     "$deployment" >/dev/null
 
 expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_BAD_API_NETWORKS=true     "$deployment/deploy/verify-production-exposure.sh"     "$deployment"
+
+expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_WRITABLE_PARSER=true     "$deployment/deploy/verify-production-exposure.sh"     "$deployment"
 
 expect_failure env     PATH="$fake_bin:$PATH"     BILLWATCH_TEST_WRITABLE_WEB=true     "$deployment/deploy/verify-production-exposure.sh"     "$deployment"
 
