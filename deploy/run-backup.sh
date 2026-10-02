@@ -39,6 +39,55 @@ compose()
     fi
 }
 
+wait_for_api_health()
+{
+    attempt=1
+
+    while [ "$attempt" -le 60 ]
+    do
+        api_container="$(compose ps -q api 2>/dev/null || true)"
+
+        if [ -n "$api_container" ]; then
+            health_status="$(
+                docker inspect \
+                    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                    "$api_container" \
+                    2>/dev/null || true
+            )"
+
+            if [ "$health_status" = "healthy" ]; then
+                return 0
+            fi
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
+wait_for_parser_readiness()
+{
+    attempt=1
+
+    while [ "$attempt" -le 30 ]
+    do
+        if compose exec -T api \
+            curl --fail --silent \
+                --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                https://parser-worker:8081/health/ready \
+                >/dev/null 2>&1; then
+            return 0
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
 api_was_running=false
 edge_was_running=false
 
@@ -70,7 +119,9 @@ restore_services()
     restore_result=0
 
     if [ "$api_was_running" = true ]; then
-        if compose up --detach --wait --wait-timeout 120 api; then
+        if compose up --detach --no-build api &&
+           wait_for_api_health &&
+           wait_for_parser_readiness; then
             api_was_running=false
         else
             restore_result=1

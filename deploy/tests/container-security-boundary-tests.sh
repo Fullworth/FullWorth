@@ -134,23 +134,54 @@ parser_worker = services["parser-worker"]
 if parser_worker.get("read_only") is not True:
     fail("parser-worker root filesystem must be read-only.")
 
-if parser_worker.get("user") != "1654:1654":
-    fail("parser-worker must run as its dedicated unprivileged user.")
+if parser_worker.get("user") != "0:0":
+    fail(
+        "parser-worker bootstrap must start as root only long enough to "
+        "delegate its own cgroup subtree before dropping privileges."
+    )
+
+if parser_worker.get("cgroup") != "host":
+    fail("parser-worker bootstrap must use the host cgroup namespace for exact subtree delegation.")
 
 if parser_worker.get("ports"):
     fail("parser-worker must not publish host ports.")
 
 parser_volumes = parser_worker.get("volumes", [])
-if len(parser_volumes) != 1:
-    fail("parser-worker must mount only the TLS public-certificate volume.")
+if len(parser_volumes) != 2:
+    fail(
+        "parser-worker must mount only the TLS certificate volume and "
+        "the cgroup-v2 hierarchy required for delegated document limits."
+    )
 
-parser_tls_volume = parser_volumes[0]
+parser_tls_volume = next(
+    (
+        volume
+        for volume in parser_volumes
+        if volume.get("target") == "/var/run/fullworth-parser-tls"
+    ),
+    None,
+)
 if (
-    parser_tls_volume.get("source") != "parser_worker_tls"
-    or parser_tls_volume.get("target") != "/var/run/fullworth-parser-tls"
+    parser_tls_volume is None
+    or parser_tls_volume.get("source") != "parser_worker_tls"
     or parser_tls_volume.get("read_only") is True
 ):
-    fail("parser-worker TLS volume must be the only writable worker mount.")
+    fail("parser-worker TLS volume must remain the worker's writable certificate mount.")
+
+parser_cgroup_volume = next(
+    (
+        volume
+        for volume in parser_volumes
+        if volume.get("target") == "/sys/fs/cgroup"
+    ),
+    None,
+)
+if (
+    parser_cgroup_volume is None
+    or parser_cgroup_volume.get("source") != "/sys/fs/cgroup"
+    or parser_cgroup_volume.get("read_only") is True
+):
+    fail("parser-worker must receive the cgroup-v2 hierarchy for bootstrap delegation.")
 
 if parser_worker.get("pids_limit") != 64:
     fail("parser-worker must enforce a 64 PID ceiling.")
@@ -165,13 +196,24 @@ if int(parser_worker.get("memswap_limit", 0)) != 512 * 1024 * 1024:
     fail("parser-worker must disable swap expansion beyond its memory ceiling.")
 
 if "ALL" not in parser_worker.get("cap_drop", []):
-    fail("parser-worker must drop all Linux capabilities.")
+    fail("parser-worker must drop all Linux capabilities before the bootstrap allowlist.")
+
+if set(parser_worker.get("cap_add", [])) != {"CHOWN", "SETGID", "SETPCAP", "SETUID"}:
+    fail(
+        "parser-worker bootstrap may add only CHOWN, SETGID, SETPCAP, and SETUID "
+        "before the entrypoint permanently drops privileges and clears its "
+        "capability bounding set."
+    )
 
 if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
     fail("parser-worker must disable privilege escalation.")
 
-if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_healthy":
-    fail("API must wait for parser-worker resource-limit readiness.")
+if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_started":
+    fail(
+        "API must use service_started for the delegated parser worker; "
+        "guarded startup performs the pinned-TLS readiness gate without "
+        "injecting Docker health-exec processes into the delegated parent cgroup."
+    )
 
 api_environment = services["api"].get("environment", {})
 parser_url = api_environment.get("ParserWorker__BaseUrl")
@@ -328,3 +370,30 @@ if web_environment.get("ReverseProxy__KnownProxies__0") != "172.31.0.10":
 
 print("Container security boundary tests passed.")
 PY
+
+entrypoint="$root_dir/deploy/parser-worker-entrypoint.sh"
+
+[ -f "$entrypoint" ] ||
+    fail "parser-worker cgroup bootstrap entrypoint is missing."
+
+grep -Fq '[ "$(id -u)" = "0" ]' "$entrypoint" ||
+    fail "parser-worker bootstrap must explicitly require root before delegation."
+
+grep -Fq 'exec setpriv' "$entrypoint" ||
+    fail "parser-worker bootstrap must exec through setpriv after delegation."
+
+for required_flag in \
+    '--reuid=1654' \
+    '--regid=1654' \
+    '--clear-groups' \
+    '--inh-caps=-all' \
+    '--ambient-caps=-all' \
+    '--bounding-set=-all'
+do
+    grep -Fq -- "$required_flag" "$entrypoint" ||
+        fail "parser-worker bootstrap is missing required privilege-drop flag: $required_flag"
+done
+
+grep -Fq 'ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]' \
+    "$root_dir/Dockerfile" ||
+    fail "parser-worker image must enter through the cgroup bootstrap wrapper."

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using FullWorth.ParserWorker.Ocr;
@@ -11,6 +12,71 @@ var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
 {
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 };
+
+if (args.Length == 1 && args[0] == "--containment-memory-child")
+{
+    /*
+     * The parent starts this process before cgroup attachment, but does not
+     * release this one-byte gate until the child is inside its document cgroup.
+     */
+    if (Console.OpenStandardInput().ReadByte() < 0)
+    {
+        Environment.ExitCode = 70;
+        return;
+    }
+
+    var allocations = new List<nint>();
+    var touchBuffer = new byte[1024 * 1024];
+    Array.Fill(touchBuffer, (byte)0x5A);
+
+    const int blockBytes = 16 * 1024 * 1024;
+    const long maximumProbeBytes = 1024L * 1024 * 1024;
+    long allocatedBytes = 0;
+
+    while (allocatedBytes < maximumProbeBytes)
+    {
+        var block = Marshal.AllocHGlobal(blockBytes);
+        allocations.Add(block);
+
+        for (var offset = 0; offset < blockBytes; offset += touchBuffer.Length)
+        {
+            Marshal.Copy(
+                touchBuffer,
+                0,
+                IntPtr.Add(block, offset),
+                touchBuffer.Length);
+        }
+
+        allocatedBytes += blockBytes;
+    }
+
+    foreach (var block in allocations)
+    {
+        Marshal.FreeHGlobal(block);
+    }
+
+    Environment.ExitCode = 70;
+    return;
+}
+
+if (args.Length == 1 && args[0] == "--containment-self-test")
+{
+    var evidence = await RunContainmentSelfTestAsync();
+    var output = JsonSerializer.SerializeToUtf8Bytes(
+        new
+        {
+            status = evidence.Success ? "ok" : "failed",
+            code = evidence.Code,
+            memoryMaxBytes = evidence.MemoryMaxBytes,
+            memoryPeakBytes = evidence.MemoryPeakBytes,
+            oomKillDelta = evidence.OomKillDelta
+        },
+        jsonOptions);
+
+    await Console.OpenStandardOutput().WriteAsync(output);
+    Environment.ExitCode = evidence.Success ? 0 : 70;
+    return;
+}
 
 if (args.Length == 1 && args[0] == "--parse-pdf")
 {
@@ -40,6 +106,26 @@ if (args.Length == 3 && args[0] == "--ocr")
         return;
     }
 
+    /*
+     * Read the bounded document before loading Tesseract.
+     *
+     * The supervisor does not write stdin until after this child has been
+     * attached to its per-document cgroup. Blocking here closes the startup
+     * race where native OCR could otherwise allocate memory before the hard
+     * document ceiling became authoritative.
+     */
+    var input = await ReadBoundedAsync(
+        Console.OpenStandardInput(),
+        CancellationToken.None);
+    if (input is null)
+    {
+        var rejected = JsonSerializer.SerializeToUtf8Bytes(
+            BillStatementOcrResult.Failure(0),
+            jsonOptions);
+        await Console.OpenStandardOutput().WriteAsync(rejected);
+        return;
+    }
+
     using var engine = new TesseractBillStatementOcrEngine(
         Options.Create(new BillStatementOcrOptions
         {
@@ -47,8 +133,9 @@ if (args.Length == 3 && args[0] == "--ocr")
             MaximumProcessingDuration = TimeSpan.FromSeconds(25)
         }),
         NullLogger<TesseractBillStatementOcrEngine>.Instance);
+    using var inputStream = new MemoryStream(input, writable: false);
     var result = engine.TryExtract(
-        Console.OpenStandardInput(),
+        inputStream,
         mediaType,
         extension);
     var output = JsonSerializer.SerializeToUtf8Bytes(result, jsonOptions);
@@ -96,7 +183,8 @@ using var requestGate = new SemaphoreSlim(1, 1);
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", () =>
-    WorkerResourceLimits.AreCurrentContainerLimitsEnforced()
+    WorkerResourceLimits.AreCurrentContainerLimitsEnforced() &&
+    DocumentProcessCgroup.IsDelegationReady()
         ? Results.Ok(new { status = "ready" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
@@ -310,6 +398,17 @@ static async Task<byte[]> RunParserProcessAsync(
         throw new InvalidOperationException("The parser worker could not be started.");
     }
 
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "pdf",
+            out var documentCgroup) ||
+        documentCgroup is null)
+    {
+        TryKillWorkerTree(process);
+        throw new InvalidOperationException("The parser worker could not establish document containment.");
+    }
+
+    using var containment = documentCgroup;
     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation);
     deadline.CancelAfter(TimeSpan.FromSeconds(20));
     var stdoutTask = ReadBoundedOutputAsync(process.StandardOutput.BaseStream, WorkerProtocol.MaxResponseBytes, deadline.Token);
@@ -399,10 +498,22 @@ static async Task<byte[]> RunOcrProcessAsync(
         throw new InvalidOperationException("The OCR worker could not be started.");
     }
 
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "ocr",
+            out var documentCgroup) ||
+        documentCgroup is null)
+    {
+        TryKillWorkerTree(process);
+        throw new InvalidOperationException("The OCR worker could not establish document containment.");
+    }
+
+    using var containment = documentCgroup;
+
     try
     {
-        // Prefer the disposable document child if the cgroup reaches its hard
-        // memory ceiling instead of sacrificing the supervisor.
+        // Prefer the disposable document child if the per-document cgroup
+        // reaches its hard memory ceiling instead of sacrificing the supervisor.
         File.WriteAllText($"/proc/{process.Id}/oom_score_adj", "1000");
     }
     catch
@@ -465,6 +576,178 @@ static async Task<byte[]> RunOcrProcessAsync(
     }
 }
 
+static async Task<(bool Success, string Code, long MemoryMaxBytes, long MemoryPeakBytes, long OomKillDelta)>
+    RunContainmentSelfTestAsync()
+{
+    if (!OperatingSystem.IsLinux() ||
+        !WorkerResourceLimits.AreCurrentContainerLimitsEnforced() ||
+        !DocumentProcessCgroup.IsDelegationReady())
+    {
+        return (false, "containment_unavailable", 0, 0, 0);
+    }
+
+    var dotnetPath = Environment.ProcessPath;
+    if (string.IsNullOrWhiteSpace(dotnetPath) ||
+        !Path.IsPathFullyQualified(dotnetPath))
+    {
+        return (false, "runtime_unavailable", 0, 0, 0);
+    }
+
+    var startInfo = new ProcessStartInfo
+    {
+        FileName = dotnetPath,
+        WorkingDirectory = AppContext.BaseDirectory,
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    startInfo.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
+    startInfo.ArgumentList.Add("--containment-memory-child");
+
+    startInfo.Environment.Clear();
+    var dotnetRoot = Path.GetDirectoryName(dotnetPath);
+    if (!string.IsNullOrWhiteSpace(dotnetRoot))
+    {
+        startInfo.Environment["DOTNET_ROOT"] = dotnetRoot;
+    }
+
+    startInfo.Environment["DOTNET_EnableDiagnostics"] = "0";
+
+    using var process = new Process { StartInfo = startInfo };
+    if (!process.Start())
+    {
+        return (false, "probe_start_failed", 0, 0, 0);
+    }
+
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "ocr",
+            out var containment) ||
+        containment is null)
+    {
+        TryKillWorkerTree(process);
+        return (false, "probe_attach_failed", 0, 0, 0);
+    }
+
+    var cgroupPath = containment.CgroupPath;
+    var result =
+        (Success: false,
+         Code: "probe_failed",
+         MemoryMaxBytes: 0L,
+         MemoryPeakBytes: 0L,
+         OomKillDelta: 0L);
+
+    try
+    {
+        if (!containment.TryReadMemoryEvidence(
+                out var memoryMaxBefore,
+                out _,
+                out var oomKillBefore))
+        {
+            result =
+                (false, "probe_evidence_unavailable", 0, 0, 0);
+        }
+        else
+        {
+            var stdoutTask = DiscardedProcessOutput.DrainAsync(
+                process.StandardOutput.BaseStream,
+                CancellationToken.None);
+            var stderrTask = DiscardedProcessOutput.DrainAsync(
+                process.StandardError.BaseStream,
+                CancellationToken.None);
+
+            process.StandardInput.BaseStream.WriteByte(0x01);
+            process.StandardInput.Close();
+
+            using var deadline =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(20));
+
+            var timedOut =
+                false;
+
+            try
+            {
+                await process.WaitForExitAsync(
+                    deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                timedOut =
+                    true;
+
+                TryKillWorkerTree(
+                    process);
+            }
+
+            await stdoutTask;
+            await stderrTask;
+
+            if (timedOut)
+            {
+                result =
+                    (false, "probe_timeout", memoryMaxBefore, 0, 0);
+            }
+            else if (!containment.TryReadMemoryEvidence(
+                         out var memoryMaxAfter,
+                         out var memoryPeakAfter,
+                         out var oomKillAfter))
+            {
+                result =
+                    (false, "probe_evidence_unavailable", memoryMaxBefore, 0, 0);
+            }
+            else
+            {
+                var oomKillDelta =
+                    Math.Max(
+                        0,
+                        oomKillAfter -
+                        oomKillBefore);
+
+                result =
+                    memoryMaxAfter ==
+                        memoryMaxBefore &&
+                    process.ExitCode !=
+                        0 &&
+                    oomKillDelta >=
+                        1
+                        ? (true, "ok", memoryMaxAfter, memoryPeakAfter, oomKillDelta)
+                        : (false, "probe_oom_not_observed", memoryMaxAfter, memoryPeakAfter, oomKillDelta);
+            }
+        }
+    }
+    catch
+    {
+        result =
+            (false, "probe_failed", result.MemoryMaxBytes, result.MemoryPeakBytes, result.OomKillDelta);
+    }
+    finally
+    {
+        if (!process.HasExited)
+        {
+            TryKillWorkerTree(
+                process);
+        }
+
+        containment.Dispose();
+    }
+
+    if (Directory.Exists(
+            cgroupPath))
+    {
+        return (
+            false,
+            "probe_cleanup_failed",
+            result.MemoryMaxBytes,
+            result.MemoryPeakBytes,
+            result.OomKillDelta);
+    }
+
+    return result;
+}
+
 static async Task<byte[]?> ReadBoundedOutputAsync(Stream stream, int maxBytes, CancellationToken cancellationToken)
 {
     using var output = new MemoryStream();
@@ -494,9 +777,15 @@ static void TryKillWorkerTree(Process process)
         {
             process.Kill(entireProcessTree: true);
         }
+
+        // A per-document cgroup cannot be removed while any killed descendant
+        // is still draining out of it. Wait a short, bounded interval so the
+        // containment lease can be deleted deterministically on failure paths.
+        process.WaitForExit(milliseconds: 5_000);
     }
     catch
     {
         // The worker failure is returned without exposing process diagnostics.
+        // Cgroup cleanup remains best effort if the runtime cannot confirm exit.
     }
 }

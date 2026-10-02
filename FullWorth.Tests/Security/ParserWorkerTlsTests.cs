@@ -83,17 +83,47 @@ public sealed class ParserWorkerTlsTests
     }
 
     [Fact]
-    public void TlsConfiguration_RejectsRelativeOrMissingPaths()
+    public void TlsConfiguration_RejectsRelativePath_ButFailsClosedUntilAbsolutePinIsPublished()
     {
         Assert.Throws<InvalidOperationException>(
             () => ParserWorkerTlsCertificate.CreateAndPublish(
                 "parser-worker.cer.pem"));
         Assert.Throws<InvalidOperationException>(
             () => new ParserWorkerServerCertificateValidator(
+                "parser-worker.cer.pem"));
+
+        using var temporary = new TemporaryDirectory();
+        var path = Path.Combine(
+            temporary.Path,
+            "parser-worker.cer.pem");
+        var validator =
+            new ParserWorkerServerCertificateValidator(
+                path);
+
+        using var unpublishedPeerDirectory = new TemporaryDirectory();
+        using var unpublishedPeer =
+            ParserWorkerTlsCertificate.CreateAndPublish(
                 Path.Combine(
-                    Path.GetTempPath(),
-                    Guid.NewGuid().ToString("N"),
-                    "missing.pem")));
+                    unpublishedPeerDirectory.Path,
+                    "peer.cer.pem"));
+
+        Assert.False(
+            validator.Validate(
+                new HttpRequestMessage(),
+                unpublishedPeer,
+                null,
+                SslPolicyErrors.None));
+
+        using var published =
+            ParserWorkerTlsCertificate.CreateAndPublish(
+                path);
+
+        Assert.True(
+            validator.Validate(
+                new HttpRequestMessage(),
+                published,
+                null,
+                SslPolicyErrors.RemoteCertificateChainErrors));
     }
 
     private sealed class TemporaryDirectory : IDisposable

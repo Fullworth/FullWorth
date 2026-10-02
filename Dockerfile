@@ -36,12 +36,15 @@ RUN apt-get update \
         libc6-dev \
         libtesseract5 \
         tesseract-ocr-eng \
+        util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
+COPY deploy/parser-worker-entrypoint.sh /usr/local/bin/fullworth-parser-worker-entrypoint
 
-RUN mkdir --parents /app/x64 /app/tessdata /app/runtimes/linux-x64/native /var/run/fullworth-parser-tls \
+RUN chmod 0755 /usr/local/bin/fullworth-parser-worker-entrypoint \
+    && mkdir --parents /app/x64 /app/tessdata /app/runtimes/linux-x64/native /var/run/fullworth-parser-tls \
     && test -f /lib/x86_64-linux-gnu/libdl.so.2 \
     && ln --symbolic --force /lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/libdl.so \
     && ln --symbolic --force /lib/x86_64-linux-gnu/libdl.so.2 /app/runtimes/linux-x64/native/libdl.so \
@@ -63,12 +66,10 @@ ENV ASPNETCORE_HTTP_PORTS=8081 \
 
 EXPOSE 8081
 
-USER $APP_UID
+HEALTHCHECK NONE
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl --fail --silent http://localhost:8081/health/ready || exit 1
-
-ENTRYPOINT ["dotnet", "FullWorth.ParserWorker.dll"]
+ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]
+CMD ["dotnet", "FullWorth.ParserWorker.dll"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 

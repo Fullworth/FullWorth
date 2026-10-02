@@ -75,6 +75,9 @@ trap 'exit 130' HUP INT TERM
 [ -f "$root_dir/deploy/check-http-security-boundaries.sh" ] ||
     fail "HTTP security boundary verifier is missing."
 
+[ -f "$root_dir/deploy/verify-parser-containment.sh" ] ||
+    fail "parser containment verifier is missing."
+
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
 
@@ -218,6 +221,29 @@ compose up \
     api \
     web \
     edge
+
+parser_ready=false
+parser_attempt=1
+while [ "$parser_attempt" -le 30 ]
+do
+    if compose exec -T api \
+        curl --fail --silent \
+            --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+            https://parser-worker:8081/health/ready \
+            >/dev/null 2>&1; then
+        parser_ready=true
+        break
+    fi
+
+    sleep 2
+    parser_attempt=$((parser_attempt + 1))
+done
+
+[ "$parser_ready" = true ] ||
+    fail "the parser worker did not become ready through the pinned internal TLS path."
+
+sh "$root_dir/deploy/verify-parser-containment.sh" \
+    "$root_dir"
 
 "$root_dir/deploy/monitor-readiness.sh" \
     "https://$api_host"

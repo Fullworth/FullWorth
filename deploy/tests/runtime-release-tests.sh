@@ -70,6 +70,9 @@ case "$1" in
             *'ps -q parser-worker'*) printf '%s\n' 'cid-parser-worker' ;;
             *'ps -q api'*) printf '%s\n' 'cid-api' ;;
             *'ps -q web'*) printf '%s\n' 'cid-web' ;;
+            *'exec -T api curl --fail --silent --show-error --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem https://parser-worker:8081/health/ready'*)
+                [ "${BILLWATCH_TEST_PARSER_READY:-true}" = true ]
+                ;;
             *) exit 2 ;;
         esac
         ;;
@@ -130,7 +133,7 @@ expect_failure verify BILLWATCH_TEST_WEB_REVISION="$other_release"
 expect_failure verify BILLWATCH_TEST_BACKUP_REVISION="$other_release"
 expect_failure verify BILLWATCH_TEST_BACKUP_MISSING=true
 expect_failure verify BILLWATCH_TEST_UNHEALTHY=api
-expect_failure verify BILLWATCH_TEST_UNHEALTHY=parser-worker
+expect_failure verify BILLWATCH_TEST_PARSER_READY=false
 expect_failure verify BILLWATCH_TEST_MISSING_SERVICE=web
 expect_failure verify BILLWATCH_TEST_HEAD="$other_release"
 
