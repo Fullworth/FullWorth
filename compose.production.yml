@@ -315,7 +315,7 @@ services:
     logging: *default-logging
 
   edge:
-    image: caddy:2.11-alpine
+    image: caddy:2.11-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
     restart: unless-stopped
     stop_grace_period: 30s
     logging: *default-logging
