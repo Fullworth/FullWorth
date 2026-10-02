@@ -11,7 +11,8 @@ for workflow in "$workflow_dir"/*.yml "$workflow_dir"/*.yaml; do
 
   while IFS= read -r line || [ -n "$line" ]; do
     line_number=$((line_number + 1))
-    value=$(printf '%s\n' "$line" | sed -n 's/^[[:space:]]*uses:[[:space:]]*//p')
+    value=$(printf '%s\n' "$line" |
+      sed -n         -e 's/^[[:space:]]*-[[:space:]]*uses:[[:space:]]*//p'         -e 's/^[[:space:]]*uses:[[:space:]]*//p')
     [ -n "$value" ] || continue
 
     value=$(printf '%s\n' "$value" |
