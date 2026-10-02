@@ -609,8 +609,10 @@ jobs:
 
           parser_uid="$(awk '/^Uid:/ { print $2; exit }' "/proc/${parser_pid}/status")"
           parser_caps="$(awk '/^CapEff:/ { print $2; exit }' "/proc/${parser_pid}/status")"
+          parser_bounding_caps="$(awk '/^CapBnd:/ { print $2; exit }' "/proc/${parser_pid}/status")"
           test "$parser_uid" = "1654"
           test "$parser_caps" = "0000000000000000"
+          test "$parser_bounding_caps" = "0000000000000000"
 
           parser_relative="$(
             awk -F: '$1 == "0" && $2 == "" { print $3; exit }'               "/proc/${parser_pid}/cgroup"
