@@ -19,6 +19,8 @@ public sealed class OcrImageProcessCgroup : IDisposable
     private const string DocumentCpuPeriodVariable = "FULLWORTH_PARSER_DOCUMENT_CPU_PERIOD_US";
     private const string DocumentMemoryLimitVariable = "FULLWORTH_PARSER_DOCUMENT_MEMORY_MAX_BYTES";
     private const string DocumentSwapLimitVariable = "FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES";
+    private const string ObservationDelayVariable = "FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS";
+    private const int MaximumObservationDelayMilliseconds = 1_000;
 
     private readonly string _path;
     private bool _disposed;
@@ -32,7 +34,8 @@ public sealed class OcrImageProcessCgroup : IDisposable
         DocumentCpuQuotaVariable,
         DocumentCpuPeriodVariable,
         DocumentMemoryLimitVariable,
-        DocumentSwapLimitVariable
+        DocumentSwapLimitVariable,
+        ObservationDelayVariable
     };
 
     private OcrImageProcessCgroup(string path)
@@ -41,7 +44,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
     }
 
     public static void CopyConfiguredEnvironment(
-        IDictionary<string, string> target,
+        IDictionary<string, string?> target,
         Func<string, string?> getEnvironmentVariable)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -241,6 +244,31 @@ public sealed class OcrImageProcessCgroup : IDisposable
         }
 
         return childFullPath;
+    }
+
+    public static TimeSpan GetConfiguredObservationDelay()
+    {
+        var configured = Environment.GetEnvironmentVariable(
+            ObservationDelayVariable);
+
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return TimeSpan.Zero;
+        }
+
+        if (!int.TryParse(
+                configured,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var milliseconds) ||
+            milliseconds < 0 ||
+            milliseconds > MaximumObservationDelayMilliseconds)
+        {
+            throw new InvalidOperationException(
+                "The OCR image observation delay is outside its safe range.");
+        }
+
+        return TimeSpan.FromMilliseconds(milliseconds);
     }
 
     public static bool HasValidLimitConfiguration(
