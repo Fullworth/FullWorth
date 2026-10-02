@@ -31,7 +31,7 @@ cleanup()
         printf '%s\n' \
             "Candidate release verification failed. Stopping the unverified public application services." >&2
 
-        compose stop api web web-session-cache edge >/dev/null 2>&1 ||
+        compose stop api parser-worker web web-session-cache edge >/dev/null 2>&1 ||
             printf '%s\n' \
                 "WARNING: FullWorth could not confirm that all unverified public application services stopped. Operator intervention is required immediately." >&2
     fi
@@ -45,7 +45,7 @@ cleanup()
             "Do not attempt an automatic code rollback: the candidate API may already have applied forward database migrations." \
             "Keep the public application services stopped until the failure is understood or a tested recovery is performed." \
             "Inspect sanitized service logs before recovery:" \
-            "docker compose --env-file .env.production --file compose.production.yml logs --no-color --tail 200 api web web-session-cache edge database" >&2
+            "docker compose --env-file .env.production --file compose.production.yml logs --no-color --tail 200 api parser-worker web web-session-cache edge database" >&2
     fi
 
     exit "$status"
@@ -151,13 +151,15 @@ compose \
     --profile operations \
     build \
     api \
+    parser-worker \
     web \
     backup
 
-for image_name in api web backup
+for image_name in api parser-worker web backup
 do
     case "$image_name" in
         api) image="billwatch-api:$release_id" ;;
+        parser-worker) image="billwatch-parser-worker:$release_id" ;;
         web) image="billwatch-web:$release_id" ;;
         backup) image="billwatch-backup:$release_id" ;;
     esac
@@ -212,6 +214,7 @@ compose up \
     --wait-timeout 240 \
     --no-build \
     database \
+    parser-worker \
     api \
     web \
     edge
