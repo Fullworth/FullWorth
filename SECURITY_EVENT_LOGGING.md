@@ -1,6 +1,6 @@
 # Security event telemetry
 
-FullWorth emits a dedicated structured log category, `FullWorth.SecurityEvents`, for request-boundary security outcomes that operators need to detect separately from debug and application logs.
+FullWorth emits a dedicated structured log category, `FullWorth.SecurityEvents`, for request-boundary security outcomes and a separate `FullWorth.SecurityAlerts` category for bounded repeated-event alerts.
 
 ## Events
 
@@ -27,8 +27,29 @@ The event intentionally excludes raw paths, query strings, request/response bodi
 
 These events complement persisted admin audit records. They do not replace the admin mutation audit trail and are not persisted in the application database.
 
+## Bounded repeated-event alerts
+
+The in-process aggregator groups only by the fixed event name, normalized HTTP method, application-owned route template, and authentication state. It never groups by or copies a user, IP address, raw URL, request ID, credential, statement, or financial value.
+
+A five-minute fixed window emits these alerts:
+
+| Alert ID | Name | Threshold |
+| --- | --- | --- |
+| 29101 | `repeated_authentication_rejections` | 25 matching 401 events |
+| 29102 | `repeated_authorization_denials` | 10 matching 403 events |
+| 29103 | `repeated_rate_limit_rejections` | 5 matching 429 events |
+| 29104 | `security_event_aggregation_capacity_reached` | 5 events routed to the overflow bucket |
+
+Each aggregation key can emit at most once every 15 minutes. Threshold crossings during that cooldown are suppressed and reported as a count on the next emitted alert. Aggregation memory is capped at 512 buckets, including a reserved overflow bucket. Buckets inactive for 20 minutes are removed before admitting a new key. If the cap is still full, new dimensions go to the fixed overflow bucket rather than allocating more state.
+
+Alerts contain only the same safe grouping dimensions, threshold, window length, and number of suppressed threshold crossings. They intentionally omit request IDs because a repeated-event alert represents many requests.
+
+This aggregation is process-local and resets on API restart. In a future multi-instance deployment, the collector must combine `FullWorth.SecurityAlerts` across instances; the current production rule remains one API instance because startup migration ownership has not been redesigned.
+
 ## Operations
 
-Route `FullWorth.SecurityEvents` to the security log stream in the deployment's log collector. Alerting and retention must operate on the fixed event IDs and names, not free-form message parsing. Until a bounded aggregation rule is deployed, do not page on every individual event; ordinary invalid credentials and expired sessions can produce isolated 401 responses.
+Route `FullWorth.SecurityEvents` to the security event stream and `FullWorth.SecurityAlerts` to the alert collector. Notification rules must use alert IDs 29101–29104 rather than parsing message text. Page or notify from the bounded alert stream, not from every individual event.
 
-Correlation through the request ID may be used to find nearby application diagnostics, but operators must not add secrets or user financial evidence to either stream.
+A capacity alert means the safe aggregation-key budget was exhausted. Investigate whether route cardinality changed or an unexpected endpoint pattern entered the pipeline; do not raise the cap until the source is understood.
+
+Correlation through an individual event's request ID may be used to find nearby application diagnostics, but operators must not add secrets or user financial evidence to either stream.
