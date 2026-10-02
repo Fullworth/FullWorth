@@ -12,6 +12,59 @@ var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 };
 
+if (args.Length == 1 && args[0] == "--containment-memory-child")
+{
+    /*
+     * The parent starts this process before cgroup attachment, but does not
+     * release this one-byte gate until the child is inside its document cgroup.
+     */
+    if (Console.OpenStandardInput().ReadByte() < 0)
+    {
+        Environment.ExitCode = 70;
+        return;
+    }
+
+    var allocations = new List<byte[]>();
+    const int blockBytes = 16 * 1024 * 1024;
+    const long maximumProbeBytes = 1024L * 1024 * 1024;
+    long allocatedBytes = 0;
+
+    while (allocatedBytes < maximumProbeBytes)
+    {
+        var block = GC.AllocateUninitializedArray<byte>(blockBytes);
+        for (var offset = 0; offset < block.Length; offset += 4096)
+        {
+            block[offset] = 0x5A;
+        }
+
+        allocations.Add(block);
+        allocatedBytes += block.Length;
+    }
+
+    GC.KeepAlive(allocations);
+    Environment.ExitCode = 70;
+    return;
+}
+
+if (args.Length == 1 && args[0] == "--containment-self-test")
+{
+    var evidence = await RunContainmentSelfTestAsync();
+    var output = JsonSerializer.SerializeToUtf8Bytes(
+        new
+        {
+            status = evidence.Success ? "ok" : "failed",
+            code = evidence.Code,
+            memoryMaxBytes = evidence.MemoryMaxBytes,
+            memoryPeakBytes = evidence.MemoryPeakBytes,
+            oomKillDelta = evidence.OomKillDelta
+        },
+        jsonOptions);
+
+    await Console.OpenStandardOutput().WriteAsync(output);
+    Environment.ExitCode = evidence.Success ? 0 : 70;
+    return;
+}
+
 if (args.Length == 1 && args[0] == "--parse-pdf")
 {
     var parsed = new PdfStatementTextParser().Extract(Console.OpenStandardInput());
@@ -506,6 +559,147 @@ static async Task<byte[]> RunOcrProcessAsync(
         if (!process.HasExited)
         {
             TryKillWorkerTree(process);
+        }
+    }
+}
+
+static async Task<(bool Success, string Code, long MemoryMaxBytes, long MemoryPeakBytes, long OomKillDelta)>
+    RunContainmentSelfTestAsync()
+{
+    if (!OperatingSystem.IsLinux() ||
+        !WorkerResourceLimits.AreCurrentContainerLimitsEnforced() ||
+        !DocumentProcessCgroup.IsDelegationReady())
+    {
+        return (false, "containment_unavailable", 0, 0, 0);
+    }
+
+    var dotnetPath = Environment.ProcessPath;
+    if (string.IsNullOrWhiteSpace(dotnetPath) ||
+        !Path.IsPathFullyQualified(dotnetPath))
+    {
+        return (false, "runtime_unavailable", 0, 0, 0);
+    }
+
+    var startInfo = new ProcessStartInfo
+    {
+        FileName = dotnetPath,
+        WorkingDirectory = AppContext.BaseDirectory,
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+    startInfo.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
+    startInfo.ArgumentList.Add("--containment-memory-child");
+
+    startInfo.Environment.Clear();
+    var dotnetRoot = Path.GetDirectoryName(dotnetPath);
+    if (!string.IsNullOrWhiteSpace(dotnetRoot))
+    {
+        startInfo.Environment["DOTNET_ROOT"] = dotnetRoot;
+    }
+
+    startInfo.Environment["DOTNET_EnableDiagnostics"] = "0";
+
+    using var process = new Process { StartInfo = startInfo };
+    if (!process.Start())
+    {
+        return (false, "probe_start_failed", 0, 0, 0);
+    }
+
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "ocr",
+            out var containment) ||
+        containment is null)
+    {
+        TryKillWorkerTree(process);
+        return (false, "probe_attach_failed", 0, 0, 0);
+    }
+
+    var cgroupPath = containment.CgroupPath;
+
+    try
+    {
+        if (!containment.TryReadMemoryEvidence(
+                out var memoryMaxBefore,
+                out _,
+                out var oomKillBefore))
+        {
+            TryKillWorkerTree(process);
+            return (false, "probe_evidence_unavailable", 0, 0, 0);
+        }
+
+        var stdoutTask = DiscardedProcessOutput.DrainAsync(
+            process.StandardOutput.BaseStream,
+            CancellationToken.None);
+        var stderrTask = DiscardedProcessOutput.DrainAsync(
+            process.StandardError.BaseStream,
+            CancellationToken.None);
+
+        process.StandardInput.BaseStream.WriteByte(0x01);
+        process.StandardInput.Close();
+
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        try
+        {
+            await process.WaitForExitAsync(deadline.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            TryKillWorkerTree(process);
+            return (false, "probe_timeout", memoryMaxBefore, 0, 0);
+        }
+
+        await stdoutTask;
+        await stderrTask;
+
+        if (!containment.TryReadMemoryEvidence(
+                out var memoryMaxAfter,
+                out var memoryPeakAfter,
+                out var oomKillAfter))
+        {
+            return (false, "probe_evidence_unavailable", memoryMaxBefore, 0, 0);
+        }
+
+        var oomKillDelta =
+            Math.Max(
+                0,
+                oomKillAfter - oomKillBefore);
+
+        if (memoryMaxAfter != memoryMaxBefore ||
+            process.ExitCode == 0 ||
+            oomKillDelta < 1)
+        {
+            return (
+                false,
+                "probe_oom_not_observed",
+                memoryMaxAfter,
+                memoryPeakAfter,
+                oomKillDelta);
+        }
+
+        return (
+            true,
+            "ok",
+            memoryMaxAfter,
+            memoryPeakAfter,
+            oomKillDelta);
+    }
+    finally
+    {
+        if (!process.HasExited)
+        {
+            TryKillWorkerTree(process);
+        }
+
+        containment.Dispose();
+
+        if (Directory.Exists(cgroupPath))
+        {
+            // A leaked cgroup makes the proof fail closed on the next run too.
+            Environment.ExitCode = 70;
         }
     }
 }
