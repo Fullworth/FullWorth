@@ -308,6 +308,7 @@ write_valid_env "$deployment_root/.env.production"
 command_log="$temp_dir/deployment-commands.log"
 readiness_log="$temp_dir/deployment-readiness.log"
 security_log="$temp_dir/deployment-security.log"
+containment_log="$temp_dir/deployment-containment.log"
 release_id=0123456789abcdef0123456789abcdef01234567
 old_release=89abcdef0123456789abcdef0123456789abcdef
 
@@ -355,6 +356,13 @@ printf '%s|%s\n' "$1" "$2" >> "$BILLWATCH_TEST_SECURITY_LOG"
 [ "${BILLWATCH_TEST_FAIL_SECURITY:-false}" != true ] || exit 1
 SCRIPT
 
+cat > "$deployment_root/deploy/verify-parser-containment.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s\n' "$1" >> "$BILLWATCH_TEST_CONTAINMENT_LOG"
+[ "${BILLWATCH_TEST_FAIL_CONTAINMENT:-false}" != true ] || exit 1
+SCRIPT
+
 cat > "$deployment_root/deploy/run-backup.sh" <<'SCRIPT'
 #!/bin/sh
 set -eu
@@ -362,7 +370,7 @@ printf '%s\n' backup >> "$BILLWATCH_TEST_COMMAND_LOG"
 exit 0
 SCRIPT
 
-chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/run-backup.sh"
+chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/verify-parser-containment.sh" "$deployment_root/deploy/run-backup.sh"
 
 run_deploy()
 {
@@ -371,6 +379,7 @@ run_deploy()
         BILLWATCH_TEST_COMMAND_LOG="$command_log" \
         BILLWATCH_TEST_READINESS_LOG="$readiness_log" \
         BILLWATCH_TEST_SECURITY_LOG="$security_log" \
+        BILLWATCH_TEST_CONTAINMENT_LOG="$containment_log" \
         "$@" \
         "$deployment_root/deploy/deploy-production.sh" \
         "$deployment_root/.env.production"
@@ -385,6 +394,7 @@ grep -q 'config --quiet' "$command_log" || fail "deployment did not validate Com
 grep -q -- '--profile operations build api parser-worker web backup' "$command_log" || fail "deployment did not build API, parser-worker, web, and backup release images."
 grep -q 'image inspect' "$command_log" || fail "deployment did not verify built image release revisions."
 grep -q 'up --detach --wait --wait-timeout 240 --no-build database parser-worker api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
+grep -qx "$deployment_root" "$containment_log" || fail "deployment did not require parser containment proof before acceptance."
 grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
 grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
 grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
@@ -396,6 +406,13 @@ expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "bad image revision changed the last verified release marker."
 if grep -q 'up --detach' "$command_log"; then fail "bad image revision reached production startup."; fi
 if grep -q 'stop api parser-worker web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
+
+: > "$command_log"
+: > "$containment_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_CONTAINMENT=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "containment failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "containment failure did not stop the unverified candidate runtime."
+[ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after containment failure."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_SECURITY=true
