@@ -645,6 +645,34 @@ jobs:
 
           docker compose --file compose.production.yml exec -T api             curl --fail --silent --show-error               --retry 30 --retry-all-errors --retry-delay 1               --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem               https://parser-worker:8081/health/ready               >/dev/null
 
+      - name: Prove parser per-document memory containment
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          evidence="$(
+            docker compose --file compose.production.yml run               --rm               --no-deps               parser-worker               dotnet FullWorth.ParserWorker.dll --containment-self-test
+          )"
+
+          printf '%s' "$evidence" | python3 -c '
+          import json
+          import sys
+
+          result = json.load(sys.stdin)
+          assert result.get("status") == "ok", result
+          assert result.get("code") == "ok", result
+          assert result.get("memoryMaxBytes") == 402653184, result
+          assert result.get("memoryPeakBytes", 0) > 0, result
+          assert result.get("memoryPeakBytes", 0) <= result.get("memoryMaxBytes", 0), result
+          assert result.get("oomKillDelta", 0) >= 1, result
+          '
+
+          docker compose --file compose.production.yml ps --status running --services |
+            grep -qx parser-worker
+
+          docker compose --file compose.production.yml exec -T api             curl --fail --silent --show-error               --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem               https://parser-worker:8081/health/ready               >/dev/null
+
       - name: Verify API HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 https://localhost/health/ready
