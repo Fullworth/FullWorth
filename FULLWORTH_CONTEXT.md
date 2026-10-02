@@ -1,3 +1,13 @@
+## Bounded repeated-security-event aggregation — 2026-10-02
+
+The API now turns repeated request-boundary 401, 403, and 429 events into a separate `FullWorth.SecurityAlerts` stream instead of requiring operators to alert on every ordinary authentication failure. Fixed five-minute thresholds are 25 matching authentication rejections, 10 matching authorization denials, and 5 matching rate-limit rejections. Each safe aggregation key can emit at most once every 15 minutes; threshold crossings during the cooldown are suppressed and reported on the next emitted alert.
+
+Aggregation keys contain only the fixed event name, normalized method, application-owned route template, and authentication state. Alerts omit request IDs, users, IP addresses, raw URLs, credentials, statements, and financial values. Process memory is hard-bounded to 512 buckets including a reserved overflow bucket; inactive buckets expire after 20 minutes, and excess dimensions produce a fixed capacity alert instead of allocating unbounded state. The operator document records alert IDs 29101–29104, routing, capacity handling, and the current process-local/single-API-instance boundary.
+
+Exact PR #620 head `85330b2e757a85ffc67f6760f9244c71a0163ee2` passed FullWorth CI #1511 (run `37038951999`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #608 (run `37038951995`) before squash merge to `development` as `3e6419cf00542b3b875aeb855623f61553279310`.
+
+This completes bounded repeated-event alerting for the request-boundary telemetry introduced by PR #618. Broader ownership/provider/export/delete security-event coverage and incident-response runbooks remain separate follow-up work. No production deployment occurred.
+
 ## Structured request-boundary security events — 2026-10-02
 
 The API now emits authentication rejection, authorization denial, and rate-limit enforcement to the dedicated `FullWorth.SecurityEvents` category with fixed event IDs 29001–29003. The middleware surrounds rate limiting, authorization, and endpoint execution so downstream short circuits are observable. Events contain only a normalized fixed-set HTTP method, application-owned route template, response status, authentication state, and the existing server-generated request ID.
