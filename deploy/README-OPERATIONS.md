@@ -4,6 +4,14 @@ Run production commands as the deployment account that owns `/opt/billwatch/.env
 
 Never paste production secrets into chat, issue trackers, shell history, or logs.
 
+## Security incidents and credential rotation
+
+Use `SECURITY_INCIDENT_RESPONSE.md` for incident severity, the first-15-minute
+containment sequence, secret-safe evidence handling, account-wide session
+revocation semantics, credential rotation ordering, clean-host recovery, and the
+closure gate. The runbook preserves the boundary between CI evidence and direct
+evidence from the deployed production release.
+
 ## Verify a deployed release
 
 ```sh
