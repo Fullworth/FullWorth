@@ -786,19 +786,24 @@ jobs:
           )"
           test "$tampered_body_status" = "401"
 
-      - name: Verify isolated OCR worker path
+      - name: Verify isolated OCR worker path and per-document cgroup
         if: steps.container_changes.outputs.required == 'true'
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
+
           image_file="$(mktemp)"
-          trap 'rm -f "$image_file"' EXIT
+          response_one="$(mktemp)"
+          response_two="$(mktemp)"
+          trap 'rm -f "$image_file" "$response_one" "$response_two"' EXIT
+
           python3 - <<'PY' > "$image_file"
           import struct
           import zlib
 
-          width = 300
-          height = 100
+          width = 2400
+          height = 1800
           raw = b"".join(
               b"\\x00" + (b"\\xff\\xff\\xff" * width)
               for _ in range(height)
@@ -821,19 +826,44 @@ jobs:
               + chunk(b"IDAT", zlib.compress(raw, 9))
               + chunk(b"IEND", b"")
           )
-          sys_stdout = __import__("sys").stdout.buffer
-          sys_stdout.write(png)
+          __import__("sys").stdout.buffer.write(png)
           PY
-          timestamp="$(date +%s)"
-          nonce="$(openssl rand -hex 16)"
+
           content_sha256="$(sha256sum "$image_file" | awk '{ print $1 }')"
-          signature="$(
-            printf 'POST\n/v1/ocr/extract\n%s\n%s\n%s' \
-              "$timestamp" "$nonce" "$content_sha256" |
-              openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
-              awk '{ print $2 }'
+
+          container_id="$(docker compose --file compose.production.yml ps -q parser-worker)"
+          test -n "$container_id"
+          parser_pid="$(docker inspect --format '{{.State.Pid}}' "$container_id")"
+          test "$parser_pid" -gt 0
+
+          parser_relative="$(
+            awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
+              "/proc/${parser_pid}/cgroup"
           )"
-          response="$(
+          case "$parser_relative" in
+            */fullworth-supervisor) ;;
+            *)
+              echo "Parser supervisor is not in its delegated leaf cgroup." >&2
+              exit 1
+              ;;
+          esac
+
+          parent_relative="${parser_relative%/fullworth-supervisor}"
+          parent_cgroup="/sys/fs/cgroup${parent_relative}"
+          test -d "$parent_cgroup"
+
+          send_ocr_request()
+          {
+            output_file=$1
+            timestamp="$(date +%s)"
+            nonce="$(openssl rand -hex 16)"
+            signature="$(
+              printf 'POST\n/v1/ocr/extract\n%s\n%s\n%s' \
+                "$timestamp" "$nonce" "$content_sha256" |
+                openssl dgst -sha256 -hmac "$BILLWATCH_PARSER_AUTH_TOKEN" -hex |
+                awk '{ print $2 }'
+            )"
+
             docker compose --file compose.production.yml exec -T api \
               curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
                 --fail --silent --show-error --request POST \
@@ -845,16 +875,101 @@ jobs:
                 --header "X-FullWorth-Parser-Content-SHA256: ${content_sha256}" \
                 --header "X-FullWorth-Parser-Signature: ${signature}" \
                 --data-binary @- https://parser-worker:8081/v1/ocr/extract \
-              < "$image_file"
-          )"
-          printf '%s' "$response" | python3 -c '
+              < "$image_file" > "$output_file"
+          }
+
+          observe_document_cgroup()
+          {
+            request_pid=$1
+            for _ in $(seq 1 500)
+            do
+              matches=("$parent_cgroup"/fullworth-ocr-*)
+              if [ "${#matches[@]}" -gt 1 ]; then
+                echo "More than one OCR document cgroup exists under the single-request worker." >&2
+                return 1
+              fi
+
+              if [ "${#matches[@]}" -eq 1 ]; then
+                printf '%s\n' "${matches[0]}"
+                return 0
+              fi
+
+              if ! kill -0 "$request_pid" 2>/dev/null; then
+                break
+              fi
+
+              sleep 0.01
+            done
+
+            echo "No per-document OCR cgroup was observed while OCR was active." >&2
+            return 1
+          }
+
+          verify_live_document_cgroup()
+          {
+            cgroup_path=$1
+            test -d "$cgroup_path"
+            test "$(cat "$cgroup_path/memory.max")" = "402653184"
+            test "$(cat "$cgroup_path/memory.swap.max")" = "0"
+            test "$(cat "$cgroup_path/pids.max")" = "48"
+            test "$(tr -s '[:space:]' ' ' < "$cgroup_path/cpu.max" | sed 's/ $//')" = "100000 100000"
+
+            child_pid="$(head -n 1 "$cgroup_path/cgroup.procs")"
+            test -n "$child_pid"
+            child_relative="$(
+              awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
+                "/proc/${child_pid}/cgroup"
+            )"
+            expected_relative="/${cgroup_path#/sys/fs/cgroup/}"
+            test "$child_relative" = "$expected_relative"
+          }
+
+          verify_removed_document_cgroup()
+          {
+            cgroup_path=$1
+            for _ in $(seq 1 200)
+            do
+              [ ! -d "$cgroup_path" ] && return 0
+              sleep 0.01
+            done
+
+            echo "Per-document cgroup remained after its OCR child exited." >&2
+            return 1
+          }
+
+          existing=("$parent_cgroup"/fullworth-ocr-*)
+          test "${#existing[@]}" -eq 0
+
+          send_ocr_request "$response_one" &
+          first_request_pid=$!
+          first_cgroup="$(observe_document_cgroup "$first_request_pid")"
+          verify_live_document_cgroup "$first_cgroup"
+          wait "$first_request_pid"
+          verify_removed_document_cgroup "$first_cgroup"
+
+          send_ocr_request "$response_two" &
+          second_request_pid=$!
+          second_cgroup="$(observe_document_cgroup "$second_request_pid")"
+          verify_live_document_cgroup "$second_cgroup"
+          wait "$second_request_pid"
+          verify_removed_document_cgroup "$second_cgroup"
+
+          test "$first_cgroup" != "$second_cgroup"
+
+          for response_file in "$response_one" "$response_two"
+          do
+            python3 - "$response_file" <<'PY'
           import json
           import sys
-          result = json.load(sys.stdin)
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              result = json.load(handle)
+
           assert result.get("pageCount") == 1, result
           assert result.get("isUsable") is False, result
           assert result.get("text") == "", result
-          '
+          PY
+          done
 
       - name: Install visual acceptance dependencies
         if: steps.visual_changes.outputs.required == 'true'
