@@ -178,10 +178,21 @@ if (args.Length == 3 && args[0] == "--ocr")
         }),
         NullLogger<TesseractBillStatementOcrEngine>.Instance);
     using var inputStream = new MemoryStream(input, writable: false);
-    var result = engine.TryExtract(
-        inputStream,
-        mediaType,
-        extension);
+    BillStatementOcrResult result;
+    try
+    {
+        result = engine.TryExtract(
+            inputStream,
+            mediaType,
+            extension);
+    }
+    catch (OcrImageContainmentException ex)
+    {
+        result = BillStatementOcrResult.Failure(
+            pageCount: 1,
+            failureCode: ex.Code);
+    }
+
     var output = JsonSerializer.SerializeToUtf8Bytes(result, jsonOptions);
     if (output.Length > WorkerProtocol.MaxResponseBytes)
     {
