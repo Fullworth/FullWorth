@@ -40,7 +40,7 @@ do
     fi
 done
 
-for service in database parser-worker api web
+for service in database api web
 do
     container_id="$(compose ps -q "$service")"
 
@@ -58,6 +58,14 @@ do
         fail "Production container is not healthy: $service ($health_status)" 69
     fi
 done
+
+if ! compose exec -T api \
+    curl --fail --silent --show-error \
+        --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+        https://parser-worker:8081/health/ready \
+        >/dev/null; then
+    fail "Production parser worker readiness probe failed." 69
+fi
 
 release_id="$(git -C "$deployment_directory" rev-parse --verify HEAD^{commit} 2>/dev/null)" ||
     fail "Could not resolve the deployed Git commit." 77
