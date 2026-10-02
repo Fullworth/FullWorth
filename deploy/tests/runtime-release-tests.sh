@@ -61,12 +61,13 @@ case "$1" in
     compose)
         case "$*" in
             *'ps --status running --services'*)
-                for service in database api web edge
+                for service in database parser-worker api web edge
                 do
                     [ "${BILLWATCH_TEST_MISSING_SERVICE:-}" = "$service" ] || printf '%s\n' "$service"
                 done
                 ;;
             *'ps -q database'*) printf '%s\n' 'cid-database' ;;
+            *'ps -q parser-worker'*) printf '%s\n' 'cid-parser-worker' ;;
             *'ps -q api'*) printf '%s\n' 'cid-api' ;;
             *'ps -q web'*) printf '%s\n' 'cid-web' ;;
             *) exit 2 ;;
@@ -90,6 +91,7 @@ case "$1" in
             *'org.opencontainers.image.revision'* )
                 case "$container_id" in
                     cid-api) printf '%s\n' "${BILLWATCH_TEST_API_REVISION:-$release_default}" ;;
+                    cid-parser-worker) printf '%s\n' "${BILLWATCH_TEST_PARSER_REVISION:-$release_default}" ;;
                     cid-web) printf '%s\n' "${BILLWATCH_TEST_WEB_REVISION:-$release_default}" ;;
                     *) exit 2 ;;
                 esac
@@ -123,10 +125,12 @@ verify()
 
 verify >/dev/null
 expect_failure verify BILLWATCH_TEST_API_REVISION="$other_release"
+expect_failure verify BILLWATCH_TEST_PARSER_REVISION="$other_release"
 expect_failure verify BILLWATCH_TEST_WEB_REVISION="$other_release"
 expect_failure verify BILLWATCH_TEST_BACKUP_REVISION="$other_release"
 expect_failure verify BILLWATCH_TEST_BACKUP_MISSING=true
 expect_failure verify BILLWATCH_TEST_UNHEALTHY=api
+expect_failure verify BILLWATCH_TEST_UNHEALTHY=parser-worker
 expect_failure verify BILLWATCH_TEST_MISSING_SERVICE=web
 expect_failure verify BILLWATCH_TEST_HEAD="$other_release"
 
