@@ -518,9 +518,15 @@ static void TryKillWorkerTree(Process process)
         {
             process.Kill(entireProcessTree: true);
         }
+
+        // A per-document cgroup cannot be removed while any killed descendant
+        // is still draining out of it. Wait a short, bounded interval so the
+        // containment lease can be deleted deterministically on failure paths.
+        process.WaitForExit(milliseconds: 5_000);
     }
     catch
     {
         // The worker failure is returned without exposing process diagnostics.
+        // Cgroup cleanup remains best effort if the runtime cannot confirm exit.
     }
 }
