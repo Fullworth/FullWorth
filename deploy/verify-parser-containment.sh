@@ -177,8 +177,8 @@ import struct
 import sys
 import zlib
 
-width = 1200
-height = 900
+width = 640
+height = 480
 marker = os.environ["PROOF_MARKER"].encode("ascii")
 raw = b"".join(
     b"\x00" + (b"\xff\xff\xff" * width)
