@@ -1,4 +1,8 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# syntax=docker/dockerfile:1
+
+# Digest-pinned Microsoft images keep the reviewed base immutable while retaining
+# the version tag for human-readable upgrade diffs.
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:478b9038d187e5b5c29bfa8173ded5d29e864b5ad06102a12106380ee01e2e49 AS build
 
 WORKDIR /src
 
@@ -23,7 +27,7 @@ RUN dotnet publish FullWorth.API/FullWorth.API.csproj \
     --output /app/parser-worker-publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS parser-worker-final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:a04d1c1d2d26119049494057d80ea6cda25bbd8aef7c444a1fc1ef874fd3955b AS parser-worker-final
 
 ARG BILLWATCH_RELEASE_ID=unknown
 
@@ -71,7 +75,7 @@ HEALTHCHECK NONE
 ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]
 CMD ["dotnet", "FullWorth.ParserWorker.dll"]
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:a04d1c1d2d26119049494057d80ea6cda25bbd8aef7c444a1fc1ef874fd3955b AS final
 
 ARG BILLWATCH_RELEASE_ID=unknown
 
