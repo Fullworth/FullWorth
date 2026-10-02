@@ -46,7 +46,8 @@ internal interface ISecurityEventSink
 }
 
 internal sealed class LoggerSecurityEventSink(
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    SecurityEventAlertAggregator alertAggregator)
     : ISecurityEventSink
 {
     private readonly ILogger _logger =
@@ -86,6 +87,9 @@ internal sealed class LoggerSecurityEventSink(
             securityEvent.StatusCode,
             securityEvent.Authenticated,
             securityEvent.RequestId);
+
+        alertAggregator.Observe(
+            securityEvent);
     }
 }
 
