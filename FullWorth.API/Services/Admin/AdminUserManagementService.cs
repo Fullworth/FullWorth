@@ -34,57 +34,70 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
-        return await InTransactionAsync(
-            async () =>
-            {
-                var state =
-                    await LoadManagementStateAsync(
-                        actorUserId,
-                        targetUserId,
-                        cancellationToken);
+        var changed =
+            false;
 
-                if (state is null ||
-                    !FullWorthRoleHierarchy.CanManageUser(
-                        state.ActorHighestRole!,
-                        state.TargetHighestRole) ||
-                    !FullWorthRoleHierarchy.CanAssignRole(
-                        state.ActorHighestRole!,
-                        roleName))
+        var result =
+            await InTransactionAsync(
+                async () =>
                 {
-                    return AdminUserMutationResult.Forbidden;
-                }
+                    var state =
+                        await LoadManagementStateAsync(
+                            actorUserId,
+                            targetUserId,
+                            cancellationToken);
 
-                var mutation =
-                    await identityGateway.StageAssignRoleAsync(
-                        targetUserId,
-                        roleName,
-                        cancellationToken);
+                    if (state is null ||
+                        !FullWorthRoleHierarchy.CanManageUser(
+                            state.ActorHighestRole!,
+                            state.TargetHighestRole) ||
+                        !FullWorthRoleHierarchy.CanAssignRole(
+                            state.ActorHighestRole!,
+                            roleName))
+                    {
+                        return AdminUserMutationResult.Forbidden;
+                    }
 
-                if (!mutation.Found ||
-                    !mutation.RoleId.HasValue)
-                {
-                    return AdminUserMutationResult.NotFound;
-                }
+                    var mutation =
+                        await identityGateway.StageAssignRoleAsync(
+                            targetUserId,
+                            roleName,
+                            cancellationToken);
 
-                if (mutation.Changed)
-                {
-                    AddAudit(
-                        actorUserId,
-                        targetUserId,
-                        "StaffRoleAssigned",
-                        mutation.RoleId.Value);
+                    if (!mutation.Found ||
+                        !mutation.RoleId.HasValue)
+                    {
+                        return AdminUserMutationResult.NotFound;
+                    }
 
-                    await dbContext.SaveChangesAsync(
-                        cancellationToken);
+                    if (mutation.Changed)
+                    {
+                        AddAudit(
+                            actorUserId,
+                            targetUserId,
+                            "StaffRoleAssigned",
+                            mutation.RoleId.Value);
 
-                    SecuritySensitiveActionLog.AdminMutationCompleted(
-                        _securityLogger,
-                        "StaffRoleAssigned");
-                }
+                        await dbContext.SaveChangesAsync(
+                            cancellationToken);
 
-                return AdminUserMutationResult.Success;
-            },
-            cancellationToken);
+                        changed =
+                            true;
+                    }
+
+                    return AdminUserMutationResult.Success;
+                },
+                cancellationToken);
+
+        if (result.Succeeded &&
+            changed)
+        {
+            SecuritySensitiveActionLog.AdminMutationCompleted(
+                _securityLogger,
+                "StaffRoleAssigned");
+        }
+
+        return result;
     }
 
     public async Task<AdminUserMutationResult> RemoveRoleAsync(
@@ -100,54 +113,67 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
-        return await InTransactionAsync(
-            async () =>
-            {
-                var state =
-                    await LoadManagementStateAsync(
-                        actorUserId,
-                        targetUserId,
-                        cancellationToken);
+        var changed =
+            false;
 
-                if (state is null ||
-                    !FullWorthRoleHierarchy.CanManageUser(
-                        state.ActorHighestRole!,
-                        state.TargetHighestRole))
+        var result =
+            await InTransactionAsync(
+                async () =>
                 {
-                    return AdminUserMutationResult.Forbidden;
-                }
+                    var state =
+                        await LoadManagementStateAsync(
+                            actorUserId,
+                            targetUserId,
+                            cancellationToken);
 
-                var mutation =
-                    await identityGateway.StageRemoveRoleAsync(
-                        targetUserId,
-                        roleName,
-                        cancellationToken);
+                    if (state is null ||
+                        !FullWorthRoleHierarchy.CanManageUser(
+                            state.ActorHighestRole!,
+                            state.TargetHighestRole))
+                    {
+                        return AdminUserMutationResult.Forbidden;
+                    }
 
-                if (!mutation.Found ||
-                    !mutation.RoleId.HasValue)
-                {
-                    return AdminUserMutationResult.NotFound;
-                }
+                    var mutation =
+                        await identityGateway.StageRemoveRoleAsync(
+                            targetUserId,
+                            roleName,
+                            cancellationToken);
 
-                if (mutation.Changed)
-                {
-                    AddAudit(
-                        actorUserId,
-                        targetUserId,
-                        "StaffRoleRemoved",
-                        mutation.RoleId.Value);
+                    if (!mutation.Found ||
+                        !mutation.RoleId.HasValue)
+                    {
+                        return AdminUserMutationResult.NotFound;
+                    }
 
-                    await dbContext.SaveChangesAsync(
-                        cancellationToken);
+                    if (mutation.Changed)
+                    {
+                        AddAudit(
+                            actorUserId,
+                            targetUserId,
+                            "StaffRoleRemoved",
+                            mutation.RoleId.Value);
 
-                    SecuritySensitiveActionLog.AdminMutationCompleted(
-                        _securityLogger,
-                        "StaffRoleRemoved");
-                }
+                        await dbContext.SaveChangesAsync(
+                            cancellationToken);
 
-                return AdminUserMutationResult.Success;
-            },
-            cancellationToken);
+                        changed =
+                            true;
+                    }
+
+                    return AdminUserMutationResult.Success;
+                },
+                cancellationToken);
+
+        if (result.Succeeded &&
+            changed)
+        {
+            SecuritySensitiveActionLog.AdminMutationCompleted(
+                _securityLogger,
+                "StaffRoleRemoved");
+        }
+
+        return result;
     }
 
     public async Task<AdminUserMutationResult> GrantEntitlementAsync(
