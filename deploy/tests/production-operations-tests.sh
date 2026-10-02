@@ -464,5 +464,6 @@ grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fa
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after failure."
 
 sh "$root_dir/deploy/tests/alert-observation-proof-tests.sh" || fail "alert observation proof regression suite failed."
+sh "$root_dir/deploy/tests/security-incident-response-runbook-tests.sh" || fail "security incident-response runbook regression suite failed."
 
 printf '%s\n' 'Production operation script tests passed.'
