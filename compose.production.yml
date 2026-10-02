@@ -31,7 +31,7 @@ services:
       database:
         condition: service_healthy
       parser-worker:
-        condition: service_started
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
