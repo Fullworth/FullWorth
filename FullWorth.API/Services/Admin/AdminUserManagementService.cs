@@ -2,6 +2,7 @@ using System.Data;
 using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -13,8 +14,13 @@ public sealed class AdminUserManagementService(
     IAdminIdentityMutationGateway identityGateway,
     IAdminSubscriptionMutationGateway subscriptionGateway,
     IAdminAuditLogWriter auditLogWriter,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILoggerFactory loggerFactory)
 {
+    private readonly ILogger _securityLogger =
+        SecuritySensitiveActionLog.CreateLogger(
+            loggerFactory);
+
     public async Task<AdminUserMutationResult> AssignRoleAsync(
         Guid actorUserId,
         Guid targetUserId,
@@ -70,6 +76,10 @@ public sealed class AdminUserManagementService(
 
                     await dbContext.SaveChangesAsync(
                         cancellationToken);
+
+                    SecuritySensitiveActionLog.AdminMutationCompleted(
+                        _securityLogger,
+                        "StaffRoleAssigned");
                 }
 
                 return AdminUserMutationResult.Success;
@@ -129,6 +139,10 @@ public sealed class AdminUserManagementService(
 
                     await dbContext.SaveChangesAsync(
                         cancellationToken);
+
+                    SecuritySensitiveActionLog.AdminMutationCompleted(
+                        _securityLogger,
+                        "StaffRoleRemoved");
                 }
 
                 return AdminUserMutationResult.Success;
@@ -186,6 +200,10 @@ public sealed class AdminUserManagementService(
         await dbContext.SaveChangesAsync(
             cancellationToken);
 
+        SecuritySensitiveActionLog.AdminMutationCompleted(
+            _securityLogger,
+            "SubscriptionEntitlementGranted");
+
         return AdminUserMutationResult.SuccessWithId(
             entitlementId);
     }
@@ -235,6 +253,10 @@ public sealed class AdminUserManagementService(
 
             await dbContext.SaveChangesAsync(
                 cancellationToken);
+
+            SecuritySensitiveActionLog.AdminMutationCompleted(
+                _securityLogger,
+                "SubscriptionEntitlementRevoked");
         }
 
         return AdminUserMutationResult.Success;
@@ -291,6 +313,12 @@ public sealed class AdminUserManagementService(
 
         await dbContext.SaveChangesAsync(
             cancellationToken);
+
+        SecuritySensitiveActionLog.AdminMutationCompleted(
+            _securityLogger,
+            isActive
+                ? "UserProgramMembershipEnabled"
+                : "UserProgramMembershipDisabled");
 
         return AdminUserMutationResult.SuccessWithId(
             membershipId);
