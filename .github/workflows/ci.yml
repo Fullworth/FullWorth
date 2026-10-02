@@ -160,8 +160,7 @@ jobs:
             "FullWorth.Web/",
             "FullWorth.Tests/",
             "FullWorth.VisualTests/",
-            "deploy/",
-            ".github/workflows/"
+            "deploy/"
           )
 
           $safeExactFiles = @(
@@ -283,7 +282,8 @@ jobs:
             "FullWorth.Core/",
             "FullWorth.Web/",
             "FullWorth.VisualTests/",
-            "deploy/"
+            "deploy/",
+            ".github/workflows/"
           )
 
           $relevantExactFiles = @(
