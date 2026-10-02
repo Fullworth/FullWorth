@@ -1123,7 +1123,36 @@ jobs:
           {
             request_pid=$1
             output_file=$2
-            cgroup_path="$(observe_image_cgroup "$request_pid")"
+            response_file=$3
+
+            if ! cgroup_path="$(observe_image_cgroup "$request_pid")"; then
+              for _ in $(seq 1 200)
+              do
+                [ -s "$response_file" ] && break
+                kill -0 "$request_pid" 2>/dev/null || break
+                sleep 0.01
+              done
+
+              if [ -s "$response_file" ]; then
+                python3 - "$response_file" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          print(
+              "OCR image containment diagnostic: {}".format(
+                  result.get("failureCode") or "none"
+              ),
+              file=sys.stderr,
+          )
+          PY
+              fi
+
+              return 1
+            fi
+
             verify_live_image_cgroup "$cgroup_path"
             printf '%s\n' "$cgroup_path" > "$output_file"
           }
@@ -1151,7 +1180,8 @@ jobs:
           first_request_pid=$!
           observe_and_verify_document_cgroup "$first_request_pid" "$first_document_observation" &
           first_document_observer_pid=$!
-          observe_and_verify_image_cgroup "$first_request_pid" "$first_image_observation" &
+          observe_and_verify_image_cgroup \
+            "$first_request_pid" "$first_image_observation" "$response_one" &
           first_image_observer_pid=$!
           wait "$first_document_observer_pid"
           wait "$first_image_observer_pid"
@@ -1165,7 +1195,8 @@ jobs:
           second_request_pid=$!
           observe_and_verify_document_cgroup "$second_request_pid" "$second_document_observation" &
           second_document_observer_pid=$!
-          observe_and_verify_image_cgroup "$second_request_pid" "$second_image_observation" &
+          observe_and_verify_image_cgroup \
+            "$second_request_pid" "$second_image_observation" "$response_two" &
           second_image_observer_pid=$!
           wait "$second_document_observer_pid"
           wait "$second_image_observer_pid"
