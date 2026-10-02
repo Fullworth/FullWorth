@@ -327,17 +327,17 @@ case "$*" in
     *'ps --status running --services'*)
         [ "${BILLWATCH_TEST_RUNNING_API:-false}" != true ] || printf '%s\n' api
         ;;
-    *'image inspect --format '*'billwatch-api:'*|*'image inspect --format '*'billwatch-web:'*|*'image inspect --format '*'billwatch-backup:'*)
+    *'image inspect --format '*'billwatch-api:'*|*'image inspect --format '*'billwatch-parser-worker:'*|*'image inspect --format '*'billwatch-web:'*|*'image inspect --format '*'billwatch-backup:'*)
         if [ "${BILLWATCH_TEST_BAD_IMAGE_REVISION:-false}" = true ]; then
             printf '%s\n' '89abcdef0123456789abcdef0123456789abcdef'
         else
             printf '%s\n' '0123456789abcdef0123456789abcdef01234567'
         fi
         ;;
-    *'up --detach --wait --wait-timeout 240 --no-build database api web edge'*)
+    *'up --detach --wait --wait-timeout 240 --no-build database parser-worker api web edge'*)
         [ "${BILLWATCH_TEST_FAIL_UP:-false}" != true ] || exit 1
         ;;
-    *'stop api web web-session-cache edge'*) : ;;
+    *'stop api parser-worker web web-session-cache edge'*) : ;;
 esac
 SCRIPT
 
@@ -382,9 +382,9 @@ run_deploy >/dev/null
 [ "$(cat "$deployment_root/.billwatch-release")" = "$release_id" ] || fail "deployment did not record the verified release."
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after success."
 grep -q 'config --quiet' "$command_log" || fail "deployment did not validate Compose configuration."
-grep -q -- '--profile operations build api web backup' "$command_log" || fail "deployment did not build API, web, and backup release images."
+grep -q -- '--profile operations build api parser-worker web backup' "$command_log" || fail "deployment did not build API, parser-worker, web, and backup release images."
 grep -q 'image inspect' "$command_log" || fail "deployment did not verify built image release revisions."
-grep -q 'up --detach --wait --wait-timeout 240 --no-build database api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
+grep -q 'up --detach --wait --wait-timeout 240 --no-build database parser-worker api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
 grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
 grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
 grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
@@ -395,25 +395,25 @@ chmod 600 "$deployment_root/.billwatch-release"
 expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "bad image revision changed the last verified release marker."
 if grep -q 'up --detach' "$command_log"; then fail "bad image revision reached production startup."; fi
-if grep -q 'stop api web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
+if grep -q 'stop api parser-worker web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_SECURITY=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "HTTP security failure changed the last verified release marker."
 grep -qx 'backup' "$command_log" || fail "stopped-runtime recovery did not create a pre-deploy recovery point."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_READINESS=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "readiness failure changed the last verified release marker."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_UP=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "failed startup changed the last verified release marker."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after failure."
 
 sh "$root_dir/deploy/tests/alert-observation-proof-tests.sh" || fail "alert observation proof regression suite failed."

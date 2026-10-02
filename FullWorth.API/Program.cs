@@ -814,9 +814,30 @@ builder.Services.AddHttpClient<
             return handler;
         });
 
-builder.Services.AddSingleton<
-    IBillStatementOcrEngine,
-    TesseractBillStatementOcrEngine>();
+builder.Services.AddHttpClient<
+        IBillStatementOcrEngine,
+        ParserWorkerBillStatementOcrEngine>(
+        client =>
+        {
+            client.BaseAddress =
+                parserWorkerBaseUri;
+
+            client.Timeout =
+                TimeSpan.FromSeconds(
+                    40);
+        })
+    .ConfigurePrimaryHttpMessageHandler(
+        () =>
+        {
+            var handler = new HttpClientHandler();
+            if (parserWorkerServerCertificateValidator is not null)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    parserWorkerServerCertificateValidator.Validate;
+            }
+
+            return handler;
+        });
 
 builder.Services.AddScoped<
     BillStatementDocumentTextReader>();

@@ -34,3 +34,16 @@ This file contains only work that cannot be completed safely through the current
 **Verify:** The legally approved license/notice text is merged from a current-development PR before commercial launch, and no repository documentation claims legal approval before that review is complete.
 
 Do not put credentials, tokens, recovery codes, financial data, private statements, or other secrets in this file.
+
+
+## OCR containment production proof
+
+After the isolated OCR worker change reaches `master`, an operator with the existing guarded production-host access must:
+
+1. Deploy the exact approved `master` SHA through the guarded deployment workflow.
+2. Record the deployed release SHA and verify API/Web/parser-worker readiness.
+3. Run a synthetic image OCR request and a bounded memory-pressure fixture while recording the parser-worker cgroup's `memory.max`, `memory.swap.max`, `memory.events`, `memory.peak`, `cpu.max`, and surviving API/Web readiness.
+4. Confirm no statement bytes, OCR text, credentials, or native diagnostics appear in API, worker, Docker, or systemd logs.
+5. Do not mark distinct per-document cgroups complete until the host runtime safely delegates a writable cgroup-v2 subtree to the unprivileged worker and a test proves every child enters a unique finite subgroup that is removed after exit.
+
+GitHub CI proves the production image and Compose boundary only; it cannot substitute for this deployed-host evidence.

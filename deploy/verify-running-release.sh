@@ -72,7 +72,7 @@ compose()
         "$@"
 }
 
-for service in api web
+for service in api parser-worker web
 do
     container_id=$(compose ps -q "$service") ||
         fail "the running $service container could not be resolved." 78
