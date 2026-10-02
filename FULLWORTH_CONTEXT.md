@@ -1,3 +1,11 @@
+## Provenance-preserving guarded release image deployment — 2026-10-02
+
+The guarded GitHub production workflow now resolves the successful FullWorth CI run for the exact approved `master` SHA, downloads the release-scoped API, parser-worker, and Web image artifact, verifies both build-provenance and SPDX SBOM attestations for every archive, and creates a checksum manifest before transfer over pinned SSH. The production host verifies that manifest, loads those application images without rebuilding them, validates the release labels, and requires each running application container to use the exact loaded image ID before the verified release marker can advance. The operations-only backup image remains host-built.
+
+Exact PR #616 head `8c167b11f0ba35895bd7d892649437c4a4950ea0` passed FullWorth CI #1505 (run `37024933210`: backend tests, MAUI Android, production-container deployment regressions, parser containment, visual/security boundaries, and encrypted recovery) and Dependency Security #602 (run `37024933482`) before squash merge to `development` as `bcd198c52ab2f19ed01757f1e437fcf201e80fa2`.
+
+This closes the repository path from GitHub-attested application image archives to guarded runtime image-identity verification. It does not establish production acceptance because no deployment occurred. Same-release deployed-host containment and provenance evidence remain required after promotion to `master`. A direct host build remains a recovery option but is explicitly not provenance-preserving.
+
 ## Per-image OCR cgroup containment — 2026-10-02
 
 Every admitted standalone or PDF-extracted OCR image now runs in a fresh sibling cgroup-v2 leaf beneath the delegated parser-container parent. The one-shot image process is moved from its per-document cgroup into the image scope before encoded bytes are released or native Tesseract/Leptonica state is initialized. Linux execution fails closed when the scope cannot be created, constrained, entered, or verified. Each image scope enforces a finite 1-CPU quota, a 384 MiB hard memory ceiling, zero swap, and OOM-group behavior; configured image limits cannot exceed the enclosing document limits. Safe failure codes distinguish pre-decode admission rejection from containment setup failure without returning parser diagnostics or document content.
