@@ -1,3 +1,13 @@
+## Per-document parser cgroup containment — 2026-10-01
+
+Every admitted PDF or OCR document now runs in a unique cgroup-v2 child scope before its bytes are released to the native parser. Each child is constrained to 1 CPU, 384 MiB memory, zero swap, and 48 PIDs, while the parent parser container remains capped at 1 CPU, 512 MiB memory, and 64 PIDs. The trusted bootstrap performs only cgroup subtree delegation, then executes the HTTP supervisor as UID/GID 1654 with cleared supplementary groups and an empty inheritable, ambient, effective, and bounding capability set.
+
+Production-container validation proves the running supervisor identity and capability boundary, two real OCR requests receive distinct finite cgroups, completed document cgroups are removed, and unmanaged page pressure produces a kernel cgroup-v2 `oom_kill` event without killing the supervisor. The guarded production deployment now runs `deploy/verify-parser-containment.sh` and refuses to advance the verified release marker unless live OCR placement, cleanup, hard memory enforcement, readiness survival, and sanitized recent logs all pass.
+
+Exact PR #601 head `de1f652c78c2f0364fb5d74e1da15acce15d4093` passed FullWorth CI #1446 (run `36953420697`: backend build/tests, production Compose security/deployment regressions, live parser cgroup delegation, hard cgroup OOM enforcement, isolated PDF/OCR paths, per-document uniqueness and cleanup, production-container readiness/security boundaries, and encrypted backup/restore) and Dependency Security #543 (run `36953420631`). It was squash-merged to `development` as `99feea1211d178b98139b56e5a15023243ed54be`.
+
+This completes repository- and CI-proven OCR process isolation, per-document cgroups, and hard OS-enforced native-image memory containment. It does not claim deployed-host acceptance. Direct production evidence remains a human/operator gate after this exact change reaches `master`; no production deployment occurred.
+
 ## Standalone OCR image pre-decode admission — 2026-10-01
 
 Standalone PNG and JPEG statement uploads now pass a bounded, allocation-light header inspection before any native Tesseract/Leptonica decode. PNG admission requires the exact signature and canonical 13-byte IHDR, while JPEG admission safely walks length-delimited marker segments to a supported start-of-frame marker. Malformed, truncated, unsupported, zero-dimension, and over-limit inputs fail closed. Accepted dimensions reuse the PDF OCR memory admission model: encoded bytes plus a conservative eight decoded bytes per pixel must remain within 256 MiB.
