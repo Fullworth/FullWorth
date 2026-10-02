@@ -1,3 +1,13 @@
+## Immutable GitHub Actions supply chain — 2026-10-02
+
+Every external action used by FullWorth's GitHub workflows is now pinned to an immutable 40-character commit SHA. The production deployment checkout was pinned first in PR #604; PR #605 then pinned the Android/iOS packaging, production auth smoke, external readiness, repository-governance, and artifact transfer actions without changing their behavior. A repository-wide shell contract rejects future mutable external action tags and unpinned Docker action images while permitting repository-local actions. Every workflow-file change now enters the production-container validation path, so editing a previously unlisted workflow cannot bypass that contract.
+
+The first PR #605 exact-head run correctly exposed Android and iOS packaging contracts that still asserted mutable artifact tags. Those tests were corrected to require the exact reviewed artifact-action commits. Corrected head `31e370bb3957dbbd32cf085d57d1764cb3b1a5e4` passed FullWorth CI #1452 (run `36971569424`), Dependency Security #549 (run `36971569415`), Android Internal APK #63 (run `36971569617`, including signed package and emulator launch), and iOS Internal Simulator #57 (run `36971569427`, including simulator build/install/launch). PR #605 was squash-merged to `development` as `3a9d8a5617a39f0d0b1560fbbd65dbbae1892937`.
+
+PR #604 head `2be7933d815bddcba252fca862efd826acf6c7d3` separately passed FullWorth CI #1449 (run `36968503452`) and Dependency Security #546 (run `36968503734`) before squash merge as `a57b52b3a04e0a18dbd3e7f62b1156693e1e55cc`.
+
+This completes immutable pinning and regression enforcement for GitHub Actions references. Container base/runtime image digest pinning and signed build provenance remain separate supply-chain milestones. No production deployment occurred.
+
 ## Per-document parser cgroup containment — 2026-10-01
 
 Every admitted PDF or OCR document now runs in a unique cgroup-v2 child scope before its bytes are released to the native parser. Each child is constrained to 1 CPU, 384 MiB memory, zero swap, and 48 PIDs, while the parent parser container remains capped at 1 CPU, 512 MiB memory, and 64 PIDs. The trusted bootstrap performs only cgroup subtree delegation, then executes the HTTP supervisor as UID/GID 1654 with cleared supplementary groups and an empty inheritable, ambient, effective, and bounding capability set.
