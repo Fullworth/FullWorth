@@ -74,7 +74,7 @@ if grep -Fq 'mapfile ' "$workflow"; then
 fi
 grep -Fq 'ios-simulator-smoke.sh' "$workflow" ||
     fail "workflow does not install and launch the built app in Simulator."
-grep -Fq 'actions/upload-artifact@v7' "$workflow" ||
+grep -Fq 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' "$workflow" ||
     fail "workflow does not publish a simulator artifact."
 grep -Fq 'retention-days: 14' "$workflow" ||
     fail "iOS simulator artifact retention is not bounded."
