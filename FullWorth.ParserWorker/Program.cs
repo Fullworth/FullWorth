@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using FullWorth.ParserWorker.Ocr;
@@ -24,24 +25,36 @@ if (args.Length == 1 && args[0] == "--containment-memory-child")
         return;
     }
 
-    var allocations = new List<byte[]>();
+    var allocations = new List<nint>();
+    var touchBuffer = new byte[1024 * 1024];
+    Array.Fill(touchBuffer, (byte)0x5A);
+
     const int blockBytes = 16 * 1024 * 1024;
     const long maximumProbeBytes = 1024L * 1024 * 1024;
     long allocatedBytes = 0;
 
     while (allocatedBytes < maximumProbeBytes)
     {
-        var block = GC.AllocateUninitializedArray<byte>(blockBytes);
-        for (var offset = 0; offset < block.Length; offset += 4096)
+        var block = Marshal.AllocHGlobal(blockBytes);
+        allocations.Add(block);
+
+        for (var offset = 0; offset < blockBytes; offset += touchBuffer.Length)
         {
-            block[offset] = 0x5A;
+            Marshal.Copy(
+                touchBuffer,
+                0,
+                IntPtr.Add(block, offset),
+                touchBuffer.Length);
         }
 
-        allocations.Add(block);
-        allocatedBytes += block.Length;
+        allocatedBytes += blockBytes;
     }
 
-    GC.KeepAlive(allocations);
+    foreach (var block in allocations)
+    {
+        Marshal.FreeHGlobal(block);
+    }
+
     Environment.ExitCode = 70;
     return;
 }
