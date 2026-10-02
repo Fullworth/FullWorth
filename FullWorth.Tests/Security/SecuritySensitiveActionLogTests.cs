@@ -16,6 +16,7 @@ public sealed class SecuritySensitiveActionLogTests
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             logger,
+            CreateAlertAggregator(),
             "StaffRoleAssigned");
 
         Assert.Equal(
@@ -54,6 +55,7 @@ public sealed class SecuritySensitiveActionLogTests
             () =>
                 SecuritySensitiveActionLog.AdminMutationCompleted(
                     logger,
+                    CreateAlertAggregator(),
                     "attacker@example.com secret-token"));
 
         Assert.Empty(
@@ -71,6 +73,7 @@ public sealed class SecuritySensitiveActionLogTests
 
         SecuritySensitiveActionLog.AccountExportCompleted(
             logger,
+            CreateAlertAggregator(),
             "attacker@example.com\r\nsecret-token");
 
         var entry =
@@ -111,6 +114,7 @@ public sealed class SecuritySensitiveActionLogTests
 
         SecuritySensitiveActionLog.AccountDeletionCompleted(
             logger,
+            CreateAlertAggregator(),
             requestId);
 
         var entry =
@@ -130,6 +134,23 @@ public sealed class SecuritySensitiveActionLogTests
             requestId,
             entry.Message,
             StringComparison.Ordinal);
+    }
+
+    private static SecuritySensitiveActionAlertAggregator
+        CreateAlertAggregator()
+    {
+        return new SecuritySensitiveActionAlertAggregator(
+            TimeProvider.System,
+            new NullSecuritySensitiveActionAlertSink());
+    }
+
+    private sealed class NullSecuritySensitiveActionAlertSink
+        : ISecuritySensitiveActionAlertSink
+    {
+        public void Write(
+            SecuritySensitiveActionAlert securityAlert)
+        {
+        }
     }
 
     private sealed class RecordingLoggerFactory
