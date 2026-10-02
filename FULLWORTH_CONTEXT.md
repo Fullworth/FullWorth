@@ -1,3 +1,13 @@
+## Financial provider attention security event — 2026-10-02
+
+FullWorth now emits metadata-only security event 29014, `financial_provider_attention_required`, when a Plaid account- or transaction-sync error is classified as requiring user action and the owned bank connection is successfully persisted from `Active` to `RequiresAttention`. The event contains only the fixed provider name `plaid` and one allowlisted operation name, `accounts_sync` or `transactions_sync`.
+
+The event deliberately excludes Plaid error code/type, user IDs, bank-connection/item/account identifiers, institution data, provider request IDs, access tokens, request/response bodies, and financial values. Provider/API errors that do not require user action leave the connection active and do not emit this security event. A concurrent/no-op path that no longer transitions an active connection likewise emits nothing.
+
+Exact corrected PR #625 head `1da0811ec5208f8493b5846613c3a5e9bc06525f` passed FullWorth CI #1519 (run `37049123705`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #616 (run `37049123724`) before squash merge to `development` as `09ce3dbc539bc31835e890bed267fe8593f5ffcd`.
+
+This closes the first financial-provider failure telemetry slice. Bounded alert thresholds for high-risk/provider-attention events, broader ownership-violation detection, other provider-failure classes, and incident-response/credential-rotation runbooks remain separate follow-up work. No production deployment occurred.
+
 ## High-risk authenticated action security events — 2026-10-02
 
 FullWorth now emits dedicated metadata-only `FullWorth.SecurityEvents` records when sensitive authenticated actions actually complete, closing the next observability gap after generic 401/403/429 telemetry. Event 29011 records only a fixed allowlisted administrative action name after persisted staff-role, entitlement, program-membership, or subscription-access-key mutations. Event 29012 records successful strongly reauthenticated account export, and event 29013 records committed account deletion, including the accepted statement-cleanup-pending case.
