@@ -1,5 +1,6 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.API.Services.Plaid;
@@ -7,8 +8,12 @@ namespace FullWorth.API.Services.Plaid;
 public sealed class PlaidConnectionSyncCoordinator(
     FullWorthDbContext dbContext,
     PlaidAccountSyncService accountSyncService,
-    PlaidTransactionSyncService transactionSyncService)
+    PlaidTransactionSyncService transactionSyncService,
+    ILoggerFactory loggerFactory)
 {
+    private readonly ILogger _securityLogger =
+        SecuritySensitiveActionLog.CreateLogger(
+            loggerFactory);
     public async Task<PlaidAccountSyncSummary> SyncAllAccountsAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
@@ -37,10 +42,16 @@ public sealed class PlaidConnectionSyncCoordinator(
                     .RequiresUserAttention(
                         exception))
             {
-                await PersistRequiresAttentionAsync(
-                    userId,
-                    connection,
-                    cancellationToken);
+                if (await PersistRequiresAttentionAsync(
+                        userId,
+                        connection,
+                        cancellationToken))
+                {
+                    SecuritySensitiveActionLog
+                        .FinancialProviderAttentionRequired(
+                            _securityLogger,
+                            "accounts_sync");
+                }
 
                 throw;
             }
@@ -87,10 +98,16 @@ public sealed class PlaidConnectionSyncCoordinator(
                     .RequiresUserAttention(
                         exception))
             {
-                await PersistRequiresAttentionAsync(
-                    userId,
-                    connection,
-                    cancellationToken);
+                if (await PersistRequiresAttentionAsync(
+                        userId,
+                        connection,
+                        cancellationToken))
+                {
+                    SecuritySensitiveActionLog
+                        .FinancialProviderAttentionRequired(
+                            _securityLogger,
+                            "transactions_sync");
+                }
 
                 throw;
             }
@@ -120,10 +137,16 @@ public sealed class PlaidConnectionSyncCoordinator(
         catch (PlaidApiException exception)
             when (PlaidConnectionAttentionClassifier.RequiresUserAttention(exception))
         {
-            await PersistRequiresAttentionAsync(
-                userId,
-                connectionId,
-                cancellationToken);
+            if (await PersistRequiresAttentionAsync(
+                    userId,
+                    connectionId,
+                    cancellationToken))
+            {
+                SecuritySensitiveActionLog
+                    .FinancialProviderAttentionRequired(
+                        _securityLogger,
+                        "accounts_sync");
+            }
 
             throw;
         }
@@ -146,10 +169,16 @@ public sealed class PlaidConnectionSyncCoordinator(
         catch (PlaidApiException exception)
             when (PlaidConnectionAttentionClassifier.RequiresUserAttention(exception))
         {
-            await PersistRequiresAttentionAsync(
-                userId,
-                connectionId,
-                cancellationToken);
+            if (await PersistRequiresAttentionAsync(
+                    userId,
+                    connectionId,
+                    cancellationToken))
+            {
+                SecuritySensitiveActionLog
+                    .FinancialProviderAttentionRequired(
+                        _securityLogger,
+                        "transactions_sync");
+            }
 
             throw;
         }
@@ -170,7 +199,7 @@ public sealed class PlaidConnectionSyncCoordinator(
             .ToListAsync(cancellationToken);
     }
 
-    private async Task PersistRequiresAttentionAsync(
+    private async Task<bool> PersistRequiresAttentionAsync(
         Guid userId,
         BankConnectionEntity connection,
         CancellationToken cancellationToken)
@@ -184,10 +213,10 @@ public sealed class PlaidConnectionSyncCoordinator(
                 "The bank connection does not belong to the requested user.");
         }
 
-        if (connection.Status ==
-            BankConnectionStatus.Disconnected)
+        if (connection.Status !=
+            BankConnectionStatus.Active)
         {
-            return;
+            return false;
         }
 
         connection.Status =
@@ -198,9 +227,11 @@ public sealed class PlaidConnectionSyncCoordinator(
 
         await dbContext.SaveChangesAsync(
             cancellationToken);
+
+        return true;
     }
 
-    private async Task PersistRequiresAttentionAsync(
+    private async Task<bool> PersistRequiresAttentionAsync(
         Guid userId,
         Guid connectionId,
         CancellationToken cancellationToken)
@@ -215,9 +246,9 @@ public sealed class PlaidConnectionSyncCoordinator(
                 cancellationToken);
 
         if (connection is null ||
-            connection.Status == BankConnectionStatus.Disconnected)
+            connection.Status != BankConnectionStatus.Active)
         {
-            return;
+            return false;
         }
 
         connection.Status =
@@ -227,6 +258,8 @@ public sealed class PlaidConnectionSyncCoordinator(
             DateTimeOffset.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 
     private static void ValidateIdentifiers(
