@@ -1,5 +1,6 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Plaid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
