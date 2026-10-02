@@ -219,6 +219,26 @@ compose up \
     web \
     edge
 
+parser_ready=false
+parser_attempt=1
+while [ "$parser_attempt" -le 30 ]
+do
+    if compose exec -T api \
+        curl --fail --silent \
+            --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+            https://parser-worker:8081/health/ready \
+            >/dev/null 2>&1; then
+        parser_ready=true
+        break
+    fi
+
+    sleep 2
+    parser_attempt=$((parser_attempt + 1))
+done
+
+[ "$parser_ready" = true ] ||
+    fail "the parser worker did not become ready through the pinned internal TLS path."
+
 "$root_dir/deploy/monitor-readiness.sh" \
     "https://$api_host"
 
