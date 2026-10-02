@@ -1,3 +1,15 @@
+## Security incident response and credential rotation runbook — 2026-10-02
+
+FullWorth now has a production security-incident runbook covering SEV-1 through SEV-3 classification, the first fifteen minutes of containment, secret-safe evidence handling, affected-user and broad identity containment, ordered credential rotation, compromised-host recovery, and an explicit closure gate. It prohibits feature-branch deployment, direct Identity-table edits, credential exposure in tickets or shell arguments, destructive evidence cleanup, and production claims based only on CI.
+
+The rotation matrix covers the production database, Web-session Redis, parser-worker authentication, Plaid, Stripe API/webhook, Resend, Google, Apple, operations-alert webhook, append-only backup storage, Restic keys, and the GitHub production SSH key. The session section is bound to the implemented strongly reauthenticated `sessions/revoke-all` path and `SecurityStamp` rotation: refresh access ends immediately, the current Web session signs out, and already-issued bearer access remains bounded by its existing fifteen-minute lifetime rather than being falsely described as instantly revoked.
+
+A new POSIX regression contract verifies every required section, every protected production setting, every referenced operational path, the feature-branch prohibition, the deployed-evidence boundary, the current revocation endpoint/mechanism, and the production-operations guide link. The contract runs from the existing production operations suite.
+
+Exact PR #627 head `95a4ce7ca4f8b2df30661ae02f3c6700ccec3cdb` passed FullWorth CI #1521 (run `37064373112`: backend build/tests, MAUI Android, Linux production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #618 (run `37064373180`) before squash merge to `development` as `a60f87f91fb58357e934fa52ccaddb6e81ac36ba`.
+
+This completes repository documentation and executable regression enforcement for incident response, credential rotation, and session-revocation procedures. It does not prove that operators have exercised a production incident or credential rotation; direct deployed-host/provider evidence remains required during a real incident or scheduled drill. No production deployment occurred.
+
 ## Financial provider attention security event — 2026-10-02
 
 FullWorth now emits metadata-only security event 29014, `financial_provider_attention_required`, when a Plaid account- or transaction-sync error is classified as requiring user action and the owned bank connection is successfully persisted from `Active` to `RequiresAttention`. The event contains only the fixed provider name `plaid` and one allowlisted operation name, `accounts_sync` or `transactions_sync`.
