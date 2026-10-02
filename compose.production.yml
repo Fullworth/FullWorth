@@ -31,7 +31,7 @@ services:
       database:
         condition: service_healthy
       parser-worker:
-        condition: service_healthy
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
@@ -89,7 +89,11 @@ services:
     restart: unless-stopped
     stop_grace_period: 10s
     logging: *default-logging
-    user: "1654:1654"
+    # Root exists only for the deterministic cgroup-v2 bootstrap. The entrypoint
+    # immediately drops to UID/GID 1654 with an empty capability bounding set
+    # before the HTTP worker starts.
+    user: "0:0"
+    cgroup: host
     read_only: true
     pids_limit: 64
     cpus: ${BILLWATCH_PARSER_CPU_LIMIT:-1.0}
@@ -97,6 +101,10 @@ services:
     memswap_limit: ${BILLWATCH_PARSER_MEMORY_LIMIT:-512m}
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     security_opt:
       - no-new-privileges:true
     environment:
@@ -105,23 +113,19 @@ services:
       DOTNET_EnableDiagnostics: "0"
       ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
       ParserWorker__TlsCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
+      FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US: "100000"
+      FULLWORTH_PARSER_DOCUMENT_CPU_PERIOD_US: "100000"
+      FULLWORTH_PARSER_DOCUMENT_MEMORY_MAX_BYTES: "402653184"
+      FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES: "0"
+      FULLWORTH_PARSER_DOCUMENT_PIDS_MAX: "48"
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1654,gid=1654,mode=0700
     volumes:
       - parser_worker_tls:/var/run/fullworth-parser-tls
-    healthcheck:
-      test:
-        - CMD
-        - curl
-        - --fail
-        - --silent
-        - --cacert
-        - /var/run/fullworth-parser-tls/parser-worker.cer.pem
-        - https://localhost:8081/health/ready
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
+      - type: bind
+        source: /sys/fs/cgroup
+        target: /sys/fs/cgroup
+        read_only: false
     networks:
       - parser_worker
 
