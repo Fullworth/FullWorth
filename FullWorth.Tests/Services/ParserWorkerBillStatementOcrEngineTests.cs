@@ -71,7 +71,10 @@ public sealed class ParserWorkerBillStatementOcrEngineTests
             Assert.Equal("image/png", request.Content?.Headers.ContentType?.MediaType);
             Assert.Equal(".png", Assert.Single(request.Headers.GetValues("X-FullWorth-Ocr-Extension")));
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
-            var actualBody = request.Content!\n                .ReadAsByteArrayAsync(cancellationToken)\n                .GetAwaiter()\n                .GetResult();
+            var actualBody = request.Content!
+                .ReadAsByteArrayAsync(cancellationToken)
+                .GetAwaiter()
+                .GetResult();
             Assert.Equal(expectedBody, actualBody);
             var expectedHash = Convert.ToHexString(SHA256.HashData(actualBody)).ToLowerInvariant();
             Assert.Equal(
