@@ -40,6 +40,26 @@ if (args.Length == 3 && args[0] == "--ocr")
         return;
     }
 
+    /*
+     * Read the bounded document before loading Tesseract.
+     *
+     * The supervisor does not write stdin until after this child has been
+     * attached to its per-document cgroup. Blocking here closes the startup
+     * race where native OCR could otherwise allocate memory before the hard
+     * document ceiling became authoritative.
+     */
+    var input = await ReadBoundedAsync(
+        Console.OpenStandardInput(),
+        CancellationToken.None);
+    if (input is null)
+    {
+        var rejected = JsonSerializer.SerializeToUtf8Bytes(
+            BillStatementOcrResult.Failure(0),
+            jsonOptions);
+        await Console.OpenStandardOutput().WriteAsync(rejected);
+        return;
+    }
+
     using var engine = new TesseractBillStatementOcrEngine(
         Options.Create(new BillStatementOcrOptions
         {
@@ -47,8 +67,9 @@ if (args.Length == 3 && args[0] == "--ocr")
             MaximumProcessingDuration = TimeSpan.FromSeconds(25)
         }),
         NullLogger<TesseractBillStatementOcrEngine>.Instance);
+    using var inputStream = new MemoryStream(input, writable: false);
     var result = engine.TryExtract(
-        Console.OpenStandardInput(),
+        inputStream,
         mediaType,
         extension);
     var output = JsonSerializer.SerializeToUtf8Bytes(result, jsonOptions);
