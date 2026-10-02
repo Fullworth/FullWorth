@@ -225,7 +225,7 @@ services:
       - web_session
 
   database:
-    image: postgres:17-bookworm
+    image: postgres:17-bookworm@sha256:639ab7ceb90e13123085b741fb31ef493fba25463002f6da665352e7b534b652
     restart: unless-stopped
     stop_grace_period: 60s
     logging: *default-logging
@@ -296,7 +296,7 @@ services:
   restore-database:
     profiles:
       - operations
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     restart: "no"
     stop_grace_period: 30s
     environment:
@@ -315,7 +315,7 @@ services:
     logging: *default-logging
 
   edge:
-    image: caddy:2.11-alpine
+    image: caddy:2.11-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
     restart: unless-stopped
     stop_grace_period: 30s
     logging: *default-logging
