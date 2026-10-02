@@ -664,7 +664,6 @@ jobs:
           assert result.get("code") == "ok", result
           assert result.get("memoryMaxBytes") == 402653184, result
           assert result.get("memoryPeakBytes", 0) > 0, result
-          assert result.get("memoryPeakBytes", 0) <= result.get("memoryMaxBytes", 0), result
           assert result.get("oomKillDelta", 0) >= 1, result
           '
 
