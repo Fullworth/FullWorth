@@ -30,7 +30,7 @@ compose()
         "$@"
 }
 
-required_services="database api web edge"
+required_services="database parser-worker api web edge"
 
 for service in $required_services
 do
@@ -40,7 +40,7 @@ do
     fi
 done
 
-for service in database api web
+for service in database parser-worker api web
 do
     container_id="$(compose ps -q "$service")"
 
@@ -90,6 +90,7 @@ verify_running_revision()
 }
 
 verify_running_revision api
+verify_running_revision parser-worker
 verify_running_revision web
 
 backup_image="billwatch-backup:$release_id"
