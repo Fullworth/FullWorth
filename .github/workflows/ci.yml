@@ -934,8 +934,8 @@ jobs:
           import struct
           import zlib
 
-          width = 2400
-          height = 1800
+          width = 1200
+          height = 900
           raw = b"".join(
               b"\\x00" + (b"\\xff\\xff\\xff" * width)
               for _ in range(height)
