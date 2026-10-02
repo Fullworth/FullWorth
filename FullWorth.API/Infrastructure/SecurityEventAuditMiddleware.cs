@@ -12,6 +12,15 @@ internal static class SecurityEventNames
 
     internal const string RateLimitRejected =
         "rate_limit_rejected";
+
+    internal const string AdminMutationCompleted =
+        "admin_mutation_completed";
+
+    internal const string AccountExportCompleted =
+        "account_export_completed";
+
+    internal const string AccountDeletionCompleted =
+        "account_deletion_completed";
 }
 
 internal static class SecurityEventIds
@@ -30,6 +39,21 @@ internal static class SecurityEventIds
         new(
             29003,
             nameof(RateLimitRejected));
+
+    internal static readonly EventId AdminMutationCompleted =
+        new(
+            29011,
+            nameof(AdminMutationCompleted));
+
+    internal static readonly EventId AccountExportCompleted =
+        new(
+            29012,
+            nameof(AccountExportCompleted));
+
+    internal static readonly EventId AccountDeletionCompleted =
+        new(
+            29013,
+            nameof(AccountDeletionCompleted));
 }
 
 internal sealed record SecurityEventObservation(
@@ -213,5 +237,124 @@ internal sealed class SecurityEventAuditMiddleware(
             _ =>
                 "OTHER"
         };
+    }
+}
+
+
+internal static class SecuritySensitiveActionLog
+{
+    private const string SecurityLoggerCategory =
+        "FullWorth.SecurityEvents";
+
+    internal static ILogger CreateLogger(
+        ILoggerFactory loggerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(
+            loggerFactory);
+
+        return loggerFactory.CreateLogger(
+            SecurityLoggerCategory);
+    }
+
+    internal static void AdminMutationCompleted(
+        ILogger logger,
+        string action)
+    {
+        ArgumentNullException.ThrowIfNull(
+            logger);
+
+        var safeAction =
+            action switch
+            {
+                "StaffRoleAssigned" =>
+                    action,
+
+                "StaffRoleRemoved" =>
+                    action,
+
+                "SubscriptionEntitlementGranted" =>
+                    action,
+
+                "SubscriptionEntitlementRevoked" =>
+                    action,
+
+                "UserProgramMembershipEnabled" =>
+                    action,
+
+                "UserProgramMembershipDisabled" =>
+                    action,
+
+                "SubscriptionAccessKeyCreated" =>
+                    action,
+
+                "SubscriptionAccessKeyRevoked" =>
+                    action,
+
+                _ =>
+                    throw new ArgumentOutOfRangeException(
+                        nameof(action),
+                        "Unknown administrative security action.")
+            };
+
+        logger.LogWarning(
+            SecurityEventIds.AdminMutationCompleted,
+            "Security event {SecurityEventName} action={SecurityAction}",
+            SecurityEventNames.AdminMutationCompleted,
+            safeAction);
+    }
+
+    internal static void AccountExportCompleted(
+        ILogger logger,
+        string requestId)
+    {
+        WriteAccountAction(
+            logger,
+            SecurityEventIds.AccountExportCompleted,
+            SecurityEventNames.AccountExportCompleted,
+            requestId);
+    }
+
+    internal static void AccountDeletionCompleted(
+        ILogger logger,
+        string requestId)
+    {
+        WriteAccountAction(
+            logger,
+            SecurityEventIds.AccountDeletionCompleted,
+            SecurityEventNames.AccountDeletionCompleted,
+            requestId);
+    }
+
+    private static void WriteAccountAction(
+        ILogger logger,
+        EventId eventId,
+        string eventName,
+        string requestId)
+    {
+        ArgumentNullException.ThrowIfNull(
+            logger);
+
+        logger.LogWarning(
+            eventId,
+            "Security event {SecurityEventName} request_id={RequestId}",
+            eventName,
+            GetSafeRequestId(
+                requestId));
+    }
+
+    private static string GetSafeRequestId(
+        string requestId)
+    {
+        if (requestId.Length !=
+                32 ||
+            requestId.Any(
+                character =>
+                    !char.IsAsciiHexDigit(
+                        character)))
+        {
+            return "<unavailable>";
+        }
+
+        return requestId.ToLowerInvariant();
     }
 }
