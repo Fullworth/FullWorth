@@ -38,12 +38,16 @@ Do not put credentials, tokens, recovery codes, financial data, private statemen
 
 ## OCR containment production proof
 
-After the isolated OCR worker change reaches `master`, an operator with the existing guarded production-host access must:
+**Status:** Awaiting an exact-`master` guarded production deployment after PR #601 is merged.
 
-1. Deploy the exact approved `master` SHA through the guarded deployment workflow.
-2. Record the deployed release SHA and verify API/Web/parser-worker readiness.
-3. Run a synthetic image OCR request and a bounded memory-pressure fixture while recording the parser-worker cgroup's `memory.max`, `memory.swap.max`, `memory.events`, `memory.peak`, `cpu.max`, and surviving API/Web readiness.
-4. Confirm no statement bytes, OCR text, credentials, or native diagnostics appear in API, worker, Docker, or systemd logs.
-5. Do not mark distinct per-document cgroups complete until the host runtime safely delegates a writable cgroup-v2 subtree to the unprivileged worker and a test proves every child enters a unique finite subgroup that is removed after exit.
+PR #601 makes `deploy/deploy-production.sh` run `deploy/verify-parser-containment.sh` before a candidate release can receive the verified release marker. That host verifier checks the running parser supervisor identity/capabilities, finite delegated cgroup controls, a real synthetic OCR child in its own finite subgroup, subgroup cleanup, a kernel-observed per-document OOM kill under the 384 MiB ceiling, parser survival/readiness, and absence of the synthetic raw-document marker, parser credential, and native OCR diagnostic markers from API/parser container logs.
 
-GitHub CI proves the production image and Compose boundary only; it cannot substitute for this deployed-host evidence.
+The remaining human action is the intentionally manual production release decision:
+
+1. Merge only after the exact PR #601 head passes full CI and dependency security.
+2. Promote the verified `development` state to `master` through the normal reviewed release path.
+3. Dispatch the guarded production workflow for that exact current `master` SHA.
+4. Preserve the workflow log containing the sanitized containment verifier output and release SHA as deployed-host evidence.
+5. Review the production systemd journal for the proof window if systemd-level log evidence is required; the automated verifier intentionally does not grant itself broader journal privileges or export journal contents.
+
+Do not mark production containment accepted merely from GitHub CI. Acceptance requires the exact deployed `master` release to pass the host verifier.
