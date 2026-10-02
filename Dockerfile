@@ -69,6 +69,7 @@ RUN apt-get update \
         ca-certificates \
         curl \
         libtesseract-dev \
+        tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=native-build /native-root/usr/local/ /usr/local/
@@ -77,9 +78,10 @@ WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
 
 RUN ldconfig \
-    && mkdir --parents /app/x64 /var/run/fullworth-parser-tls \
+    && mkdir --parents /app/x64 /app/tessdata /var/run/fullworth-parser-tls \
     && ln --symbolic /usr/local/lib/libleptonica.so /app/x64/libleptonica-1.85.0.dll.so \
     && ln --symbolic "$(find /usr/lib -type f -name 'libtesseract.so.*' -print -quit)" /app/x64/libtesseract55.dll.so \
+    && ln --symbolic "$(find /usr/share -type f -path '*/tessdata/eng.traineddata' -print -quit)" /app/tessdata/eng.traineddata \
     && chown --recursive "$APP_UID:$APP_UID" \
         /app \
         /var/run/fullworth-parser-tls
