@@ -1,3 +1,13 @@
+## Executable endpoint security inventory — 2026-10-02
+
+FullWorth now has a runtime-derived, CI-enforced inventory of all 198 application-owned API and Web method-route exposures. The snapshot records each route template's authentication metadata and effective rate-limit class across 83 API exposures and 115 Web exposures. Any route addition, removal, HTTP-method change, authentication change, or endpoint rate-limit metadata change produces an exact test diff that requires intentional review.
+
+The inventory distinguishes the API host's partitioned 300-per-minute global limiter from Web routes that have no Web-layer limiter, rather than conflating missing endpoint metadata with a global control. Named authentication, statement upload/download, account export, subscription, and Web authentication policies remain visible per route. The accompanying `ENDPOINT_SECURITY_INVENTORY.md` documents counts, classification semantics, endpoint-family risk review, exclusions, and the required change procedure. Development-only OpenAPI exposure is explicitly identified, and static/framework infrastructure is excluded.
+
+Exact PR #631 head `bffdc39194240701513a1f7167304436082a6ff2` passed FullWorth CI #1529 (run `37076261576`: backend build/tests, MAUI Android, and the production-container relevance gate) and Dependency Security #626 (run `37076261741`) before squash merge to `development` as `2d3550a197d4760fc5f0009e83f9b3603ba15b09`.
+
+This completes the endpoint-inventory checklist item and establishes the review gate needed for broader endpoint cost/sensitivity classification. Cost-based limiter refinement, content-type/request-smuggling review, and webhook replay/idempotency review remain separate work. No production deployment occurred.
+
 ## Bounded high-risk security-event alerts — 2026-10-02
 
 FullWorth now turns repeated high-risk authenticated events 29011–29014 into bounded `FullWorth.SecurityAlerts` records. Five-minute thresholds are five matching events for one allowlisted administrative action, ten application-wide account exports, three application-wide account deletions, and five provider-attention transitions for one allowlisted Plaid operation. Alert IDs 29111–29114 use a fifteen-minute per-key cooldown and report suppressed threshold crossings on the next emitted alert.
