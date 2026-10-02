@@ -216,21 +216,20 @@ nonce="$(openssl rand -hex 16)"
 content_sha256="$(sha256sum "$image_file" | awk '{ print $1 }')"
 
 signature="$(
-    {
-        printf '%s' "$parser_token"
-        printf '\\0'
-        printf 'POST\\n/v1/ocr/extract\\n%s\\n%s\\n%s' \
-            "$timestamp" "$nonce" "$content_sha256"
-    } |
+    printf '%s' "$parser_token" |
     python3 -c '
 import hashlib
 import hmac
 import sys
 
-payload = sys.stdin.buffer.read()
-key, message = payload.split(b"\\0", 1)
+key = sys.stdin.buffer.read()
+message = "POST\\n/v1/ocr/extract\\n{}\\n{}\\n{}".format(
+    sys.argv[1],
+    sys.argv[2],
+    sys.argv[3],
+).encode("utf-8")
 print(hmac.new(key, message, hashlib.sha256).hexdigest())
-'
+' "$timestamp" "$nonce" "$content_sha256"
 )"
 
 send_ocr_request()
