@@ -179,32 +179,32 @@ internal sealed class SecurityEventAuditMiddleware(
     {
         return method switch
         {
-            HttpMethods.Get =>
-                HttpMethods.Get,
+            "GET" =>
+                "GET",
 
-            HttpMethods.Post =>
-                HttpMethods.Post,
+            "POST" =>
+                "POST",
 
-            HttpMethods.Put =>
-                HttpMethods.Put,
+            "PUT" =>
+                "PUT",
 
-            HttpMethods.Patch =>
-                HttpMethods.Patch,
+            "PATCH" =>
+                "PATCH",
 
-            HttpMethods.Delete =>
-                HttpMethods.Delete,
+            "DELETE" =>
+                "DELETE",
 
-            HttpMethods.Options =>
-                HttpMethods.Options,
+            "OPTIONS" =>
+                "OPTIONS",
 
-            HttpMethods.Head =>
-                HttpMethods.Head,
+            "HEAD" =>
+                "HEAD",
 
-            HttpMethods.Connect =>
-                HttpMethods.Connect,
+            "CONNECT" =>
+                "CONNECT",
 
-            HttpMethods.Trace =>
-                HttpMethods.Trace,
+            "TRACE" =>
+                "TRACE",
 
             _ =>
                 "OTHER"
