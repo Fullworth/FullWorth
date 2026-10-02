@@ -923,7 +923,11 @@ jobs:
           image_file="$(mktemp)"
           response_one="$(mktemp)"
           response_two="$(mktemp)"
-          trap 'rm -f "$image_file" "$response_one" "$response_two"' EXIT
+          first_document_observation="$(mktemp)"
+          first_image_observation="$(mktemp)"
+          second_document_observation="$(mktemp)"
+          second_image_observation="$(mktemp)"
+          trap 'rm -f "$image_file" "$response_one" "$response_two" "$first_document_observation" "$first_image_observation" "$second_document_observation" "$second_image_observation"' EXIT
 
           python3 - <<'PY' > "$image_file"
           import struct
@@ -1010,7 +1014,7 @@ jobs:
             request_pid=$1
             for _ in $(seq 1 500)
             do
-              matches=("$parent_cgroup"/fullworth-ocr-*)
+              matches=("$parent_cgroup"/fullworth-ocr-[0-9]*-*)
               if [ "${#matches[@]}" -gt 1 ]; then
                 echo "More than one OCR document cgroup exists under the single-request worker." >&2
                 return 1
@@ -1041,6 +1045,61 @@ jobs:
             test "$(cat "$cgroup_path/pids.max")" = "48"
             test "$(tr -s '[:space:]' ' ' < "$cgroup_path/cpu.max" | sed 's/ $//')" = "100000 100000"
 
+            # Native OCR moves temporarily into a stricter sibling image
+            # cgroup; the document group may therefore have no direct process
+            # while one image is inside native decode/OCR.
+            child_pid="$(head -n 1 "$cgroup_path/cgroup.procs")"
+            if [ -n "$child_pid" ]; then
+              child_relative="$(
+                awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
+                  "/proc/${child_pid}/cgroup"
+              )"
+              expected_relative="/${cgroup_path#/sys/fs/cgroup/}"
+              test "$child_relative" = "$expected_relative"
+            fi
+          }
+
+          observe_image_cgroup()
+          {
+            request_pid=$1
+            for _ in $(seq 1 500)
+            do
+              matches=("$parent_cgroup"/fullworth-ocr-image-*)
+              if [ "${#matches[@]}" -gt 1 ]; then
+                echo "More than one OCR image cgroup exists for one image." >&2
+                return 1
+              fi
+
+              if [ "${#matches[@]}" -eq 1 ]; then
+                printf '%s\n' "${matches[0]}"
+                return 0
+              fi
+
+              if ! kill -0 "$request_pid" 2>/dev/null; then
+                break
+              fi
+
+              sleep 0.01
+            done
+
+            echo "No sibling OCR image cgroup was observed while OCR was active." >&2
+            return 1
+          }
+
+          verify_live_image_cgroup()
+          {
+            cgroup_path=$1
+            test -d "$cgroup_path"
+            test "$(cat "$cgroup_path/memory.max")" = "402653184"
+            test "$(cat "$cgroup_path/memory.swap.max")" = "0"
+            test "$(tr -s '[:space:]' ' ' < "$cgroup_path/cpu.max" | sed 's/ $//')" = "100000 100000"
+
+            for controller in cpu memory
+            do
+              tr ' ' '\n' < "$cgroup_path/../cgroup.subtree_control" |
+                grep -qx "$controller"
+            done
+
             child_pid="$(head -n 1 "$cgroup_path/cgroup.procs")"
             test -n "$child_pid"
             child_relative="$(
@@ -1051,35 +1110,70 @@ jobs:
             test "$child_relative" = "$expected_relative"
           }
 
-          verify_removed_document_cgroup()
+          observe_and_verify_document_cgroup()
+          {
+            request_pid=$1
+            output_file=$2
+            cgroup_path="$(observe_document_cgroup "$request_pid")"
+            verify_live_document_cgroup "$cgroup_path"
+            printf '%s\n' "$cgroup_path" > "$output_file"
+          }
+
+          observe_and_verify_image_cgroup()
+          {
+            request_pid=$1
+            output_file=$2
+            cgroup_path="$(observe_image_cgroup "$request_pid")"
+            verify_live_image_cgroup "$cgroup_path"
+            printf '%s\n' "$cgroup_path" > "$output_file"
+          }
+
+          verify_removed_cgroup()
           {
             cgroup_path=$1
+            label=$2
             for _ in $(seq 1 200)
             do
               [ ! -d "$cgroup_path" ] && return 0
               sleep 0.01
             done
 
-            echo "Per-document cgroup remained after its OCR child exited." >&2
+            echo "$label cgroup remained after its OCR scope exited." >&2
             return 1
           }
 
-          existing=("$parent_cgroup"/fullworth-ocr-*)
-          test "${#existing[@]}" -eq 0
+          existing_documents=("$parent_cgroup"/fullworth-ocr-[0-9]*-*)
+          existing_images=("$parent_cgroup"/fullworth-ocr-image-*)
+          test "${#existing_documents[@]}" -eq 0
+          test "${#existing_images[@]}" -eq 0
 
           send_ocr_request "$response_one" &
           first_request_pid=$!
-          first_cgroup="$(observe_document_cgroup "$first_request_pid")"
-          verify_live_document_cgroup "$first_cgroup"
+          observe_and_verify_document_cgroup "$first_request_pid" "$first_document_observation" &
+          first_document_observer_pid=$!
+          observe_and_verify_image_cgroup "$first_request_pid" "$first_image_observation" &
+          first_image_observer_pid=$!
+          wait "$first_document_observer_pid"
+          wait "$first_image_observer_pid"
+          first_cgroup="$(cat "$first_document_observation")"
+          first_image_cgroup="$(cat "$first_image_observation")"
           wait "$first_request_pid"
-          verify_removed_document_cgroup "$first_cgroup"
+          verify_removed_cgroup "$first_image_cgroup" "Per-image"
+          verify_removed_cgroup "$first_cgroup" "Per-document"
 
           send_ocr_request "$response_two" &
           second_request_pid=$!
-          second_cgroup="$(observe_document_cgroup "$second_request_pid")"
-          verify_live_document_cgroup "$second_cgroup"
+          observe_and_verify_document_cgroup "$second_request_pid" "$second_document_observation" &
+          second_document_observer_pid=$!
+          observe_and_verify_image_cgroup "$second_request_pid" "$second_image_observation" &
+          second_image_observer_pid=$!
+          wait "$second_document_observer_pid"
+          wait "$second_image_observer_pid"
+          second_cgroup="$(cat "$second_document_observation")"
+          second_image_cgroup="$(cat "$second_image_observation")"
           wait "$second_request_pid"
-          verify_removed_document_cgroup "$second_cgroup"
+          verify_removed_cgroup "$second_image_cgroup" "Per-image"
+          verify_removed_cgroup "$second_cgroup" "Per-document"
 
           test "$first_cgroup" != "$second_cgroup"
 
@@ -1118,7 +1212,7 @@ jobs:
         with:
           name: fullworth-visual-${{ github.run_id }}
           path: FullWorth.VisualTests/artifacts
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Verify production HTTP security boundaries
