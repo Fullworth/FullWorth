@@ -7,6 +7,8 @@ public sealed class DocumentProcessCgroup : IDisposable
     private const string CpuMaxPath = "cpu.max";
     private const string MemoryMaxPath = "memory.max";
     private const string MemorySwapMaxPath = "memory.swap.max";
+    private const string MemoryEventsPath = "memory.events";
+    private const string MemoryPeakPath = "memory.peak";
     private const string PidsMaxPath = "pids.max";
     private const string OomGroupPath = "memory.oom.group";
     private const string CgroupProcessesPath = "cgroup.procs";
@@ -25,6 +27,93 @@ public sealed class DocumentProcessCgroup : IDisposable
     private DocumentProcessCgroup(string path)
     {
         _path = path;
+    }
+
+    public string CgroupPath => _path;
+
+    public bool TryReadMemoryEvidence(
+        out long memoryMaxBytes,
+        out long memoryPeakBytes,
+        out long oomKillCount)
+    {
+        memoryMaxBytes = 0;
+        memoryPeakBytes = 0;
+        oomKillCount = 0;
+
+        if (_disposed)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!TryParsePositive(
+                    File.ReadAllText(
+                        Path.Combine(
+                            _path,
+                            MemoryMaxPath)),
+                    out memoryMaxBytes) ||
+                !TryParseNonNegative(
+                    File.ReadAllText(
+                        Path.Combine(
+                            _path,
+                            MemoryPeakPath)),
+                    out memoryPeakBytes))
+            {
+                return false;
+            }
+
+            var foundOomKill =
+                false;
+
+            foreach (var line in
+                     File.ReadLines(
+                         Path.Combine(
+                             _path,
+                             MemoryEventsPath)))
+            {
+                var parts =
+                    line.Split(
+                        new[]
+                        {
+                            ' ',
+                            '\t'
+                        },
+                        StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length !=
+                        2 ||
+                    !string.Equals(
+                        parts[0],
+                        "oom_kill",
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!TryParseNonNegative(
+                        parts[1],
+                        out oomKillCount))
+                {
+                    return false;
+                }
+
+                foundOomKill =
+                    true;
+
+                break;
+            }
+
+            return foundOomKill;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     public static bool IsDelegationReady()
