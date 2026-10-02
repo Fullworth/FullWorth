@@ -33,6 +33,7 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         ca-certificates \
         curl \
+        libc6-dev \
         libtesseract5 \
         tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
@@ -40,7 +41,10 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
 
-RUN mkdir --parents /app/x64 /app/tessdata /var/run/fullworth-parser-tls \
+RUN mkdir --parents /app/x64 /app/tessdata /app/runtimes/linux-x64/native /var/run/fullworth-parser-tls \
+    && test -f /lib/x86_64-linux-gnu/libdl.so.2 \
+    && ln --symbolic --force /lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/libdl.so \
+    && ln --symbolic --force /lib/x86_64-linux-gnu/libdl.so.2 /app/runtimes/linux-x64/native/libdl.so \
     && english_model="$(find /usr/share -type f -path '*/tessdata/eng.traineddata' -print -quit)" \
     && leptonica_library="$(find /usr/lib -type f -name 'liblept.so.5*' -print -quit)" \
     && tesseract_library="$(find /usr/lib -type f -name 'libtesseract.so.5*' -print -quit)" \
