@@ -107,6 +107,7 @@ services:
     cap_add:
       - CHOWN
       - SETGID
+      - SETPCAP
       - SETUID
     security_opt:
       - no-new-privileges:true
