@@ -1,5 +1,6 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,8 +10,13 @@ public sealed class AdminSubscriptionAccessKeyService(
     FullWorthDbContext dbContext,
     SubscriptionAccessKeyGenerator keyGenerator,
     IAdminAuditLogWriter auditLogWriter,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILoggerFactory loggerFactory)
 {
+    private readonly ILogger _securityLogger =
+        SecuritySensitiveActionLog.CreateLogger(
+            loggerFactory);
+
     public async Task<CreatedSubscriptionAccessKey> CreateAsync(
         Guid actorUserId,
         SubscriptionAccessKeyPurpose purpose,
@@ -71,6 +77,10 @@ public sealed class AdminSubscriptionAccessKeyService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        SecuritySensitiveActionLog.AdminMutationCompleted(
+            _securityLogger,
+            "SubscriptionAccessKeyCreated");
+
         return new CreatedSubscriptionAccessKey(
             accessKey.Id,
             generated.PlaintextKey,
@@ -119,6 +129,11 @@ public sealed class AdminSubscriptionAccessKeyService(
                 CreatedAtUtc: nowUtc));
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        SecuritySensitiveActionLog.AdminMutationCompleted(
+            _securityLogger,
+            "SubscriptionAccessKeyRevoked");
+
         return true;
     }
 
