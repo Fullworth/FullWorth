@@ -82,9 +82,11 @@ COPY deploy/parser-worker-entrypoint.sh /usr/local/bin/fullworth-parser-worker-e
 RUN chmod 0755 /usr/local/bin/fullworth-parser-worker-entrypoint \
     && ldconfig \
     && mkdir --parents /app/x64 /app/tessdata /var/run/fullworth-parser-tls \
+    && english_model="$(find /usr/share -type f -path '*/tessdata/eng.traineddata' -print -quit)" \
+    && test -n "$english_model" \
     && ln --symbolic /usr/local/lib/libleptonica.so /app/x64/libleptonica-1.85.0.dll.so \
     && ln --symbolic "$(find /usr/lib -type f -name 'libtesseract.so.*' -print -quit)" /app/x64/libtesseract55.dll.so \
-    && ln --symbolic "$(find /usr/share -type f -path '*/tessdata/eng.traineddata' -print -quit)" /app/tessdata/eng.traineddata \
+    && ln --symbolic --force "$english_model" /app/tessdata/eng.traineddata \
     && chown --recursive "$APP_UID:$APP_UID" \
         /app \
         /var/run/fullworth-parser-tls
