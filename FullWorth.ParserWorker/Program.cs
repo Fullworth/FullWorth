@@ -64,6 +64,10 @@ if (args.Length == 3 && args[0] == "--ocr")
 }
 
 var builder = WebApplication.CreateBuilder(args);
+var ocrRuntimeReady =
+    builder.Environment.IsDevelopment() ||
+    await ProbeOcrRuntimeAsync(jsonOptions);
+
 var tlsCertificate =
     builder.Environment.IsDevelopment()
         ? null
@@ -96,7 +100,8 @@ using var requestGate = new SemaphoreSlim(1, 1);
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", () =>
-    WorkerResourceLimits.AreCurrentContainerLimitsEnforced()
+    WorkerResourceLimits.AreCurrentContainerLimitsEnforced() &&
+    ocrRuntimeReady
         ? Results.Ok(new { status = "ready" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
@@ -355,6 +360,31 @@ static async Task<byte[]> RunParserProcessAsync(
         {
             TryKillWorkerTree(process);
         }
+    }
+}
+
+static async Task<bool> ProbeOcrRuntimeAsync(
+    JsonSerializerOptions jsonOptions)
+{
+    try
+    {
+        var output = await RunOcrProcessAsync(
+            OcrRuntimeProbe.ImageBytes,
+            "image/png",
+            ".png",
+            CancellationToken.None,
+            jsonOptions);
+        var result = JsonSerializer.Deserialize<BillStatementOcrResult>(
+            output,
+            jsonOptions);
+
+        return result is not null &&
+               OcrRuntimeProbe.IsHealthy(result);
+    }
+    catch
+    {
+        // Readiness fails closed without retaining native diagnostics or OCR text.
+        return false;
     }
 }
 
