@@ -1,3 +1,13 @@
+## Bounded high-risk security-event alerts — 2026-10-02
+
+FullWorth now turns repeated high-risk authenticated events 29011–29014 into bounded `FullWorth.SecurityAlerts` records. Five-minute thresholds are five matching events for one allowlisted administrative action, ten application-wide account exports, three application-wide account deletions, and five provider-attention transitions for one allowlisted Plaid operation. Alert IDs 29111–29114 use a fifteen-minute per-key cooldown and report suppressed threshold crossings on the next emitted alert.
+
+The detector admits only twelve fixed keys: eight administrative actions, application-wide export and deletion scopes, and the two provider operations `accounts_sync` and `transactions_sync`. Unknown dimension values fail before state allocation. Alert payloads exclude source request IDs, actor/user/account identifiers, IP addresses, raw paths, provider identifiers and errors, token material, statements, and financial values. The operator guide records routing and initial threshold-tuning guidance, while retaining the existing process-local and single-API-instance boundary.
+
+Exact PR #629 head `211de20920023e9505fd9a418f9ef0559212bf27` passed FullWorth CI #1523 (run `37071364822`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #620 (run `37071364764`) before squash merge to `development` as `e252b98b6a5d7cbc922d93c303058df5990a1581`.
+
+This completes bounded alerting for the implemented request-boundary, administrative, account-export/deletion, and provider-attention security events. Cross-instance aggregation remains future work if the one-API-instance production rule changes. No production deployment occurred.
+
 ## Security incident response and credential rotation runbook — 2026-10-02
 
 FullWorth now has a production security-incident runbook covering SEV-1 through SEV-3 classification, the first fifteen minutes of containment, secret-safe evidence handling, affected-user and broad identity containment, ordered credential rotation, compromised-host recovery, and an explicit closure gate. It prohibits feature-branch deployment, direct Identity-table edits, credential exposure in tickets or shell arguments, destructive evidence cleanup, and production claims based only on CI.
@@ -18,7 +28,7 @@ The event deliberately excludes Plaid error code/type, user IDs, bank-connection
 
 Exact corrected PR #625 head `1da0811ec5208f8493b5846613c3a5e9bc06525f` passed FullWorth CI #1519 (run `37049123705`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #616 (run `37049123724`) before squash merge to `development` as `09ce3dbc539bc31835e890bed267fe8593f5ffcd`.
 
-This closes the first financial-provider failure telemetry slice. Bounded alert thresholds for high-risk/provider-attention events, broader ownership-violation detection, other provider-failure classes, and incident-response/credential-rotation runbooks remain separate follow-up work. No production deployment occurred.
+This closes the first financial-provider failure telemetry slice. PR #629 subsequently added bounded alerting for provider-attention events, and PR #627 added the incident-response/credential-rotation runbook. Broader ownership-violation detection and other provider-failure classes remain separate follow-up work. No production deployment occurred.
 
 ## High-risk authenticated action security events — 2026-10-02
 
@@ -28,7 +38,7 @@ These events deliberately exclude actor/target/resource IDs, emails, financial v
 
 Exact PR #623 head `bce1ff54fbc91f04b63b63e07b4c2e407dedcfeb` passed FullWorth CI #1515 (run `37046644058`: backend build/tests, MAUI gating, production image builds and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #612 (run `37046644044`) before squash merge to `development` as `91267421173ee7819a98a728b533fd0e66d97f28`.
 
-This completes telemetry for successful admin mutations and account export/deletion. Bounded alert thresholds for those actions, ownership-violation/provider-failure security events, and incident-response/credential-rotation runbooks remain separate follow-up work. No production deployment occurred.
+This completes telemetry for successful admin mutations and account export/deletion. PR #629 subsequently added bounded alerting for those actions, PR #625 added the first provider-attention event, and PR #627 added the incident-response/credential-rotation runbook. Broader ownership-violation detection remains separate follow-up work. No production deployment occurred.
 
 ## Bounded repeated-security-event aggregation — 2026-10-02
 
@@ -38,7 +48,7 @@ Aggregation keys contain only the fixed event name, normalized method, applicati
 
 Exact PR #620 head `85330b2e757a85ffc67f6760f9244c71a0163ee2` passed FullWorth CI #1511 (run `37038951999`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #608 (run `37038951995`) before squash merge to `development` as `3e6419cf00542b3b875aeb855623f61553279310`.
 
-This completes bounded repeated-event alerting for the request-boundary telemetry introduced by PR #618. Broader ownership/provider/export/delete security-event coverage and incident-response runbooks remain separate follow-up work. No production deployment occurred.
+This completes bounded repeated-event alerting for the request-boundary telemetry introduced by PR #618. PRs #623, #625, and #629 subsequently added high-risk action/provider events and their bounded alerts, and PR #627 added the incident-response runbook. Broader ownership-violation detection remains separate follow-up work. No production deployment occurred.
 
 ## Structured request-boundary security events — 2026-10-02
 
