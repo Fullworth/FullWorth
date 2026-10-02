@@ -604,11 +604,12 @@ public sealed class TesseractBillStatementOcrEngine
             if (OperatingSystem.IsLinux() &&
                 (!OcrImageProcessCgroup.TryAttachProcess(
                     process.Id,
-                    out imageScope) ||
+                    out imageScope,
+                    out var failureCode) ||
                  imageScope is null))
             {
                 TryKillImageWorker(process);
-                return false;
+                throw new OcrImageContainmentException(failureCode);
             }
 
             try
@@ -680,6 +681,10 @@ public sealed class TesseractBillStatementOcrEngine
                 TryKillImageWorker(process);
             }
 
+            throw;
+        }
+        catch (OcrImageContainmentException)
+        {
             throw;
         }
         catch (Exception ex)
@@ -1090,4 +1095,17 @@ internal sealed class OcrProcessingDeadline
 
 internal sealed class BillStatementOcrTimeoutException : Exception
 {
+}
+
+internal sealed class OcrImageContainmentException : Exception
+{
+    public OcrImageContainmentException(string code)
+        : base(code)
+    {
+        Code = string.IsNullOrWhiteSpace(code)
+            ? "image_containment_unavailable"
+            : code;
+    }
+
+    public string Code { get; }
 }
