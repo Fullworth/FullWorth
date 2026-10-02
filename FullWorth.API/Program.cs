@@ -932,6 +932,10 @@ builder.Services.AddScoped<
     FullWorthReadinessService>();
 
 builder.Services.AddSingleton<
+    ISecurityEventSink,
+    LoggerSecurityEventSink>();
+
+builder.Services.AddSingleton<
     BillStatementProcessingSignal>();
 
 builder.Services.AddHostedService<
@@ -1103,6 +1107,8 @@ app.Use(
  * Anonymous callers still fall back to an IP-scoped partition.
  */
 app.UseAuthentication();
+app.UseMiddleware<
+    SecurityEventAuditMiddleware>();
 app.UseRateLimiter();
 app.UseFullWorthRegistrationLegalAcceptance();
 app.UseAuthorization();
