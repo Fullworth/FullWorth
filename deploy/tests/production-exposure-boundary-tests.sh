@@ -35,6 +35,9 @@ case "$*" in
     *"compose "*" ps -q api")
         printf '%s\n' api-id
         ;;
+    *"compose "*" ps -q parser-worker")
+        printf '%s\n' parser-worker-id
+        ;;
     *"compose "*" ps -q web")
         printf '%s\n' web-id
         ;;
@@ -47,7 +50,7 @@ case "$*" in
     *"compose "*" ps -q edge")
         printf '%s\n' edge-id
         ;;
-    *".NetworkSettings.Ports"*api-id|*".NetworkSettings.Ports"*web-id|*".NetworkSettings.Ports"*database-id|*".NetworkSettings.Ports"*web-session-cache-id)
+    *".NetworkSettings.Ports"*api-id|*".NetworkSettings.Ports"*parser-worker-id|*".NetworkSettings.Ports"*web-id|*".NetworkSettings.Ports"*database-id|*".NetworkSettings.Ports"*web-session-cache-id)
         :
         ;;
     *".NetworkSettings.Ports"*edge-id)
@@ -63,14 +66,20 @@ case "$*" in
                 billwatch_api_edge \
                 billwatch_data \
                 billwatch_public_edge \
-                billwatch_web_api
+                billwatch_web_api \
+                billwatch_parser_worker
         else
             printf '%s\n' \
                 billwatch_api_edge \
                 billwatch_api_egress \
                 billwatch_data \
-                billwatch_web_api
+                billwatch_web_api \
+                billwatch_parser_worker
         fi
+        ;;
+    *".NetworkSettings.Networks"*parser-worker-id)
+        printf '\n'
+        printf '%s\n' billwatch_parser_worker
         ;;
     *".NetworkSettings.Networks"*web-id)
         printf '\n'
