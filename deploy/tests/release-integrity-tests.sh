@@ -154,17 +154,26 @@ case "$*" in
     *'ps -q api')
         printf '%s\n' api-container
         ;;
+    *'ps -q parser-worker')
+        printf '%s\n' parser-container
+        ;;
     *'ps -q web')
         printf '%s\n' web-container
         ;;
     *'inspect --format {{.State.Running}} api-container')
         [ "${BILLWATCH_TEST_API_STOPPED:-false}" != true ] && printf '%s\n' true || printf '%s\n' false
         ;;
+    *'inspect --format {{.State.Running}} parser-container')
+        [ "${BILLWATCH_TEST_PARSER_STOPPED:-false}" != true ] && printf '%s\n' true || printf '%s\n' false
+        ;;
     *'inspect --format {{.State.Running}} web-container')
         [ "${BILLWATCH_TEST_WEB_STOPPED:-false}" != true ] && printf '%s\n' true || printf '%s\n' false
         ;;
     *'inspect --format {{index .Config.Labels "org.opencontainers.image.revision"}} api-container')
         printf '%s\n' "${BILLWATCH_TEST_API_REVISION:-0123456789abcdef0123456789abcdef01234567}"
+        ;;
+    *'inspect --format {{index .Config.Labels "org.opencontainers.image.revision"}} parser-container')
+        printf '%s\n' "${BILLWATCH_TEST_PARSER_REVISION:-0123456789abcdef0123456789abcdef01234567}"
         ;;
     *'inspect --format {{index .Config.Labels "org.opencontainers.image.revision"}} web-container')
         printf '%s\n' "${BILLWATCH_TEST_WEB_REVISION:-0123456789abcdef0123456789abcdef01234567}"
@@ -190,8 +199,10 @@ write_environment
 write_release
 verify_running >/dev/null
 expect_failure verify_running BILLWATCH_TEST_API_REVISION="$other_release"
+expect_failure verify_running BILLWATCH_TEST_PARSER_REVISION="$other_release"
 expect_failure verify_running BILLWATCH_TEST_WEB_REVISION="$other_release"
 expect_failure verify_running BILLWATCH_TEST_API_STOPPED=true
+expect_failure verify_running BILLWATCH_TEST_PARSER_STOPPED=true
 expect_failure verify_running BILLWATCH_TEST_WEB_STOPPED=true
 
 chmod 644 "$deployment_root/.billwatch-release"
