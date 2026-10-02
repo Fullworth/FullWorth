@@ -1,3 +1,13 @@
+## High-risk authenticated action security events — 2026-10-02
+
+FullWorth now emits dedicated metadata-only `FullWorth.SecurityEvents` records when sensitive authenticated actions actually complete, closing the next observability gap after generic 401/403/429 telemetry. Event 29011 records only a fixed allowlisted administrative action name after persisted staff-role, entitlement, program-membership, or subscription-access-key mutations. Event 29012 records successful strongly reauthenticated account export, and event 29013 records committed account deletion, including the accepted statement-cleanup-pending case.
+
+These events deliberately exclude actor/target/resource IDs, emails, financial values, request bodies, credentials, provider tokens, statement content, and other user-controlled text. Account export/delete records include only a validated server-generated 128-bit lowercase-hex request ID; invalid values are replaced with `<unavailable>`. Staff-role mutation events are emitted only after the surrounding relational transaction commits, so a failed commit cannot produce a false “completed” security event. Focused tests lock the dedicated log category, fixed event IDs, admin-action allowlist, and fail-closed request-ID sanitization.
+
+Exact PR #623 head `bce1ff54fbc91f04b63b63e07b4c2e407dedcfeb` passed FullWorth CI #1515 (run `37046644058`: backend build/tests, MAUI gating, production image builds and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #612 (run `37046644044`) before squash merge to `development` as `91267421173ee7819a98a728b533fd0e66d97f28`.
+
+This completes telemetry for successful admin mutations and account export/deletion. Bounded alert thresholds for those actions, ownership-violation/provider-failure security events, and incident-response/credential-rotation runbooks remain separate follow-up work. No production deployment occurred.
+
 ## Bounded repeated-security-event aggregation — 2026-10-02
 
 The API now turns repeated request-boundary 401, 403, and 429 events into a separate `FullWorth.SecurityAlerts` stream instead of requiring operators to alert on every ordinary authentication failure. Fixed five-minute thresholds are 25 matching authentication rejections, 10 matching authorization denials, and 5 matching rate-limit rejections. Each safe aggregation key can emit at most once every 15 minutes; threshold crossings during the cooldown are suppressed and reported on the next emitted alert.
