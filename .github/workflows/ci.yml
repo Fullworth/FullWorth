@@ -606,6 +606,43 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
+      - name: Prepare release supply-chain artifacts
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: mkdir -p provenance
+
+      - name: Generate API image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        with:
+          image: billwatch-api:${{ github.sha }}
+          format: spdx-json
+          syft-version: v1.54.0
+          output-file: provenance/billwatch-api.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate parser worker image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        with:
+          image: billwatch-parser-worker:${{ github.sha }}
+          format: spdx-json
+          syft-version: v1.54.0
+          output-file: provenance/billwatch-parser-worker.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate web image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        with:
+          image: billwatch-web:${{ github.sha }}
+          format: spdx-json
+          syft-version: v1.54.0
+          output-file: provenance/billwatch-web.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
       - name: Export production image artifacts for attestation
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         shell: bash
@@ -615,6 +652,27 @@ jobs:
           docker save billwatch-api:${{ github.sha }} -o provenance/billwatch-api.tar
           docker save billwatch-parser-worker:${{ github.sha }} -o provenance/billwatch-parser-worker.tar
           docker save billwatch-web:${{ github.sha }} -o provenance/billwatch-web.tar
+
+      - name: Attest API image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        with:
+          subject-path: provenance/billwatch-api.tar
+          sbom-path: provenance/billwatch-api.spdx.json
+
+      - name: Attest parser worker image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        with:
+          subject-path: provenance/billwatch-parser-worker.tar
+          sbom-path: provenance/billwatch-parser-worker.spdx.json
+
+      - name: Attest web image SBOM
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        with:
+          subject-path: provenance/billwatch-web.tar
+          sbom-path: provenance/billwatch-web.spdx.json
 
       - name: Attest production image artifacts
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -627,7 +685,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fullworth-production-image-artifacts-${{ github.sha }}
-          path: provenance/*.tar
+          path: |
+            provenance/*.tar
+            provenance/*.spdx.json
           if-no-files-found: error
           retention-days: 7
 
