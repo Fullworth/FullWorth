@@ -4,6 +4,7 @@ using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Identity;
 using FullWorth.API.Services.Subscriptions;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -266,7 +267,8 @@ public sealed class AdminUserManagementServiceTests
             new AdminSubscriptionMutationGateway(dbContext),
             new AdminAuditLogWriter(dbContext),
             new FixedTimeProvider(NowUtc),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            TestSecurityAlertAggregator.Create());
     }
 
     private static FullWorthDbContext CreateDbContext()

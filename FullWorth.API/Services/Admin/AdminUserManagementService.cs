@@ -15,7 +15,9 @@ public sealed class AdminUserManagementService(
     IAdminSubscriptionMutationGateway subscriptionGateway,
     IAdminAuditLogWriter auditLogWriter,
     TimeProvider timeProvider,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    SecuritySensitiveActionAlertAggregator
+        securityAlertAggregator)
 {
     private readonly ILogger _securityLogger =
         SecuritySensitiveActionLog.CreateLogger(
@@ -94,6 +96,7 @@ public sealed class AdminUserManagementService(
         {
             SecuritySensitiveActionLog.AdminMutationCompleted(
                 _securityLogger,
+                securityAlertAggregator,
                 "StaffRoleAssigned");
         }
 
@@ -170,6 +173,7 @@ public sealed class AdminUserManagementService(
         {
             SecuritySensitiveActionLog.AdminMutationCompleted(
                 _securityLogger,
+                securityAlertAggregator,
                 "StaffRoleRemoved");
         }
 
@@ -228,6 +232,7 @@ public sealed class AdminUserManagementService(
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             _securityLogger,
+            securityAlertAggregator,
             "SubscriptionEntitlementGranted");
 
         return AdminUserMutationResult.SuccessWithId(
@@ -282,6 +287,7 @@ public sealed class AdminUserManagementService(
 
             SecuritySensitiveActionLog.AdminMutationCompleted(
                 _securityLogger,
+                securityAlertAggregator,
                 "SubscriptionEntitlementRevoked");
         }
 
@@ -342,6 +348,7 @@ public sealed class AdminUserManagementService(
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             _securityLogger,
+            securityAlertAggregator,
             isActive
                 ? "UserProgramMembershipEnabled"
                 : "UserProgramMembershipDisabled");

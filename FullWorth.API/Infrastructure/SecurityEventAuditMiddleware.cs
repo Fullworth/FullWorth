@@ -266,10 +266,14 @@ internal static class SecuritySensitiveActionLog
 
     internal static void AdminMutationCompleted(
         ILogger logger,
+        SecuritySensitiveActionAlertAggregator alertAggregator,
         string action)
     {
         ArgumentNullException.ThrowIfNull(
             logger);
+
+        ArgumentNullException.ThrowIfNull(
+            alertAggregator);
 
         var safeAction =
             action switch
@@ -309,14 +313,24 @@ internal static class SecuritySensitiveActionLog
             "Security event {SecurityEventName} action={SecurityAction}",
             SecurityEventNames.AdminMutationCompleted,
             safeAction);
+
+        alertAggregator.Observe(
+            new SecuritySensitiveActionObservation(
+                SecurityEventNames.AdminMutationCompleted,
+                "action",
+                safeAction));
     }
 
     internal static void FinancialProviderAttentionRequired(
         ILogger logger,
+        SecuritySensitiveActionAlertAggregator alertAggregator,
         string operation)
     {
         ArgumentNullException.ThrowIfNull(
             logger);
+
+        ArgumentNullException.ThrowIfNull(
+            alertAggregator);
 
         var safeOperation =
             operation switch
@@ -339,14 +353,22 @@ internal static class SecuritySensitiveActionLog
             SecurityEventNames.FinancialProviderAttentionRequired,
             "plaid",
             safeOperation);
+
+        alertAggregator.Observe(
+            new SecuritySensitiveActionObservation(
+                SecurityEventNames.FinancialProviderAttentionRequired,
+                "operation",
+                safeOperation));
     }
 
     internal static void AccountExportCompleted(
         ILogger logger,
+        SecuritySensitiveActionAlertAggregator alertAggregator,
         string requestId)
     {
         WriteAccountAction(
             logger,
+            alertAggregator,
             SecurityEventIds.AccountExportCompleted,
             SecurityEventNames.AccountExportCompleted,
             requestId);
@@ -354,10 +376,12 @@ internal static class SecuritySensitiveActionLog
 
     internal static void AccountDeletionCompleted(
         ILogger logger,
+        SecuritySensitiveActionAlertAggregator alertAggregator,
         string requestId)
     {
         WriteAccountAction(
             logger,
+            alertAggregator,
             SecurityEventIds.AccountDeletionCompleted,
             SecurityEventNames.AccountDeletionCompleted,
             requestId);
@@ -365,6 +389,7 @@ internal static class SecuritySensitiveActionLog
 
     private static void WriteAccountAction(
         ILogger logger,
+        SecuritySensitiveActionAlertAggregator alertAggregator,
         EventId eventId,
         string eventName,
         string requestId)
@@ -372,12 +397,21 @@ internal static class SecuritySensitiveActionLog
         ArgumentNullException.ThrowIfNull(
             logger);
 
+        ArgumentNullException.ThrowIfNull(
+            alertAggregator);
+
         logger.LogWarning(
             eventId,
             "Security event {SecurityEventName} request_id={RequestId}",
             eventName,
             GetSafeRequestId(
                 requestId));
+
+        alertAggregator.Observe(
+            new SecuritySensitiveActionObservation(
+                eventName,
+                "scope",
+                "application"));
     }
 
     private static string GetSafeRequestId(

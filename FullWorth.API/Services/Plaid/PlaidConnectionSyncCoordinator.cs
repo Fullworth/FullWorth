@@ -9,7 +9,9 @@ public sealed class PlaidConnectionSyncCoordinator(
     FullWorthDbContext dbContext,
     PlaidAccountSyncService accountSyncService,
     PlaidTransactionSyncService transactionSyncService,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    SecuritySensitiveActionAlertAggregator
+        securityAlertAggregator)
 {
     private readonly ILogger _securityLogger =
         SecuritySensitiveActionLog.CreateLogger(
@@ -50,6 +52,7 @@ public sealed class PlaidConnectionSyncCoordinator(
                     SecuritySensitiveActionLog
                         .FinancialProviderAttentionRequired(
                             _securityLogger,
+                            securityAlertAggregator,
                             "accounts_sync");
                 }
 
@@ -106,6 +109,7 @@ public sealed class PlaidConnectionSyncCoordinator(
                     SecuritySensitiveActionLog
                         .FinancialProviderAttentionRequired(
                             _securityLogger,
+                            securityAlertAggregator,
                             "transactions_sync");
                 }
 
@@ -145,6 +149,7 @@ public sealed class PlaidConnectionSyncCoordinator(
                 SecuritySensitiveActionLog
                     .FinancialProviderAttentionRequired(
                         _securityLogger,
+                        securityAlertAggregator,
                         "accounts_sync");
             }
 
@@ -177,6 +182,7 @@ public sealed class PlaidConnectionSyncCoordinator(
                 SecuritySensitiveActionLog
                     .FinancialProviderAttentionRequired(
                         _securityLogger,
+                        securityAlertAggregator,
                         "transactions_sync");
             }
 

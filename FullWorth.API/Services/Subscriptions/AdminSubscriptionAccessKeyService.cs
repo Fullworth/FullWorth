@@ -11,7 +11,9 @@ public sealed class AdminSubscriptionAccessKeyService(
     SubscriptionAccessKeyGenerator keyGenerator,
     IAdminAuditLogWriter auditLogWriter,
     TimeProvider timeProvider,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    SecuritySensitiveActionAlertAggregator
+        securityAlertAggregator)
 {
     private readonly ILogger _securityLogger =
         SecuritySensitiveActionLog.CreateLogger(
@@ -79,6 +81,7 @@ public sealed class AdminSubscriptionAccessKeyService(
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             _securityLogger,
+            securityAlertAggregator,
             "SubscriptionAccessKeyCreated");
 
         return new CreatedSubscriptionAccessKey(
@@ -132,6 +135,7 @@ public sealed class AdminSubscriptionAccessKeyService(
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             _securityLogger,
+            securityAlertAggregator,
             "SubscriptionAccessKeyRevoked");
 
         return true;

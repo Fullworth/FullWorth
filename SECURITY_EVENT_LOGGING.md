@@ -35,7 +35,7 @@ These events complement persisted admin audit records. They do not replace the a
 
 ## Bounded repeated-event alerts
 
-The in-process aggregator groups only by the fixed event name, normalized HTTP method, application-owned route template, and authentication state. It never groups by or copies a user, IP address, raw URL, request ID, credential, statement, or financial value.
+The request-boundary in-process aggregator groups only by the fixed event name, normalized HTTP method, application-owned route template, and authentication state. It never groups by or copies a user, IP address, raw URL, request ID, credential, statement, or financial value.
 
 A five-minute fixed window emits these alerts:
 
@@ -46,15 +46,24 @@ A five-minute fixed window emits these alerts:
 | 29103 | `repeated_rate_limit_rejections` | 5 matching 429 events |
 | 29104 | `security_event_aggregation_capacity_reached` | 5 events routed to the overflow bucket |
 
-Each aggregation key can emit at most once every 15 minutes. Threshold crossings during that cooldown are suppressed and reported as a count on the next emitted alert. Aggregation memory is capped at 512 buckets, including a reserved overflow bucket. Buckets inactive for 20 minutes are removed before admitting a new key. If the cap is still full, new dimensions go to the fixed overflow bucket rather than allocating more state.
+Each request-boundary aggregation key can emit at most once every 15 minutes. Threshold crossings during that cooldown are suppressed and reported as a count on the next emitted alert. Request-boundary aggregation memory is capped at 512 buckets, including a reserved overflow bucket. Buckets inactive for 20 minutes are removed before admitting a new key. If the cap is still full, new dimensions go to the fixed overflow bucket rather than allocating more state.
 
-Alerts contain only the same safe grouping dimensions, threshold, window length, and number of suppressed threshold crossings. They intentionally omit request IDs because a repeated-event alert represents many requests.
+High-risk action detection uses the same five-minute window and fifteen-minute per-key cooldown, with only twelve possible allowlisted keys: eight administrative action names, the application-wide export and deletion scopes, and two provider operation names.
+
+| Alert ID | Name | Threshold and safe grouping |
+| --- | --- | --- |
+| 29111 | `repeated_admin_mutations` | 5 events for one allowlisted administrative action |
+| 29112 | `repeated_account_exports` | 10 application-wide export events |
+| 29113 | `repeated_account_deletions` | 3 application-wide deletion events |
+| 29114 | `repeated_financial_provider_attention` | 5 events for one allowlisted provider operation |
+
+Unknown action, scope, or operation values are rejected before aggregation state is allocated. High-risk alerts never contain the source event's request ID, an actor or account identifier, Plaid data, or other user-controlled text. Alerts contain only the fixed event/alert names, the allowlisted dimension name and value, threshold, window length, and number of suppressed threshold crossings.
 
 This aggregation is process-local and resets on API restart. In a future multi-instance deployment, the collector must combine `FullWorth.SecurityAlerts` across instances; the current production rule remains one API instance because startup migration ownership has not been redesigned.
 
 ## Operations
 
-Route `FullWorth.SecurityEvents` to the security event stream and `FullWorth.SecurityAlerts` to the alert collector. Notification rules must use alert IDs 29101–29104 rather than parsing message text. Page or notify from the bounded alert stream, not from every individual request-boundary event. High-risk action events 29011–29014 are currently telemetry only; bounded alerting for administrative/export/delete/provider-attention activity remains separate follow-up work.
+Route `FullWorth.SecurityEvents` to the security event stream and `FullWorth.SecurityAlerts` to the alert collector. Notification rules must use alert IDs 29101–29104 and 29111–29114 rather than parsing message text. Page or notify from the bounded alert stream, not from every individual event. Treat thresholds as initial operational defaults and tune the collector notification policy from observed safe alert volume; do not add user or financial dimensions to reduce false positives.
 
 A capacity alert means the safe aggregation-key budget was exhausted. Investigate whether route cardinality changed or an unexpected endpoint pattern entered the pipeline; do not raise the cap until the source is understood.
 
