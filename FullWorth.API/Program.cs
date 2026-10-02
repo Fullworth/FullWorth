@@ -932,6 +932,17 @@ builder.Services.AddScoped<
     FullWorthReadinessService>();
 
 builder.Services.AddSingleton<
+    ISecurityEventAlertSink,
+    LoggerSecurityEventAlertSink>();
+
+builder.Services.AddSingleton(
+    serviceProvider =>
+        new SecurityEventAlertAggregator(
+            TimeProvider.System,
+            serviceProvider.GetRequiredService<
+                ISecurityEventAlertSink>()));
+
+builder.Services.AddSingleton<
     ISecurityEventSink,
     LoggerSecurityEventSink>();
 
