@@ -160,7 +160,8 @@ jobs:
             "FullWorth.Web/",
             "FullWorth.Tests/",
             "FullWorth.VisualTests/",
-            "deploy/"
+            "deploy/",
+            ".github/workflows/"
           )
 
           $safeExactFiles = @(
@@ -360,6 +361,7 @@ jobs:
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
+          sh deploy/tests/workflow-action-pinning-tests.sh
           sh deploy/tests/project-boundary-tests.sh
           sh deploy/tests/service-module-boundary-tests.sh
           sh deploy/tests/data-ownership-boundary-tests.sh
