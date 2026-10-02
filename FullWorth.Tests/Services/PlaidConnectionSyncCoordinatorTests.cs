@@ -74,6 +74,12 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                 loggerFactory.Entries);
 
         Assert.Equal(
+            "FullWorth.SecurityEvents",
+            securityEvent.CategoryName);
+        Assert.Equal(
+            "FullWorth.SecurityEvents",
+            securityEvent.CategoryName);
+        Assert.Equal(
             29014,
             securityEvent.EventId.Id);
         Assert.Contains(
