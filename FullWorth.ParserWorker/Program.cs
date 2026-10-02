@@ -619,6 +619,12 @@ static async Task<(bool Success, string Code, long MemoryMaxBytes, long MemoryPe
     }
 
     var cgroupPath = containment.CgroupPath;
+    var result =
+        (Success: false,
+         Code: "probe_failed",
+         MemoryMaxBytes: 0L,
+         MemoryPeakBytes: 0L,
+         OomKillDelta: 0L);
 
     try
     {
@@ -627,81 +633,106 @@ static async Task<(bool Success, string Code, long MemoryMaxBytes, long MemoryPe
                 out _,
                 out var oomKillBefore))
         {
-            TryKillWorkerTree(process);
-            return (false, "probe_evidence_unavailable", 0, 0, 0);
+            result =
+                (false, "probe_evidence_unavailable", 0, 0, 0);
         }
-
-        var stdoutTask = DiscardedProcessOutput.DrainAsync(
-            process.StandardOutput.BaseStream,
-            CancellationToken.None);
-        var stderrTask = DiscardedProcessOutput.DrainAsync(
-            process.StandardError.BaseStream,
-            CancellationToken.None);
-
-        process.StandardInput.BaseStream.WriteByte(0x01);
-        process.StandardInput.Close();
-
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        try
+        else
         {
-            await process.WaitForExitAsync(deadline.Token);
+            var stdoutTask = DiscardedProcessOutput.DrainAsync(
+                process.StandardOutput.BaseStream,
+                CancellationToken.None);
+            var stderrTask = DiscardedProcessOutput.DrainAsync(
+                process.StandardError.BaseStream,
+                CancellationToken.None);
+
+            process.StandardInput.BaseStream.WriteByte(0x01);
+            process.StandardInput.Close();
+
+            using var deadline =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(20));
+
+            var timedOut =
+                false;
+
+            try
+            {
+                await process.WaitForExitAsync(
+                    deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                timedOut =
+                    true;
+
+                TryKillWorkerTree(
+                    process);
+            }
+
+            await stdoutTask;
+            await stderrTask;
+
+            if (timedOut)
+            {
+                result =
+                    (false, "probe_timeout", memoryMaxBefore, 0, 0);
+            }
+            else if (!containment.TryReadMemoryEvidence(
+                         out var memoryMaxAfter,
+                         out var memoryPeakAfter,
+                         out var oomKillAfter))
+            {
+                result =
+                    (false, "probe_evidence_unavailable", memoryMaxBefore, 0, 0);
+            }
+            else
+            {
+                var oomKillDelta =
+                    Math.Max(
+                        0,
+                        oomKillAfter -
+                        oomKillBefore);
+
+                result =
+                    memoryMaxAfter ==
+                        memoryMaxBefore &&
+                    process.ExitCode !=
+                        0 &&
+                    oomKillDelta >=
+                        1
+                        ? (true, "ok", memoryMaxAfter, memoryPeakAfter, oomKillDelta)
+                        : (false, "probe_oom_not_observed", memoryMaxAfter, memoryPeakAfter, oomKillDelta);
+            }
         }
-        catch (OperationCanceledException)
-        {
-            TryKillWorkerTree(process);
-            return (false, "probe_timeout", memoryMaxBefore, 0, 0);
-        }
-
-        await stdoutTask;
-        await stderrTask;
-
-        if (!containment.TryReadMemoryEvidence(
-                out var memoryMaxAfter,
-                out var memoryPeakAfter,
-                out var oomKillAfter))
-        {
-            return (false, "probe_evidence_unavailable", memoryMaxBefore, 0, 0);
-        }
-
-        var oomKillDelta =
-            Math.Max(
-                0,
-                oomKillAfter - oomKillBefore);
-
-        if (memoryMaxAfter != memoryMaxBefore ||
-            process.ExitCode == 0 ||
-            oomKillDelta < 1)
-        {
-            return (
-                false,
-                "probe_oom_not_observed",
-                memoryMaxAfter,
-                memoryPeakAfter,
-                oomKillDelta);
-        }
-
-        return (
-            true,
-            "ok",
-            memoryMaxAfter,
-            memoryPeakAfter,
-            oomKillDelta);
+    }
+    catch
+    {
+        result =
+            (false, "probe_failed", result.MemoryMaxBytes, result.MemoryPeakBytes, result.OomKillDelta);
     }
     finally
     {
         if (!process.HasExited)
         {
-            TryKillWorkerTree(process);
+            TryKillWorkerTree(
+                process);
         }
 
         containment.Dispose();
-
-        if (Directory.Exists(cgroupPath))
-        {
-            // A leaked cgroup makes the proof fail closed on the next run too.
-            Environment.ExitCode = 70;
-        }
     }
+
+    if (Directory.Exists(
+            cgroupPath))
+    {
+        return (
+            false,
+            "probe_cleanup_failed",
+            result.MemoryMaxBytes,
+            result.MemoryPeakBytes,
+            result.OomKillDelta);
+    }
+
+    return result;
 }
 
 static async Task<byte[]?> ReadBoundedOutputAsync(Stream stream, int maxBytes, CancellationToken cancellationToken)
