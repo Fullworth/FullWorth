@@ -1,3 +1,13 @@
+## Bounded repeated security-event aggregation — 2026-10-02
+
+The API now aggregates repeated request-boundary authentication rejections, authorization denials, and rate-limit enforcement into the dedicated `FullWorth.SecurityAlerts` category. Fixed five-minute thresholds emit alerts after 25 matching 401 events, 10 matching 403 events, or 5 matching 429 events. A fifteen-minute per-key cooldown suppresses repeated notifications and reports the number of suppressed threshold crossings on the next alert.
+
+Aggregation keys contain only the fixed security-event name, normalized HTTP method, application-owned route template, and authentication state. Alerts intentionally exclude request IDs, users, IP addresses, raw URLs and queries, credentials, statement content, and financial values. Process-local state is capped at 512 buckets including a reserved overflow bucket; inactive buckets are pruned, and excess dimensions produce a fixed capacity alert rather than allocating unbounded memory. Focused tests cover every threshold, cooldown behavior, safe-dimension separation, capacity and overflow handling, stale-bucket pruning, and request-ID exclusion.
+
+Exact PR #620 head `85330b2e757a85ffc67f6760f9244c71a0163ee2` passed FullWorth CI #1511 (run `37038951999`: backend build/tests, MAUI Android, Linux production images and Compose, live parser/OCR containment, HTTPS and security boundaries, and encrypted backup/restore) and Dependency Security #608 (run `37038951995`) before squash merge to `development` as `3e6419cf00542b3b875aeb855623f61553279310`.
+
+This completes bounded anti-spam alert thresholds for the request-boundary security events introduced in PR #618. Aggregation remains process-local and resets on API restart; a future multi-instance deployment must aggregate the alert stream externally. Broader ownership/provider/export/delete coverage and incident-response, credential-rotation, and session-revocation runbooks remain follow-up work. No production deployment occurred.
+
 ## Structured request-boundary security events — 2026-10-02
 
 The API now emits authentication rejection, authorization denial, and rate-limit enforcement to the dedicated `FullWorth.SecurityEvents` category with fixed event IDs 29001–29003. The middleware surrounds rate limiting, authorization, and endpoint execution so downstream short circuits are observable. Events contain only a normalized fixed-set HTTP method, application-owned route template, response status, authentication state, and the existing server-generated request ID.
