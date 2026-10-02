@@ -71,11 +71,19 @@ parser_caps="$(
         "/proc/$parser_pid/status"
 )"
 
+parser_bounding_caps="$(
+    awk '/^CapBnd:/ { print $2; exit }' \
+        "/proc/$parser_pid/status"
+)"
+
 [ "$parser_uid" = "1654" ] ||
     fail "the running parser supervisor is not the dedicated unprivileged identity." 77
 
 [ "$parser_caps" = "0000000000000000" ] ||
     fail "the running parser supervisor retains effective Linux capabilities." 77
+
+[ "$parser_bounding_caps" = "0000000000000000" ] ||
+    fail "the running parser supervisor retains Linux capabilities in its bounding set." 77
 
 parser_relative="$(
     awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
@@ -417,7 +425,7 @@ release_id="$(git -C "$deployment_directory" rev-parse --verify HEAD^{commit} 2>
 printf '%s\n' \
     "FullWorth parser containment verification passed." \
     "Release: $release_id" \
-    "Parser runtime: uid=1654 effective-capabilities=none" \
+    "Parser runtime: uid=1654 effective-capabilities=none bounding-capabilities=none" \
     "Document limits: cpu.max=100000/100000 memory.max=402653184 memory.swap.max=0 pids.max=48" \
     "Kernel memory proof: $containment_summary" \
     "Synthetic OCR: per-document cgroup observed and removed; parser readiness survived."
