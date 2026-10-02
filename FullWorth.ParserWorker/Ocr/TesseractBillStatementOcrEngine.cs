@@ -299,7 +299,9 @@ public sealed class TesseractBillStatementOcrEngine
         {
             return BillStatementOcrResult.Failure(
                 pageCount:
-                    1);
+                    1,
+                failureCode:
+                    "image_admission_rejected");
         }
 
         if (!TryRecognizeImage(
