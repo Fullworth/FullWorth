@@ -21,6 +21,9 @@ internal static class SecurityEventNames
 
     internal const string AccountDeletionCompleted =
         "account_deletion_completed";
+
+    internal const string FinancialProviderAttentionRequired =
+        "financial_provider_attention_required";
 }
 
 internal static class SecurityEventIds
@@ -54,6 +57,11 @@ internal static class SecurityEventIds
         new(
             29013,
             nameof(AccountDeletionCompleted));
+
+    internal static readonly EventId FinancialProviderAttentionRequired =
+        new(
+            29014,
+            nameof(FinancialProviderAttentionRequired));
 }
 
 internal sealed record SecurityEventObservation(
@@ -301,6 +309,36 @@ internal static class SecuritySensitiveActionLog
             "Security event {SecurityEventName} action={SecurityAction}",
             SecurityEventNames.AdminMutationCompleted,
             safeAction);
+    }
+
+    internal static void FinancialProviderAttentionRequired(
+        ILogger logger,
+        string operation)
+    {
+        ArgumentNullException.ThrowIfNull(
+            logger);
+
+        var safeOperation =
+            operation switch
+            {
+                "accounts_sync" =>
+                    operation,
+
+                "transactions_sync" =>
+                    operation,
+
+                _ =>
+                    throw new ArgumentOutOfRangeException(
+                        nameof(operation),
+                        "Unknown financial-provider security operation.")
+            };
+
+        logger.LogWarning(
+            SecurityEventIds.FinancialProviderAttentionRequired,
+            "Security event {SecurityEventName} provider={Provider} operation={ProviderOperation}",
+            SecurityEventNames.FinancialProviderAttentionRequired,
+            "plaid",
+            safeOperation);
     }
 
     internal static void AccountExportCompleted(
