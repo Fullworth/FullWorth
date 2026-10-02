@@ -70,14 +70,17 @@ RUN apt-get update \
         curl \
         libtesseract-dev \
         tesseract-ocr-eng \
+        util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=native-build /native-root/usr/local/ /usr/local/
 
 WORKDIR /app
 COPY --from=build /app/parser-worker-publish/ ./
+COPY deploy/parser-worker-entrypoint.sh /usr/local/bin/fullworth-parser-worker-entrypoint
 
-RUN ldconfig \
+RUN chmod 0755 /usr/local/bin/fullworth-parser-worker-entrypoint \
+    && ldconfig \
     && mkdir --parents /app/x64 /app/tessdata /var/run/fullworth-parser-tls \
     && ln --symbolic /usr/local/lib/libleptonica.so /app/x64/libleptonica-1.85.0.dll.so \
     && ln --symbolic "$(find /usr/lib -type f -name 'libtesseract.so.*' -print -quit)" /app/x64/libtesseract55.dll.so \
@@ -91,12 +94,10 @@ ENV ASPNETCORE_HTTP_PORTS=8081 \
 
 EXPOSE 8081
 
-USER $APP_UID
+HEALTHCHECK NONE
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl --fail --silent http://localhost:8081/health/ready || exit 1
-
-ENTRYPOINT ["dotnet", "FullWorth.ParserWorker.dll"]
+ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]
+CMD ["dotnet", "FullWorth.ParserWorker.dll"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
