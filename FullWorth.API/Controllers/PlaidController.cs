@@ -26,7 +26,9 @@ public sealed class PlaidController : ControllerBase
         PlaidTransactionSyncService transactionSyncService,
         FullWorthDbContext dbContext,
         UserManager<ApplicationUser> userManager,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        SecuritySensitiveActionAlertAggregator
+            securityAlertAggregator)
     {
         _plaidLinkService = plaidLinkService;
         _exchangeService = exchangeService;
@@ -36,7 +38,8 @@ public sealed class PlaidController : ControllerBase
                 dbContext,
                 accountSyncService,
                 transactionSyncService,
-                loggerFactory);
+                loggerFactory,
+                securityAlertAggregator);
         _userManager = userManager;
     }
 
