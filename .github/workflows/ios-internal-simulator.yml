@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Validate packaging workflow contract
         run: |
@@ -61,10 +61,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Install .NET 10
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: 10.0.x
 
@@ -118,7 +118,7 @@ jobs:
           fi
 
       - name: Cache NuGet packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-ios-internal-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
@@ -216,7 +216,7 @@ jobs:
           printf 'sha256=%s\n' "$sha256" >> "$GITHUB_OUTPUT"
 
       - name: Upload iOS simulator artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fullworth-ios-simulator-${{ github.sha }}
           path: ${{ steps.package.outputs.artifact_dir }}
