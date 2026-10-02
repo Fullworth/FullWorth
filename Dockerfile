@@ -108,18 +108,12 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         ca-certificates \
         curl \
-        libtesseract-dev \
     && rm -rf /var/lib/apt/lists/*
-
-COPY --from=native-build /native-root/usr/local/ /usr/local/
 
 WORKDIR /app
 COPY --from=build /app/publish/ ./
 
-RUN ldconfig \
-    && mkdir --parents /app/x64 /var/lib/billwatch/keys /var/lib/billwatch/statements \
-    && ln --symbolic /usr/local/lib/libleptonica.so /app/x64/libleptonica-1.85.0.dll.so \
-    && ln --symbolic "$(find /usr/lib -type f -name 'libtesseract.so.*' -print -quit)" /app/x64/libtesseract55.dll.so \
+RUN mkdir --parents /var/lib/billwatch/keys /var/lib/billwatch/statements \
     && chown --recursive "$APP_UID:$APP_UID" /var/lib/billwatch
 
 ENV ASPNETCORE_HTTP_PORTS=8080 \
