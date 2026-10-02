@@ -1,3 +1,21 @@
+## Hard per-image OCR cgroup containment — 2026-10-02
+
+Each native OCR image operation now runs in a fresh short-lived sibling cgroup under the parser container's already delegated cgroup-v2 parent. The image subprocess is born inside the unique per-document scope, remains blocked before receiving image bytes, and is moved into the image scope only after finite limits are configured and verified. Production defaults enforce 1 CPU, 384 MiB memory, zero swap, and OOM-group handling; configured image limits are rejected when they are weaker than the enclosing document limits. Linux execution fails closed if the scope cannot be created, configured, entered, verified, or cleaned up.
+
+Focused unit tests lock limit parsing, sibling-path construction, configuration copying, and rejection of invalid or weaker limits. The production-container gate proves two real OCR requests receive distinct live document and image scopes, verifies process placement and finite CPU/memory/swap settings, and verifies both scope types disappear after completion. The guarded deployed-host containment verifier now requires the same per-document and per-image evidence before accepting a release.
+
+The first exact-head run correctly rejected the CI fixture before native OCR because its Python generator emitted literal escaped text instead of binary PNG bytes. Corrected exact head `470d65e195cd3a4dfc01a4f79ee6fa81af16ebe1` passed FullWorth CI #1503 (run `36996242801`: backend build/tests, MAUI Android, live parser/OCR containment, production images/Compose, visual acceptance, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #600 (run `36996242700`). PR #611 was squash-merged to `development` as `cfa9de2dde23f9818e4429f781776fab7064e9d3`.
+
+This completes repository- and CI-proven hard per-image native OCR resource enforcement. It does not prove deployed-host acceptance: the change must reach `master` and pass the guarded production deployment's real-host containment verifier before that claim is made. No production deployment occurred.
+
+## Attested release image SBOMs — 2026-10-02
+
+On `master` pushes, the Linux production-container job now generates SPDX JSON SBOMs from the exact API, parser-worker, and Web images built for that release. Each SBOM is attested against its matching exported image archive and retained with the release image artifacts for seven days. The SBOM generator action, Syft version, attestation actions, master-only gate, subjects, filenames, and retention policy are commit-pinned and regression-locked.
+
+Exact PR #613 head `ef0a16778b1beadf7723a247b5705e1cc06e730e` passed FullWorth CI #1477 (run `36983809331`) and Dependency Security #574 (run `36983809299`) before squash merge to `development` as `8d330e9fc635b456a2d13b7e180a01e59740a8b7`.
+
+These SBOMs and attestations cover the release image archives built by GitHub CI. The guarded production deployment still rebuilds images on the VPS, so no claim is made that the deployed images consume or are covered by these GitHub artifacts. No production deployment occurred.
+
 ## Signed GitHub build provenance — 2026-10-02
 
 GitHub Actions now emits verifiable build provenance for the three production image archives built by the Linux production-container job on pushes to `master`. The container job alone receives the minimal `id-token: write` and `attestations: write` permissions; it exports the API, parser-worker, and Web images tagged with the exact Git commit, attests the resulting tar archives through the immutable commit-pinned `actions/attest-build-provenance` action, and retains those attested artifacts for seven days. A regression contract locks the permissions, master-only gate, exact action pin, subjects, image tags, and retention policy.
