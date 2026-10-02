@@ -620,7 +620,8 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                 apiClient,
                 tokenProtector),
             loggerFactory ??
-                NullLoggerFactory.Instance);
+                NullLoggerFactory.Instance,
+            TestSecurityAlertAggregator.Create());
     }
 
     private static BankConnectionEntity CreateConnection(
