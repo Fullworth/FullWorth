@@ -1031,10 +1031,12 @@ public sealed record BillStatementOcrResult(
     string Text,
     int PageCount,
     float MeanConfidence,
-    bool IsUsable)
+    bool IsUsable,
+    string? FailureCode = null)
 {
     public static BillStatementOcrResult Failure(
-        int pageCount)
+        int pageCount,
+        string? failureCode = null)
     {
         return new BillStatementOcrResult(
             Text:
@@ -1047,7 +1049,10 @@ public sealed record BillStatementOcrResult(
                 0f,
 
             IsUsable:
-                false);
+                false,
+
+            FailureCode:
+                failureCode);
     }
 }
 
