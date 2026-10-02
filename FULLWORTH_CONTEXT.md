@@ -1,3 +1,11 @@
+## Signed GitHub build provenance — 2026-10-02
+
+GitHub Actions now emits verifiable build provenance for the three production image archives built by the Linux production-container job on pushes to `master`. The container job alone receives the minimal `id-token: write` and `attestations: write` permissions; it exports the API, parser-worker, and Web images tagged with the exact Git commit, attests the resulting tar archives through the immutable commit-pinned `actions/attest-build-provenance` action, and retains those attested artifacts for seven days. A regression contract locks the permissions, master-only gate, exact action pin, subjects, image tags, and retention policy.
+
+Exact PR #609 head `3f736a1d75140e6d1fadaa3d897cf9b46b26167e` passed FullWorth CI #1466 (run `36977359332`) and Dependency Security #563 (run `36977359405`) before squash merge to `development` as `33aec7a027304d30edfcbc153d59c5a52e4195a9`.
+
+This provenance covers the image archives built by GitHub CI. The guarded production deployment still rebuilds images on the VPS, so no claim is made that deployed images are derived from or covered by these attestations. SBOM publication and a deploy path that consumes verified GitHub-built artifacts remain separate supply-chain work. No production deployment occurred.
+
 ## Immutable production and recovery container inputs — 2026-10-02
 
 Every external container image used by FullWorth's production and isolated-recovery Dockerfiles and Compose topologies is now pinned to an immutable multi-architecture SHA-256 manifest digest while retaining a readable upstream version tag. This covers the .NET SDK/runtime bases for API, parser worker, and Web; the PostgreSQL backup base; PostgreSQL production and restore services; Redis; and Caddy. Repository-built `billwatch-*` images remain bound to the exact 40-character `BILLWATCH_RELEASE_ID` and are rebuilt from the guarded release checkout.
