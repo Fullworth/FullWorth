@@ -45,13 +45,9 @@ do
 done
 
 parser_container="$(compose ps -q parser-worker)"
-api_container="$(compose ps -q api)"
 
 [ -n "$parser_container" ] ||
     fail "the parser-worker container could not be resolved." 69
-
-[ -n "$api_container" ] ||
-    fail "the API container could not be resolved." 69
 
 parser_pid="$(
     docker inspect \
@@ -204,16 +200,12 @@ sys.stdout.buffer.write(png)
 PY
 
 parser_token="$(
-    docker inspect \
-        --format '{{range .Config.Env}}{{println .}}{{end}}' \
-        "$api_container" |
     awk -F= '
-        $1 == "ParserWorker__AuthenticationToken" {
-            sub(/^[^=]*=/, "")
-            print
+        $1 == "BILLWATCH_PARSER_AUTH_TOKEN" {
+            print substr($0, length($1) + 2)
             exit
         }
-    '
+    ' "$environment_file"
 )"
 
 [ "${#parser_token}" -ge 32 ] ||
@@ -224,41 +216,40 @@ nonce="$(openssl rand -hex 16)"
 content_sha256="$(sha256sum "$image_file" | awk '{ print $1 }')"
 
 signature="$(
-    PARSER_TOKEN="$parser_token" \
+    {
+        printf '%s' "$parser_token"
+        printf '\\0'
+        printf 'POST\\n/v1/ocr/extract\\n%s\\n%s\\n%s' \
+            "$timestamp" "$nonce" "$content_sha256"
+    } |
     python3 -c '
 import hashlib
 import hmac
-import os
 import sys
 
-message = "POST\n/v1/ocr/extract\n{}\n{}\n{}".format(
-    sys.argv[1],
-    sys.argv[2],
-    sys.argv[3],
-).encode("utf-8")
-print(
-    hmac.new(
-        os.environ["PARSER_TOKEN"].encode("utf-8"),
-        message,
-        hashlib.sha256,
-    ).hexdigest()
-)
-' "$timestamp" "$nonce" "$content_sha256"
+payload = sys.stdin.buffer.read()
+key, message = payload.split(b"\\0", 1)
+print(hmac.new(key, message, hashlib.sha256).hexdigest())
+'
 )"
 
 send_ocr_request()
 {
     compose exec -T api \
-        curl --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
-            --fail --silent --show-error --request POST \
-            --header 'Content-Type: image/png' \
-            --header 'X-FullWorth-Ocr-Extension: .png' \
-            --header "Authorization: Bearer $parser_token" \
-            --header "X-FullWorth-Parser-Timestamp: $timestamp" \
-            --header "X-FullWorth-Parser-Nonce: $nonce" \
-            --header "X-FullWorth-Parser-Content-SHA256: $content_sha256" \
-            --header "X-FullWorth-Parser-Signature: $signature" \
-            --data-binary @- https://parser-worker:8081/v1/ocr/extract \
+        sh -c '
+            exec curl \
+                --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                --fail --silent --show-error --request POST \
+                --header "Content-Type: image/png" \
+                --header "X-FullWorth-Ocr-Extension: .png" \
+                --header "Authorization: Bearer ${ParserWorker__AuthenticationToken}" \
+                --header "X-FullWorth-Parser-Timestamp: $1" \
+                --header "X-FullWorth-Parser-Nonce: $2" \
+                --header "X-FullWorth-Parser-Content-SHA256: $3" \
+                --header "X-FullWorth-Parser-Signature: $4" \
+                --data-binary @- \
+                https://parser-worker:8081/v1/ocr/extract
+        ' sh "$timestamp" "$nonce" "$content_sha256" "$signature" \
         < "$image_file" > "$response_file"
 }
 
@@ -410,7 +401,8 @@ if grep -Fq "$proof_marker" "$logs_file"; then
     fail "synthetic document bytes appeared in application or parser logs." 77
 fi
 
-if grep -Fq "$parser_token" "$logs_file"; then
+if printf '%s\\n' "$parser_token" |
+   grep -Fq -f - "$logs_file"; then
     fail "the parser authentication credential appeared in application or parser logs." 77
 fi
 
