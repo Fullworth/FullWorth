@@ -612,6 +612,19 @@ public sealed class TesseractBillStatementOcrEngine
                 throw new OcrImageContainmentException(failureCode);
             }
 
+            var observationDelay =
+                OcrImageProcessCgroup.GetConfiguredObservationDelay();
+            if (observationDelay > TimeSpan.Zero)
+            {
+                /*
+                 * CI may hold the already-contained, stdin-blocked image worker
+                 * briefly so the host can inspect the live kernel scope.
+                 * Production defaults to zero and no image bytes are released
+                 * until after this bounded observation window.
+                 */
+                Thread.Sleep(observationDelay);
+            }
+
             try
             {
                 File.WriteAllText(
