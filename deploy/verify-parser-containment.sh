@@ -177,8 +177,8 @@ import struct
 import sys
 import zlib
 
-width = 4000
-height = 3000
+width = 640
+height = 480
 marker = os.environ["PROOF_MARKER"].encode("ascii")
 raw = b"".join(
     b"\x00" + (b"\xff\xff\xff" * width)
@@ -267,7 +267,7 @@ document_cgroup=
 attempt=1
 while [ "$attempt" -le 500 ]
 do
-    set -- "$parent_cgroup"/fullworth-ocr-*
+    set -- "$parent_cgroup"/fullworth-ocr-[0-9]*-*
 
     if [ "$#" -gt 1 ]; then
         fail "multiple OCR document cgroups existed during a single admitted request." 77
@@ -307,21 +307,80 @@ set -- $(cat "$document_cgroup/cpu.max")
 
 child_pid="$(head -n 1 "$document_cgroup/cgroup.procs")"
 
-case "$child_pid" in
+if [ -n "$child_pid" ]; then
+    case "$child_pid" in
+        *[!0-9]*)
+            fail "the OCR child PID in the document cgroup is invalid." 77
+            ;;
+    esac
+
+    child_relative="$(
+        awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
+            "/proc/$child_pid/cgroup"
+    )"
+
+    expected_relative="/${document_cgroup#/sys/fs/cgroup/}"
+
+    [ "$child_relative" = "$expected_relative" ] ||
+        fail "the OCR child is not executing in the observed document cgroup." 77
+fi
+
+image_cgroup=
+attempt=1
+while [ "$attempt" -le 500 ]
+do
+    set -- "$parent_cgroup"/fullworth-ocr-image-*
+
+    if [ "$#" -gt 1 ]; then
+        fail "multiple OCR image cgroups existed during a single admitted image." 77
+    fi
+
+    if [ "$#" -eq 1 ] &&
+       [ -d "$1" ]; then
+        image_cgroup=$1
+        break
+    fi
+
+    if ! kill -0 "$request_pid" 2>/dev/null; then
+        break
+    fi
+
+    sleep 0.01
+    attempt=$((attempt + 1))
+done
+
+[ -n "$image_cgroup" ] ||
+    fail "no per-image OCR cgroup was observed while native OCR was active." 77
+
+[ "$(cat "$image_cgroup/memory.max")" = "402653184" ] ||
+    fail "the OCR image memory ceiling is not 384 MiB." 77
+
+[ "$(cat "$image_cgroup/memory.swap.max")" = "0" ] ||
+    fail "the OCR image swap ceiling is not zero." 77
+
+set -- $(cat "$image_cgroup/cpu.max")
+[ "$#" -eq 2 ] &&
+[ "$1" = "100000" ] &&
+[ "$2" = "100000" ] ||
+    fail "the OCR image CPU ceiling is not the expected finite quota." 77
+
+image_pid="$(head -n 1 "$image_cgroup/cgroup.procs")"
+
+case "$image_pid" in
     ''|*[!0-9]*)
-        fail "the OCR child PID was not present in its cgroup." 77
+        fail "the OCR image PID was not present in its cgroup." 77
         ;;
 esac
 
-child_relative="$(
+image_relative="$(
     awk -F: '$1 == "0" && $2 == "" { print $3; exit }' \
-        "/proc/$child_pid/cgroup"
+        "/proc/$image_pid/cgroup"
 )"
 
-expected_relative="/${document_cgroup#/sys/fs/cgroup/}"
+expected_image_relative="/${image_cgroup#/sys/fs/cgroup/}"
 
-[ "$child_relative" = "$expected_relative" ] ||
-    fail "the OCR child is not executing in the observed document cgroup." 77
+[ "$image_relative" = "$expected_image_relative" ] ||
+    fail "native OCR is not executing in the observed per-image cgroup." 77
 
 if ! wait "$request_pid"; then
     request_pid=
@@ -347,12 +406,16 @@ PY
 attempt=1
 while [ "$attempt" -le 200 ]
 do
+    [ ! -d "$image_cgroup" ] &&
     [ ! -d "$document_cgroup" ] &&
         break
 
     sleep 0.01
     attempt=$((attempt + 1))
 done
+
+[ ! -d "$image_cgroup" ] ||
+    fail "the per-image OCR cgroup remained after native OCR exited." 77
 
 [ ! -d "$document_cgroup" ] ||
     fail "the per-document OCR cgroup remained after its child exited." 77
@@ -428,4 +491,4 @@ printf '%s\n' \
     "Parser runtime: uid=1654 effective-capabilities=none bounding-capabilities=none" \
     "Document limits: cpu.max=100000/100000 memory.max=402653184 memory.swap.max=0 pids.max=48" \
     "Kernel memory proof: $containment_summary" \
-    "Synthetic OCR: per-document cgroup observed and removed; parser readiness survived."
+    "Synthetic OCR: per-document and per-image cgroups observed and removed; parser readiness survived."

@@ -122,6 +122,13 @@ services:
       FULLWORTH_PARSER_DOCUMENT_MEMORY_MAX_BYTES: "402653184"
       FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES: "0"
       FULLWORTH_PARSER_DOCUMENT_PIDS_MAX: "48"
+      # Native OCR is entered only after its stricter sibling per-image cgroup is ready.
+      FULLWORTH_PARSER_IMAGE_CPU_QUOTA_US: "100000"
+      FULLWORTH_PARSER_IMAGE_CPU_PERIOD_US: "100000"
+      FULLWORTH_PARSER_IMAGE_MEMORY_MAX_BYTES: "402653184"
+      FULLWORTH_PARSER_IMAGE_SWAP_MAX_BYTES: "0"
+      # Test-only host observation window; production defaults to no delay.
+      FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS: ${FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS:-0}
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1654,gid=1654,mode=0700
     volumes:

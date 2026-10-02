@@ -93,6 +93,50 @@ if (args.Length == 1 && args[0] == "--parse-pdf")
     return;
 }
 
+if (args.Length == 2 && args[0] == "--ocr-image")
+{
+    var mediaType = args[1];
+    if (!string.Equals(
+            mediaType,
+            "image/png",
+            StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(
+            mediaType,
+            "image/jpeg",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        Environment.ExitCode = 64;
+        return;
+    }
+
+    /*
+     * This process is started inside the document cgroup and receives no image
+     * bytes until its parent has attached it to the one-shot image cgroup.
+     * Native Tesseract initialization therefore cannot begin outside the image
+     * CPU/memory ceiling.
+     */
+    var result = TesseractBillStatementOcrEngine.RunImageWorker(
+        Console.OpenStandardInput(),
+        mediaType,
+        Path.Combine(
+            AppContext.BaseDirectory,
+            "tessdata"));
+
+    var output = JsonSerializer.SerializeToUtf8Bytes(
+        result,
+        jsonOptions);
+
+    if (output.Length > WorkerProtocol.MaxResponseBytes)
+    {
+        output = JsonSerializer.SerializeToUtf8Bytes(
+            BillStatementOcrResult.Failure(1),
+            jsonOptions);
+    }
+
+    await Console.OpenStandardOutput().WriteAsync(output);
+    return;
+}
+
 if (args.Length == 3 && args[0] == "--ocr")
 {
     var mediaType = args[1];
@@ -134,10 +178,21 @@ if (args.Length == 3 && args[0] == "--ocr")
         }),
         NullLogger<TesseractBillStatementOcrEngine>.Instance);
     using var inputStream = new MemoryStream(input, writable: false);
-    var result = engine.TryExtract(
-        inputStream,
-        mediaType,
-        extension);
+    BillStatementOcrResult result;
+    try
+    {
+        result = engine.TryExtract(
+            inputStream,
+            mediaType,
+            extension);
+    }
+    catch (OcrImageContainmentException ex)
+    {
+        result = BillStatementOcrResult.Failure(
+            pageCount: 1,
+            failureCode: ex.Code);
+    }
+
     var output = JsonSerializer.SerializeToUtf8Bytes(result, jsonOptions);
     if (output.Length > WorkerProtocol.MaxResponseBytes)
     {
@@ -485,6 +540,9 @@ static async Task<byte[]> RunOcrProcessAsync(
     startInfo.ArgumentList.Add(mediaType);
     startInfo.ArgumentList.Add(extension);
     startInfo.Environment.Clear();
+    OcrImageProcessCgroup.CopyConfiguredEnvironment(
+        startInfo.Environment,
+        Environment.GetEnvironmentVariable);
     var dotnetRoot = Path.GetDirectoryName(dotnetPath);
     if (!string.IsNullOrWhiteSpace(dotnetRoot))
     {

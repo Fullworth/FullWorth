@@ -107,6 +107,82 @@ public sealed class ParserWorkerResourceLimitTests
                 "test-instance"));
     }
 
+    [Theory]
+    [InlineData("100000", "100000", "402653184", "0", true)]
+    [InlineData("max", "100000", "402653184", "0", false)]
+    [InlineData("100000", "0", "402653184", "0", false)]
+    [InlineData("100000", "100000", "max", "0", false)]
+    [InlineData("100000", "100000", "402653184", "max", false)]
+    public void OcrImageConfigurationRequiresFiniteLimits(
+        string cpuQuota,
+        string cpuPeriod,
+        string memoryMax,
+        string swapMax,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            OcrImageProcessCgroup.HasValidLimitConfiguration(
+                cpuQuota,
+                cpuPeriod,
+                memoryMax,
+                swapMax));
+    }
+
+    [Theory]
+    [InlineData("100000 100000", "100000 100000", "402653184", "402653184", "0", "0", true)]
+    [InlineData("100001 100000", "100000 100000", "402653184", "402653184", "0", "0", false)]
+    [InlineData("100000 100000", "100000 100000", "402653185", "402653184", "0", "0", false)]
+    [InlineData("100000 100000", "100000 100000", "402653184", "402653184", "1", "0", false)]
+    [InlineData("100000 99999", "100000 100000", "402653184", "402653184", "0", "0", false)]
+    public void OcrImageLimitsCannotExceedDocumentLimits(
+        string imageCpu,
+        string documentCpu,
+        string imageMemory,
+        string documentMemory,
+        string imageSwap,
+        string documentSwap,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            OcrImageProcessCgroup.LimitsFitInsideParent(
+                imageCpu,
+                documentCpu,
+                imageMemory,
+                documentMemory,
+                imageSwap,
+                documentSwap));
+    }
+
+    [Fact]
+    public void OcrImageCgroupIsCreatedBesideDocumentInsideDelegatedParent()
+    {
+        var delegatedParent = Path.Combine(
+            Path.GetTempPath(),
+            "fullworth-parser-container");
+        var document = Path.Combine(
+            delegatedParent,
+            "fullworth-ocr-4321-document-instance");
+
+        var image = OcrImageProcessCgroup.BuildCgroupPath(
+            delegatedParent,
+            4321,
+            "test-instance");
+
+        Assert.Equal(
+            Path.Combine(
+                delegatedParent,
+                "fullworth-ocr-image-4321-test-instance"),
+            image);
+        Assert.Equal(
+            Path.GetDirectoryName(document),
+            Path.GetDirectoryName(image));
+        Assert.NotEqual(
+            document,
+            image);
+    }
+
     [Fact]
     public async Task ProtocolRejectsWhenResourceLimitsAreUnverified()
     {
@@ -141,6 +217,38 @@ public sealed class ParserWorkerResourceLimitTests
             () => throw new InvalidOperationException("probe failed"));
 
         Assert.Equal("worker_limits_unverified", response.ErrorCode);
+    }
+
+    [Fact]
+    public void OcrChildEnvironmentCopiesConfiguredContainmentVariables()
+    {
+        var configured = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["FULLWORTH_PARSER_IMAGE_CPU_QUOTA_US"] = "100000",
+            ["FULLWORTH_PARSER_IMAGE_CPU_PERIOD_US"] = "100000",
+            ["FULLWORTH_PARSER_IMAGE_MEMORY_MAX_BYTES"] = "402653184",
+            ["FULLWORTH_PARSER_IMAGE_SWAP_MAX_BYTES"] = "0",
+            ["FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US"] = "100000",
+            ["FULLWORTH_PARSER_DOCUMENT_CPU_PERIOD_US"] = "100000",
+            ["FULLWORTH_PARSER_DOCUMENT_MEMORY_MAX_BYTES"] = "402653184",
+            ["FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES"] = "0",
+            ["FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS"] = "250"
+        };
+        var childEnvironment = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["UNRELATED"] = "preserved"
+        };
+
+        OcrImageProcessCgroup.CopyConfiguredEnvironment(
+            childEnvironment,
+            name => configured.TryGetValue(name, out var value) ? value : null);
+
+        Assert.Equal("100000", childEnvironment["FULLWORTH_PARSER_IMAGE_CPU_QUOTA_US"]);
+        Assert.Equal("402653184", childEnvironment["FULLWORTH_PARSER_IMAGE_MEMORY_MAX_BYTES"]);
+        Assert.Equal("100000", childEnvironment["FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US"]);
+        Assert.Equal("0", childEnvironment["FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES"]);
+        Assert.Equal("250", childEnvironment["FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS"]);
+        Assert.Equal("preserved", childEnvironment["UNRELATED"]);
     }
 
     private static MemoryStream Request()
