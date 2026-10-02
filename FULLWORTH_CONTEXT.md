@@ -1,3 +1,13 @@
+## Immutable production and recovery container inputs — 2026-10-02
+
+Every external container image used by FullWorth's production and isolated-recovery Dockerfiles and Compose topologies is now pinned to an immutable multi-architecture SHA-256 manifest digest while retaining a readable upstream version tag. This covers the .NET SDK/runtime bases for API, parser worker, and Web; the PostgreSQL backup base; PostgreSQL production and restore services; Redis; and Caddy. Repository-built `billwatch-*` images remain bound to the exact 40-character `BILLWATCH_RELEASE_ID` and are rebuilt from the guarded release checkout.
+
+A repository-wide POSIX shell contract rejects future mutable external `FROM`, Dockerfile frontend, and production/recovery Compose image references. The contract runs inside the Linux production-container gate, and `SUPPLY_CHAIN_SECURITY.md` records the review/update policy. Dependabot continues monitoring the Docker and Compose inputs on `development`; updates must advance reviewed digests rather than removing them.
+
+Exact PR #608 head `4bac7d005fa16e42f01d0b02e9b4376f92a42558` passed FullWorth CI #1465 (run `36976631341`: backend build/tests, MAUI Android, production image builds, production Compose readiness, parser isolation and per-document cgroup containment, visual acceptance, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #562 (run `36976631448`). It was squash-merged to `development` as `e42115887a80ffef917b4b8ea3b6ed1af01eeb6e`.
+
+This closes mutable external container inputs for production and recovery. Signed build provenance and SBOM publication for FullWorth-built release images remain separate supply-chain work. No production deployment occurred.
+
 ## Immutable GitHub Actions supply chain — 2026-10-02
 
 Every external action used by FullWorth's GitHub workflows is now pinned to an immutable 40-character commit SHA. The production deployment checkout was pinned first in PR #604; PR #605 then pinned the Android/iOS packaging, production auth smoke, external readiness, repository-governance, and artifact transfer actions without changing their behavior. A repository-wide shell contract rejects future mutable external action tags and unpinned Docker action images while permitting repository-local actions. Every workflow-file change now enters the production-container validation path, so editing a previously unlisted workflow cannot bypass that contract.
