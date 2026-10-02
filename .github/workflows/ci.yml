@@ -44,7 +44,8 @@ jobs:
             "BILLWATCH_CONTEXT.md",
             "FULLWORTH_CONTEXT.md",
             "README.md",
-            "REVENUE_READINESS.md"
+            "REVENUE_READINESS.md",
+            "SUPPLY_CHAIN_SECURITY.md"
           )
 
           $backendSafePrefixes = @(
@@ -179,6 +180,7 @@ jobs:
             "Dockerfile.web",
             "README.md",
             "REVENUE_READINESS.md",
+            "SUPPLY_CHAIN_SECURITY.md",
             "compose.ai-evaluation.yml",
             "compose.production.yml"
           )
@@ -362,6 +364,7 @@ jobs:
         if: steps.container_changes.outputs.required == 'true'
         run: |
           sh deploy/tests/workflow-action-pinning-tests.sh
+          sh deploy/tests/container-image-pinning-tests.sh
           sh deploy/tests/project-boundary-tests.sh
           sh deploy/tests/service-module-boundary-tests.sh
           sh deploy/tests/data-ownership-boundary-tests.sh
