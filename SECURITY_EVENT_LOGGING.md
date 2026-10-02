@@ -17,7 +17,7 @@ The middleware surrounds rate limiting, authorization, and endpoint execution, s
 Each event contains only:
 
 - the fixed event name and numeric event ID;
-- the HTTP method;
+- a normalized, fixed-set HTTP method (unknown method tokens become `OTHER`);
 - the application-owned route template, never the raw URL;
 - the response status code;
 - whether the request had an authenticated principal;

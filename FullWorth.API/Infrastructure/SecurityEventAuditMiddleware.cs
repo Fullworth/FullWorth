@@ -162,7 +162,8 @@ internal sealed class SecurityEventAuditMiddleware(
         observation =
             new SecurityEventObservation(
                 eventName,
-                context.Request.Method,
+                GetSafeHttpMethod(
+                    context.Request.Method),
                 endpointPattern,
                 context.Response.StatusCode,
                 context.User.Identity?
@@ -171,5 +172,42 @@ internal sealed class SecurityEventAuditMiddleware(
                 context.TraceIdentifier);
 
         return true;
+    }
+
+    private static string GetSafeHttpMethod(
+        string method)
+    {
+        return method switch
+        {
+            HttpMethods.Get =>
+                HttpMethods.Get,
+
+            HttpMethods.Post =>
+                HttpMethods.Post,
+
+            HttpMethods.Put =>
+                HttpMethods.Put,
+
+            HttpMethods.Patch =>
+                HttpMethods.Patch,
+
+            HttpMethods.Delete =>
+                HttpMethods.Delete,
+
+            HttpMethods.Options =>
+                HttpMethods.Options,
+
+            HttpMethods.Head =>
+                HttpMethods.Head,
+
+            HttpMethods.Connect =>
+                HttpMethods.Connect,
+
+            HttpMethods.Trace =>
+                HttpMethods.Trace,
+
+            _ =>
+                "OTHER"
+        };
     }
 }

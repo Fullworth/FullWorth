@@ -95,6 +95,36 @@ public sealed class SecurityEventAuditMiddlewareTests
     }
 
     [Fact]
+    public void Observation_NormalizesAnAttackerControlledHttpMethod()
+    {
+        var context =
+            CreateContext();
+
+        context.Request.Method =
+            "POST\\r\\nInjected-Field: secret";
+
+        context.Response.StatusCode =
+            StatusCodes.Status401Unauthorized;
+
+        var created =
+            SecurityEventAuditMiddleware.TryCreateObservation(
+                context,
+                out var securityEvent);
+
+        Assert.True(
+            created);
+
+        Assert.Equal(
+            "OTHER",
+            securityEvent.HttpMethod);
+
+        Assert.DoesNotContain(
+            "secret",
+            securityEvent.HttpMethod,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Observation_UsesRouteTemplateAndExcludesRawRequestData()
     {
         var context =
