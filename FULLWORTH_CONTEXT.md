@@ -1,10 +1,28 @@
+## Per-image OCR cgroup containment — 2026-10-02
+
+Every admitted standalone or PDF-extracted OCR image now runs in a fresh sibling cgroup-v2 leaf beneath the delegated parser-container parent. The one-shot image process is moved from its per-document cgroup into the image scope before encoded bytes are released or native Tesseract/Leptonica state is initialized. Linux execution fails closed when the scope cannot be created, constrained, entered, or verified. Each image scope enforces a finite 1-CPU quota, a 384 MiB hard memory ceiling, zero swap, and OOM-group behavior; configured image limits cannot exceed the enclosing document limits. Safe failure codes distinguish pre-decode admission rejection from containment setup failure without returning parser diagnostics or document content.
+
+The production-container gate sends two real admitted PNG requests, concurrently observes their live document and image scopes, verifies exact limits and process membership, proves unique names and cleanup, and then completes the existing kernel OOM, parser-survival, HTTPS, visual, security-boundary, and encrypted recovery checks. The initial red runs exposed a sequential observer race and then a malformed synthetic PNG whose Python byte literals contained escaped backslashes. The final binary fixture and bounded CI-only pre-input observation window make the kernel proof deterministic; production defaults to zero observation delay.
+
+Exact PR #611 head `470d65e195cd3a4dfc01a4f79ee6fa81af16ebe1` passed FullWorth CI #1503 (run `36996242801`: backend tests, MAUI Android, Linux production images/Compose, live document/image cgroups, visual acceptance, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #600 (run `36996242700`) before squash merge to `development` as `cfa9de2dde23f9818e4429f781776fab7064e9d3`.
+
+This closes repository and CI evidence for OCR process isolation, per-document cgroups, and hard OS-enforced per-image memory limits. It does not establish deployed-host containment. The guarded production deployment and same-release `deploy/verify-parser-containment.sh` evidence remain required after promotion to `master`. No production deployment occurred.
+
+## Release image SBOM attestations — 2026-10-02
+
+Master production-container builds now generate SPDX JSON SBOMs from the exact API, parser-worker, and Web images, bind each SBOM to its matching exported image archive with GitHub attestations, retain the SBOMs beside the seven-day image artifacts, and preserve the separate signed build-provenance attestations. The SBOM generator, Syft version, attestation action, and artifact action are immutable-pinned and regression-checked.
+
+Exact PR #613 head `ef0a16778b1beadf7723a247b5705e1cc06e730e` passed FullWorth CI #1477 (run `36983809331`) and Dependency Security #574 (run `36983809299`) before squash merge to `development` as `8d330e9fc635b456a2d13b7e180a01e59740a8b7`.
+
+These attestations prove what GitHub CI built and bound to each archive. They do not prove that the VPS deployed those exact bytes; consuming verified GitHub-built artifacts and checking deployed-image identity remain follow-up release work. No production deployment occurred.
+
 ## Signed GitHub build provenance — 2026-10-02
 
 GitHub Actions now emits verifiable build provenance for the three production image archives built by the Linux production-container job on pushes to `master`. The container job alone receives the minimal `id-token: write` and `attestations: write` permissions; it exports the API, parser-worker, and Web images tagged with the exact Git commit, attests the resulting tar archives through the immutable commit-pinned `actions/attest-build-provenance` action, and retains those attested artifacts for seven days. A regression contract locks the permissions, master-only gate, exact action pin, subjects, image tags, and retention policy.
 
 Exact PR #609 head `3f736a1d75140e6d1fadaa3d897cf9b46b26167e` passed FullWorth CI #1466 (run `36977359332`) and Dependency Security #563 (run `36977359405`) before squash merge to `development` as `33aec7a027304d30edfcbc153d59c5a52e4195a9`.
 
-This provenance covers the image archives built by GitHub CI. The guarded production deployment still rebuilds images on the VPS, so no claim is made that deployed images are derived from or covered by these attestations. SBOM publication and a deploy path that consumes verified GitHub-built artifacts remain separate supply-chain work. No production deployment occurred.
+This provenance covers the image archives built by GitHub CI. PR #613 subsequently added SPDX SBOM generation and signed SBOM attestations for those exact archives. The guarded production deployment still rebuilds images on the VPS, so no claim is made that deployed images are derived from or covered by these attestations. A deploy path that consumes verified GitHub-built artifacts remains separate supply-chain work. No production deployment occurred.
 
 ## Immutable production and recovery container inputs — 2026-10-02
 
