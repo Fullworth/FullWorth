@@ -597,6 +597,54 @@ jobs:
         if: steps.container_changes.outputs.required == 'true'
         run: docker compose --file compose.production.yml up --detach --no-build
 
+      - name: Verify parser cgroup delegation boundary
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id="$(docker compose --file compose.production.yml ps -q parser-worker)"
+          test -n "$container_id"
+          parser_pid="$(docker inspect --format '{{.State.Pid}}' "$container_id")"
+          test "$parser_pid" -gt 0
+
+          parser_uid="$(awk '/^Uid:/ { print $2; exit }' "/proc/${parser_pid}/status")"
+          parser_caps="$(awk '/^CapEff:/ { print $2; exit }' "/proc/${parser_pid}/status")"
+          test "$parser_uid" = "1654"
+          test "$parser_caps" = "0000000000000000"
+
+          parser_relative="$(
+            awk -F: '$1 == "0" && $2 == "" { print $3; exit }'               "/proc/${parser_pid}/cgroup"
+          )"
+          case "$parser_relative" in
+            */fullworth-supervisor) ;;
+            *)
+              echo "Parser supervisor is not in its delegated leaf cgroup." >&2
+              exit 1
+              ;;
+          esac
+
+          parent_relative="${parser_relative%/fullworth-supervisor}"
+          parent_cgroup="/sys/fs/cgroup${parent_relative}"
+          test -d "$parent_cgroup"
+
+          cpu_max="$(cat "$parent_cgroup/cpu.max")"
+          memory_max="$(cat "$parent_cgroup/memory.max")"
+          swap_max="$(cat "$parent_cgroup/memory.swap.max")"
+          pids_max="$(cat "$parent_cgroup/pids.max")"
+
+          case "$cpu_max" in max\ *|"") exit 1 ;; esac
+          case "$memory_max" in max|"") exit 1 ;; esac
+          case "$swap_max" in max|"") exit 1 ;; esac
+          case "$pids_max" in max|"") exit 1 ;; esac
+
+          for controller in cpu memory pids
+          do
+            tr ' ' '\n' < "$parent_cgroup/cgroup.subtree_control" |
+              grep -qx "$controller"
+          done
+
+          docker compose --file compose.production.yml exec -T api             curl --fail --silent --show-error               --retry 30 --retry-all-errors --retry-delay 1               --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem               https://parser-worker:8081/health/ready               >/dev/null
+
       - name: Verify API HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 https://localhost/health/ready
