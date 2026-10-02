@@ -21,8 +21,12 @@ grep -Fq 'confirm_guarded_deploy:' "$workflow" ||
     fail "workflow does not require explicit deployment confirmation."
 grep -Fq 'environment: production' "$workflow" ||
     fail "workflow does not use the production environment gate."
+grep -Fq 'actions: read' "$workflow" ||
+    fail "workflow cannot read the exact CI artifact."
+grep -Fq 'attestations: read' "$workflow" ||
+    fail "workflow cannot verify GitHub attestations."
 grep -Fq 'contents: read' "$workflow" ||
-    fail "workflow permissions are not read-only."
+    fail "workflow cannot read the approved source release."
 grep -Fq 'cancel-in-progress: false' "$workflow" ||
     fail "workflow allows an in-flight production deploy to be cancelled by another dispatch."
 
@@ -87,5 +91,22 @@ grep -Fq 'sh deploy/monitor-readiness.sh https://fullworth.org' "$workflow" ||
 if grep -Eq '(cat|cp|scp).*[.]env[.]production' "$workflow"; then
     fail "workflow appears to copy or print the production environment file."
 fi
+
+grep -Fq 'fullworth-production-image-artifacts-$RELEASE_SHA' "$workflow" ||
+    fail "workflow does not select the exact release image artifact."
+grep -Fq 'actions/workflows/ci.yml/runs' "$workflow" ||
+    fail "workflow does not require a successful exact-head CI run."
+grep -Fq 'gh attestation verify' "$workflow" ||
+    fail "workflow does not verify release image attestations."
+grep -Fq -- '--predicate-type https://slsa.dev/provenance/v1' "$workflow" ||
+    fail "workflow does not require build-provenance attestations."
+grep -Fq -- '--predicate-type https://spdx.dev/Document' "$workflow" ||
+    fail "workflow does not require SBOM attestations."
+grep -Fq 'sha256sum -c SHA256SUMS' "$workflow" ||
+    fail "remote release images are not checksum-verified after transfer."
+grep -Fq 'docker load --input "$image_archive"' "$workflow" ||
+    fail "workflow does not load the verified CI images on the production host."
+grep -Fq 'FULLWORTH_USE_PREBUILT_RELEASE_IMAGES=1' "$workflow" ||
+    fail "guarded deployment can rebuild and replace verified application images."
 
 printf '%s\n' "Guarded GitHub production deploy workflow regression passed."
