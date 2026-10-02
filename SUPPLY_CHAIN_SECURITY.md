@@ -29,6 +29,8 @@ Dependabot monitors the root Dockerfiles, backup Dockerfile, and root Compose fi
 
 Do not remove a digest to obtain a security update. Review and advance the digest instead.
 
-## Remaining provenance work
+## Release image provenance and SBOMs
 
-Immutable inputs close tag drift. Signed build provenance and SBOM publication for FullWorth-built release images remain a separate milestone, as does direct verification of the images on a deployed production host.
+For production-container-relevant pushes to `master`, CI builds the API, parser-worker, and Web images from the exact commit. It generates an SPDX JSON SBOM from each built image, creates a GitHub SBOM attestation bound to that image's exported archive, and separately creates signed build-provenance attestations for the image archives. The workflow artifact contains all three image archives and their matching SBOM files and is retained for seven days; GitHub's attestations are published separately from that short-lived artifact.
+
+The workflow uses commit-pinned GitHub Actions for SBOM generation and attestation. These checks prove what CI generated and bound to each archive. They do not prove that a production host deployed those exact image bytes; deployed-image verification remains an operational follow-up.
