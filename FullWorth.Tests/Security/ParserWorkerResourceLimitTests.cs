@@ -76,6 +76,38 @@ public sealed class ParserWorkerResourceLimitTests
     }
 
     [Fact]
+    public void DocumentCgroupIsCreatedInsideTheDelegatedParent()
+    {
+        var parent = Path.Combine(Path.GetTempPath(), "fullworth-parser-container");
+
+        var child = DocumentProcessCgroup.BuildDocumentCgroupPath(
+            parent,
+            "ocr",
+            4321,
+            "test-instance");
+
+        Assert.Equal(
+            Path.Combine(parent, "fullworth-ocr-4321-test-instance"),
+            child);
+    }
+
+    [Theory]
+    [InlineData("unknown")]
+    [InlineData("../ocr")]
+    [InlineData("")]
+    public void DocumentCgroupRejectsUnsupportedWorkloadNames(string workload)
+    {
+        var parent = Path.Combine(Path.GetTempPath(), "fullworth-parser-container");
+
+        Assert.ThrowsAny<ArgumentException>(
+            () => DocumentProcessCgroup.BuildDocumentCgroupPath(
+                parent,
+                workload,
+                4321,
+                "test-instance"));
+    }
+
+    [Fact]
     public async Task ProtocolRejectsWhenResourceLimitsAreUnverified()
     {
         var response = await WorkerProtocol.BuildResponseAsync(
