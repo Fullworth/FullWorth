@@ -75,6 +75,9 @@ trap 'exit 130' HUP INT TERM
 [ -f "$root_dir/deploy/check-http-security-boundaries.sh" ] ||
     fail "HTTP security boundary verifier is missing."
 
+[ -f "$root_dir/deploy/verify-parser-containment.sh" ] ||
+    fail "parser containment verifier is missing."
+
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
 
@@ -238,6 +241,9 @@ done
 
 [ "$parser_ready" = true ] ||
     fail "the parser worker did not become ready through the pinned internal TLS path."
+
+sh "$root_dir/deploy/verify-parser-containment.sh" \
+    "$root_dir"
 
 "$root_dir/deploy/monitor-readiness.sh" \
     "https://$api_host"
