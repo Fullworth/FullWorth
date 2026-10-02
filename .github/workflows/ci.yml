@@ -25,6 +25,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify production images are digest pinned
+        run: bash deploy/tests/container-image-pinning-tests.sh
+
       - name: Detect backend-relevant changes
         id: backend_changes
         shell: pwsh
