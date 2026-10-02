@@ -27,6 +27,8 @@ public sealed class AccountController : ControllerBase
     private readonly IAccountSubscriptionDeletionGateway _subscriptionDeletionGateway;
     private readonly ILogger<AccountController> _logger;
     private readonly ILogger _securityLogger;
+    private readonly SecuritySensitiveActionAlertAggregator
+        _securityAlertAggregator;
 
     public AccountController(
         FullWorthDbContext dbContext,
@@ -37,7 +39,9 @@ public sealed class AccountController : ControllerBase
         IAccountStatementDeletionGateway statementDeletionGateway,
         IAccountSubscriptionDeletionGateway subscriptionDeletionGateway,
         ILogger<AccountController> logger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        SecuritySensitiveActionAlertAggregator
+            securityAlertAggregator)
     {
         _dbContext = dbContext;
         _accountDataExportBuilder = accountDataExportBuilder;
@@ -50,6 +54,8 @@ public sealed class AccountController : ControllerBase
         _securityLogger =
             SecuritySensitiveActionLog.CreateLogger(
                 loggerFactory);
+        _securityAlertAggregator =
+            securityAlertAggregator;
     }
 
     [HttpPost("export")]
@@ -113,6 +119,7 @@ public sealed class AccountController : ControllerBase
 
         SecuritySensitiveActionLog.AccountExportCompleted(
             _securityLogger,
+            _securityAlertAggregator,
             HttpContext.TraceIdentifier);
 
         return Ok(export);
@@ -361,6 +368,7 @@ public sealed class AccountController : ControllerBase
 
         SecuritySensitiveActionLog.AccountDeletionCompleted(
             _securityLogger,
+            _securityAlertAggregator,
             HttpContext.TraceIdentifier);
 
         var cleanupPending = false;
