@@ -87,7 +87,7 @@ assert_read_only_runtime()
     fi
 }
 
-for service in api web database web-session-cache
+for service in api parser-worker web database web-session-cache
 do
     id="$(container_id "$service")"
 
@@ -126,7 +126,11 @@ assert_networks api \
     data \
     api_edge \
     web_api \
-    api_egress
+    api_egress \
+    parser_worker
+
+assert_networks parser-worker \
+    parser_worker
 
 assert_networks web \
     web_edge \
@@ -146,6 +150,7 @@ assert_networks edge \
     web_edge
 
 assert_read_only_runtime api 256
+assert_read_only_runtime parser-worker 64
 assert_read_only_runtime web 256
 assert_read_only_runtime web-session-cache 128
 assert_read_only_runtime edge 128
