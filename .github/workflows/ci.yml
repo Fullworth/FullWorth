@@ -252,6 +252,7 @@ jobs:
       BILLWATCH_BACKUP_CLIENT_MODE: append-only
       BILLWATCH_DATABASE_PASSWORD: ci-only-password
       BILLWATCH_PARSER_AUTH_TOKEN: ci-parser-worker-authentication-token-more-than-32-characters
+      FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS: "250"
       BILLWATCH_WEB_SESSION_REDIS_PASSWORD: ci-web-session-password-more-than-32-characters
       BILLWATCH_HOST: localhost
       BILLWATCH_WEB_HOST: web.localhost
