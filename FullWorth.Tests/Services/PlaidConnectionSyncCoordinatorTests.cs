@@ -740,13 +740,18 @@ public sealed class PlaidConnectionSyncCoordinatorTests
         string errorCode)
     {
         var json =
-            $"""
-            {
-              "error_type": "{{errorType}}",
-              "error_code": "{{errorCode}}",
-              "request_id": "safe-test-request-id"
-            }
-            """;
+            JsonSerializer.Serialize(
+                new
+                {
+                    error_type =
+                        errorType,
+
+                    error_code =
+                        errorCode,
+
+                    request_id =
+                        "safe-test-request-id"
+                });
 
         return new HttpResponseMessage(statusCode)
         {
