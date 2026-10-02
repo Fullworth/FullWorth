@@ -241,6 +241,10 @@ jobs:
     name: Linux production container
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     env:
       ACME_EMAIL: ci@example.com
       BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: "true"
@@ -359,6 +363,10 @@ jobs:
           }
 
           "required=$($required.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Verify signed provenance gate configuration
+        if: steps.container_changes.outputs.required == 'true'
+        run: bash deploy/tests/signed-build-provenance-tests.sh
 
       - name: Validate production operation scripts
         if: steps.container_changes.outputs.required == 'true'
@@ -597,6 +605,31 @@ jobs:
             BILLWATCH_RELEASE_ID=${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+      - name: Export production image artifacts for attestation
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p provenance
+          docker save billwatch-api:${{ github.sha }} -o provenance/billwatch-api.tar
+          docker save billwatch-parser-worker:${{ github.sha }} -o provenance/billwatch-parser-worker.tar
+          docker save billwatch-web:${{ github.sha }} -o provenance/billwatch-web.tar
+
+      - name: Attest production image artifacts
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: provenance/*.tar
+
+      - name: Upload attested production image artifacts
+        if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: fullworth-production-image-artifacts-${{ github.sha }}
+          path: provenance/*.tar
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Start production stack
         if: steps.container_changes.outputs.required == 'true'
