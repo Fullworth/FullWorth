@@ -139,6 +139,21 @@ grep -Fq \
     "$root_dir/deploy/deploy-production.sh" ||
     fail "stopped-runtime recovery does not preserve the pre-deploy backup gate."
 
+grep -Fq \
+    'FULLWORTH_USE_PREBUILT_RELEASE_IMAGES' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment cannot consume verified CI images."
+
+grep -Fq \
+    'expected_api_image_id="$(docker image inspect --format' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment does not bind the expected API image identity."
+
+grep -Fq \
+    'the running $service_name container does not use the verified CI image' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment does not verify running container image identities."
+
 grep -qx \
     'User=deploy' \
     "$backup_service" ||
