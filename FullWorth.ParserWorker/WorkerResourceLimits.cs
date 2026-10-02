@@ -135,9 +135,28 @@ public static class WorkerResourceLimits
     {
         try
         {
-            return HasFiniteCpuLimit(File.ReadAllText(Path.Combine(CgroupRoot, CpuMaxPath))) &&
-                   HasFiniteMemoryLimit(File.ReadAllText(Path.Combine(CgroupRoot, MemoryMaxPath))) &&
-                   HasFiniteSwapLimit(File.ReadAllText(Path.Combine(CgroupRoot, MemorySwapMaxPath)));
+            var currentPath = GetCurrentCgroupPath();
+            if (currentPath is null)
+            {
+                return false;
+            }
+
+            var limitPath =
+                string.Equals(
+                    Path.GetFileName(currentPath),
+                    "fullworth-supervisor",
+                    StringComparison.Ordinal)
+                    ? Directory.GetParent(currentPath)?.FullName
+                    : currentPath;
+
+            if (string.IsNullOrWhiteSpace(limitPath))
+            {
+                return false;
+            }
+
+            return HasFiniteCpuLimit(File.ReadAllText(Path.Combine(limitPath, CpuMaxPath))) &&
+                   HasFiniteMemoryLimit(File.ReadAllText(Path.Combine(limitPath, MemoryMaxPath))) &&
+                   HasFiniteSwapLimit(File.ReadAllText(Path.Combine(limitPath, MemorySwapMaxPath)));
         }
         catch (IOException)
         {
