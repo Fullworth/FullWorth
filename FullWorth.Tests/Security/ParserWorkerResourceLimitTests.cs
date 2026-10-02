@@ -231,9 +231,10 @@ public sealed class ParserWorkerResourceLimitTests
             ["FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US"] = "100000",
             ["FULLWORTH_PARSER_DOCUMENT_CPU_PERIOD_US"] = "100000",
             ["FULLWORTH_PARSER_DOCUMENT_MEMORY_MAX_BYTES"] = "402653184",
-            ["FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES"] = "0"
+            ["FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES"] = "0",
+            ["FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS"] = "250"
         };
-        var childEnvironment = new Dictionary<string, string>(StringComparer.Ordinal)
+        var childEnvironment = new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["UNRELATED"] = "preserved"
         };
@@ -246,6 +247,7 @@ public sealed class ParserWorkerResourceLimitTests
         Assert.Equal("402653184", childEnvironment["FULLWORTH_PARSER_IMAGE_MEMORY_MAX_BYTES"]);
         Assert.Equal("100000", childEnvironment["FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US"]);
         Assert.Equal("0", childEnvironment["FULLWORTH_PARSER_DOCUMENT_SWAP_MAX_BYTES"]);
+        Assert.Equal("250", childEnvironment["FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS"]);
         Assert.Equal("preserved", childEnvironment["UNRELATED"]);
     }
 
