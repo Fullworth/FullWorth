@@ -1,3 +1,13 @@
+## Structured request-boundary security events — 2026-10-02
+
+The API now emits authentication rejection, authorization denial, and rate-limit enforcement to the dedicated `FullWorth.SecurityEvents` category with fixed event IDs 29001–29003. The middleware surrounds rate limiting, authorization, and endpoint execution so downstream short circuits are observable. Events contain only a normalized fixed-set HTTP method, application-owned route template, response status, authentication state, and the existing server-generated request ID.
+
+Raw paths, query strings, bodies, email addresses, user IDs, provider IDs, IP addresses, claims, cookies, authorization headers, tokens, statement content, financial values, and custom HTTP method text are excluded. Focused tests prove the event mapping, ordinary-response silence, route-template use, sensitive-input exclusion, and custom-method normalization.
+
+Exact corrected PR #618 head `54c6e2abddb26880cc71629fc34d66e4e1303930` passed FullWorth CI #1509 (run `37032350735`: 1,148 backend tests, MAUI Android, production images and Compose, parser containment, visual/security boundaries, and encrypted recovery) and Dependency Security #606 (run `37032350638`) before squash merge to `development` as `5221c3ee8a81b81d6f8c699e5159ed1f41a7a5b8`.
+
+This establishes a separate secret-safe security-event stream. Repeated-event aggregation, bounded alert thresholds, broader ownership/provider/export/delete detection, and incident-response runbooks remain separate follow-up work. No production deployment occurred.
+
 ## Provenance-preserving guarded release image deployment — 2026-10-02
 
 The guarded GitHub production workflow now resolves the successful FullWorth CI run for the exact approved `master` SHA, downloads the release-scoped API, parser-worker, and Web image artifact, verifies both build-provenance and SPDX SBOM attestations for every archive, and creates a checksum manifest before transfer over pinned SSH. The production host verifies that manifest, loads those application images without rebuilding them, validates the release labels, and requires each running application container to use the exact loaded image ID before the verified release marker can advance. The operations-only backup image remains host-built.
