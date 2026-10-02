@@ -96,7 +96,8 @@ using var requestGate = new SemaphoreSlim(1, 1);
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", () =>
-    WorkerResourceLimits.AreCurrentContainerLimitsEnforced()
+    WorkerResourceLimits.AreCurrentContainerLimitsEnforced() &&
+    DocumentProcessCgroup.IsDelegationReady()
         ? Results.Ok(new { status = "ready" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
@@ -310,6 +311,17 @@ static async Task<byte[]> RunParserProcessAsync(
         throw new InvalidOperationException("The parser worker could not be started.");
     }
 
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "pdf",
+            out var documentCgroup) ||
+        documentCgroup is null)
+    {
+        TryKillWorkerTree(process);
+        throw new InvalidOperationException("The parser worker could not establish document containment.");
+    }
+
+    using var containment = documentCgroup;
     using var deadline = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation);
     deadline.CancelAfter(TimeSpan.FromSeconds(20));
     var stdoutTask = ReadBoundedOutputAsync(process.StandardOutput.BaseStream, WorkerProtocol.MaxResponseBytes, deadline.Token);
@@ -399,10 +411,22 @@ static async Task<byte[]> RunOcrProcessAsync(
         throw new InvalidOperationException("The OCR worker could not be started.");
     }
 
+    if (!DocumentProcessCgroup.TryAttachProcess(
+            process.Id,
+            "ocr",
+            out var documentCgroup) ||
+        documentCgroup is null)
+    {
+        TryKillWorkerTree(process);
+        throw new InvalidOperationException("The OCR worker could not establish document containment.");
+    }
+
+    using var containment = documentCgroup;
+
     try
     {
-        // Prefer the disposable document child if the cgroup reaches its hard
-        // memory ceiling instead of sacrificing the supervisor.
+        // Prefer the disposable document child if the per-document cgroup
+        // reaches its hard memory ceiling instead of sacrificing the supervisor.
         File.WriteAllText($"/proc/{process.Id}/oom_score_adj", "1000");
     }
     catch
