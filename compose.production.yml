@@ -31,7 +31,10 @@ services:
       database:
         condition: service_healthy
       parser-worker:
-        condition: service_healthy
+        # The worker enables domain controllers in its container cgroup, so
+        # Docker health-exec processes must not be injected into that parent.
+        # Guarded startup verifies readiness over the pinned internal TLS path.
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
