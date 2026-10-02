@@ -51,6 +51,21 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+sh -n "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier has invalid shell syntax."
+
+grep -Fq -- '--containment-self-test' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not execute the hard-memory self-test."
+
+grep -Fq 'FullWorthContainmentProof-' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not use a unique raw-document log marker."
+
+grep -Fq 'oom_kill_delta' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not report kernel OOM-kill evidence."
+
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
 
