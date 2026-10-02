@@ -59,24 +59,77 @@ public sealed class OcrImageProcessCgroup : IDisposable
 
     public static bool TryAttachProcess(
         int processId,
-        out OcrImageProcessCgroup? scope)
+        out OcrImageProcessCgroup? scope) =>
+        TryAttachProcess(processId, out scope, out _);
+
+    public static bool TryAttachProcess(
+        int processId,
+        out OcrImageProcessCgroup? scope,
+        out string failureCode)
     {
         scope = null;
+        failureCode = string.Empty;
 
-        if (!OperatingSystem.IsLinux() ||
-            processId <= 0 ||
-            !TryReadCurrentCgroupPath(out var documentPath) ||
-            !IsOcrDocumentCgroup(documentPath) ||
-            !TryReadProcessCgroupPath(processId, out var initialProcessPath) ||
-            !string.Equals(
+        if (!OperatingSystem.IsLinux())
+        {
+            failureCode = "image_cgroup_requires_linux";
+            return false;
+        }
+
+        if (processId <= 0)
+        {
+            failureCode = "image_process_id_invalid";
+            return false;
+        }
+
+        if (!TryReadCurrentCgroupPath(out var documentPath))
+        {
+            failureCode = "document_cgroup_unreadable";
+            return false;
+        }
+
+        if (!IsOcrDocumentCgroup(documentPath))
+        {
+            failureCode = "document_cgroup_unexpected";
+            return false;
+        }
+
+        if (!TryReadProcessCgroupPath(processId, out var initialProcessPath))
+        {
+            failureCode = "image_process_cgroup_unreadable";
+            return false;
+        }
+
+        if (!string.Equals(
                 initialProcessPath,
                 documentPath,
-                StringComparison.Ordinal) ||
-            !TryGetDelegatedParent(documentPath, out var delegatedParentPath) ||
-            !HasDelegatedControllers(delegatedParentPath) ||
-            !TryReadConfiguredLimits(out var limits) ||
-            !LimitsFitInsideDocument(documentPath, limits))
+                StringComparison.Ordinal))
         {
+            failureCode = "image_process_not_in_document_cgroup";
+            return false;
+        }
+
+        if (!TryGetDelegatedParent(documentPath, out var delegatedParentPath))
+        {
+            failureCode = "delegated_parent_unavailable";
+            return false;
+        }
+
+        if (!HasDelegatedControllers(delegatedParentPath))
+        {
+            failureCode = "delegated_controllers_unavailable";
+            return false;
+        }
+
+        if (!TryReadConfiguredLimits(out var limits))
+        {
+            failureCode = "image_limits_invalid";
+            return false;
+        }
+
+        if (!LimitsFitInsideDocument(documentPath, limits))
+        {
+            failureCode = "image_limits_exceed_document";
             return false;
         }
 
@@ -119,6 +172,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
                     Path.GetFullPath(imagePath),
                     StringComparison.Ordinal))
             {
+                failureCode = "image_cgroup_membership_unverified";
                 TryRestoreAndDelete(
                     documentPath,
                     imagePath,
@@ -131,6 +185,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
         }
         catch (IOException)
         {
+            failureCode = "image_cgroup_io_failure";
             TryRestoreAndDelete(
                 documentPath,
                 imagePath,
@@ -139,6 +194,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
         }
         catch (UnauthorizedAccessException)
         {
+            failureCode = "image_cgroup_access_denied";
             TryRestoreAndDelete(
                 documentPath,
                 imagePath,
@@ -147,6 +203,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
         }
         catch (InvalidOperationException)
         {
+            failureCode = "image_cgroup_state_invalid";
             TryRestoreAndDelete(
                 documentPath,
                 imagePath,
