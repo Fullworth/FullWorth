@@ -207,8 +207,12 @@ if set(parser_worker.get("cap_add", [])) != {"CHOWN", "SETGID", "SETUID"}:
 if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
     fail("parser-worker must disable privilege escalation.")
 
-if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_healthy":
-    fail("API must wait for parser-worker resource-limit readiness.")
+if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_started":
+    fail(
+        "API must use service_started for the delegated parser worker; "
+        "guarded startup performs the pinned-TLS readiness gate without "
+        "injecting Docker health-exec processes into the delegated parent cgroup."
+    )
 
 api_environment = services["api"].get("environment", {})
 parser_url = api_environment.get("ParserWorker__BaseUrl")
