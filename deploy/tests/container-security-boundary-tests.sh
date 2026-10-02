@@ -198,10 +198,11 @@ if int(parser_worker.get("memswap_limit", 0)) != 512 * 1024 * 1024:
 if "ALL" not in parser_worker.get("cap_drop", []):
     fail("parser-worker must drop all Linux capabilities before the bootstrap allowlist.")
 
-if set(parser_worker.get("cap_add", [])) != {"CHOWN", "SETGID", "SETUID"}:
+if set(parser_worker.get("cap_add", [])) != {"CHOWN", "SETGID", "SETPCAP", "SETUID"}:
     fail(
-        "parser-worker bootstrap may add only CHOWN, SETGID, and SETUID "
-        "before the entrypoint permanently drops privileges."
+        "parser-worker bootstrap may add only CHOWN, SETGID, SETPCAP, and SETUID "
+        "before the entrypoint permanently drops privileges and clears its "
+        "capability bounding set."
     )
 
 if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
