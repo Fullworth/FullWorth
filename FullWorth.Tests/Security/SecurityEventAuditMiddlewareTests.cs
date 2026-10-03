@@ -87,11 +87,90 @@ public sealed class SecurityEventAuditMiddlewareTests
                 });
 
         await middleware.InvokeAsync(
-            CreateContext(),
+            CreateContext(
+                HttpMethods.Get,
+                "/api/account"),
             sink);
 
         Assert.Empty(
             sink.Events);
+    }
+
+    [Theory]
+    [InlineData("DELETE", "/api/bank-connections/{connectionId:guid}")]
+    [InlineData("DELETE", "/api/planning/bill-funding-preferences/{billStreamId:guid}")]
+    [InlineData("GET", "/api/bill-streams/{billStreamId:guid}")]
+    [InlineData("GET", "/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}")]
+    [InlineData("GET", "/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}/file")]
+    [InlineData("POST", "/api/alerts/{alertId:guid}/dismiss")]
+    [InlineData("POST", "/api/alerts/{alertId:guid}/read")]
+    [InlineData("POST", "/api/bill-streams/{billStreamId:guid}/statement-uploads")]
+    [InlineData("POST", "/api/plaid/connections/{connectionId:guid}/accounts/sync")]
+    [InlineData("POST", "/api/plaid/connections/{connectionId:guid}/transactions/sync")]
+    [InlineData("POST", "/api/plaid/connections/{connectionId:guid}/update-link-token")]
+    [InlineData("POST", "/api/plaid/link-session/{sessionId:guid}/complete")]
+    [InlineData("PUT", "/api/planning/bill-funding-preferences/{billStreamId:guid}")]
+    [InlineData("PUT", "/api/planning/payday-plans/{payrollTransactionId:guid}")]
+    public void AuthenticatedOwnershipScopedNotFound_EmitsProbeSignal(
+        string method,
+        string routePattern)
+    {
+        var context =
+            CreateContext(
+                method,
+                routePattern);
+
+        context.Response.StatusCode =
+            StatusCodes.Status404NotFound;
+
+        var created =
+            SecurityEventAuditMiddleware.TryCreateObservation(
+                context,
+                out var securityEvent);
+
+        Assert.True(
+            created);
+
+        Assert.Equal(
+            SecurityEventNames.OwnershipScopedResourceNotFound,
+            securityEvent.Name);
+
+        Assert.Equal(
+            method,
+            securityEvent.HttpMethod);
+
+        Assert.Equal(
+            routePattern,
+            securityEvent.EndpointPattern);
+
+        Assert.Equal(
+            StatusCodes.Status404NotFound,
+            securityEvent.StatusCode);
+
+        Assert.True(
+            securityEvent.Authenticated);
+    }
+
+    [Fact]
+    public void AnonymousOwnershipScopedNotFound_DoesNotEmitProbeSignal()
+    {
+        var context =
+            CreateContext();
+
+        context.User =
+            new ClaimsPrincipal(
+                new ClaimsIdentity());
+
+        context.Response.StatusCode =
+            StatusCodes.Status404NotFound;
+
+        var created =
+            SecurityEventAuditMiddleware.TryCreateObservation(
+                context,
+                out _);
+
+        Assert.False(
+            created);
     }
 
     [Fact]
@@ -181,7 +260,9 @@ public sealed class SecurityEventAuditMiddlewareTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DefaultHttpContext CreateContext()
+    private static DefaultHttpContext CreateContext(
+        string method = "POST",
+        string routePattern = "/api/bill-streams/{billStreamId:guid}")
     {
         var context =
             new DefaultHttpContext();
@@ -190,7 +271,7 @@ public sealed class SecurityEventAuditMiddlewareTests
             "0123456789abcdef0123456789abcdef";
 
         context.Request.Method =
-            HttpMethods.Post;
+            method;
 
         context.User =
             new ClaimsPrincipal(
@@ -209,7 +290,7 @@ public sealed class SecurityEventAuditMiddlewareTests
                     Task.CompletedTask,
 
                 RoutePatternFactory.Parse(
-                    "/api/bill-streams/{billStreamId:guid}"),
+                    routePattern),
 
                 order:
                     0,

@@ -11,6 +11,9 @@ internal static class SecurityEventAlertNames
     internal const string RepeatedRateLimitRejections =
         "repeated_rate_limit_rejections";
 
+    internal const string RepeatedOwnershipScopedResourceMisses =
+        "repeated_ownership_scoped_resource_misses";
+
     internal const string AggregationCapacityReached =
         "security_event_aggregation_capacity_reached";
 }
@@ -31,6 +34,11 @@ internal static class SecurityEventAlertIds
         new(
             29103,
             nameof(RepeatedRateLimitRejections));
+
+    internal static readonly EventId RepeatedOwnershipScopedResourceMisses =
+        new(
+            29105,
+            nameof(RepeatedOwnershipScopedResourceMisses));
 
     internal static readonly EventId AggregationCapacityReached =
         new(
@@ -84,6 +92,11 @@ internal sealed class LoggerSecurityEventAlertSink(
                     .RepeatedRateLimitRejections =>
                     SecurityEventAlertIds
                         .RepeatedRateLimitRejections,
+
+                SecurityEventAlertNames
+                    .RepeatedOwnershipScopedResourceMisses =>
+                    SecurityEventAlertIds
+                        .RepeatedOwnershipScopedResourceMisses,
 
                 SecurityEventAlertNames
                     .AggregationCapacityReached =>
@@ -331,6 +344,10 @@ internal sealed class SecurityEventAlertAggregator
                 .RateLimitRejected =>
                 5,
 
+            SecurityEventNames
+                .OwnershipScopedResourceNotFound =>
+                20,
+
             "aggregation_capacity" =>
                 5,
 
@@ -363,6 +380,11 @@ internal sealed class SecurityEventAlertAggregator
                     .RateLimitRejected =>
                     SecurityEventAlertNames
                         .RepeatedRateLimitRejections,
+
+                SecurityEventNames
+                    .OwnershipScopedResourceNotFound =>
+                    SecurityEventAlertNames
+                        .RepeatedOwnershipScopedResourceMisses,
 
                 "aggregation_capacity" =>
                     SecurityEventAlertNames

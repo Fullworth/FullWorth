@@ -13,6 +13,9 @@ internal static class SecurityEventNames
     internal const string RateLimitRejected =
         "rate_limit_rejected";
 
+    internal const string OwnershipScopedResourceNotFound =
+        "ownership_scoped_resource_not_found";
+
     internal const string AdminMutationCompleted =
         "admin_mutation_completed";
 
@@ -42,6 +45,11 @@ internal static class SecurityEventIds
         new(
             29003,
             nameof(RateLimitRejected));
+
+    internal static readonly EventId OwnershipScopedResourceNotFound =
+        new(
+            29004,
+            nameof(OwnershipScopedResourceNotFound));
 
     internal static readonly EventId AdminMutationCompleted =
         new(
@@ -104,6 +112,9 @@ internal sealed class LoggerSecurityEventSink(
                 SecurityEventNames.RateLimitRejected =>
                     SecurityEventIds.RateLimitRejected,
 
+                SecurityEventNames.OwnershipScopedResourceNotFound =>
+                    SecurityEventIds.OwnershipScopedResourceNotFound,
+
                 _ =>
                     throw new ArgumentOutOfRangeException(
                         nameof(securityEvent),
@@ -159,6 +170,27 @@ internal sealed class SecurityEventAuditMiddleware(
         ArgumentNullException.ThrowIfNull(
             context);
 
+        /*
+         * Route patterns are application-owned templates. Never log the raw
+         * path, query string, request body, IP address, claims, or account
+         * identifiers here because those values can contain user financial
+         * evidence or attacker-controlled text.
+         */
+        var endpointPattern =
+            (context.GetEndpoint() as RouteEndpoint)?
+                .RoutePattern
+                .RawText
+            ?? "<unmatched>";
+
+        var httpMethod =
+            GetSafeHttpMethod(
+                context.Request.Method);
+
+        var authenticated =
+            context.User.Identity?
+                .IsAuthenticated ==
+            true;
+
         var eventName =
             context.Response.StatusCode switch
             {
@@ -170,6 +202,13 @@ internal sealed class SecurityEventAuditMiddleware(
 
                 StatusCodes.Status429TooManyRequests =>
                     SecurityEventNames.RateLimitRejected,
+
+                StatusCodes.Status404NotFound
+                    when authenticated &&
+                         IsOwnershipScopedResourceRoute(
+                             httpMethod,
+                             endpointPattern) =>
+                    SecurityEventNames.OwnershipScopedResourceNotFound,
 
                 _ =>
                     null
@@ -183,31 +222,99 @@ internal sealed class SecurityEventAuditMiddleware(
             return false;
         }
 
-        /*
-         * Route patterns are application-owned templates. Never log the raw
-         * path, query string, request body, IP address, claims, or account
-         * identifiers here because those values can contain user financial
-         * evidence or attacker-controlled text.
-         */
-        var endpointPattern =
-            (context.GetEndpoint() as RouteEndpoint)?
-                .RoutePattern
-                .RawText
-            ?? "<unmatched>";
-
         observation =
             new SecurityEventObservation(
                 eventName,
-                GetSafeHttpMethod(
-                    context.Request.Method),
+                httpMethod,
                 endpointPattern,
                 context.Response.StatusCode,
-                context.User.Identity?
-                    .IsAuthenticated ==
-                    true,
+                authenticated,
                 context.TraceIdentifier);
 
         return true;
+    }
+
+    private static bool IsOwnershipScopedResourceRoute(
+        string httpMethod,
+        string endpointPattern)
+    {
+        return (
+            httpMethod,
+            endpointPattern) switch
+        {
+            (
+                "DELETE",
+                "/api/bank-connections/{connectionId:guid}") =>
+                true,
+
+            (
+                "DELETE",
+                "/api/planning/bill-funding-preferences/{billStreamId:guid}") =>
+                true,
+
+            (
+                "GET",
+                "/api/bill-streams/{billStreamId:guid}") =>
+                true,
+
+            (
+                "GET",
+                "/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}") =>
+                true,
+
+            (
+                "GET",
+                "/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}/file") =>
+                true,
+
+            (
+                "POST",
+                "/api/alerts/{alertId:guid}/dismiss") =>
+                true,
+
+            (
+                "POST",
+                "/api/alerts/{alertId:guid}/read") =>
+                true,
+
+            (
+                "POST",
+                "/api/bill-streams/{billStreamId:guid}/statement-uploads") =>
+                true,
+
+            (
+                "POST",
+                "/api/plaid/connections/{connectionId:guid}/accounts/sync") =>
+                true,
+
+            (
+                "POST",
+                "/api/plaid/connections/{connectionId:guid}/transactions/sync") =>
+                true,
+
+            (
+                "POST",
+                "/api/plaid/connections/{connectionId:guid}/update-link-token") =>
+                true,
+
+            (
+                "POST",
+                "/api/plaid/link-session/{sessionId:guid}/complete") =>
+                true,
+
+            (
+                "PUT",
+                "/api/planning/bill-funding-preferences/{billStreamId:guid}") =>
+                true,
+
+            (
+                "PUT",
+                "/api/planning/payday-plans/{payrollTransactionId:guid}") =>
+                true,
+
+            _ =>
+                false
+        };
     }
 
     private static string GetSafeHttpMethod(
