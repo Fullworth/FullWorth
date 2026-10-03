@@ -127,7 +127,6 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8081
       DOTNET_EnableDiagnostics: "0"
-      ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
       ParserWorker__TlsCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
       FULLWORTH_PARSER_DOCUMENT_CPU_QUOTA_US: "100000"
       FULLWORTH_PARSER_DOCUMENT_CPU_PERIOD_US: "100000"
