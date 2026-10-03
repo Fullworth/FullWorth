@@ -258,7 +258,7 @@ As of 2026-10-03:
 - `development` is the active integration branch and currently diverges from `master`: GitHub comparison reports 134 commits ahead and 3 commits behind. This must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
 - The currently verified live production release is `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
 - Newer security, document-isolation, supply-chain, Stripe, request-boundary, and recovery work on `development` is **not** considered deployed merely because it is merged.
-- PR #649, **Gate releases on secret non-disclosure**, is the active pull request at this snapshot. Its dependency-security run #679 passed; FullWorth CI #1582 is still in progress on head `1735c7512416a3fbf284ba2087f7ffb175a56961`. Do not merge it until the exact head passes every required gate.
+- PR #649, **Gate releases on secret non-disclosure**, passed FullWorth CI #1582 and Dependency Security #679 on exact head `1735c7512416a3fbf284ba2087f7ffb175a56961`, then merged to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`. Its context record merged through PR #652 as `bc8e89479f55db7f9095b0c7470acc1fb91b8263`.
 
 ### Release-readiness estimate
 
@@ -303,13 +303,13 @@ Release-relevant open security/governance work still includes:
 
 - broader negative cross-user tests where coverage is not yet exhaustive;
 - stronger secret injection than ordinary container environment variables where operationally available;
-- completion of secret non-disclosure verification through PR #649 and later deployed-release proof;
+- stronger secret injection remains open; PR #649 completed repository/CI non-disclosure verification, while deployed-release proof remains separate;
 - database runtime-role least privilege and migration/runtime privilege separation;
 - continued same-user composite constraints where security-critical;
 - SSH/operator access hardening and host/kernel/container patch-cadence review;
 - immutable/off-host backup protection proof;
 - compromised-host recovery exercise;
-- branch protection/rulesets for `master` and `development`;
+- required CI/security status checks in the active `master`/`development` protected-branch ruleset;
 - direct deployed-release evidence before making production-security claims.
 
 ### Document parser and OCR containment
@@ -365,7 +365,7 @@ Still open where applicable:
 
 `HUMAN-TODO.md` currently identifies launch work that repository automation cannot safely complete:
 
-- GitHub branch protection/rulesets for `master` and `development`;
+- required CI/security status checks in the existing `master`/`development` protected-branch ruleset;
 - qualified commercial legal/license review;
 - the intentional production-release decision needed to collect deployed-host containment evidence.
 
@@ -422,7 +422,7 @@ This table summarizes where the roadmap stands without pretending that feature c
 
 | Milestone | Current status | Release interpretation |
 | --- | --- | --- |
-| 0 — Stabilize integration branch | **Active** | Current work is focused and CI-gated, but `development`/ `master` divergence, PR #649, branch protection, and release-freeze reconciliation remain. |
+| 0 — Stabilize integration branch | **Active** | Current work is focused and CI-gated; `development`/`master` divergence, required-check enforcement, open cleanup/roadmap work, and release-freeze reconciliation remain. |
 | 1 — PWA performance baseline | **Substantially implemented** | Major browser/render/performance work exists; installed-device acceptance still matters before calling the client release-complete. |
 | 2 — Installed PWA parity / MAUI retirement | **Partially complete** | PWA parity is advanced; Android physical acceptance is open and MAUI has not yet been deliberately retired. |
 | 3 — Recurring bill discovery quality | **Core implemented; quality work ongoing** | Recurring discovery is production-capable, but broader real-world recurrence/accuracy evidence remains ongoing product-quality work. |
@@ -2300,15 +2300,9 @@ Persistent identifiers require explicit migration.
 
 The shortest credible path to production release is now **security closure → release freeze → guarded deployment → same-release acceptance**, not another feature sprint.
 
-## Step 1 — Finish the current exact-head security PR
+## ~~Step 1 — Complete the exact-head secret non-disclosure milestone~~
 
-Complete PR #649 only after:
-
-- FullWorth CI #1582 finishes successfully on exact head `1735c7512416a3fbf284ba2087f7ffb175a56961`;
-- dependency security remains green;
-- no new review finding invalidates that head.
-
-Do not merge a different head using the earlier successful dependency-security result.
+~~PR #649 exact head `1735c7512416a3fbf284ba2087f7ffb175a56961` passed FullWorth CI #1582 and Dependency Security #679, then merged to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`. PR #652 recorded the milestone after its own exact-head checks passed.~~
 
 ## Step 2 — Close the remaining release-critical #291 security gaps
 
@@ -2322,7 +2316,7 @@ Prioritize the open items that materially change public-release risk:
 - SSH/operator and host patching hardening;
 - immutable/off-host backup proof;
 - compromised-host recovery exercise;
-- branch protection/rulesets;
+- required status checks in the active protected-branch ruleset;
 - direct deployed-release security evidence.
 
 Do not prolong the release merely to chase cosmetic checklist work, but do not defer a real P0/P1 trust boundary.
@@ -2386,7 +2380,7 @@ The guarded deployment must preserve:
 
 For the parser/OCR work, preserve sanitized deployed-host evidence from `deploy/verify-parser-containment.sh`.
 
-For PR #649 and related secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
+For the PR #649 secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
 
 ## Step 7 — Build one same-release private-beta evidence bundle
 
@@ -2436,7 +2430,7 @@ Do not ship an ambiguous half-enabled AI persistence path.
 
 Before commercial/public launch:
 
-- enable branch protection/rulesets for `master` and `development`;
+- add required CI/security checks to the active protected-branch ruleset for `master` and `development`;
 - complete qualified commercial license review;
 - complete qualified review of the exact customer-facing Terms/Privacy version;
 - resolve third-party/model/runtime notice obligations;
