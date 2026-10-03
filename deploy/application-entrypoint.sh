@@ -43,4 +43,40 @@ fi
 chmod 0700 "$keys_path"
 find "$keys_path" -mindepth 1 -maxdepth 1 -type f -exec chmod 0600 {} \;
 
+statements_path=${BillStatementStorage__RootPath:-}
+
+if [ -n "$statements_path" ]; then
+    case "$statements_path" in
+        /*) ;;
+        *)
+            echo "BillStatementStorage__RootPath must be absolute." >&2
+            exit 64
+            ;;
+    esac
+
+    if [ -L "$statements_path" ]; then
+        echo "The statement storage directory must not be a symbolic link." >&2
+        exit 77
+    fi
+
+    mkdir -p -- "$statements_path"
+
+    if [ -L "$statements_path" ] || [ ! -d "$statements_path" ]; then
+        echo "The statement storage path must resolve to a real directory." >&2
+        exit 77
+    fi
+
+    unexpected_statement_entry="$(
+        find "$statements_path" -xdev -mindepth 1 ! -type d ! -type f -print -quit
+    )"
+
+    if [ -n "$unexpected_statement_entry" ]; then
+        echo "Statement storage contains a symbolic link or non-regular entry." >&2
+        exit 77
+    fi
+
+    find "$statements_path" -xdev -type d -exec chmod 0700 {} \;
+    find "$statements_path" -xdev -type f -exec chmod 0600 {} \;
+fi
+
 exec "$@"

@@ -1429,7 +1429,10 @@ jobs:
             'test "$(stat -c %a /var/lib/billwatch-web/keys)" = 700 &&
              test -n "$(find /var/lib/billwatch-web/keys -type f -name "key-*.xml" -size +0c -perm 600 -print -quit)"'
           docker compose --file compose.production.yml exec --no-TTY api sh -c \
-            'test -n "$(find /var/lib/billwatch/statements -type f -size +0c -print -quit)"'
+            'test "$(stat -c %a /var/lib/billwatch/statements)" = 700 &&
+             test -z "$(find /var/lib/billwatch/statements -xdev -type d ! -perm 700 -print -quit)" &&
+             test -z "$(find /var/lib/billwatch/statements -xdev -type f ! -perm 600 -print -quit)" &&
+             test -n "$(find /var/lib/billwatch/statements -type f -size +0c -print -quit)"'
 
       - name: Build recovery image
         if: steps.container_changes.outputs.required == 'true'
@@ -1463,6 +1466,13 @@ jobs:
         run: |
           docker compose --profile operations --file compose.production.yml up --detach --wait restore-database
           docker compose --profile operations --file compose.production.yml run --rm backup verify
+          docker compose --profile operations --file compose.production.yml exec --no-TTY restore-database sh -ec '
+            expected_owner="$(id -u postgres):$(id -g postgres)"
+            test "$(stat -c %a "$PGDATA")" = 700
+            test "$(stat -c %u:%g "$PGDATA")" = "$expected_owner"
+            test -z "$(find "$PGDATA" -xdev -type d ! -perm 700 -print -quit)"
+            test -z "$(find "$PGDATA" -xdev -type f ! -perm 600 -print -quit)"
+          '
           docker compose --profile operations --file compose.production.yml stop restore-database
 
       - name: Verify API recovery after backup

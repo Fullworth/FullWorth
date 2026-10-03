@@ -147,7 +147,7 @@ docker compose --env-file .env.production --file compose.production.yml --profil
 docker compose --env-file .env.production --file compose.production.yml --profile operations stop restore-database
 ```
 
-Verification selects only a snapshot that completed repository integrity checking, validates SHA-256 manifests, restores into disposable storage, loads the dump into a separate temporary PostgreSQL server, checks EF migration history, and reconciles every database statement record with its restored file and size. It never connects to the live database server for restore work and never overwrites live files.
+Verification selects only a snapshot that completed repository integrity checking, validates SHA-256 manifests, restores into disposable storage, loads the dump into a separate temporary PostgreSQL server, checks EF migration history, and reconciles every database statement record with its restored file and size. It never connects to the live database server for restore work and never overwrites live files. It also fails closed unless restored Data Protection rings, statement directories/files, and isolated PostgreSQL data retain their private owners and exact `0700`/`0600` modes; see `RECOVERY_PERMISSION_POLICY.md`.
 
 For a standard `/opt/billwatch` installation, install and enable the supplied daily backup timer and failure-alert service together:
 

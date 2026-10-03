@@ -312,12 +312,17 @@ services:
       POSTGRES_USER: billwatch
       POSTGRES_PASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        - CMD-SHELL
+        - >-
+          test "$(stat -c %a /var/lib/postgresql/data)" = 700 &&
+          test "$(stat -c %u:%g /var/lib/postgresql/data)" = "$(id -u postgres):$(id -g postgres)" &&
+          pg_isready -U billwatch -d restore_host
       interval: 2s
       timeout: 5s
       retries: 30
     tmpfs:
-      - /var/lib/postgresql/data:rw,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g}
+      - /var/lib/postgresql/data:rw,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g},uid=70,gid=70,mode=0700
     networks:
       - data
     logging: *default-logging

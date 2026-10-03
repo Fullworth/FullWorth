@@ -56,4 +56,41 @@ then
     fail "entrypoint accepted a relative key path."
 fi
 
-printf '%s\n' 'Data Protection permission tests passed.'
+statements_path="$temp_dir/statements"
+mkdir "$statements_path"
+mkdir "$statements_path/account"
+printf '%s\n' statement > "$statements_path/account/statement.pdf"
+chmod 0777 "$statements_path" "$statements_path/account"
+chmod 0666 "$statements_path/account/statement.pdf"
+
+DataProtection__KeysPath="$keys_path" \
+BillStatementStorage__RootPath="$statements_path" \
+    sh "$entrypoint" \
+    sh -c '
+        [ "$(stat -c %a "$BillStatementStorage__RootPath")" = 700 ]
+        [ "$(stat -c %a "$BillStatementStorage__RootPath/account")" = 700 ]
+        [ "$(stat -c %a "$BillStatementStorage__RootPath/account/statement.pdf")" = 600 ]
+        touch "$BillStatementStorage__RootPath/account/new-statement.pdf"
+        [ "$(stat -c %a "$BillStatementStorage__RootPath/account/new-statement.pdf")" = 600 ]
+    ' ||
+    fail "entrypoint did not enforce statement directory, file, and creation permissions."
+
+linked_statement="$statements_path/account/linked.pdf"
+ln -s "$statements_path/account/statement.pdf" "$linked_statement"
+
+if DataProtection__KeysPath="$keys_path" \
+   BillStatementStorage__RootPath="$statements_path" \
+    sh "$entrypoint" true >/dev/null 2>&1
+then
+    fail "entrypoint accepted a symbolic link inside statement storage."
+fi
+rm "$linked_statement"
+
+if DataProtection__KeysPath="$keys_path" \
+   BillStatementStorage__RootPath=relative/statements \
+    sh "$entrypoint" true >/dev/null 2>&1
+then
+    fail "entrypoint accepted a relative statement storage path."
+fi
+
+printf '%s\n' 'Data Protection and statement permission tests passed.'
