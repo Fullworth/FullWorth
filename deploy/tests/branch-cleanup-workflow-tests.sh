@@ -13,16 +13,24 @@ fail()
 
 [ -f "$workflow" ] || fail "workflow is missing."
 
-grep -Fq 'issue_comment:' "$workflow" ||
-    fail "cleanup is not owner-comment triggered."
-grep -Fq "github.event.issue.number == 245" "$workflow" ||
-    fail "cleanup is not restricted to the control issue."
-grep -Fq "github.event.comment.body == '/cleanup-merged-branches'" "$workflow" ||
-    fail "cleanup does not require the exact command."
+grep -Fq 'workflow_dispatch:' "$workflow" ||
+    fail "cleanup is not manually dispatched."
+grep -Fq 'confirmation:' "$workflow" ||
+    fail "cleanup dispatch lacks an explicit confirmation input."
+grep -Fq "inputs.confirmation == 'cleanup-merged-branches'" "$workflow" ||
+    fail "cleanup does not require the exact confirmation phrase."
 grep -Fq "github.repository == 'Fullworth/FullWorth'" "$workflow" ||
     fail "cleanup is not restricted to the FullWorth repository."
 grep -Fq "github.actor == 'RealizmModz'" "$workflow" ||
     fail "cleanup is not restricted to the authorized repository maintainer."
+
+if grep -Fq 'issue_comment:' "$workflow"; then
+    fail "cleanup must not depend on a permanent issue-comment control surface."
+fi
+if grep -Fq 'github.event.issue.number' "$workflow"; then
+    fail "cleanup still depends on a control issue number."
+fi
+
 grep -Fq 'contents: write' "$workflow" ||
     fail "workflow lacks the ref-deletion permission."
 grep -Fq 'pull-requests: read' "$workflow" ||
