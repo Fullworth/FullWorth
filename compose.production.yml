@@ -322,7 +322,7 @@ services:
       timeout: 5s
       retries: 30
     tmpfs:
-      - /var/lib/postgresql/data:rw,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g}
+      - /var/lib/postgresql/data:rw,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g},uid=70,gid=70,mode=0700
     networks:
       - data
     logging: *default-logging
