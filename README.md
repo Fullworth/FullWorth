@@ -66,7 +66,7 @@ Deploy:
 sh deploy/validate-production-env.sh .env.production
 ```
 
-The preflight rejects linked or over-permissioned environment files, placeholders, weak database/backup passwords, local backup destinations, invalid Plaid environments, non-public hostnames, unsafe retention settings, non-HTTPS operations alert endpoints, and release identifiers that are not exact lowercase 40-character Git commits. It never prints secret values.
+The preflight rejects linked or over-permissioned environment files, placeholders, weak or reused database/Web-session/parser-worker credentials, local backup destinations, invalid Plaid environments, non-public hostnames, unsafe retention settings, non-HTTPS operations alert endpoints, and release identifiers that are not exact lowercase 40-character Git commits. It never prints secret values.
 4. Configure `RESTIC_REPOSITORY` as a private off-host destination and use a separate, randomly generated `RESTIC_PASSWORD`. Losing that password makes every backup unrecoverable.
 5. Keep all AI flags disabled. No OpenAI key is required for the current runtime.
 6. Initialize the encrypted repository once:
@@ -110,6 +110,7 @@ The application fails closed outside Development unless these settings are prese
 - `DataProtection__KeysPath`
 - `BillStatementStorage__RootPath`
 - `WebSession__RedisHost` / `BILLWATCH_WEB_SESSION_REDIS_PASSWORD`
+- `ParserWorker__AuthenticationToken` / `BILLWATCH_PARSER_AUTH_TOKEN`
 - `Plaid__ClientId`
 - `Plaid__Secret`
 - `Plaid__Environment`
@@ -130,7 +131,7 @@ Subscription enforcement is controlled by `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_EN
 
 ### Encrypted backups
 
-`deploy/run-backup.sh` briefly stops the API, creates a PostgreSQL custom-format dump, and sends that dump plus the matching statement files and Data Protection key ring to Restic in one encrypted snapshot. A restart trap brings the API back even when backup fails. The backup container receives the sensitive volumes read-only and drops every Linux capability.
+`deploy/run-backup.sh` briefly stops the public edge plus the API and Web key-ring writers, creates a PostgreSQL custom-format dump, and sends that dump, matching statement files, and both separated Data Protection key rings to Restic in one encrypted snapshot. A restart trap restores the previously running services even when backup fails. The backup container receives the sensitive volumes read-only and drops every Linux capability. See `DATA_PROTECTION_KEY_LIFECYCLE.md` for permission, rotation, compromise, and clean-host recovery rules.
 
 Create a manual backup:
 
@@ -146,7 +147,7 @@ docker compose --env-file .env.production --file compose.production.yml --profil
 docker compose --env-file .env.production --file compose.production.yml --profile operations stop restore-database
 ```
 
-Verification selects only a snapshot that completed repository integrity checking, validates SHA-256 manifests, restores into disposable storage, loads the dump into a separate temporary PostgreSQL server, checks EF migration history, and reconciles every database statement record with its restored file and size. It never connects to the live database server for restore work and never overwrites live files.
+Verification selects only a snapshot that completed repository integrity checking, validates SHA-256 manifests, restores into disposable storage, loads the dump into a separate temporary PostgreSQL server, checks EF migration history, and reconciles every database statement record with its restored file and size. It never connects to the live database server for restore work and never overwrites live files. It also fails closed unless restored Data Protection rings, statement directories/files, and isolated PostgreSQL data retain their private owners and exact `0700`/`0600` modes; see `RECOVERY_PERMISSION_POLICY.md`.
 
 For a standard `/opt/billwatch` installation, install and enable the supplied daily backup timer and failure-alert service together:
 

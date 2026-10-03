@@ -25,7 +25,9 @@ write_valid_env()
         -e 's/replace-with-the-deployed-git-commit/0123456789abcdef0123456789abcdef01234567/' \
         -e 's/owner@example\.com/ops@fullworth.test/' \
         -e 's/replace-with-a-long-random-password/database-password-with-more-than-32-characters/' \
+        -e 's/replace-with-separate-runtime-database-password/runtime-database-password-with-more-than-32-characters/' \
         -e 's/replace-with-a-separate-long-random-web-session-password/web-session-password-with-more-than-32-characters/' \
+        -e 's/replace-with-a-separate-random-parser-worker-token/parser-worker-token-with-more-than-32-characters/' \
         -e 's/replace-with-plaid-client-id/test-plaid-client/' \
         -e 's/replace-with-plaid-secret/test-plaid-secret/' \
         -e 's#s3:https://s3\.example\.com/billwatch-production#s3:https://objects.fullworth.test/production#' \
@@ -50,8 +52,81 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+sh -n "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier has invalid shell syntax."
+
+grep -Fq 'Transfer-Encoding: chunked'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not probe Transfer-Encoding and Content-Length ambiguity."
+
+grep -Fq 'assert_transfer_length_canonicalized'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not require safe Transfer-Encoding canonicalization."
+
+grep -Fq '/api/auth/logout'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP framing canonicalization probe does not reach a body-reading API endpoint."
+
+grep -Fq 'Content-Length: 4\r\nContent-Length: 5'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not probe conflicting Content-Length values."
+
+grep -Fq 'X-FullWorth-Request-Id'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP framing probes do not prove rejection before the application boundary."
+
+sh -n "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier has invalid shell syntax."
+
+grep -Fq -- '--containment-self-test' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not execute the hard-memory self-test."
+
+grep -Fq 'FullWorthContainmentProof-' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not use a unique raw-document log marker."
+
+grep -Fq 'oom_kill_delta' \
+    "$root_dir/deploy/verify-parser-containment.sh" ||
+    fail "parser containment verifier does not report kernel OOM-kill evidence."
+
+sh "$root_dir/deploy/tests/data-protection-key-permission-tests.sh" >/dev/null
+sh "$root_dir/deploy/tests/backup-asset-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
+
+grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile" ||
+    fail "API image does not apply the protected key-ring entrypoint."
+
+grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile.web" ||
+    fail "Web image does not apply the protected key-ring entrypoint."
+
+grep -Fq 'web_data_protection_keys:/source/web-data-protection:ro' \
+    "$root_dir/compose.production.yml" ||
+    fail "encrypted backups do not receive the Web Data Protection key ring."
+
+grep -Fq 'web-data-protection.tar' "$root_dir/deploy/backup/backup.sh" ||
+    fail "encrypted backup bundles do not include the Web Data Protection key ring."
+
+grep -Fq 'validate_private_asset_tree /source/statements' \
+    "$root_dir/deploy/backup/backup.sh" ||
+    fail "backup capture does not reject unsafe statement storage permissions."
+
+grep -Fq 'restored statement storage' "$root_dir/deploy/backup/backup.sh" ||
+    fail "isolated restore does not verify restored statement permissions."
+
+grep -Fq 'stat -c %a /var/lib/postgresql/data' \
+    "$root_dir/compose.production.yml" ||
+    fail "isolated PostgreSQL restore readiness does not require a private data root."
+
+grep -Fq 'uid=70,gid=70,mode=0700' "$root_dir/compose.production.yml" ||
+    fail "isolated PostgreSQL tmpfs is not mounted with private PostgreSQL ownership."
+
+grep -Fq 'find "$PGDATA" -xdev -type f ! -perm 600' \
+    "$root_dir/.github/workflows/ci.yml" ||
+    fail "isolated PostgreSQL restore does not audit final data-file modes."
+
+grep -Fq 'SetDefaultKeyLifetime' "$root_dir/FullWorth.API/Program.cs" ||
+    fail "API Data Protection rotation lifetime is not explicit."
+
+grep -Fq 'SetDefaultKeyLifetime' \
+    "$root_dir/FullWorth.Web/Infrastructure/WebHostingExtensions.cs" ||
+    fail "Web Data Protection rotation lifetime is not explicit."
 
 backup_service="$root_dir/deploy/systemd/billwatch-backup.service"
 
@@ -69,14 +144,14 @@ grep -Fq \
     fail "production API is not wired to the Apple external identity audience."
 
 grep -Fq \
-    'ExternalIdentity__Google__ClientSecret: ${FULLWORTH_GOOGLE_CLIENT_SECRET:-}' \
+    'target: ExternalIdentity__Google__ClientSecret' \
     "$root_dir/compose.production.yml" ||
-    fail "production Web is not wired to the Google external identity secret."
+    fail "production Web is not wired to the file-backed Google external identity secret."
 
 grep -Fq \
-    'ExternalIdentity__Apple__ClientSecret: ${FULLWORTH_APPLE_CLIENT_SECRET:-}' \
+    'target: ExternalIdentity__Apple__ClientSecret' \
     "$root_dir/compose.production.yml" ||
-    fail "production Web is not wired to the Apple external identity secret."
+    fail "production Web is not wired to the file-backed Apple external identity secret."
 
 grep -Fq \
     'ReverseProxy__KnownProxies__0: 172.30.0.10' \
@@ -104,7 +179,7 @@ grep -Fq -- \
     fail "Redis password interpolation is consumed by Compose instead of the container."
 
 grep -Fq \
-    'REDISCLI_AUTH="$$REDIS_PASSWORD"' \
+    'REDISCLI_AUTH="$$(cat /run/secrets/redis_password)"' \
     "$root_dir/compose.production.yml" ||
     fail "Redis healthcheck password interpolation is consumed by Compose instead of the container."
 
@@ -122,6 +197,21 @@ grep -Fq \
     'previous_verified_release=$(cat "$release_file")' \
     "$root_dir/deploy/deploy-production.sh" ||
     fail "stopped-runtime recovery does not preserve the pre-deploy backup gate."
+
+grep -Fq \
+    'FULLWORTH_USE_PREBUILT_RELEASE_IMAGES' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment cannot consume verified CI images."
+
+grep -Fq \
+    'expected_api_image_id="$(docker image inspect --format' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment does not bind the expected API image identity."
+
+grep -Fq \
+    'the running $service_name container does not use the verified CI image' \
+    "$root_dir/deploy/deploy-production.sh" ||
+    fail "production deployment does not verify running container image identities."
 
 grep -qx \
     'User=deploy' \
@@ -179,6 +269,16 @@ reused_web_session_env="$temp_dir/reused-web-session.env"
 write_valid_env "$reused_web_session_env"
 sed -i 's/web-session-password-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_web_session_env"
 expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_web_session_env"
+
+weak_parser_auth_env="$temp_dir/weak-parser-auth.env"
+write_valid_env "$weak_parser_auth_env"
+sed -i 's/parser-worker-token-with-more-than-32-characters/short/' "$weak_parser_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$weak_parser_auth_env"
+
+reused_parser_auth_env="$temp_dir/reused-parser-auth.env"
+write_valid_env "$reused_parser_auth_env"
+sed -i 's/parser-worker-token-with-more-than-32-characters/database-password-with-more-than-32-characters/' "$reused_parser_auth_env"
+expect_failure "$root_dir/deploy/validate-production-env.sh" "$reused_parser_auth_env"
 
 same_host_env="$temp_dir/same-host.env"
 write_valid_env "$same_host_env"
@@ -287,6 +387,12 @@ cp "$root_dir/deploy/validate-production-env.sh" "$deployment_root/deploy/valida
 cp "$root_dir/deploy/monitor-readiness.sh" "$deployment_root/deploy/monitor-readiness.sh"
 cp "$root_dir/deploy/verify-running-release.sh" "$deployment_root/deploy/verify-running-release.sh"
 cp "$root_dir/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/check-http-security-boundaries.sh"
+cp "$root_dir/deploy/verify-secret-non-disclosure.sh" "$deployment_root/deploy/verify-secret-non-disclosure.sh"
+cp "$root_dir/deploy/materialize-container-secrets.sh" "$deployment_root/deploy/materialize-container-secrets.sh"
+cp "$root_dir/deploy/verify-file-backed-secrets.sh" "$deployment_root/deploy/verify-file-backed-secrets.sh"
+cp "$root_dir/deploy/prepare-database-runtime.sh" "$deployment_root/deploy/prepare-database-runtime.sh"
+mkdir -p "$deployment_root/deploy/database"
+cp "$root_dir/deploy/database/provision-runtime-role.sh" "$deployment_root/deploy/database/provision-runtime-role.sh"
 cp "$root_dir/deploy/run-backup.sh" "$deployment_root/deploy/run-backup.sh"
 cp "$root_dir/deploy/deploy-production.sh" "$deployment_root/deploy/deploy-production.sh"
 : > "$deployment_root/Dockerfile"
@@ -297,6 +403,9 @@ write_valid_env "$deployment_root/.env.production"
 command_log="$temp_dir/deployment-commands.log"
 readiness_log="$temp_dir/deployment-readiness.log"
 security_log="$temp_dir/deployment-security.log"
+secret_log="$temp_dir/deployment-secret-non-disclosure.log"
+file_secret_log="$temp_dir/deployment-file-backed-secret.log"
+containment_log="$temp_dir/deployment-containment.log"
 release_id=0123456789abcdef0123456789abcdef01234567
 old_release=89abcdef0123456789abcdef0123456789abcdef
 
@@ -316,17 +425,17 @@ case "$*" in
     *'ps --status running --services'*)
         [ "${BILLWATCH_TEST_RUNNING_API:-false}" != true ] || printf '%s\n' api
         ;;
-    *'image inspect --format '*'billwatch-api:'*|*'image inspect --format '*'billwatch-web:'*|*'image inspect --format '*'billwatch-backup:'*)
+    *'image inspect --format '*'billwatch-api:'*|*'image inspect --format '*'billwatch-parser-worker:'*|*'image inspect --format '*'billwatch-web:'*|*'image inspect --format '*'billwatch-backup:'*)
         if [ "${BILLWATCH_TEST_BAD_IMAGE_REVISION:-false}" = true ]; then
             printf '%s\n' '89abcdef0123456789abcdef0123456789abcdef'
         else
             printf '%s\n' '0123456789abcdef0123456789abcdef01234567'
         fi
         ;;
-    *'up --detach --wait --wait-timeout 240 --no-build database api web edge'*)
+    *'up --detach --wait --wait-timeout 240 --no-build database parser-worker api web edge'*)
         [ "${BILLWATCH_TEST_FAIL_UP:-false}" != true ] || exit 1
         ;;
-    *'stop api web web-session-cache edge'*) : ;;
+    *'stop api parser-worker web web-session-cache edge'*) : ;;
 esac
 SCRIPT
 
@@ -344,6 +453,34 @@ printf '%s|%s\n' "$1" "$2" >> "$BILLWATCH_TEST_SECURITY_LOG"
 [ "${BILLWATCH_TEST_FAIL_SECURITY:-false}" != true ] || exit 1
 SCRIPT
 
+cat > "$deployment_root/deploy/verify-parser-containment.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s\n' "$1" >> "$BILLWATCH_TEST_CONTAINMENT_LOG"
+[ "${BILLWATCH_TEST_FAIL_CONTAINMENT:-false}" != true ] || exit 1
+SCRIPT
+
+cat > "$deployment_root/deploy/verify-secret-non-disclosure.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s|%s|%s\n' "$1" "$2" "$3" >> "$BILLWATCH_TEST_SECRET_LOG"
+[ "${BILLWATCH_TEST_FAIL_SECRET_DISCLOSURE:-false}" != true ] || exit 1
+SCRIPT
+
+cat > "$deployment_root/deploy/verify-file-backed-secrets.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s\n' "$1" >> "$BILLWATCH_TEST_FILE_SECRET_LOG"
+[ "${BILLWATCH_TEST_FAIL_FILE_SECRET:-false}" != true ] || exit 1
+SCRIPT
+
+cat > "$deployment_root/deploy/prepare-database-runtime.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s\n' database-prepare >> "$BILLWATCH_TEST_COMMAND_LOG"
+exit 0
+SCRIPT
+
 cat > "$deployment_root/deploy/run-backup.sh" <<'SCRIPT'
 #!/bin/sh
 set -eu
@@ -351,7 +488,7 @@ printf '%s\n' backup >> "$BILLWATCH_TEST_COMMAND_LOG"
 exit 0
 SCRIPT
 
-chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/run-backup.sh"
+chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/verify-parser-containment.sh" "$deployment_root/deploy/verify-secret-non-disclosure.sh" "$deployment_root/deploy/prepare-database-runtime.sh" "$deployment_root/deploy/run-backup.sh"
 
 run_deploy()
 {
@@ -360,23 +497,32 @@ run_deploy()
         BILLWATCH_TEST_COMMAND_LOG="$command_log" \
         BILLWATCH_TEST_READINESS_LOG="$readiness_log" \
         BILLWATCH_TEST_SECURITY_LOG="$security_log" \
+        BILLWATCH_TEST_SECRET_LOG="$secret_log" \
+        BILLWATCH_TEST_FILE_SECRET_LOG="$file_secret_log" \
+        BILLWATCH_TEST_CONTAINMENT_LOG="$containment_log" \
         "$@" \
         "$deployment_root/deploy/deploy-production.sh" \
         "$deployment_root/.env.production"
 }
 
 : > "$command_log"
+: > "$secret_log"
+: > "$file_secret_log"
 run_deploy >/dev/null
 
 [ "$(cat "$deployment_root/.billwatch-release")" = "$release_id" ] || fail "deployment did not record the verified release."
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after success."
 grep -q 'config --quiet' "$command_log" || fail "deployment did not validate Compose configuration."
-grep -q -- '--profile operations build api web backup' "$command_log" || fail "deployment did not build API, web, and backup release images."
+grep -q -- '--profile operations build api parser-worker web backup' "$command_log" || fail "deployment did not build API, parser-worker, web, and backup release images."
 grep -q 'image inspect' "$command_log" || fail "deployment did not verify built image release revisions."
-grep -q 'up --detach --wait --wait-timeout 240 --no-build database api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
+grep -qx 'database-prepare' "$command_log" || fail "deployment did not run the isolated database preparation stage."
+grep -q 'up --detach --wait --wait-timeout 240 --no-build database parser-worker api web edge' "$command_log" || fail "deployment did not wait for the full production service set."
+grep -qx "$deployment_root" "$containment_log" || fail "deployment did not require parser containment proof before acceptance."
 grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
 grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
 grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
+grep -qx "$deployment_root" "$file_secret_log" || fail "deployment did not verify file-backed secret scoping before acceptance."
+grep -qx "$deployment_root|https://api.fullworth.test|https://app.fullworth.test" "$secret_log" || fail "deployment did not verify secret non-disclosure before acceptance."
 
 printf '%s\n' "$old_release" > "$deployment_root/.billwatch-release"
 chmod 600 "$deployment_root/.billwatch-release"
@@ -384,27 +530,87 @@ chmod 600 "$deployment_root/.billwatch-release"
 expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "bad image revision changed the last verified release marker."
 if grep -q 'up --detach' "$command_log"; then fail "bad image revision reached production startup."; fi
-if grep -q 'stop api web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
+if grep -q 'stop api parser-worker web web-session-cache edge' "$command_log"; then fail "pre-start image verification failure unnecessarily stopped the existing runtime."; fi
+
+: > "$command_log"
+: > "$containment_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_CONTAINMENT=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "containment failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "containment failure did not stop the unverified candidate runtime."
+[ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after containment failure."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_SECURITY=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "HTTP security failure changed the last verified release marker."
 grep -qx 'backup' "$command_log" || fail "stopped-runtime recovery did not create a pre-deploy recovery point."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."
 
 : > "$command_log"
+: > "$file_secret_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_FILE_SECRET=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "file-backed secret failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "file-backed secret failure did not stop the unverified candidate runtime."
+
+: > "$command_log"
+: > "$secret_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_SECRET_DISCLOSURE=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "secret disclosure failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "secret disclosure failure did not stop the unverified candidate runtime."
+
+: > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_READINESS=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "readiness failure changed the last verified release marker."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "readiness failure did not stop the unverified candidate runtime."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_UP=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "failed startup changed the last verified release marker."
-grep -q 'stop api web web-session-cache edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "failed startup did not stop potentially started candidate services."
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after failure."
 
 sh "$root_dir/deploy/tests/alert-observation-proof-tests.sh" || fail "alert observation proof regression suite failed."
+sh "$root_dir/deploy/tests/security-incident-response-runbook-tests.sh" || fail "security incident-response runbook regression suite failed."
+
+sh -n "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier has invalid shell syntax."
+
+for required_setting in \
+    'permitrootlogin no' \
+    'passwordauthentication no' \
+    'kbdinteractiveauthentication no' \
+    'permitemptypasswords no' \
+    'pubkeyauthentication yes' \
+    'allowtcpforwarding no' \
+    'x11forwarding no'
+do
+    grep -Fq "$required_setting" "$root_dir/deploy/verify-host-hardening.sh" ||
+        fail "host hardening verifier is missing required SSH setting: $required_setting"
+done
+
+grep -Fq 'max_auth_tries' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not bound SSH authentication attempts."
+
+grep -Fq 'login_grace_time' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not bound SSH login grace time."
+
+grep -Fq 'unattended-upgrades' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not require unattended security upgrades."
+
+grep -Fq 'apt-daily-upgrade.timer' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not require the security-upgrade timer."
+
+grep -Fq '/var/run/reboot-required' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not reject pending host reboots."
+
+grep -Fq 'sole explicit member of the `docker` group' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not document Docker-group privilege."
+
+grep -Fq 'SSH source restriction is also required' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not preserve the provider-firewall evidence boundary."
+
+grep -Fq 'at least weekly' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not define a patch review cadence."
 
 printf '%s\n' 'Production operation script tests passed.'

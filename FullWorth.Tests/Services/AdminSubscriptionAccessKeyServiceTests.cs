@@ -2,7 +2,9 @@ using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Admin;
 using FullWorth.API.Services.Subscriptions;
+using FullWorth.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FullWorth.Tests.Services;
 
@@ -157,7 +159,9 @@ public sealed class AdminSubscriptionAccessKeyServiceTests
             dbContext,
             generator,
             new AdminAuditLogWriter(dbContext),
-            new FixedTimeProvider(NowUtc));
+            new FixedTimeProvider(NowUtc),
+            NullLoggerFactory.Instance,
+            TestSecurityAlertAggregator.Create());
     }
 
     private static FullWorthDbContext CreateDbContext()

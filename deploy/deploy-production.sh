@@ -9,6 +9,10 @@ release_file="$root_dir/.billwatch-release"
 release_temp=
 deployment_started=false
 candidate_runtime_started=false
+use_prebuilt_release_images=${FULLWORTH_USE_PREBUILT_RELEASE_IMAGES:-0}
+expected_api_image_id=
+expected_parser_image_id=
+expected_web_image_id=
 
 fail()
 {
@@ -31,7 +35,7 @@ cleanup()
         printf '%s\n' \
             "Candidate release verification failed. Stopping the unverified public application services." >&2
 
-        compose stop api web web-session-cache edge >/dev/null 2>&1 ||
+        compose stop api parser-worker web web-session-cache edge >/dev/null 2>&1 ||
             printf '%s\n' \
                 "WARNING: FullWorth could not confirm that all unverified public application services stopped. Operator intervention is required immediately." >&2
     fi
@@ -45,7 +49,7 @@ cleanup()
             "Do not attempt an automatic code rollback: the candidate API may already have applied forward database migrations." \
             "Keep the public application services stopped until the failure is understood or a tested recovery is performed." \
             "Inspect sanitized service logs before recovery:" \
-            "docker compose --env-file .env.production --file compose.production.yml logs --no-color --tail 200 api web web-session-cache edge database" >&2
+            "docker compose --env-file .env.production --file compose.production.yml logs --no-color --tail 200 api parser-worker web web-session-cache edge database" >&2
     fi
 
     exit "$status"
@@ -53,6 +57,11 @@ cleanup()
 
 trap cleanup EXIT
 trap 'exit 130' HUP INT TERM
+
+case "$use_prebuilt_release_images" in
+    0|1) ;;
+    *) fail "FULLWORTH_USE_PREBUILT_RELEASE_IMAGES must be 0 or 1." ;;
+esac
 
 [ -f "$root_dir/compose.production.yml" ] ||
     fail "compose.production.yml is missing."
@@ -74,6 +83,24 @@ trap 'exit 130' HUP INT TERM
 
 [ -f "$root_dir/deploy/check-http-security-boundaries.sh" ] ||
     fail "HTTP security boundary verifier is missing."
+
+[ -f "$root_dir/deploy/verify-parser-containment.sh" ] ||
+    fail "parser containment verifier is missing."
+
+[ -f "$root_dir/deploy/verify-secret-non-disclosure.sh" ] ||
+    fail "secret non-disclosure verifier is missing."
+
+[ -f "$root_dir/deploy/materialize-container-secrets.sh" ] ||
+    fail "file-backed secret materializer is missing."
+
+[ -f "$root_dir/deploy/verify-file-backed-secrets.sh" ] ||
+    fail "file-backed secret verifier is missing."
+
+[ -f "$root_dir/deploy/prepare-database-runtime.sh" ] ||
+    fail "database runtime preparation script is missing."
+
+[ -f "$root_dir/deploy/database/provision-runtime-role.sh" ] ||
+    fail "database runtime-role provisioner is missing."
 
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
@@ -112,6 +139,13 @@ if ! mkdir "$lock_dir" 2>/dev/null; then
     fail "another deployment is active or a stale deployment lock requires operator review."
 fi
 
+FULLWORTH_SECRET_DIRECTORY="$root_dir/.fullworth-secrets"
+export FULLWORTH_SECRET_DIRECTORY
+
+sh "$root_dir/deploy/materialize-container-secrets.sh" \
+    "$env_file" \
+    "$FULLWORTH_SECRET_DIRECTORY"
+
 compose()
 {
     docker compose \
@@ -147,17 +181,42 @@ if [ "$running_public_count" -eq 3 ]; then
         "$env_file"
 fi
 
-compose \
-    --profile operations \
-    build \
-    api \
-    web \
-    backup
+if [ "$use_prebuilt_release_images" = 1 ]; then
+    for image_name in api parser-worker web
+    do
+        case "$image_name" in
+            api) image="billwatch-api:$release_id" ;;
+            parser-worker) image="billwatch-parser-worker:$release_id" ;;
+            web) image="billwatch-web:$release_id" ;;
+        esac
 
-for image_name in api web backup
+        docker image inspect "$image" >/dev/null 2>&1 ||
+            fail "the verified prebuilt $image_name image is unavailable."
+    done
+
+    expected_api_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-api:$release_id")"
+    expected_parser_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-parser-worker:$release_id")"
+    expected_web_image_id="$(docker image inspect --format '{{.Id}}' "billwatch-web:$release_id")"
+
+    compose \
+        --profile operations \
+        build \
+        backup
+else
+    compose \
+        --profile operations \
+        build \
+        api \
+        parser-worker \
+        web \
+        backup
+fi
+
+for image_name in api parser-worker web backup
 do
     case "$image_name" in
         api) image="billwatch-api:$release_id" ;;
+        parser-worker) image="billwatch-parser-worker:$release_id" ;;
         web) image="billwatch-web:$release_id" ;;
         backup) image="billwatch-backup:$release_id" ;;
     esac
@@ -199,11 +258,26 @@ if [ "$backup_required" = true ]; then
     printf '%s\n' \
         "Creating a verified encrypted recovery point before replacing the last verified FullWorth release."
 
-    "$root_dir/deploy/run-backup.sh" \
+    FULLWORTH_BACKUP_RESTORE_SERVICES=false \
+        "$root_dir/deploy/run-backup.sh" \
         "$root_dir"
 fi
 
 deployment_started=true
+
+if [ "$running_public_count" -eq 3 ]; then
+    compose stop \
+        --timeout 30 \
+        api \
+        parser-worker \
+        web \
+        web-session-cache \
+        edge
+fi
+
+sh "$root_dir/deploy/prepare-database-runtime.sh" \
+    "$root_dir"
+
 candidate_runtime_started=true
 
 compose up \
@@ -212,9 +286,54 @@ compose up \
     --wait-timeout 240 \
     --no-build \
     database \
+    parser-worker \
     api \
     web \
     edge
+
+if [ "$use_prebuilt_release_images" = 1 ]; then
+    verify_running_image()
+    {
+        service_name=$1
+        expected_image_id=$2
+        container_id="$(compose ps -q "$service_name")"
+
+        [ -n "$container_id" ] ||
+            fail "the $service_name container could not be resolved for release-image verification."
+
+        running_image_id="$(docker inspect --format '{{.Image}}' "$container_id")"
+
+        [ "$running_image_id" = "$expected_image_id" ] ||
+            fail "the running $service_name container does not use the verified CI image."
+    }
+
+    verify_running_image api "$expected_api_image_id"
+    verify_running_image parser-worker "$expected_parser_image_id"
+    verify_running_image web "$expected_web_image_id"
+fi
+
+parser_ready=false
+parser_attempt=1
+while [ "$parser_attempt" -le 30 ]
+do
+    if compose exec -T api \
+        curl --fail --silent \
+            --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+            https://parser-worker:8081/health/ready \
+            >/dev/null 2>&1; then
+        parser_ready=true
+        break
+    fi
+
+    sleep 2
+    parser_attempt=$((parser_attempt + 1))
+done
+
+[ "$parser_ready" = true ] ||
+    fail "the parser worker did not become ready through the pinned internal TLS path."
+
+sh "$root_dir/deploy/verify-parser-containment.sh" \
+    "$root_dir"
 
 "$root_dir/deploy/monitor-readiness.sh" \
     "https://$api_host"
@@ -223,6 +342,14 @@ compose up \
     "https://$web_host"
 
 sh "$root_dir/deploy/check-http-security-boundaries.sh" \
+    "https://$api_host" \
+    "https://$web_host"
+
+sh "$root_dir/deploy/verify-file-backed-secrets.sh" \
+    "$root_dir"
+
+sh "$root_dir/deploy/verify-secret-non-disclosure.sh" \
+    "$root_dir" \
     "https://$api_host" \
     "https://$web_host"
 

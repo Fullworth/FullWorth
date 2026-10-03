@@ -3,6 +3,7 @@
   <Project Path="FullWorth.AiEvaluation/FullWorth.AiEvaluation.csproj" />
   <Project Path="FullWorth.Core/FullWorth.Core.csproj" />
   <Project Path="FullWorth.csproj" />
+  <Project Path="FullWorth.ParserWorker/FullWorth.ParserWorker.csproj" />
   <Project Path="FullWorth.Tests/FullWorth.Tests.csproj" />
   <Project Path="FullWorth.Web/FullWorth.Web.csproj" Id="d1284b23-1452-4ac2-a448-1cf772deb572" />
 </Solution>

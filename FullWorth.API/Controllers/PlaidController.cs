@@ -1,9 +1,11 @@
 ﻿using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Plaid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullWorth.API.Controllers;
 
@@ -25,7 +27,10 @@ public sealed class PlaidController : ControllerBase
         PlaidAccountSyncService accountSyncService,
         PlaidTransactionSyncService transactionSyncService,
         FullWorthDbContext dbContext,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ILoggerFactory loggerFactory,
+        SecuritySensitiveActionAlertAggregator
+            securityAlertAggregator)
     {
         _plaidLinkService = plaidLinkService;
         _exchangeService = exchangeService;
@@ -34,11 +39,14 @@ public sealed class PlaidController : ControllerBase
             new PlaidConnectionSyncCoordinator(
                 dbContext,
                 accountSyncService,
-                transactionSyncService);
+                transactionSyncService,
+                loggerFactory,
+                securityAlertAggregator);
         _userManager = userManager;
     }
 
     [HttpPost("link-token")]
+    [EnableRateLimiting("financial-provider")]
     public async Task<IActionResult> CreateLinkSession(
         CancellationToken cancellationToken)
     {
@@ -61,6 +69,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("connections/{connectionId:guid}/update-link-token")]
+    [EnableRateLimiting("financial-provider")]
     public async Task<IActionResult> CreateUpdateLinkSession(
         Guid connectionId,
         CancellationToken cancellationToken)
@@ -101,6 +110,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("link-session/{sessionId:guid}/complete")]
+    [EnableRateLimiting("financial-provider")]
     public async Task<IActionResult> CompleteLinkSession(
         Guid sessionId,
         CancellationToken cancellationToken)
@@ -130,6 +140,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("accounts/sync")]
+    [EnableRateLimiting("financial-refresh")]
     public async Task<IActionResult> SyncAllAccounts(
         CancellationToken cancellationToken)
     {
@@ -147,6 +158,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("transactions/sync")]
+    [EnableRateLimiting("financial-refresh")]
     public async Task<IActionResult> SyncAllTransactions(
         CancellationToken cancellationToken)
     {
@@ -164,6 +176,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("connections/{connectionId:guid}/accounts/sync")]
+    [EnableRateLimiting("financial-refresh")]
     public async Task<IActionResult> SyncAccounts(
         Guid connectionId,
         CancellationToken cancellationToken)
@@ -197,6 +210,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("connections/{connectionId:guid}/transactions/sync")]
+    [EnableRateLimiting("financial-refresh")]
     public async Task<IActionResult> SyncTransactions(
         Guid connectionId,
         CancellationToken cancellationToken)
@@ -226,6 +240,7 @@ public sealed class PlaidController : ControllerBase
     }
 
     [HttpPost("exchange-public-token")]
+    [EnableRateLimiting("financial-provider")]
     public async Task<IActionResult> ExchangePublicToken(
         ExchangePublicTokenRequest request,
         CancellationToken cancellationToken)

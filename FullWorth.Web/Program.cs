@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
-using System.Security.Claims;
-using System.Threading.RateLimiting;
 using FullWorth.Web.Components;
 using FullWorth.Web.Infrastructure;
 using FullWorth.Web.Services;
@@ -36,6 +34,10 @@ CultureInfo.DefaultThreadCurrentUICulture =
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddKeyPerFile(
+    "/run/secrets",
+    optional: true);
 
 builder.WebHost.ConfigureKestrel(
     options =>
@@ -298,6 +300,30 @@ builder.Services.AddRateLimiter(
                     window:
                         TimeSpan.FromMinutes(
                             1)));
+
+        options.AddPolicy(
+            BffEndpointMappings.FinancialRefreshRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext),
+                    permitLimit:
+                        6,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+
+        options.AddPolicy(
+            BffEndpointMappings.FinancialProviderRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext),
+                    permitLimit:
+                        20,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
     });
 
 var hostingConfiguration =
@@ -355,6 +381,47 @@ app.UseWhen(
             "/health"),
     branch =>
         branch.UseHttpsRedirection());
+
+/*
+ * Auth and BFF mutations intentionally consume JSON, HTML form, or multipart
+ * bodies only. Reject ambiguous/unsupported media types before authentication,
+ * antiforgery body processing, proxy work, or endpoint handlers.
+ */
+app.Use(
+    async (
+        context,
+        next) =>
+    {
+        var request = context.Request;
+        var isUnsafeMethod =
+            HttpMethods.IsPost(request.Method) ||
+            HttpMethods.IsPut(request.Method) ||
+            HttpMethods.IsPatch(request.Method) ||
+            HttpMethods.IsDelete(request.Method);
+
+        var canHaveBody =
+            context.Features
+                .Get<
+                    Microsoft.AspNetCore.Http.Features.IHttpRequestBodyDetectionFeature>()?
+                .CanHaveBody ==
+            true;
+
+        var isProtectedSurface =
+            request.Path.StartsWithSegments("/auth") ||
+            request.Path.StartsWithSegments("/bff");
+
+        if (isProtectedSurface &&
+            isUnsafeMethod &&
+            canHaveBody &&
+            !IsAllowedRequestContentType(request.ContentType))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status415UnsupportedMediaType;
+            return;
+        }
+
+        await next();
+    });
 
 app.UseAuthentication();
 app.UseRateLimiter();
@@ -485,6 +552,40 @@ static (
         language,
         quality,
         index);
+}
+
+static bool IsAllowedRequestContentType(
+    string? contentType)
+{
+    if (string.IsNullOrWhiteSpace(contentType))
+    {
+        return false;
+    }
+
+    var parameterSeparator =
+        contentType.IndexOf(';');
+
+    var mediaType =
+        (parameterSeparator >= 0
+            ? contentType[..parameterSeparator]
+            : contentType)
+        .Trim();
+
+    return mediaType.Equals(
+               "application/json",
+               StringComparison.OrdinalIgnoreCase) ||
+           (mediaType.StartsWith(
+                "application/",
+                StringComparison.OrdinalIgnoreCase) &&
+            mediaType.EndsWith(
+                "+json",
+                StringComparison.OrdinalIgnoreCase)) ||
+           mediaType.Equals(
+               "application/x-www-form-urlencoded",
+               StringComparison.OrdinalIgnoreCase) ||
+           mediaType.Equals(
+               "multipart/form-data",
+               StringComparison.OrdinalIgnoreCase);
 }
 
 static string GetRateLimitPartitionKey(

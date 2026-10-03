@@ -13,16 +13,24 @@ fail()
 
 [ -f "$workflow" ] || fail "workflow is missing."
 
-grep -Fq 'issue_comment:' "$workflow" ||
-    fail "cleanup is not owner-comment triggered."
-grep -Fq "github.event.issue.number == 245" "$workflow" ||
-    fail "cleanup is not restricted to the control issue."
-grep -Fq "github.event.comment.body == '/cleanup-merged-branches'" "$workflow" ||
-    fail "cleanup does not require the exact command."
+grep -Fq 'workflow_dispatch:' "$workflow" ||
+    fail "cleanup is not manually dispatched."
+grep -Fq 'confirmation:' "$workflow" ||
+    fail "cleanup dispatch lacks an explicit confirmation input."
+grep -Fq "inputs.confirmation == 'cleanup-merged-branches'" "$workflow" ||
+    fail "cleanup does not require the exact confirmation phrase."
 grep -Fq "github.repository == 'Fullworth/FullWorth'" "$workflow" ||
     fail "cleanup is not restricted to the FullWorth repository."
 grep -Fq "github.actor == 'RealizmModz'" "$workflow" ||
     fail "cleanup is not restricted to the authorized repository maintainer."
+
+if grep -Fq 'issue_comment:' "$workflow"; then
+    fail "cleanup must not depend on a permanent issue-comment control surface."
+fi
+if grep -Fq 'github.event.issue.number' "$workflow"; then
+    fail "cleanup still depends on a control issue number."
+fi
+
 grep -Fq 'contents: write' "$workflow" ||
     fail "workflow lacks the ref-deletion permission."
 grep -Fq 'pull-requests: read' "$workflow" ||
@@ -52,10 +60,11 @@ grep -Fq 'Deleted branch fully contained in development' "$workflow" ||
 grep -Fq 'state=closed' "$workflow" ||
     fail "closed pull requests are not checked."
 grep -Fq 'select(.head.sha ==' "$workflow" ||
-    fail "branch head is not required to match a closed PR head exactly."
-if grep -Fq 'merged_at != null' "$workflow"; then
-    fail "closed unmerged PR branches must remain eligible for reviewed cleanup."
-fi
+    fail "branch head is not required to match a PR head exactly."
+grep -Fq 'merged_at != null' "$workflow" ||
+    fail "cleanup does not require the matching PR to have been merged."
+grep -Fq 'Deleted merged-PR source branch' "$workflow" ||
+    fail "merged-PR branch deletion is not surfaced in workflow output."
 
 if grep -Fq -- '--arg' "$workflow"; then
     fail "workflow uses jq flags that gh api does not support."
@@ -70,23 +79,6 @@ grep -Fq 'Failed to delete branch that still exists' "$workflow" ||
     fail "cleanup does not fail closed when deletion fails and the ref remains."
 grep -Fq 'repos/$REPOSITORY/branches?per_page=100' "$workflow" ||
     fail "cleanup does not re-read branch state after a failed delete."
-
-grep -Fq 'current_sha" != "$expected_sha' "$workflow" ||
-    fail "reviewed stale branches are not pinned to their reviewed SHA."
-grep -Fq 'Keeping reviewed stale branch with an open PR' "$workflow" ||
-    fail "reviewed stale cleanup does not preserve newly active branches."
-grep -Fq 'feat/ui-foundation-primitives' "$workflow" ||
-    fail "reviewed no-PR UI branch is not listed for consolidation."
-grep -Fq '82e5d4fbc93390384f0d21cb90d91561d1d6a345' "$workflow" ||
-    fail "reviewed no-PR UI branch is not SHA-pinned for consolidation."
-grep -Fq 'ai/aggregate-inference-latency-metrics' "$workflow" ||
-    fail "reviewed no-PR AI branch is not listed for consolidation."
-grep -Fq 'e5509437220a7f96ddf2d2bee1c047cfbba8e82c' "$workflow" ||
-    fail "reviewed no-PR AI branch is not SHA-pinned for consolidation."
-grep -Fq 'security/single-use-refresh-tokens' "$workflow" ||
-    fail "reviewed no-PR security branch is not listed for consolidation."
-grep -Fq '67d3877a471d6a48d185135378c63cffc66fb054' "$workflow" ||
-    fail "reviewed no-PR security branch is not SHA-pinned for consolidation."
 
 if grep -Fq 'git push' "$workflow"; then
     fail "workflow should use the GitHub API instead of a repository push."

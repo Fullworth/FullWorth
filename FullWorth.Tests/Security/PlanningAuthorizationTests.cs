@@ -211,6 +211,99 @@ public sealed class PlanningAuthorizationTests
             ownerPreference.PaychecksAheadOverride);
     }
 
+    [Fact]
+    public async Task BillFundingPreferences_ListDoesNotReturnAnotherUsersPreference()
+    {
+        await using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var attackerClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                ownerClient);
+
+        var attacker =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                attackerClient);
+
+        var ownerUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                owner.Email);
+
+        var ownerBillStreamId =
+            await SeedBillStreamAsync(
+                factory,
+                ownerUserId);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var ownerPut =
+            await ownerClient.PutAsJsonAsync(
+                $"/api/planning/bill-funding-preferences/{ownerBillStreamId}",
+                new
+                {
+                    paychecksAheadOverride = 4
+                });
+
+        ownerPut.EnsureSuccessStatusCode();
+
+        TestUserAuthentication.Authorize(
+            attackerClient,
+            attacker);
+
+        using var attackerResponse =
+            await attackerClient.GetAsync(
+                "/api/planning/bill-funding-preferences");
+
+        attackerResponse.EnsureSuccessStatusCode();
+
+        var attackerPreferences =
+            await attackerResponse.Content
+                .ReadFromJsonAsync<
+                    List<BillFundingPreferencePayload>>();
+
+        Assert.NotNull(
+            attackerPreferences);
+
+        Assert.DoesNotContain(
+            attackerPreferences,
+            preference =>
+                preference.BillStreamId ==
+                ownerBillStreamId);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var ownerResponse =
+            await ownerClient.GetAsync(
+                "/api/planning/bill-funding-preferences");
+
+        ownerResponse.EnsureSuccessStatusCode();
+
+        var ownerPreferences =
+            await ownerResponse.Content
+                .ReadFromJsonAsync<
+                    List<BillFundingPreferencePayload>>();
+
+        Assert.NotNull(
+            ownerPreferences);
+
+        Assert.Contains(
+            ownerPreferences,
+            preference =>
+                preference.BillStreamId ==
+                ownerBillStreamId);
+    }
+
     [Theory]
     [InlineData("2")]
     [InlineData("NotReal")]
@@ -299,6 +392,13 @@ public sealed class PlanningAuthorizationTests
                     preference =>
                         preference.UserId == userId &&
                         preference.BillStreamId == billStreamId));
+    }
+
+    private sealed class BillFundingPreferencePayload
+    {
+        public Guid BillStreamId { get; set; }
+
+        public int? PaychecksAheadOverride { get; set; }
     }
 
     private sealed class PaySchedulePayload

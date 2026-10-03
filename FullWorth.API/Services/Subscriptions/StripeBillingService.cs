@@ -20,6 +20,8 @@ public sealed class StripeBillingService(
     private const string StripeApiBaseUrl = "https://api.stripe.com/v1/";
     private const string UserMetadataKey = "billwatch_user_id";
     private static readonly TimeSpan WebhookTolerance = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan WebhookReceiptRetention = TimeSpan.FromDays(32);
+    private const int WebhookReceiptCleanupBatchSize = 500;
 
     public bool IsConfigured => options.IsConfigured;
 
@@ -246,11 +248,31 @@ public sealed class StripeBillingService(
 
         using var document = JsonDocument.Parse(payload);
         var root = document.RootElement;
+        var eventId = GetString(root, "id");
+
+        if (!IsValidWebhookEventId(eventId))
+        {
+            throw new StripeBillingException(
+                "The billing provider sent an invalid webhook event.");
+        }
+
+        if (await dbContext.StripeWebhookEvents
+                .AsNoTracking()
+                .AnyAsync(
+                    candidate => candidate.EventId == eventId,
+                    cancellationToken))
+        {
+            return;
+        }
+
         var eventType = GetString(root, "type") ?? string.Empty;
 
         if (!root.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("object", out var objectElement))
         {
+            await CompleteWebhookEventAsync(
+                eventId!,
+                cancellationToken);
             return;
         }
 
@@ -266,25 +288,26 @@ public sealed class StripeBillingService(
             var userId = GetUserId(objectElement);
             var subscriptionId = GetString(objectElement, "subscription");
 
-            if (userId is null || string.IsNullOrWhiteSpace(subscriptionId))
+            if (userId is not null &&
+                !string.IsNullOrWhiteSpace(subscriptionId))
             {
-                return;
+                var state = await GetSubscriptionByIdAsync(
+                    subscriptionId,
+                    cancellationToken);
+
+                if (state.IsFullWorthPlan)
+                {
+                    await SyncPaidEntitlementAsync(
+                        userId.Value,
+                        state,
+                        cancellationToken,
+                        saveChanges: false);
+                }
             }
 
-            var state = await GetSubscriptionByIdAsync(
-                subscriptionId,
+            await CompleteWebhookEventAsync(
+                eventId!,
                 cancellationToken);
-
-            if (!state.IsFullWorthPlan)
-            {
-                return;
-            }
-
-            await SyncPaidEntitlementAsync(
-                userId.Value,
-                state,
-                cancellationToken);
-
             return;
         }
 
@@ -294,29 +317,100 @@ public sealed class StripeBillingService(
         {
             var userId = GetUserId(objectElement);
 
-            if (userId is null)
+            if (userId is not null)
+            {
+                // Reconcile provider state instead of trusting delivery order.
+                // A delayed active event must not restore a canceled entitlement.
+                var state = await GetCurrentSubscriptionAsync(
+                    userId.Value,
+                    email: null,
+                    cancellationToken: cancellationToken);
+
+                await SyncPaidEntitlementAsync(
+                    userId.Value,
+                    state,
+                    cancellationToken,
+                    saveChanges: false);
+            }
+        }
+
+        await CompleteWebhookEventAsync(
+            eventId!,
+            cancellationToken);
+    }
+
+    private async Task CompleteWebhookEventAsync(
+        string eventId,
+        CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        var retentionCutoff = now - WebhookReceiptRetention;
+        var expired = await dbContext.StripeWebhookEvents
+            .Where(candidate => candidate.ProcessedAtUtc < retentionCutoff)
+            .OrderBy(candidate => candidate.ProcessedAtUtc)
+            .Take(WebhookReceiptCleanupBatchSize)
+            .ToListAsync(cancellationToken);
+
+        dbContext.StripeWebhookEvents.RemoveRange(expired);
+        dbContext.StripeWebhookEvents.Add(
+            new StripeWebhookEventEntity
+            {
+                EventId = eventId,
+                ProcessedAtUtc = now
+            });
+
+        try
+        {
+            // The event receipt and any entitlement changes share one
+            // SaveChanges transaction. A failed handler therefore leaves no
+            // receipt that could suppress Stripe's retry.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent delivery can pass the initial read before the
+            // winning request commits. The primary key is the final authority.
+            dbContext.ChangeTracker.Clear();
+
+            if (await dbContext.StripeWebhookEvents
+                    .AsNoTracking()
+                    .AnyAsync(
+                        candidate => candidate.EventId == eventId,
+                        cancellationToken))
             {
                 return;
             }
 
-            // Reconcile provider state instead of trusting delivery order.
-            // A delayed active event must not restore a canceled entitlement.
-            var state = await GetCurrentSubscriptionAsync(
-                userId.Value,
-                email: null,
-                cancellationToken: cancellationToken);
-
-            await SyncPaidEntitlementAsync(
-                userId.Value,
-                state,
-                cancellationToken);
+            throw;
         }
+    }
+
+    private static bool IsValidWebhookEventId(
+        string? eventId)
+    {
+        if (eventId is null ||
+            eventId.Length is < 5 or > 255 ||
+            !eventId.StartsWith("evt_", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 4; index < eventId.Length; index++)
+        {
+            if (!char.IsAsciiLetterOrDigit(eventId[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task SyncPaidEntitlementAsync(
         Guid userId,
         StripeSubscriptionState? state,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool saveChanges = true)
     {
         var userExists =
             await userExistenceGateway.ExistsAsync(
@@ -347,7 +441,11 @@ public sealed class StripeBillingService(
                 entitlement.UpdatedAtUtc = now;
             }
 
-            await dbContext.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             return;
         }
 
@@ -398,7 +496,10 @@ public sealed class StripeBillingService(
             }
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (saveChanges)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task<StripeBillingPlan> GetPriceAsync(

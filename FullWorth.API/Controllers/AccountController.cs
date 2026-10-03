@@ -1,6 +1,7 @@
 using FullWorth.API.Authorization;
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
+using FullWorth.API.Infrastructure;
 using FullWorth.API.Services.Accounts;
 using FullWorth.API.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
@@ -25,6 +26,9 @@ public sealed class AccountController : ControllerBase
     private readonly IAccountStatementDeletionGateway _statementDeletionGateway;
     private readonly IAccountSubscriptionDeletionGateway _subscriptionDeletionGateway;
     private readonly ILogger<AccountController> _logger;
+    private readonly ILogger _securityLogger;
+    private readonly SecuritySensitiveActionAlertAggregator
+        _securityAlertAggregator;
 
     public AccountController(
         FullWorthDbContext dbContext,
@@ -34,7 +38,10 @@ public sealed class AccountController : ControllerBase
         IAccountBillDeletionGateway billDeletionGateway,
         IAccountStatementDeletionGateway statementDeletionGateway,
         IAccountSubscriptionDeletionGateway subscriptionDeletionGateway,
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger,
+        ILoggerFactory loggerFactory,
+        SecuritySensitiveActionAlertAggregator
+            securityAlertAggregator)
     {
         _dbContext = dbContext;
         _accountDataExportBuilder = accountDataExportBuilder;
@@ -44,6 +51,11 @@ public sealed class AccountController : ControllerBase
         _statementDeletionGateway = statementDeletionGateway;
         _subscriptionDeletionGateway = subscriptionDeletionGateway;
         _logger = logger;
+        _securityLogger =
+            SecuritySensitiveActionLog.CreateLogger(
+                loggerFactory);
+        _securityAlertAggregator =
+            securityAlertAggregator;
     }
 
     [HttpPost("export")]
@@ -104,6 +116,11 @@ public sealed class AccountController : ControllerBase
         Response.Headers.Append(
             "Content-Disposition",
             "attachment; filename=\"fullworth-data-export.json\"");
+
+        SecuritySensitiveActionLog.AccountExportCompleted(
+            _securityLogger,
+            _securityAlertAggregator,
+            HttpContext.TraceIdentifier);
 
         return Ok(export);
     }
@@ -348,6 +365,11 @@ public sealed class AccountController : ControllerBase
             throw new InvalidOperationException(
                 "Account deletion did not reach a committed state.");
         }
+
+        SecuritySensitiveActionLog.AccountDeletionCompleted(
+            _securityLogger,
+            _securityAlertAggregator,
+            HttpContext.TraceIdentifier);
 
         var cleanupPending = false;
 

@@ -1,6 +1,6 @@
 # FullWorth Product & Engineering Roadmap
 
-Last updated: 2026-09-25
+Last updated: 2026-10-03
 
 Status: Active planning document
 
@@ -16,7 +16,13 @@ Primary product direction: **PWA-first**
 
 Primary product promise: **Your entire financial life. One app.**
 
+Strategic category: **Financial change intelligence**
+
 Core bill-intelligence promise: **Know when your bills change — and why.**
+
+Commercial objective: build toward a durable multi-million-dollar recurring-revenue business by earning trust, retention, and paid monitoring value rather than by maximizing feature count.
+
+Durable product strategy: `FULLWORTH_PRODUCT_STRATEGY.md`
 
 ---
 
@@ -70,6 +76,48 @@ The long-term customer experience should answer, with as little manual work as p
 - How confident is FullWorth in the explanation?
 
 The product should feel like premium consumer fintech, not enterprise administration software.
+
+## 2.1 Strategic category and commercial wedge
+
+FullWorth's category is **financial change intelligence**.
+
+The product should continuously:
+
+1. detect meaningful financial changes;
+2. explain why they happened;
+3. quantify current and longer-term impact;
+4. prioritize what deserves attention;
+5. show the evidence supporting the conclusion.
+
+Recurring bills remain the initial wedge because FullWorth can combine posted transaction facts, statement/provider evidence, deterministic comparison, and validated explanations into a concrete customer promise.
+
+Expansion into planning, cash-flow context, subscriptions, liabilities, net worth, and other financial domains should strengthen this monitoring relationship rather than turn FullWorth into a generic feature-parity dashboard.
+
+Competitive rule:
+
+- do not chase every feature offered by all-in-one finance products;
+- compete on earlier detection, stronger evidence, clearer explanation, lower false-alert rates, less manual work, and better trust;
+- require a new module to improve trust, time to value, retention, monetization, acquisition efficiency, or operational leverage before treating it as strategic work.
+
+The compounding product moat should come from:
+
+- normalized recurring financial history;
+- provider-specific bill/statement understanding;
+- evidence-linked change history;
+- deterministic financial validation;
+- user-specific corrections and outcomes;
+- high-quality evaluation and security regression coverage;
+- reliable alerting, ingestion, recovery, and provenance.
+
+The scale path is:
+
+trustworthy monitoring
+→ retained users
+→ paid recurring value
+→ repeatable acquisition
+→ scalable recurring revenue.
+
+Detailed positioning, monetization, growth, moat, and business-stage guidance lives in `FULLWORTH_PRODUCT_STRATEGY.md`.
 
 ### Experience principles
 
@@ -200,150 +248,213 @@ Never:
 
 # 4. Current development snapshot
 
-This section is a point-in-time snapshot and should be updated periodically.
+This section is the current release-readiness snapshot. It must be refreshed when a major security/release milestone lands, when the live production release changes, or when acceptance evidence materially changes.
 
-## 4.1 Branch position
+## 4.1 Branch and release position
 
-As of 2026-09-22:
+As of 2026-10-03:
 
-- `master`: `a5c45ee91aefc30897418919f9ba24b9844afb2a` (promotion PR #241 merge)
-- `development` product-code baseline promoted by PR #241: `d4ab89de5a7a0ff1407c1188defd199c1a0e3d04`
-- Production remains operator-reported live on `81a74f11941f6ed67ba5de61b9ef186ef09bae3c` until a guarded deployment of the new master release is completed.
-- Development includes the adaptive device-execution work, canonical FullWorth URL cleanup, Google/Apple sign-in/account-creation implementation, first-run personalization, authenticated readability improvements, the guarded GitHub-only production-deploy workflow, and the expanded installed-device acceptance contract.
-- ~~The first-run setup wizard passed exact-head CI #787 and merged through PR #229. New email/password registrations now enter the persisted personalization flow before the main app.~~
+- `master` is the release branch. Its current GitHub head at this snapshot is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`. A GitHub branch head is not deployment evidence.
+- `development` is the active integration branch. Its current head at this snapshot is `c283463eba028570d9b1629a5740d2dcf4c64e85`.
+- GitHub comparison reports `development` **146 commits ahead and 3 commits behind** `master`. This divergence must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
+- The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
+- Repository merges after that release are **not** considered deployed merely because CI passed or the code reached `development`.
+- The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are CI-verified repository state, not production-host evidence.
 
-## 4.2 Active work
+### Release-readiness estimate
 
-### ~~Adaptive device performance profile~~
+Current technical-lead planning estimate:
 
-Completed through the adaptive performance/device-execution merge path, including PR #203 and promotion through PR #204.
+- broad public production release: **approximately 77%**;
+- engineering/code implementation: **approximately 90–92%**;
+- next deployable production release candidate: **approximately 87–89%**.
 
-Intended user choices:
+These percentages remain intentionally conservative despite the security-code progress because the remaining release risk is dominated by real-environment/provider/device/legal evidence rather than missing generic application code. A high percentage never substitutes for exact-head CI, guarded deployment, same-release production evidence, real-device/provider acceptance, recovery proof, or legal/governance requirements.
 
-- Auto;
-- Efficiency;
-- Balanced;
-- High.
+## 4.2 Active release-critical work
 
-This feature must improve actual workload characteristics rather than intentionally slow devices.
+### Security hardening program — issue #291
 
-Examples of legitimate behavior changes:
+Issue #291 currently records **61 completed checks and 4 open checks**.
 
-- lower animation/transition cost;
-- reduced expensive blur;
-- smaller initial transaction windows;
-- richer presentation on capable devices;
-- hardware/network-hint-based Auto selection;
-- OS/browser reduced-motion preference still respected.
+Major completed areas include:
 
-Financial functionality and security behavior must remain identical across performance levels.
+- server-side BFF session/token isolation;
+- bounded refresh-token families, logout/account-wide revocation, and security-stamp invalidation;
+- strong reauthentication for destructive/security-sensitive operations;
+- OIDC state/nonce/PKCE/correlation-cookie invariants;
+- response-enumeration hardening;
+- ownership and module-boundary ratchets;
+- route-level and model-wide negative cross-user ownership coverage;
+- model-wide same-user composite foreign-key enforcement for `UserId`-scoped relationships;
+- endpoint inventory and cost-aware rate limits;
+- body/header/request-line/content-type boundaries;
+- Fetch Metadata / Origin CSRF defense in depth;
+- CSP nonce/static-style hardening;
+- statement download/export cache and disposition boundaries;
+- parser/OCR pre-admission bounds;
+- parser-worker TLS, authentication, replay resistance, and request integrity;
+- per-document and per-image cgroup CPU/memory/PID containment;
+- malicious/corrupt PDF/PNG/JPEG regression corpus;
+- Data Protection key permission/rotation/recovery hardening;
+- least-scoped file-backed production secret injection and live secret non-disclosure verification;
+- future non-local PostgreSQL certificate-verified TLS requirements;
+- dedicated least-privilege `fullworth_runtime` PostgreSQL role and one-shot migration/runtime credential separation;
+- SSH/operator hardening and host/kernel/container patch-cadence verifier/runbook;
+- immutable/pinned Actions and container-image references;
+- signed build provenance and release SBOMs;
+- bounded security-event logging, aggregation, and incident-response runbooks;
+- encrypted backup/restore verification and restored-asset permission checks.
 
-### ~~Cleanup PR #155~~
+The four remaining #291 items are now evidence/governance gates rather than ordinary feature-code work:
 
-`cleanup/remove-stale-slnlaunch`
+- complete immutable/off-host storage proof before relying on backups for destructive incidents;
+- exercise compromised-host recovery, not only ordinary failure recovery;
+- finish the branch-governance decision for independent approving reviews where GitHub permissions allow;
+- make no production-security claim without direct evidence from the exact deployed release.
 
-Purpose:
+Repository ruleset `FullWorth protected branches` is active for both `master` and `development`, requires pull requests, blocks deletion/non-fast-forward updates, requires review-thread resolution, has no bypass actors, and reports this connection cannot bypass it. Its current required approving review count is **0**, so the branch-governance checklist item remains open until that policy decision is deliberately completed through an admin-capable GitHub path.
 
-- remove the unreferenced Visual Studio `FullWorth.slnLaunch` profile;
-- keep the transitional MAUI project itself intact.
+### Document parser and OCR containment
 
-~~Exact-head CI passed and PR #155 merged without removing the transitional MAUI project.~~
+The repository implementation now has hard OS-enforced document-processing containment:
 
-### External provider production acceptance
+- isolated parser worker;
+- authenticated/TLS-protected worker boundary;
+- parser request integrity and replay protection;
+- bounded PDF/OCR input and work budgets;
+- finite container resources;
+- per-document and per-image cgroups;
+- 384 MiB child memory ceilings;
+- zero child swap;
+- bounded PIDs;
+- OOM-kill and cleanup/readiness regression proof;
+- native/parser attack-surface documentation;
+- generated malicious/corrupt document regression coverage.
 
-Google/Apple account creation code is merged, but provider acceptance remains open until real provider credentials are configured outside GitHub and each provider completes the controlled production verification sequence in `EXTERNAL_AUTH_SETUP.md`. Do not strike provider acceptance until live callback, registration, sign-in, linking, and account-isolation behavior are proven.
+This code is repository/CI evidence. **Production containment acceptance remains open until an exact-`master` guarded deployment runs the host containment verifier on the real production host and preserves sanitized deployed-host evidence.**
 
-### Installed-device personalization acceptance
+### Installed PWA acceptance
 
-~~The release-pinned Android/iOS acceptance recorder, verifier, documentation, and regression contract now include first-run setup plus display/accessibility preference application.~~
+Issue #251 remains open. The required Android installed-PWA checklist currently has **10 unrecorded checks**.
 
-The human installed-device gate remains open. Do not strike Android/iOS acceptance until the exact deployed release has been exercised on real installed devices and the metadata-only evidence has been recorded.
+Browser, Playwright, emulator, and CI evidence do not replace:
 
-### Guarded GitHub production deployment
+- real Android installed-PWA launch;
+- persisted personalization/accessibility behavior;
+- on-screen keyboard/viewport behavior;
+- mobile/back navigation;
+- installed update lifecycle;
+- statement picker return;
+- security dialogs in the installed context.
 
-~~A manual, exact-master-SHA, environment-gated GitHub production-deploy workflow is implemented and covered by CI regression checks.~~
+iOS remains optional for the current #251 bundle, while issue #258 separately tracks re-testing Safari Add to Home Screen on the current production release.
 
-Actual production deployment of a release remains a separate event. Repository completion of the workflow does not prove that the required GitHub production environment/SSH transport is configured or that a release has been deployed through it.
+### External provider and real-world acceptance
 
-## 4.3 Recently completed development work
+Still open where applicable:
 
-Recent merged development work includes:
+- real Google/Apple provider callback/registration/sign-in/linking/account-isolation acceptance;
+- controlled Plaid connect/update/reconnect plus Hosted Link human-return observation;
+- real-world Plaid payroll/sandbox acceptance for Paycheck Bill Plan issue #293;
+- representative controlled PDF/scanned-PDF/JPG/PNG statement lifecycle and semantic/OCR review;
+- external alert receipt;
+- account-deletion same-release proof;
+- controlled reboot proof;
+- clean-host recovery against the actual off-host encrypted repository;
+- provider-enforced immutable/WORM/Object-Lock-equivalent backup protection.
 
-- ~~adaptive device-side execution and bounded transaction filtering;~~
-- ~~canonical FullWorth production URL migration and monitoring cleanup;~~
-- ~~mobile logout restoration;~~
-- ~~public-site readability/contrast improvements;~~
-- ~~Google and Apple production external-auth configuration plumbing;~~
-- ~~secure Google/Apple provider-backed account registration API and Web flow;~~
-- ~~external registration legal/body-limit hardening;~~
-- ~~non-secret Google/Apple provider setup and verification guide;~~
-- ~~persistent first-run experience preference storage/API foundation;~~
-- ~~first-run personalization wizard with language, theme, readability, motion, and financial-focus choices;~~
-- ~~personalization editing from Settings;~~
-- ~~saved experience focus applied to Overview emphasis without hiding destinations;~~
-- ~~authenticated-app readability baseline and contrast improvements;~~
-- ~~guarded GitHub-only production deployment workflow with exact-release/SSH fail-closed checks;~~
-- ~~installed-device acceptance contract expanded for personalization/accessibility behavior;~~
-- ~~personalization/readability/external-auth release candidate promoted to `master` through PR #241 after exact-head CI #806;~~
-- recurring merchant-normalization improvements;
-- database-side Bill Stream aggregation;
-- reduced authenticated Web navigation flicker;
-- installed-PWA layout rerender reduction;
-- reduced Activity render work;
-- reduced Transactions render work;
-- reduced Bill Detail database round trips;
-- reduced Account page Plaid JS wiring churn;
-- removal of duplicate authenticated stylesheet work;
-- removal of stale `BILLWATCH_TODO.md`;
-- removal of an unused Web FullWorth logo asset.
+### Human-only launch gates
+
+`HUMAN-TODO.md` currently identifies launch work that repository automation cannot safely complete:
+
+- required CI/security status checks in the existing `master`/`development` protected-branch ruleset;
+- qualified commercial legal/license review;
+- the intentional production-release decision needed to collect deployed-host containment evidence.
+
+## 4.3 Recently completed engineering position
+
+The recent development cycle materially advanced release safety rather than adding speculative product surface.
+
+Important completed slices include:
+
+- FullWorth v2 consumer Web/PWA experience, responsive/mobile navigation, public landing experience, accessibility/readability preferences, offline/public fallback behavior, controlled PWA update flow, and browser-session expiry handling;
+- protected Web/BFF sessions with server-side Redis-backed tickets and opaque HttpOnly browser references;
+- authentication/session revocation, MFA/recovery, OIDC, strong-reauthentication, and anti-enumeration hardening;
+- ownership/module boundary enforcement with zero direct controller cross-owner persistence shortcuts in enforced domains;
+- Paycheck Bill Plan implementation through posted-payroll-triggered alerts and Web UX; only real-world Plaid payroll acceptance remains open in issue #293;
+- request-cost classification, API/BFF rate limits, request-size/content-type/framing controls, CSP/CSRF defense-in-depth, and sensitive-response no-store protections;
+- Stripe webhook replay protection and minimal event-receipt persistence;
+- parser/OCR process isolation and OS-enforced resource containment;
+- statement/document malicious-input regression corpus;
+- Data Protection key lifecycle and restore-permission hardening;
+- security-event telemetry, bounded alert aggregation, and incident-response/credential-rotation runbooks;
+- pinned GitHub Actions and production/recovery container inputs;
+- release SBOM generation and signed build provenance;
+- encrypted recovery and restored-asset ownership/permission verification.
+
+AI-derived persistence remains disabled. Deterministic extraction remains the production persistence authority until AI runtime, held-out quality, fallback, resource, rollback, and product-approval gates are all explicitly satisfied.
 
 ## 4.4 Production state
 
-The current operator-reported live production release is:
+The current verified live production release is:
 
-`81a74f11941f6ed67ba5de61b9ef186ef09bae3c`
+`7e8571a26447538db249c862ad009487cce119bc`
 
-The detailed guarded-deployment transcript for that release is not stored in this roadmap. The strongest preserved per-step deployment evidence remains the earlier guarded deployment of:
+It was proven by successful guarded production deploy run #7 (`36221860082`).
 
-`cbcf261e13636f0330cb9d7be2ce413871e413aa`
+That evidence establishes the release actually deployed through the guarded path. It does **not** silently extend to newer code on `master` or `development`.
 
-Verified on 2026-09-21:
+The current release/acceptance model must continue to distinguish:
 
-- exact promotion head `e8a512f62b188c24158abaec581e45217d3e9e58` passed FullWorth CI #644;
-- guarded production deployment passed;
-- encrypted pre-replacement recovery snapshot beginning `7449ac243947...` was created;
-- API, Web, database, and edge are healthy;
-- release marker and running image revisions match the deployed master release;
-- public readiness and HTTP security-boundary checks passed;
-- private-beta host readiness passed;
-- backup timer and runtime watchdog are active;
-- subscription enforcement remains disabled;
-- non-destructive direct-API smoke passed;
-- non-destructive authenticated Web/BFF smoke passed.
+- repository implementation complete;
+- exact-head CI/security complete;
+- promotion to `master` complete;
+- guarded deployment complete;
+- deployed-host verification complete;
+- provider/device/human acceptance complete;
+- private/internal beta complete;
+- external beta complete;
+- commercial/public launch complete.
 
-Still not proven by that deployment:
+The next production deployment should be a deliberately frozen release candidate containing the intended security/document/recovery improvements, not an arbitrary moving `development` head.
 
-- objective cross-user isolation with a second controlled identity and real controlled foreign-owned fixture;
-- controlled Plaid lifecycle plus human Hosted Link completion;
-- representative statement semantic/OCR acceptance;
-- account-deletion proof;
-- controlled reboot proof;
-- external alert receipt;
-- clean-host restore against the real off-host repository;
-- provider-enforced immutable storage;
-- qualified legal review.
+## 4.5 Milestone status at a glance
 
-A local-only VPS commit reported as `f9000be` contains a Web-smoke newline-handling fix, but it is not pushed, merged, or deployed and therefore is not repository or production authority.
+This table summarizes where the roadmap stands without pretending that feature count proves readiness.
 
-Production truth must always distinguish:
+| Milestone | Current status | Release interpretation |
+| --- | --- | --- |
+| 0 — Stabilize integration branch | **Active** | Current work is focused and CI-gated; `development`/`master` divergence, required-check enforcement, open cleanup/roadmap work, and release-freeze reconciliation remain. |
+| 1 — PWA performance baseline | **Substantially implemented** | Major browser/render/performance work exists; installed-device acceptance still matters before calling the client release-complete. |
+| 2 — Installed PWA parity / MAUI retirement | **Partially complete** | PWA parity is advanced; Android physical acceptance is open and MAUI has not yet been deliberately retired. |
+| 3 — Recurring bill discovery quality | **Core implemented; quality work ongoing** | Recurring discovery is production-capable, but broader real-world recurrence/accuracy evidence remains ongoing product-quality work. |
+| 4 — Statement intelligence / “why” engine | **Core implemented; acceptance incomplete** | Deterministic ingestion/extraction/matching/change logic exists and parser/OCR containment is strong in repo; representative same-release semantics/OCR and AI-quality gates remain. |
+| 5 — Alerts and proactive monitoring | **Core implemented; operational proof incomplete** | Financial/security/provider alerting exists; real destination receipt/noise acceptance remains part of release proof. |
+| 6 — Financial Home expansion | **Substantial product surface exists** | Accounts, transactions, bills, cash-flow/planning and related views are present; additional expansion is not the current release priority. |
+| 7 — Account, privacy, and trust | **Technically advanced; external gates remain** | Strong auth, export, deletion, privacy/security surfaces are implemented; legal/provider/human proof remains. |
+| 8 — Real production/private-beta acceptance | **Current critical milestone** | This is the main release bottleneck: same-release production, device, provider, recovery, statement and isolation evidence must be completed. |
+| 9 — Internal Beta 0 | **Blocked on Milestone 8 evidence** | Do not broaden testing until the release candidate can prove its own critical trust boundaries. |
+| 10 — Revenue readiness | **Infrastructure partially complete** | Stripe/entitlement infrastructure exists, but enforcement remains off and lifecycle/legal/economic gates remain. |
+| 11 — Trusted external beta | **Not yet entered as a release stage** | Begins only after same-release trust evidence and Internal Beta 0 are acceptable. |
+| 12 — Broader launch preparation | **Not complete** | Requires prior beta, operational, legal, recovery, security, provider and product-quality gates. |
 
-- merged to `master`;
-- exact-head CI passed;
-- guarded deployment completed;
-- production verification completed;
-- human/provider/operator acceptance completed.
+## 4.6 Current release philosophy
 
-Do not collapse these into one status.
+The project is no longer primarily blocked on “building the app.”
+
+The release-critical problem is now converting a large amount of implemented, CI-verified functionality into **same-release real-world proof**.
+
+Therefore:
+
+- stop adding unrelated product scope while release blockers remain;
+- finish release-critical security work;
+- freeze a release candidate;
+- reconcile and promote deliberately;
+- deploy only the exact verified `master` SHA;
+- prove critical behavior on that exact deployed release;
+- fix failures through the normal development → PR → exact-head CI → promotion → guarded-deploy path;
+- only then advance through Internal Beta 0, trusted external beta, revenue rollout, and broader launch.
 
 ---
 
@@ -1053,7 +1164,9 @@ Priority: P2, after bill-intelligence trust
 
 Goal: Expand from bill monitoring into a broader financial-life overview without turning FullWorth into a generic cluttered budget dashboard.
 
-This milestone contains proposed product direction and should be validated with user feedback before every subfeature becomes a commitment.
+The Financial Home must remain change-first. Its primary job is to answer "What changed, what needs attention, and why?" before showing secondary balances or analytics.
+
+This milestone contains proposed product direction and should be validated with user feedback before every subfeature becomes a commitment. A proposed subfeature is not strategic merely because a competitor offers it; it should strengthen monitoring, understanding, retention, or paid value.
 
 ## 12.1 Financial Home
 
@@ -1475,6 +1588,40 @@ Permanent safety exemptions should remain for essential user rights such as:
 - bank disconnect;
 - data export;
 - subscription recovery.
+
+## 16.6 Business economics and scale proof
+
+Revenue readiness is not complete merely because checkout works.
+
+Once paid rollout begins, measure:
+
+- free → paid conversion;
+- trial → paid conversion if trials are used;
+- monthly and annual paid retention;
+- logo and revenue churn;
+- realized ARPU;
+- gross margin;
+- payment-processing cost;
+- Plaid/data-provider cost per active user;
+- compute/storage cost per active user;
+- support cost per active user;
+- customer acquisition cost by channel;
+- payback period;
+- lifetime-value assumptions using real cohort evidence.
+
+Translate the long-term business goal into subscriber economics:
+
+`gross ARR = paying subscribers × realized average monthly subscription revenue × 12`
+
+Illustrative scale only:
+
+- 10,000 payers at an $8 realized monthly average ≈ $960,000 gross ARR;
+- 25,000 payers at an $8 realized monthly average ≈ $2.4 million gross ARR;
+- 50,000 payers at an $8 realized monthly average ≈ $4.8 million gross ARR.
+
+These examples are not price targets or forecasts. They make clear that retention and repeatable acquisition matter more than raw registrations.
+
+Do not scale paid acquisition until FullWorth has evidence of trustworthy core value, meaningful retention, and acceptable unit economics.
 
 ### Exit gate for Milestone 10
 
@@ -2023,7 +2170,19 @@ Done only when:
 
 # 27. Product metrics roadmap
 
-Metrics should answer whether FullWorth is actually delivering value.
+Metrics should answer whether FullWorth is actually delivering value and whether that value can become a durable business.
+
+## Primary business scorecard
+
+Use a small set of outcomes rather than a wall of vanity metrics:
+
+1. **Activation to monitored state** — percentage of eligible new users who connect data and reach at least one trustworthy monitored recurring stream.
+2. **Trusted change coverage** — ability to detect and correctly explain meaningful financial changes using controlled ground truth, evidence support, and user-confirmed outcomes where available.
+3. **Monitored-user retention** — percentage of activated users who remain connected and meaningfully monitored over 30/90/180-day periods.
+
+For paid cohorts, also track retained subscription revenue.
+
+Cross-user disclosure incidents remain a zero-tolerance security guardrail and must never be traded for growth.
 
 ## Acquisition/setup
 
@@ -2060,9 +2219,29 @@ Metrics should answer whether FullWorth is actually delivering value.
 - account disconnect rate after false detection;
 - corrected/ignored alerts;
 - statement failure rate;
-- support contacts caused by incorrect financial facts.
+- support contacts caused by incorrect financial facts;
+- unsupported explanation rate;
+- user correction rate;
+- unresolved evidence-gap rate.
 
-Do not optimize vanity metrics at the expense of accuracy.
+## Monetization and growth
+
+After paid rollout begins, measure:
+
+- free → paid conversion;
+- trial → paid conversion if applicable;
+- paid retention;
+- logo churn;
+- revenue churn;
+- realized ARPU;
+- gross margin;
+- CAC by channel;
+- payback period;
+- provider/infrastructure/support cost per active user.
+
+Measure acquisition quality by downstream activation, retention, and paid conversion rather than by cheap registrations alone.
+
+Do not optimize vanity metrics at the expense of accuracy, trust, privacy, or cancellation fairness.
 
 ---
 
@@ -2122,102 +2301,177 @@ Persistent identifiers require explicit migration.
 
 # 30. Critical path from today
 
-The current release is already deployed and healthy. The next sequence is acceptance-first rather than feature-first.
+The shortest credible path to production release is now **security closure → release freeze → guarded deployment → same-release acceptance**, not another feature sprint.
 
-## ~~Step 1~~
+## ~~Step 1 — Complete the exact-head secret non-disclosure milestone~~
 
-~~Review and safely upstream the local-only Web-smoke newline fix reported as `f9000be`.~~
+~~PR #649 exact head `1735c7512416a3fbf284ba2087f7ffb175a56961` passed FullWorth CI #1582 and Dependency Security #679, then merged to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`. PR #652 recorded the milestone after its own exact-head checks passed.~~
 
-Requirements:
+## Step 2 — Finish the evidence/governance remainder of #291
 
-- ~~obtain the exact diff from the VPS or reproduce the change deliberately in a repository branch;~~
-- ~~do not treat the local commit as authoritative until reviewed;~~
-- ~~merge through `development` only after the full exact-head CI gate;~~
-- ~~do not redeploy merely for a smoke-harness-only fix unless production runtime behavior actually depends on it.~~
+The ordinary repository-side security-hardening slices are complete through PR #662. Issue #291 is now **61/65 complete**.
 
-Completed through the reviewed repository implementation in PR #197; the old VPS-only commit remains historical and non-authoritative.
+The remaining four items require real evidence or repository-owner policy, not another generic application-code sprint:
 
-## Step 2
+- configure and prove immutable/off-host backup protection suitable for destructive-incident recovery;
+- run a compromised-host/clean-host recovery exercise against the actual off-host recovery repository;
+- decide whether `master`/`development` must require at least one independent approving review and apply that through an admin-capable GitHub path if required;
+- preserve the rule that no production-security claim is valid without direct evidence from the exact deployed release.
 
-Run objective cross-user ownership proof against release `cbcf261e13636f0330cb9d7be2ce413871e413aa`.
+Do not manufacture CI substitutes for provider-enforced immutability, clean-host recovery, or deployed-host evidence. Do not add unrelated security code merely to increase the checklist count.
 
-Use:
+## Step 3 — Freeze the next release candidate
 
-- a second controlled identity;
-- real controlled foreign-owned Bill Stream/statement/resource identifiers;
-- expected 404/ownership-denial behavior.
+After the intended security slice is complete:
 
-Do not substitute guessed IDs.
+- stop unrelated feature additions;
+- inventory the exact `development` head;
+- identify every release-blocking open PR/issue;
+- confirm migrations and compatibility requirements;
+- confirm AI-derived persistence remains disabled unless separately approved;
+- record the candidate SHA and expected acceptance bundle.
 
-## Step 3
+Only blocker fixes should change the frozen candidate.
 
-Run the controlled Plaid lifecycle.
+## Step 4 — Reconcile `development` and `master` deliberately
 
-Verify:
+At this snapshot GitHub reports `development` 134 commits ahead and 3 commits behind `master`.
 
-- Hosted Link opens;
-- a suitable controlled connection completes;
-- connection becomes Active where expected;
-- transaction sync occurs;
-- update/reconnect behavior works;
-- human Hosted Link completion is observed.
+Before promotion:
 
-## Step 4
+- inspect the three master-only commits;
+- confirm whether they are release-merge history, required hotfixes, or substantive changes;
+- preserve all required production/release changes;
+- do not force-push either long-lived branch;
+- do not discard release-only work merely to make the graph look clean.
 
-With explicit operator approval, run the controlled statement lifecycle.
+Then open the normal reviewed promotion/release PR.
 
-Use representative operator-known fixtures.
+## Step 5 — Run exact-head release verification
 
-Verify:
+The final promotion head must pass every required release gate, including the applicable:
 
-- upload;
-- classification/extraction;
-- OCR where applicable;
-- Bill Stream matching;
-- comparison;
-- explanation;
-- alert/state outcome;
-- ownership.
+- backend build/tests;
+- ownership/security tests;
+- Web/PWA/browser acceptance;
+- production-container verification;
+- dependency security;
+- migration/model checks;
+- parser/OCR containment checks;
+- recovery checks;
+- release provenance/SBOM checks.
 
-## Step 5
+An earlier green commit is not proof for a changed release head.
 
-Run disposable account-deletion proof against the same release.
+## Step 6 — Guarded-deploy the exact `master` release
 
-## Step 6
+Deploy only the exact verified current `master` SHA.
 
-Run controlled reboot proof.
+The guarded deployment must preserve:
 
-Confirm:
+- production configuration and secrets;
+- database state;
+- statement storage;
+- Data Protection keys;
+- encrypted backup/recovery capability;
+- image provenance/SBOM integrity;
+- rollback/kill-switch paths where applicable.
 
-- services recover;
-- readiness returns;
-- release marker remains correct;
-- backup/watchdog timers remain healthy.
+For the parser/OCR work, preserve sanitized deployed-host evidence from `deploy/verify-parser-containment.sh`.
 
-## Step 7
+For the PR #649 secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
 
-Run independent external alert receipt proof.
+## Step 7 — Build one same-release private-beta evidence bundle
 
-## Step 8
+Against the exact deployed candidate, complete and correlate:
 
-Run clean-host recovery against the actual off-host encrypted repository.
+1. objective cross-user Web/BFF ownership proof with two controlled identities and real controlled foreign-owned resources;
+2. controlled Plaid connect/update/reconnect lifecycle plus Hosted Link human-return observation;
+3. controlled representative PDF/scanned-PDF/JPG/PNG statement lifecycle;
+4. semantic/OCR review against operator-known facts;
+5. bill matching/change/explanation/alert outcome review;
+6. disposable account-deletion proof;
+7. controlled reboot proof;
+8. independent external alert-receipt proof;
+9. clean-host restore against the actual off-host encrypted repository;
+10. provider-enforced immutable/WORM/Object-Lock-equivalent backup proof;
+11. production release/integrity/containment evidence.
 
-## Step 9
+Do not mix evidence from unrelated deployed releases without an explicit documented relationship.
 
-Configure and prove provider-enforced immutable/WORM/Object-Lock-equivalent protection.
+## Step 8 — Complete physical Android installed-PWA acceptance
 
-## Step 10
+Close issue #251 only after all required Android checks pass on the exact live release and the metadata-only acceptance record is created.
 
-Combine same-release evidence and run Internal Beta 0 on real controlled bills.
+Browser/Chromium/emulator evidence is not a substitute.
 
-## Step 11
+Re-test iOS issue #258 separately on the then-current production release; do not make speculative manifest/service-worker changes if the failure no longer reproduces.
 
-Only after trust metrics and remaining external gates are acceptable:
+## Step 9 — Complete external provider/product acceptance
 
-- invite trusted external beta users;
-- continue PWA parity toward MAUI retirement;
-- resume recurrence-quality and statement-explanation expansion;
-- proceed toward revenue rollout.
+Where those capabilities are included in the release:
+
+- prove Google/Apple external-auth callback, account creation/sign-in/linking and isolation behavior;
+- complete real-world Plaid payroll/sandbox acceptance for Paycheck Bill Plan issue #293;
+- verify provider failure/reconnect behavior;
+- preserve only non-sensitive acceptance metadata.
+
+## Step 10 — Make the AI release scope explicit
+
+For the initial public release, choose one evidence-backed state:
+
+- keep deterministic extraction as the production authority and explicitly leave AI-derived persistence disabled; or
+- complete the local/open-weight runtime, held-out accuracy, unsupported-claim, fallback, resource/load, rollback and approval gates before activation.
+
+Do not ship an ambiguous half-enabled AI persistence path.
+
+## Step 11 — Complete governance and legal gates
+
+Before commercial/public launch:
+
+- add required CI/security checks to the active protected-branch ruleset for `master` and `development`;
+- complete qualified commercial license review;
+- complete qualified review of the exact customer-facing Terms/Privacy version;
+- resolve third-party/model/runtime notice obligations;
+- preserve the approved legal text through the normal PR/CI path.
+
+## Step 12 — Run Internal Beta 0
+
+Use the same release candidate and real controlled bills.
+
+Track:
+
+- false positive/negative recurring detection;
+- statement extraction errors;
+- unsupported explanations;
+- alert usefulness/noise;
+- account/provider failures;
+- recovery/support friction;
+- user-visible uncertainty behavior.
+
+Fix release-blocking defects before expanding the tester population.
+
+## Step 13 — Enter trusted external beta
+
+Only after the Internal Beta 0 trust metrics and remaining external gates are acceptable:
+
+- invite a deliberately small cohort;
+- keep support and incident paths ready;
+- continue observing financial-data correctness, ownership, provider behavior, latency, and alert quality;
+- avoid turning subscription enforcement on simply because Stripe checkout exists.
+
+## Step 14 — Revenue and broader launch
+
+Revenue enforcement and broader launch require:
+
+- proven subscription lifecycle;
+- approved legal/commercial posture;
+- acceptable unit economics;
+- stable provider/infrastructure costs;
+- production/recovery maturity;
+- trustworthy bill/statement/change intelligence;
+- acceptable beta retention and support burden;
+- no unresolved P0/P1 security or financial-correctness defect.
 
 ---
 

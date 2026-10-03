@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
@@ -39,11 +39,51 @@ public sealed class PdfBillStatementTextExtractor
                 "The PDF exceeds the 15 MiB parser input limit.");
         }
 
+        MemoryStream? bufferedPdfStream = null;
+
         try
         {
+            var parserStream = pdfStream;
+
+            if (!pdfStream.CanSeek)
+            {
+                bufferedPdfStream = new MemoryStream();
+                var buffer = new byte[81920];
+                var totalBytes = 0;
+
+                while (true)
+                {
+                    var bytesRead = pdfStream.Read(
+                        buffer,
+                        0,
+                        buffer.Length);
+
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    if (bytesRead > MaxPdfBytes - totalBytes)
+                    {
+                        throw new BillStatementTextExtractionException(
+                            "The PDF exceeds the 15 MiB parser input limit.");
+                    }
+
+                    bufferedPdfStream.Write(
+                        buffer,
+                        0,
+                        bytesRead);
+
+                    totalBytes += bytesRead;
+                }
+
+                bufferedPdfStream.Position = 0;
+                parserStream = bufferedPdfStream;
+            }
+
             using var document =
                 PdfDocument.Open(
-                    pdfStream);
+                    parserStream);
 
             var textBuilder =
                 new StringBuilder();
@@ -55,8 +95,7 @@ public sealed class PdfBillStatementTextExtractor
             {
                 pageCount++;
 
-                if (pageCount >
-                    MaxPages)
+                if (pageCount > MaxPages)
                 {
                     throw new BillStatementTextExtractionException(
                         $"The statement exceeds the {MaxPages}-page processing limit.");
@@ -72,8 +111,7 @@ public sealed class PdfBillStatementTextExtractor
                     continue;
                 }
 
-                if (textBuilder.Length >
-                    0)
+                if (textBuilder.Length > 0)
                 {
                     textBuilder.AppendLine();
                     textBuilder.AppendLine();
@@ -83,14 +121,12 @@ public sealed class PdfBillStatementTextExtractor
                     MaxExtractedCharacters -
                     textBuilder.Length;
 
-                if (remainingCharacters <=
-                    0)
+                if (remainingCharacters <= 0)
                 {
                     break;
                 }
 
-                if (pageText.Length >
-                    remainingCharacters)
+                if (pageText.Length > remainingCharacters)
                 {
                     textBuilder.Append(
                         pageText.AsSpan(
@@ -113,14 +149,9 @@ public sealed class PdfBillStatementTextExtractor
                 MinimumUsefulCharacters;
 
             return new BillStatementTextExtractionResult(
-                Text:
-                    extractedText,
-
-                PageCount:
-                    pageCount,
-
-                RequiresOcr:
-                    requiresOcr);
+                Text: extractedText,
+                PageCount: pageCount,
+                RequiresOcr: requiresOcr);
         }
         catch (BillStatementTextExtractionException)
         {
@@ -131,6 +162,10 @@ public sealed class PdfBillStatementTextExtractor
             throw new BillStatementTextExtractionException(
                 "FullWorth could not safely read this PDF statement.",
                 ex);
+        }
+        finally
+        {
+            bufferedPdfStream?.Dispose();
         }
     }
 
@@ -161,24 +196,18 @@ public sealed class PdfBillStatementTextExtractor
                     value.Length,
                     MaxExtractedCharacters));
 
-        var hasContent =
-            false;
-
-        var pendingBlankLine =
-            false;
+        var hasContent = false;
+        var pendingBlankLine = false;
 
         foreach (var rawLine in lines)
         {
-            var line =
-                rawLine.Trim();
+            var line = rawLine.Trim();
 
-            if (line.Length ==
-                0)
+            if (line.Length == 0)
             {
                 if (hasContent)
                 {
-                    pendingBlankLine =
-                        true;
+                    pendingBlankLine = true;
                 }
 
                 continue;
@@ -194,14 +223,9 @@ public sealed class PdfBillStatementTextExtractor
                 }
             }
 
-            normalized.Append(
-                line);
-
-            hasContent =
-                true;
-
-            pendingBlankLine =
-                false;
+            normalized.Append(line);
+            hasContent = true;
+            pendingBlankLine = false;
         }
 
         return normalized.ToString();

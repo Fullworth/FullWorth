@@ -9,6 +9,7 @@
 **/*.suo
 .env
 .env.*
+.fullworth-secrets
 *.md
 *.http
 *.sln

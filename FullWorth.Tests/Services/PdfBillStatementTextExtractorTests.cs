@@ -102,6 +102,17 @@ public sealed class PdfBillStatementTextExtractorTests
             Encoding.ASCII.GetBytes(
                 "%PDF-1.7\nxref\n0 2\n0000000000 65535 f \n0000000000 00000 n \ntrailer\n<< /Size 2 /Root 99 0 R >>\nstartxref\n9\n%%EOF")
         };
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n3 0 obj\n<< /Length 2147483647 /Filter /FlateDecode >>\nstream\nx\nendstream\nendobj\n%%EOF")
+        };
+
+        yield return new object[]
+        {
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n3 0 obj\n<< /Length 2 /Filter /ASCIIHexDecode >>\nstream\nGG\nendstream\nendobj\n%%EOF")
+        };
     }
 
     [Fact]
@@ -176,7 +187,7 @@ public sealed class PdfBillStatementTextExtractorTests
             result.RequiresOcr);
     }
 
-    private static byte[] CreatePdf(
+    internal static byte[] CreatePdf(
         string text,
         int pageCount = 1)
     {
@@ -316,5 +327,42 @@ public sealed class PdfBillStatementTextExtractorTests
             bytes,
             0,
             bytes.Length);
+    }
+}
+
+
+public sealed class PdfBillStatementMalformedCompressionTests
+{
+    [Fact]
+    public void Extract_RejectsMalformedCompressedStream()
+    {
+        var pdfBytes =
+            Encoding.ASCII.GetBytes(
+                "%PDF-1.4\n" +
+                "1 0 obj\n" +
+                "<< /Type /Catalog /Pages 2 0 R >>\n" +
+                "endobj\n" +
+                "2 0 obj\n" +
+                "<< /Type /Pages /Kids [] /Count 0 >>\n" +
+                "endobj\n" +
+                "3 0 obj\n" +
+                "<< /Length 4 /Filter /FlateDecode >>\n" +
+                "stream\n" +
+                "nope\n" +
+                "endstream\n" +
+                "endobj\n" +
+                "%%EOF");
+
+        using var pdfStream =
+            new MemoryStream(
+                pdfBytes);
+
+        var extractor =
+            new PdfBillStatementTextExtractor();
+
+        Assert.Throws<BillStatementTextExtractionException>(
+            () =>
+                extractor.Extract(
+                    pdfStream));
     }
 }

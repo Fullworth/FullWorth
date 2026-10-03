@@ -42,6 +42,12 @@ const string StatementDownloadRateLimitPolicy =
 const string SubscriptionRedemptionRateLimitPolicy =
     "subscription-redemption";
 
+const string FinancialRefreshRateLimitPolicy =
+    "financial-refresh";
+
+const string FinancialProviderRateLimitPolicy =
+    "financial-provider";
+
 const long DefaultRequestBodyLimit =
     1L * 1024 * 1024;
 
@@ -54,6 +60,104 @@ const int MaximumRequestHeaderBytes =
 var builder =
     WebApplication.CreateBuilder(
         args);
+
+builder.Configuration.AddKeyPerFile(
+    "/run/secrets",
+    optional: true);
+
+var connectionString =
+    builder.Configuration.GetConnectionString(
+        "BillWatchDatabase");
+
+if (string.IsNullOrWhiteSpace(
+        connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'BillWatchDatabase' was not found.");
+}
+
+ProductionDatabaseConnectionSecurity.Validate(
+    connectionString,
+    builder.Environment.IsDevelopment());
+
+var migrationOnly =
+    builder.Configuration.GetValue<bool>(
+        "Database:MigrationOnly");
+
+var migrateOnStartup =
+    builder.Configuration.GetValue<bool>(
+        "Database:MigrateOnStartup");
+
+if (!builder.Environment.IsDevelopment() &&
+    migrateOnStartup &&
+    !migrationOnly)
+{
+    throw new InvalidOperationException(
+        "Database:MigrateOnStartup is reserved for the one-shot migration process outside development.");
+}
+
+if (migrationOnly)
+{
+    var migrationOptions =
+        new DbContextOptionsBuilder<FullWorthDbContext>()
+            .UseNpgsql(
+                connectionString)
+            .Options;
+
+    await using var migrationDbContext =
+        new FullWorthDbContext(
+            migrationOptions);
+
+    await migrationDbContext.Database.MigrateAsync();
+    return;
+}
+
+var parserWorkerBaseUrl =
+    builder.Configuration["ParserWorker:BaseUrl"];
+
+if (!builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(parserWorkerBaseUrl))
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must be configured outside development.");
+}
+
+var resolvedParserWorkerBaseUrl =
+    parserWorkerBaseUrl
+    ?? "http://127.0.0.1:8189";
+
+var parserWorkerAuthentication =
+    new ParserWorkerAuthenticationOptions(
+        builder.Configuration["ParserWorker:AuthenticationToken"],
+        builder.Environment.IsDevelopment());
+
+if (!Uri.TryCreate(
+        resolvedParserWorkerBaseUrl,
+        UriKind.Absolute,
+        out var parserWorkerBaseUri) ||
+    parserWorkerBaseUri.Scheme is not ("http" or "https") ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.UserInfo) ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.Query) ||
+    !string.IsNullOrEmpty(parserWorkerBaseUri.Fragment))
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must be an absolute HTTP(S) endpoint without user information or query data.");
+}
+
+if (!builder.Environment.IsDevelopment() &&
+    parserWorkerBaseUri.Scheme != Uri.UriSchemeHttps)
+{
+    throw new InvalidOperationException(
+        "ParserWorker:BaseUrl must use HTTPS outside development.");
+}
+
+var parserWorkerServerCertificateValidator =
+    builder.Environment.IsDevelopment()
+        ? null
+        : new ParserWorkerServerCertificateValidator(
+            builder.Configuration[
+                "ParserWorker:ServerCertificatePath"]);
+
 
 /*
  * Do not advertise the web server implementation.
@@ -129,17 +233,6 @@ if (useForwardedHeaders)
                     proxyAddress);
             }
         });
-}
-
-var connectionString =
-    builder.Configuration.GetConnectionString(
-        "BillWatchDatabase");
-
-if (string.IsNullOrWhiteSpace(
-        connectionString))
-{
-    throw new InvalidOperationException(
-        "Connection string 'BillWatchDatabase' was not found.");
 }
 
 builder.Services.AddDbContext<FullWorthDbContext>(
@@ -474,6 +567,44 @@ builder.Services.AddRateLimiter(
                     window:
                         TimeSpan.FromMinutes(
                             10)));
+
+        /*
+         * Manual discovery and sync operations can fan out across a user's
+         * financial graph and invoke provider-backed work. Keep that work
+         * substantially below the broad request-rate boundary.
+         */
+        options.AddPolicy(
+            FinancialRefreshRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext,
+                        preferAuthenticatedUser:
+                            true),
+                    permitLimit:
+                        6,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+
+        /*
+         * Plaid Link lifecycle calls are interactive but still cross the
+         * provider boundary. This larger budget accommodates normal polling
+         * and retries without permitting the API-wide default rate.
+         */
+        options.AddPolicy(
+            FinancialProviderRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext,
+                        preferAuthenticatedUser:
+                            true),
+                    permitLimit:
+                        20,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
     });
 
 /*
@@ -484,9 +615,16 @@ builder.Services.AddRateLimiter(
  */
 var dataProtectionBuilder =
     builder.Services
-        .AddDataProtection()
-        .SetApplicationName(
-            "BillWatch");
+        .AddDataProtection();
+
+dataProtectionBuilder
+    .SetApplicationName(
+        "BillWatch");
+
+dataProtectionBuilder
+    .SetDefaultKeyLifetime(
+        TimeSpan.FromDays(
+            90));
 
 var configuredDataProtectionPath =
     builder.Configuration[
@@ -739,12 +877,58 @@ builder.Services.AddScoped<
     IAccountStatementExportGateway,
     AccountStatementExportGateway>();
 
-builder.Services.AddScoped<
-    PdfBillStatementTextExtractor>();
+builder.Services.AddSingleton(
+    parserWorkerAuthentication);
 
-builder.Services.AddSingleton<
-    IBillStatementOcrEngine,
-    TesseractBillStatementOcrEngine>();
+builder.Services.AddHttpClient<
+        IPdfStatementTextExtractor,
+        ParserWorkerPdfStatementTextExtractor>(
+        client =>
+        {
+            client.BaseAddress =
+                parserWorkerBaseUri;
+
+            client.Timeout =
+                TimeSpan.FromSeconds(
+                    25);
+        })
+    .ConfigurePrimaryHttpMessageHandler(
+        () =>
+        {
+            var handler = new HttpClientHandler();
+            if (parserWorkerServerCertificateValidator is not null)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    parserWorkerServerCertificateValidator.Validate;
+            }
+
+            return handler;
+        });
+
+builder.Services.AddHttpClient<
+        IBillStatementOcrEngine,
+        ParserWorkerBillStatementOcrEngine>(
+        client =>
+        {
+            client.BaseAddress =
+                parserWorkerBaseUri;
+
+            client.Timeout =
+                TimeSpan.FromSeconds(
+                    40);
+        })
+    .ConfigurePrimaryHttpMessageHandler(
+        () =>
+        {
+            var handler = new HttpClientHandler();
+            if (parserWorkerServerCertificateValidator is not null)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    parserWorkerServerCertificateValidator.Validate;
+            }
+
+            return handler;
+        });
 
 builder.Services.AddScoped<
     BillStatementDocumentTextReader>();
@@ -839,6 +1023,32 @@ builder.Services.AddScoped<
     FullWorthReadinessService>();
 
 builder.Services.AddSingleton<
+    ISecuritySensitiveActionAlertSink,
+    LoggerSecuritySensitiveActionAlertSink>();
+
+builder.Services.AddSingleton(
+    serviceProvider =>
+        new SecuritySensitiveActionAlertAggregator(
+            TimeProvider.System,
+            serviceProvider.GetRequiredService<
+                ISecuritySensitiveActionAlertSink>()));
+
+builder.Services.AddSingleton<
+    ISecurityEventAlertSink,
+    LoggerSecurityEventAlertSink>();
+
+builder.Services.AddSingleton(
+    serviceProvider =>
+        new SecurityEventAlertAggregator(
+            TimeProvider.System,
+            serviceProvider.GetRequiredService<
+                ISecurityEventAlertSink>()));
+
+builder.Services.AddSingleton<
+    ISecurityEventSink,
+    LoggerSecurityEventSink>();
+
+builder.Services.AddSingleton<
     BillStatementProcessingSignal>();
 
 builder.Services.AddHostedService<
@@ -847,8 +1057,7 @@ builder.Services.AddHostedService<
 var app =
     builder.Build();
 
-if (builder.Configuration.GetValue<bool>(
-        "Database:MigrateOnStartup"))
+if (migrateOnStartup)
 {
     await using var migrationScope =
         app.Services.CreateAsyncScope();
@@ -1004,12 +1213,53 @@ app.Use(
     });
 
 /*
+ * Reject body-bearing unsafe API requests with an unsupported or missing
+ * media type before authentication, model binding, or endpoint work.
+ *
+ * Kestrel owns HTTP framing validation. This application boundary narrows the
+ * parsed request formats to the three families FullWorth intentionally uses.
+ */
+app.Use(
+    async (
+        context,
+        next) =>
+    {
+        var request = context.Request;
+        var isUnsafeMethod =
+            HttpMethods.IsPost(request.Method) ||
+            HttpMethods.IsPut(request.Method) ||
+            HttpMethods.IsPatch(request.Method) ||
+            HttpMethods.IsDelete(request.Method);
+
+        var canHaveBody =
+            context.Features
+                .Get<
+                    Microsoft.AspNetCore.Http.Features.IHttpRequestBodyDetectionFeature>()?
+                .CanHaveBody ==
+            true;
+
+        if (request.Path.StartsWithSegments("/api") &&
+            isUnsafeMethod &&
+            canHaveBody &&
+            !IsAllowedRequestContentType(request.ContentType))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status415UnsupportedMediaType;
+            return;
+        }
+
+        await next();
+    });
+
+/*
  * Authentication intentionally precedes named rate-limit policies because
  * sensitive FullWorth endpoints are partitioned by authenticated UserId.
  *
  * Anonymous callers still fall back to an IP-scoped partition.
  */
 app.UseAuthentication();
+app.UseMiddleware<
+    SecurityEventAuditMiddleware>();
 app.UseRateLimiter();
 app.UseFullWorthRegistrationLegalAcceptance();
 app.UseAuthorization();
@@ -1090,6 +1340,40 @@ authenticationGroup
         RefreshTokenReplayEndpointFilter>();
 
 app.Run();
+
+static bool IsAllowedRequestContentType(
+    string? contentType)
+{
+    if (string.IsNullOrWhiteSpace(contentType))
+    {
+        return false;
+    }
+
+    var parameterSeparator =
+        contentType.IndexOf(';');
+
+    var mediaType =
+        (parameterSeparator >= 0
+            ? contentType[..parameterSeparator]
+            : contentType)
+        .Trim();
+
+    return mediaType.Equals(
+               "application/json",
+               StringComparison.OrdinalIgnoreCase) ||
+           (mediaType.StartsWith(
+                "application/",
+                StringComparison.OrdinalIgnoreCase) &&
+            mediaType.EndsWith(
+                "+json",
+                StringComparison.OrdinalIgnoreCase)) ||
+           mediaType.Equals(
+               "application/x-www-form-urlencoded",
+               StringComparison.OrdinalIgnoreCase) ||
+           mediaType.Equals(
+               "multipart/form-data",
+               StringComparison.OrdinalIgnoreCase);
+}
 
 static string GetRateLimitPartitionKey(
     HttpContext httpContext,

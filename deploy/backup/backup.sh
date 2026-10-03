@@ -4,12 +4,36 @@ set -eu
 
 umask 077
 
-: "${RESTIC_REPOSITORY:?RESTIC_REPOSITORY must be configured.}"
-: "${RESTIC_PASSWORD:?RESTIC_PASSWORD must be configured.}"
+if [ -n "${FULLWORTH_BACKUP_PERMISSION_POLICY_PATH:-}" ]; then
+    permission_policy_path=$FULLWORTH_BACKUP_PERMISSION_POLICY_PATH
+elif [ -f /usr/local/lib/fullworth/backup-permission-policy.sh ]; then
+    permission_policy_path=/usr/local/lib/fullworth/backup-permission-policy.sh
+else
+    script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+    permission_policy_path="$script_dir/permission-policy.sh"
+fi
 
-if [ "${#RESTIC_PASSWORD}" -lt 24 ] ||
-   [ "$RESTIC_PASSWORD" = "replace-with-a-separate-long-random-backup-password" ]; then
-    echo "RESTIC_PASSWORD must be a separate random value of at least 24 characters." >&2
+if [ ! -f "$permission_policy_path" ] || [ -L "$permission_policy_path" ]; then
+    echo "The backup permission policy is missing or unsafe." >&2
+    exit 78
+fi
+
+# shellcheck source=/usr/local/lib/fullworth/backup-permission-policy.sh
+. "$permission_policy_path"
+
+: "${RESTIC_REPOSITORY:?RESTIC_REPOSITORY must be configured.}"
+: "${RESTIC_PASSWORD_FILE:?RESTIC_PASSWORD_FILE must be configured.}"
+
+if [ ! -f "$RESTIC_PASSWORD_FILE" ] ||
+   [ -L "$RESTIC_PASSWORD_FILE" ]; then
+    echo "RESTIC_PASSWORD_FILE must be a regular mounted secret." >&2
+    exit 64
+fi
+
+restic_password_length="$(wc -c < "$RESTIC_PASSWORD_FILE" | tr -d ' ')"
+if [ "$restic_password_length" -lt 24 ] ||
+   grep -qx 'replace-with-a-separate-long-random-backup-password' "$RESTIC_PASSWORD_FILE"; then
+    echo "The Restic password file must contain a separate random value of at least 24 characters." >&2
     exit 64
 fi
 
@@ -34,6 +58,7 @@ candidate_tag="billwatch-candidate"
 complete_tag="billwatch-complete"
 bundle_path="/work/bundle"
 restore_path="/work/restore"
+database_passfile="/work/.pgpass"
 restore_database_host="${RESTORE_DATABASE_HOST:-restore-database}"
 retention_enabled="${BILLWATCH_BACKUP_RETENTION_ENABLED:-false}"
 retention_keep_daily="${BILLWATCH_BACKUP_KEEP_DAILY:-14}"
@@ -45,7 +70,73 @@ maintenance_allow="${BILLWATCH_BACKUP_MAINTENANCE_ALLOW:-false}"
 
 cleanup_work()
 {
-    rm -rf "$bundle_path" "$restore_path"
+    rm -rf "$bundle_path" "$restore_path" "$database_passfile"
+}
+
+prepare_database_passfile()
+{
+    : "${FULLWORTH_DATABASE_PGPASS_FILE:?FULLWORTH_DATABASE_PGPASS_FILE must be configured.}"
+
+    if [ ! -f "$FULLWORTH_DATABASE_PGPASS_FILE" ] ||
+       [ -L "$FULLWORTH_DATABASE_PGPASS_FILE" ]; then
+        echo "The database passfile secret is missing or unsafe." >&2
+        exit 64
+    fi
+
+    cp "$FULLWORTH_DATABASE_PGPASS_FILE" "$database_passfile"
+    chmod 0600 "$database_passfile"
+    export PGPASSFILE="$database_passfile"
+}
+
+validate_key_ring()
+{
+    key_root=$1
+    key_label=$2
+
+    if [ ! -d "$key_root" ] || [ -L "$key_root" ]; then
+        echo "$key_label Data Protection key ring is not a real directory." >&2
+        return 1
+    fi
+
+    unexpected_entry="$(find "$key_root" -mindepth 1 -maxdepth 1 ! -type f -print -quit)"
+
+    if [ -n "$unexpected_entry" ]; then
+        echo "$key_label Data Protection key ring contains a non-regular entry." >&2
+        return 1
+    fi
+
+    if [ "$(stat -c '%a' "$key_root")" != 700 ]; then
+        echo "$key_label Data Protection key directory must have mode 0700." >&2
+        return 1
+    fi
+
+    key_count=0
+
+    for key_file in "$key_root"/key-*.xml
+    do
+        [ -e "$key_file" ] || continue
+
+        if [ ! -f "$key_file" ] ||
+           [ -L "$key_file" ] ||
+           [ ! -s "$key_file" ]; then
+            echo "$key_label Data Protection key ring contains an invalid key file." >&2
+            return 1
+        fi
+
+        if [ "$(stat -c '%a' "$key_file")" != 600 ]; then
+            echo "$key_label Data Protection key files must have mode 0600." >&2
+            return 1
+        fi
+
+        key_count=$((key_count + 1))
+    done
+
+    if [ "$key_count" -lt 1 ]; then
+        echo "$key_label Data Protection key ring does not contain a non-empty key." >&2
+        return 1
+    fi
+
+    printf '%s\n' "$key_count"
 }
 
 require_positive_integer()
@@ -192,7 +283,8 @@ create_backup()
 {
     require_append_only_backup_role
     validate_retention_policy
-    : "${PGPASSWORD:?Database credentials must be configured for backup capture.}"
+    cleanup_work
+    prepare_database_passfile
     : "${BILLWATCH_RELEASE_ID:?BILLWATCH_RELEASE_ID must be configured for backup capture.}"
 
     case "$BILLWATCH_RELEASE_ID" in
@@ -203,15 +295,11 @@ create_backup()
     esac
 
     require_repository
-    cleanup_work
     mkdir -p "$bundle_path"
 
-    key_file_count="$(find /source/data-protection -type f -name 'key-*.xml' -size +0c | wc -l | tr -d ' ')"
-
-    if [ "$key_file_count" -lt 1 ]; then
-        echo "The Data Protection key ring does not contain a non-empty key." >&2
-        exit 1
-    fi
+    api_key_file_count="$(validate_key_ring /source/data-protection API)"
+    web_key_file_count="$(validate_key_ring /source/web-data-protection Web)"
+    validate_private_asset_tree /source/statements "source statement storage" 1654 1654 >/dev/null
 
     pg_dump \
         --host=database \
@@ -240,6 +328,7 @@ create_backup()
     fi
 
     tar -C /source/data-protection -cf "$bundle_path/data-protection.tar" .
+    tar -C /source/web-data-protection -cf "$bundle_path/web-data-protection.tar" .
     tar -C /source/statements -cf "$bundle_path/statements.tar" .
 
     latest_migration="$(psql --host=database --username=billwatch --dbname=billwatch --no-psqlrc --tuples-only --no-align --command='SELECT "MigrationId" FROM "__EFMigrationsHistory" ORDER BY "MigrationId" DESC LIMIT 1;')"
@@ -251,17 +340,18 @@ create_backup()
 
     printf '%s\n' \
         'BillWatch encrypted production backup' \
-        'FormatVersion=2' \
+        'FormatVersion=3' \
         "ReleaseId=$BILLWATCH_RELEASE_ID" \
         'PostgreSqlMajor=17' \
         "LatestMigration=$latest_migration" \
-        "DataProtectionKeyFiles=$key_file_count" \
+        "ApiDataProtectionKeyFiles=$api_key_file_count" \
+        "WebDataProtectionKeyFiles=$web_key_file_count" \
         "StatementUploads=$upload_count" \
         > "$bundle_path/manifest.txt"
 
     (
         cd "$bundle_path"
-        sha256sum database.dump data-protection.tar statements.tar statement-files.txt manifest.txt > checksums.sha256
+        sha256sum database.dump data-protection.tar web-data-protection.tar statements.tar statement-files.txt manifest.txt > checksums.sha256
     )
 
     backup_output="/work/restic-backup.json"
@@ -307,9 +397,9 @@ list_completed_snapshot()
 verify_restore()
 {
     validate_client_mode
-    : "${PGPASSWORD:?Database credentials must be configured for restore verification.}"
-    require_repository
     cleanup_work
+    prepare_database_passfile
+    require_repository
     mkdir -p "$restore_path"
 
     if ! pg_isready --host="$restore_database_host" --username=billwatch --dbname=postgres --timeout=5 >/dev/null 2>&1; then
@@ -342,18 +432,33 @@ verify_restore()
         sha256sum -c checksums.sha256
     )
 
-    grep -q '^FormatVersion=2$' "$restored_bundle/manifest.txt"
+    grep -q '^FormatVersion=3$' "$restored_bundle/manifest.txt"
     grep -q '^PostgreSqlMajor=17$' "$restored_bundle/manifest.txt"
     pg_restore --list "$restored_bundle/database.dump" >/dev/null
 
-    mkdir -p "$restore_path/extracted/data-protection" "$restore_path/extracted/statements"
+    mkdir -p \
+        "$restore_path/extracted/data-protection" \
+        "$restore_path/extracted/web-data-protection" \
+        "$restore_path/extracted/statements"
     tar -C "$restore_path/extracted/data-protection" -xf "$restored_bundle/data-protection.tar"
+    tar -C "$restore_path/extracted/web-data-protection" -xf "$restored_bundle/web-data-protection.tar"
     tar -C "$restore_path/extracted/statements" -xf "$restored_bundle/statements.tar"
 
-    restored_key_count="$(find "$restore_path/extracted/data-protection" -type f -name 'key-*.xml' -size +0c | wc -l | tr -d ' ')"
+    validate_private_asset_tree \
+        "$restore_path/extracted/statements" \
+        "restored statement storage" \
+        1654 \
+        1654 \
+        >/dev/null
 
-    if [ "$restored_key_count" -lt 1 ]; then
-        echo "The restored key ring is empty." >&2
+    restored_api_key_count="$(validate_key_ring "$restore_path/extracted/data-protection" "restored API")"
+    restored_web_key_count="$(validate_key_ring "$restore_path/extracted/web-data-protection" "restored Web")"
+    manifest_api_key_count="$(sed -n 's/^ApiDataProtectionKeyFiles=//p' "$restored_bundle/manifest.txt")"
+    manifest_web_key_count="$(sed -n 's/^WebDataProtectionKeyFiles=//p' "$restored_bundle/manifest.txt")"
+
+    if [ "$restored_api_key_count" != "$manifest_api_key_count" ] ||
+       [ "$restored_web_key_count" != "$manifest_web_key_count" ]; then
+        echo "The restored Data Protection key counts do not match the manifest." >&2
         exit 1
     fi
 
@@ -444,3 +549,4 @@ case "${1:-backup}" in
         exit 64
         ;;
 esac
+

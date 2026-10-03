@@ -7,6 +7,8 @@ using FullWorth.API.Services.Plaid;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace FullWorth.Tests.Services;
@@ -41,10 +43,13 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                     errorCode));
 
         using var httpClient = new HttpClient(handler);
+        var loggerFactory =
+            new RecordingLoggerFactory();
         var coordinator = CreateCoordinator(
             dbContext,
             httpClient,
-            tokenProtector);
+            tokenProtector,
+            loggerFactory);
 
         var exception =
             await Assert.ThrowsAsync<PlaidApiException>(
@@ -63,6 +68,52 @@ public sealed class PlaidConnectionSyncCoordinatorTests
         Assert.Equal(
             "cursor-before-error",
             connection.TransactionsCursor);
+
+        var securityEvent =
+            Assert.Single(
+                loggerFactory.Entries);
+
+        Assert.Equal(
+            "FullWorth.SecurityEvents",
+            securityEvent.CategoryName);
+        Assert.Equal(
+            "FullWorth.SecurityEvents",
+            securityEvent.CategoryName);
+        Assert.Equal(
+            29014,
+            securityEvent.EventId.Id);
+        Assert.Contains(
+            "financial_provider_attention_required",
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "accounts_sync",
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            errorCode,
+            securityEvent.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            "attention-access-token",
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            connection.PlaidItemId,
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            connection.InstitutionName,
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            userId.ToString(),
+            securityEvent.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            connection.Id.ToString(),
+            securityEvent.Message,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -97,10 +148,13 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                     "ITEM_LOGIN_REQUIRED"));
 
         using var httpClient = new HttpClient(handler);
+        var loggerFactory =
+            new RecordingLoggerFactory();
         var coordinator = CreateCoordinator(
             dbContext,
             httpClient,
-            tokenProtector);
+            tokenProtector,
+            loggerFactory);
 
         await Assert.ThrowsAsync<PlaidApiException>(
             () => coordinator.SyncTransactionsAsync(
@@ -118,6 +172,30 @@ public sealed class PlaidConnectionSyncCoordinatorTests
             "transaction-attention-token",
             tokenProtector.Unprotect(
                 connection.ProtectedPlaidAccessToken!));
+
+        var securityEvent =
+            Assert.Single(
+                loggerFactory.Entries);
+
+        Assert.Equal(
+            29014,
+            securityEvent.EventId.Id);
+        Assert.Contains(
+            "financial_provider_attention_required",
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "transactions_sync",
+            securityEvent.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "ITEM_LOGIN_REQUIRED",
+            securityEvent.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            "transaction-attention-token",
+            securityEvent.Message,
+            StringComparison.Ordinal);
     }
 
     [Theory]
@@ -147,10 +225,13 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                     errorCode));
 
         using var httpClient = new HttpClient(handler);
+        var loggerFactory =
+            new RecordingLoggerFactory();
         var coordinator = CreateCoordinator(
             dbContext,
             httpClient,
-            tokenProtector);
+            tokenProtector,
+            loggerFactory);
 
         await Assert.ThrowsAsync<PlaidApiException>(
             () => coordinator.SyncAccountsAsync(
@@ -167,6 +248,9 @@ public sealed class PlaidConnectionSyncCoordinatorTests
             "healthy-token",
             tokenProtector.Unprotect(
                 connection.ProtectedPlaidAccessToken!));
+
+        Assert.Empty(
+            loggerFactory.Entries);
     }
 
     [Fact]
@@ -511,7 +595,8 @@ public sealed class PlaidConnectionSyncCoordinatorTests
     private static PlaidConnectionSyncCoordinator CreateCoordinator(
         FullWorthDbContext dbContext,
         HttpClient httpClient,
-        PlaidTokenProtector tokenProtector)
+        PlaidTokenProtector tokenProtector,
+        ILoggerFactory? loggerFactory = null)
     {
         var apiClient =
             new PlaidApiClient(
@@ -533,7 +618,10 @@ public sealed class PlaidConnectionSyncCoordinatorTests
             new PlaidTransactionSyncService(
                 dbContext,
                 apiClient,
-                tokenProtector));
+                tokenProtector),
+            loggerFactory ??
+                NullLoggerFactory.Instance,
+            TestSecurityAlertAggregator.Create());
     }
 
     private static BankConnectionEntity CreateConnection(
@@ -653,13 +741,18 @@ public sealed class PlaidConnectionSyncCoordinatorTests
         string errorCode)
     {
         var json =
-            $$"""
-            {
-              "error_type": "{{errorType}}",
-              "error_code": "{{errorCode}}",
-              "request_id": "safe-test-request-id"
-            }
-            """;
+            JsonSerializer.Serialize(
+                new
+                {
+                    error_type =
+                        errorType,
+
+                    error_code =
+                        errorCode,
+
+                    request_id =
+                        "safe-test-request-id"
+                });
 
         return new HttpResponseMessage(statusCode)
         {
@@ -670,4 +763,64 @@ public sealed class PlaidConnectionSyncCoordinatorTests
                     "application/json")
         };
     }
+
+    private sealed class RecordingLoggerFactory
+        : ILoggerFactory
+    {
+        internal List<LogEntry> Entries { get; } =
+            [];
+
+        public ILogger CreateLogger(
+            string categoryName) =>
+                new RecordingLogger(
+                    categoryName,
+                    Entries);
+
+        public void AddProvider(
+            ILoggerProvider provider)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class RecordingLogger(
+        string categoryName,
+        List<LogEntry> entries)
+        : ILogger
+    {
+        public IDisposable? BeginScope<TState>(
+            TState state)
+            where TState : notnull =>
+                null;
+
+        public bool IsEnabled(
+            LogLevel logLevel) =>
+                true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            entries.Add(
+                new LogEntry(
+                    categoryName,
+                    logLevel,
+                    eventId,
+                    formatter(
+                        state,
+                        exception)));
+        }
+    }
+
+    private sealed record LogEntry(
+        string CategoryName,
+        LogLevel Level,
+        EventId EventId,
+        string Message);
 }

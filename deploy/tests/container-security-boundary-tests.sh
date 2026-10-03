@@ -3,8 +3,25 @@
 set -eu
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-config_file=$(mktemp)
-trap 'rm -f "$config_file"' EXIT HUP INT TERM
+temp_dir=$(mktemp -d)
+config_file="$temp_dir/compose.json"
+secret_env="$temp_dir/secrets.env"
+secret_directory="$temp_dir/container-secrets"
+trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM
+
+cat > "$secret_env" <<'ENV'
+BILLWATCH_DATABASE_PASSWORD=ci-database-password
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=ci-runtime-database-password-more-than-32-characters
+BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters
+PLAID_SECRET=ci-plaid-secret
+RESTIC_PASSWORD=ci-restic-password-with-more-than-24-chars
+ENV
+chmod 600 "$secret_env"
+sh "$root_dir/deploy/materialize-container-secrets.sh" \
+    "$secret_env" \
+    "$secret_directory" \
+    >/dev/null
 
 fail()
 {
@@ -13,10 +30,12 @@ fail()
 }
 
 env \
+    FULLWORTH_SECRET_DIRECTORY="$secret_directory" \
     ACME_EMAIL=ci@example.com \
     BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true \
     BILLWATCH_BACKUP_WORK_SIZE=1g \
     BILLWATCH_DATABASE_PASSWORD=ci-database-password \
+    BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters \
     BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters \
     BILLWATCH_HOST=api.fullworth.test \
     BILLWATCH_RELEASE_ID=0123456789abcdef0123456789abcdef01234567 \
@@ -54,7 +73,8 @@ def service_networks(name):
     return set(configured.keys())
 
 expected_networks = {
-    "api": {"data", "api_edge", "web_api", "api_egress"},
+    "api": {"data", "api_edge", "web_api", "api_egress", "parser_worker"},
+    "parser-worker": {"parser_worker"},
     "web": {"web_edge", "web_api", "web_session", "web_egress"},
     "web-session-cache": {"web_session"},
     "database": {"data"},
@@ -71,7 +91,7 @@ for service, expected in expected_networks.items():
             f"expected {sorted(expected)}."
         )
 
-for name in ("data", "api_edge", "web_edge", "web_api", "web_session"):
+for name in ("data", "api_edge", "web_edge", "web_api", "web_session", "parser_worker"):
     if networks[name].get("internal") is not True:
         fail(f"{name} must be an internal-only Docker network.")
 
@@ -87,6 +107,14 @@ for name in ("api", "web"):
 
     if service.get("pids_limit") != 256:
         fail(f"{name} must enforce a 256 PID ceiling.")
+    expected_cpus = {"api": 2.0, "web": 1.0}[name]
+    expected_memory = {"api": 1024 * 1024 * 1024, "web": 512 * 1024 * 1024}[name]
+    if float(service.get("cpus", 0)) != expected_cpus:
+        fail(f"{name} must enforce the expected CPU ceiling.")
+    if int(service.get("mem_limit", 0)) != expected_memory:
+        fail(f"{name} must enforce the expected memory ceiling.")
+    if int(service.get("memswap_limit", 0)) != expected_memory:
+        fail(f"{name} must disable swap expansion beyond the memory ceiling.")
 
     if "ALL" not in service.get("cap_drop", []):
         fail(f"{name} must drop all Linux capabilities.")
@@ -119,6 +147,135 @@ for name in ("api", "web"):
     if "size=256m" not in tmp_entry and "size=268435456" not in tmp_entry:
         fail(f"{name} /tmp must be capped at 256 MiB: {tmp_entry!r}")
 
+parser_worker = services["parser-worker"]
+
+if parser_worker.get("read_only") is not True:
+    fail("parser-worker root filesystem must be read-only.")
+
+if parser_worker.get("user") != "0:0":
+    fail(
+        "parser-worker bootstrap must start as root only long enough to "
+        "delegate its own cgroup subtree before dropping privileges."
+    )
+
+if parser_worker.get("cgroup") != "host":
+    fail("parser-worker bootstrap must use the host cgroup namespace for exact subtree delegation.")
+
+if parser_worker.get("ports"):
+    fail("parser-worker must not publish host ports.")
+
+parser_volumes = parser_worker.get("volumes", [])
+if len(parser_volumes) != 2:
+    fail(
+        "parser-worker must mount only the TLS certificate volume and "
+        "the cgroup-v2 hierarchy required for delegated document limits."
+    )
+
+parser_tls_volume = next(
+    (
+        volume
+        for volume in parser_volumes
+        if volume.get("target") == "/var/run/fullworth-parser-tls"
+    ),
+    None,
+)
+if (
+    parser_tls_volume is None
+    or parser_tls_volume.get("source") != "parser_worker_tls"
+    or parser_tls_volume.get("read_only") is True
+):
+    fail("parser-worker TLS volume must remain the worker's writable certificate mount.")
+
+parser_cgroup_volume = next(
+    (
+        volume
+        for volume in parser_volumes
+        if volume.get("target") == "/sys/fs/cgroup"
+    ),
+    None,
+)
+if (
+    parser_cgroup_volume is None
+    or parser_cgroup_volume.get("source") != "/sys/fs/cgroup"
+    or parser_cgroup_volume.get("read_only") is True
+):
+    fail("parser-worker must receive the cgroup-v2 hierarchy for bootstrap delegation.")
+
+if parser_worker.get("pids_limit") != 64:
+    fail("parser-worker must enforce a 64 PID ceiling.")
+
+if float(parser_worker.get("cpus", 0)) != 1.0:
+    fail("parser-worker must enforce a 1 CPU ceiling.")
+
+if int(parser_worker.get("mem_limit", 0)) != 512 * 1024 * 1024:
+    fail("parser-worker must enforce a 512 MiB memory ceiling.")
+
+if int(parser_worker.get("memswap_limit", 0)) != 512 * 1024 * 1024:
+    fail("parser-worker must disable swap expansion beyond its memory ceiling.")
+
+if "ALL" not in parser_worker.get("cap_drop", []):
+    fail("parser-worker must drop all Linux capabilities before the bootstrap allowlist.")
+
+if set(parser_worker.get("cap_add", [])) != {"CHOWN", "SETGID", "SETPCAP", "SETUID"}:
+    fail(
+        "parser-worker bootstrap may add only CHOWN, SETGID, SETPCAP, and SETUID "
+        "before the entrypoint permanently drops privileges and clears its "
+        "capability bounding set."
+    )
+
+if "no-new-privileges:true" not in parser_worker.get("security_opt", []):
+    fail("parser-worker must disable privilege escalation.")
+
+if services["api"].get("depends_on", {}).get("parser-worker", {}).get("condition") != "service_started":
+    fail(
+        "API must use service_started for the delegated parser worker; "
+        "guarded startup performs the pinned-TLS readiness gate without "
+        "injecting Docker health-exec processes into the delegated parent cgroup."
+    )
+
+api_environment = services["api"].get("environment", {})
+parser_url = api_environment.get("ParserWorker__BaseUrl")
+if parser_url != "https://parser-worker:8081":
+    fail("API must use the encrypted internal parser-worker endpoint.")
+
+certificate_path = "/var/run/fullworth-parser-tls/parser-worker.cer.pem"
+if api_environment.get("ParserWorker__ServerCertificatePath") != certificate_path:
+    fail("API must pin the parser-worker public certificate path.")
+if parser_worker.get("environment", {}).get(
+    "ParserWorker__TlsCertificatePath"
+) != certificate_path:
+    fail("parser-worker must publish its ephemeral public certificate.")
+
+api_tls_volume = next(
+    (
+        volume
+        for volume in services["api"].get("volumes", [])
+        if volume.get("target") == "/var/run/fullworth-parser-tls"
+    ),
+    None,
+)
+if (
+    api_tls_volume is None
+    or api_tls_volume.get("source") != "parser_worker_tls"
+    or api_tls_volume.get("read_only") is not True
+):
+    fail("API must mount the parser-worker certificate volume read-only.")
+
+def secret_targets(service):
+    return {
+        item.get("target")
+        for item in service.get("secrets", [])
+    }
+
+if "ParserWorker__AuthenticationToken" not in secret_targets(services["api"]):
+    fail("API must receive parser authentication through a mounted secret.")
+if "ParserWorker__AuthenticationToken" not in secret_targets(parser_worker):
+    fail("parser-worker must receive parser authentication through a mounted secret.")
+if "ParserWorker__AuthenticationToken" in api_environment:
+    fail("API parser authentication must not remain in the ordinary environment.")
+if "ParserWorker__AuthenticationToken" in parser_worker.get("environment", {}):
+    fail("parser-worker authentication must not remain in the ordinary environment.")
+
 session_cache = services["web-session-cache"]
 
 if session_cache.get("read_only") is not True:
@@ -140,18 +297,20 @@ if session_cache.get("user") != "999:1000":
     fail("web-session-cache must run as the Redis unprivileged user.")
 
 redis_environment = session_cache.get("environment", {})
-redis_password = redis_environment.get("REDIS_PASSWORD")
-
-if not redis_password or len(redis_password) < 32:
-    fail("web-session-cache must receive a strong runtime password.")
+if "REDIS_PASSWORD" in redis_environment:
+    fail("web-session-cache password must not remain in the ordinary environment.")
+if "redis_password" not in secret_targets(session_cache):
+    fail("web-session-cache must receive a mounted password file.")
 
 web_environment = services["web"].get("environment", {})
 
 if web_environment.get("WebSession__RedisHost") != "web-session-cache":
     fail("Web must resolve its session store only through the isolated cache service.")
 
-if web_environment.get("WebSession__RedisPassword") != redis_password:
-    fail("Web and session cache must use the same protected session-cache credential.")
+if "WebSession__RedisPassword" in web_environment:
+    fail("Web session password must not remain in the ordinary environment.")
+if "WebSession__RedisPassword" not in secret_targets(services["web"]):
+    fail("Web must receive its session password through a mounted secret.")
 
 if session_cache.get("volumes"):
     fail("web-session-cache must remain ephemeral and must not mount persistent volumes.")
@@ -159,6 +318,7 @@ if session_cache.get("volumes"):
 redis_command = " ".join(session_cache.get("command", []))
 
 for required_fragment in (
+    "cat /run/secrets/redis_password",
     "--requirepass",
     "--appendonly no",
     "--maxmemory 128mb",
@@ -237,3 +397,30 @@ if web_environment.get("ReverseProxy__KnownProxies__0") != "172.31.0.10":
 
 print("Container security boundary tests passed.")
 PY
+
+entrypoint="$root_dir/deploy/parser-worker-entrypoint.sh"
+
+[ -f "$entrypoint" ] ||
+    fail "parser-worker cgroup bootstrap entrypoint is missing."
+
+grep -Fq '[ "$(id -u)" = "0" ]' "$entrypoint" ||
+    fail "parser-worker bootstrap must explicitly require root before delegation."
+
+grep -Fq 'exec setpriv' "$entrypoint" ||
+    fail "parser-worker bootstrap must exec through setpriv after delegation."
+
+for required_flag in \
+    '--reuid=1654' \
+    '--regid=1654' \
+    '--clear-groups' \
+    '--inh-caps=-all' \
+    '--ambient-caps=-all' \
+    '--bounding-set=-all'
+do
+    grep -Fq -- "$required_flag" "$entrypoint" ||
+        fail "parser-worker bootstrap is missing required privilege-drop flag: $required_flag"
+done
+
+grep -Fq 'ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]' \
+    "$root_dir/Dockerfile" ||
+    fail "parser-worker image must enter through the cgroup bootstrap wrapper."

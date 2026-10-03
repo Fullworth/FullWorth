@@ -20,9 +20,27 @@ expect_failure()
 }
 
 backup_script="$root_dir/deploy/backup/backup.sh"
+backup_runner="$root_dir/deploy/run-backup.sh"
 maintenance_runner="$root_dir/deploy/run-backup-maintenance.sh"
 sh -n "$backup_script" || fail "backup script has invalid POSIX shell syntax."
+sh -n "$backup_runner" || fail "backup runner has invalid POSIX shell syntax."
 sh -n "$maintenance_runner" || fail "maintenance runner has invalid POSIX shell syntax."
+
+if grep -Fq 'compose up --detach --wait --wait-timeout 120 api' "$backup_runner"; then
+    fail "backup restore must not require a Docker healthcheck on the delegated parser worker."
+fi
+
+grep -Fq 'compose up --detach --no-build api' "$backup_runner" ||
+    fail "backup restore must start the API without invoking Compose global wait semantics."
+
+grep -Fq -- "--format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}'" "$backup_runner" ||
+    fail "backup restore must wait for the API container's own health state."
+
+grep -Fq -- '--cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem' "$backup_runner" ||
+    fail "backup restore must verify parser readiness through the pinned TLS certificate."
+
+grep -Fq 'https://parser-worker:8081/health/ready' "$backup_runner" ||
+    fail "backup restore must verify parser readiness before restoring edge traffic."
 
 create_backup_body=$(awk '/^create_backup\(\)/,/^}/' "$backup_script")
 if printf '%s\n' "$create_backup_body" | grep -q 'apply_retention_policy'; then
@@ -30,6 +48,41 @@ if printf '%s\n' "$create_backup_body" | grep -q 'apply_retention_policy'; then
 fi
 printf '%s\n' "$create_backup_body" | grep -q 'require_append_only_backup_role' ||
     fail "normal backup capture must require the append-only role."
+
+create_cleanup_line="$(
+    printf '%s\n' "$create_backup_body" |
+        grep -n 'cleanup_work' |
+        head -n 1 |
+        cut -d: -f1
+)"
+create_passfile_line="$(
+    printf '%s\n' "$create_backup_body" |
+        grep -n 'prepare_database_passfile' |
+        head -n 1 |
+        cut -d: -f1
+)"
+[ -n "$create_cleanup_line" ] && [ -n "$create_passfile_line" ] ||
+    fail "normal backup capture is missing passfile lifecycle steps."
+[ "$create_cleanup_line" -lt "$create_passfile_line" ] ||
+    fail "normal backup capture deletes its PostgreSQL passfile after preparing it."
+
+verify_restore_body=$(awk '/^verify_restore\(\)/,/^}/' "$backup_script")
+verify_cleanup_line="$(
+    printf '%s\n' "$verify_restore_body" |
+        grep -n 'cleanup_work' |
+        head -n 1 |
+        cut -d: -f1
+)"
+verify_passfile_line="$(
+    printf '%s\n' "$verify_restore_body" |
+        grep -n 'prepare_database_passfile' |
+        head -n 1 |
+        cut -d: -f1
+)"
+[ -n "$verify_cleanup_line" ] && [ -n "$verify_passfile_line" ] ||
+    fail "restore verification is missing passfile lifecycle steps."
+[ "$verify_cleanup_line" -lt "$verify_passfile_line" ] ||
+    fail "restore verification deletes its PostgreSQL passfile after preparing it."
 
 fake_bin="$temp_dir/bin"
 mkdir -p "$fake_bin"
@@ -45,6 +98,10 @@ esac
 EOF
 chmod 700 "$fake_bin/restic"
 
+restic_password_file="$temp_dir/restic-password"
+printf '%s' 'restic-password-with-more-than-24-characters' > "$restic_password_file"
+chmod 600 "$restic_password_file"
+
 common_env()
 {
     env \
@@ -52,7 +109,7 @@ common_env()
         BILLWATCH_TEST_RESTIC_LOG="$restic_log" \
         BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=false \
         RESTIC_REPOSITORY='rest:https://backup.example.test/billwatch' \
-        RESTIC_PASSWORD='restic-password-with-more-than-24-characters' \
+        RESTIC_PASSWORD_FILE="$restic_password_file" \
         BILLWATCH_BACKUP_RETENTION_ENABLED=true \
         BILLWATCH_BACKUP_KEEP_DAILY=14 \
         BILLWATCH_BACKUP_KEEP_WEEKLY=8 \

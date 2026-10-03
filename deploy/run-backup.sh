@@ -13,6 +13,18 @@ fi
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
 
 environment_file="$deployment_directory/.env.production"
+FULLWORTH_SECRET_DIRECTORY="$deployment_directory/.fullworth-secrets"
+export FULLWORTH_SECRET_DIRECTORY
+
+restore_services_after_backup=${FULLWORTH_BACKUP_RESTORE_SERVICES:-true}
+
+case "$restore_services_after_backup" in
+    true|false) ;;
+    *)
+        echo "FULLWORTH_BACKUP_RESTORE_SERVICES must be true or false." >&2
+        exit 64
+        ;;
+esac
 
 if [ -f "$environment_file" ]; then
     environment_owner="$(stat -c '%u' "$environment_file")"
@@ -23,6 +35,14 @@ if [ -f "$environment_file" ]; then
         echo ".env.production must be owned by the deployment account and inaccessible to group/other users." >&2
         exit 77
     fi
+
+    sh "$deployment_directory/deploy/validate-production-env.sh" "$environment_file"
+    sh "$deployment_directory/deploy/materialize-container-secrets.sh" \
+        "$environment_file" \
+        "$FULLWORTH_SECRET_DIRECTORY"
+elif [ ! -d "$FULLWORTH_SECRET_DIRECTORY" ]; then
+    echo "File-backed container secrets are missing." >&2
+    exit 66
 fi
 
 compose()
@@ -39,7 +59,85 @@ compose()
     fi
 }
 
+wait_for_api_health()
+{
+    attempt=1
+
+    while [ "$attempt" -le 60 ]
+    do
+        api_container="$(compose ps -q api 2>/dev/null || true)"
+
+        if [ -n "$api_container" ]; then
+            health_status="$(
+                docker inspect \
+                    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                    "$api_container" \
+                    2>/dev/null || true
+            )"
+
+            if [ "$health_status" = "healthy" ]; then
+                return 0
+            fi
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
+wait_for_web_health()
+{
+    attempt=1
+
+    while [ "$attempt" -le 60 ]
+    do
+        web_container="$(compose ps -q web 2>/dev/null || true)"
+
+        if [ -n "$web_container" ]; then
+            health_status="$(
+                docker inspect \
+                    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                    "$web_container" \
+                    2>/dev/null || true
+            )"
+
+            if [ "$health_status" = "healthy" ]; then
+                return 0
+            fi
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
+wait_for_parser_readiness()
+{
+    attempt=1
+
+    while [ "$attempt" -le 30 ]
+    do
+        if compose exec -T api \
+            curl --fail --silent \
+                --cacert /var/run/fullworth-parser-tls/parser-worker.cer.pem \
+                https://parser-worker:8081/health/ready \
+                >/dev/null 2>&1; then
+            return 0
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
 api_was_running=false
+web_was_running=false
 edge_was_running=false
 
 if compose ps \
@@ -48,6 +146,14 @@ if compose ps \
         | grep --quiet --line-regexp api
 then
     api_was_running=true
+fi
+
+if compose ps \
+        --status running \
+        --services \
+        | grep --quiet --line-regexp web
+then
+    web_was_running=true
 fi
 
 if compose ps \
@@ -70,8 +176,19 @@ restore_services()
     restore_result=0
 
     if [ "$api_was_running" = true ]; then
-        if compose up --detach --wait --wait-timeout 120 api; then
+        if compose up --detach --no-build api &&
+           wait_for_api_health &&
+           wait_for_parser_readiness; then
             api_was_running=false
+        else
+            restore_result=1
+        fi
+    fi
+
+    if [ "$web_was_running" = true ]; then
+        if compose up --detach --no-build web &&
+           wait_for_web_health; then
+            web_was_running=false
         else
             restore_result=1
         fi
@@ -94,8 +211,11 @@ finish_backup()
 
     trap - EXIT HUP INT TERM
 
-    if ! restore_services; then
-        exit_code=1
+    if [ "$exit_code" -ne 0 ] ||
+       [ "$restore_services_after_backup" = true ]; then
+        if ! restore_services; then
+            exit_code=1
+        fi
     fi
 
     rmdir "$lock_directory" 2>/dev/null || exit_code=1
@@ -115,6 +235,12 @@ if [ "$edge_was_running" = true ]; then
     compose stop \
         --timeout 30 \
         edge
+fi
+
+if [ "$web_was_running" = true ]; then
+    compose stop \
+        --timeout 30 \
+        web
 fi
 
 if [ "$api_was_running" = true ]; then
@@ -138,6 +264,9 @@ compose --profile operations run \
     backup \
     backup
 
-restore_services
+if [ "$restore_services_after_backup" = true ]; then
+    restore_services
+fi
+
 rmdir "$lock_directory"
 trap - EXIT HUP INT TERM

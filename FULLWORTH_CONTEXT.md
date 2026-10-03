@@ -1,3 +1,335 @@
+## Repository-side security closure checkpoint — 2026-10-03
+
+The October 3 repository-side security program has advanced to **61 completed checks and 4 open checks** on issue #291. The remaining items are real-environment/provider/governance gates rather than missing generic application code.
+
+Completed exact-head slices in this closure sequence:
+
+- PR #653 required explicit production PostgreSQL credentials and `SSL Mode=VerifyFull` for any future non-local PostgreSQL host while preserving the current internal-only Docker database path. Exact head `655c9b3e6e5d6225d66a846bec2ce6b3d314a8ca` passed FullWorth CI #1592 and Dependency Security #689 before squash merge as `fd8520b722a4f8c61596340cf8398e236905f044`.
+- PR #657 moved protected production values into least-scoped file-backed mounts, fixed PostgreSQL passfile lifetime through backup/restore, and proved Redis denies unauthenticated access while accepting the mounted secret. Exact corrected head `98f4317c0bc0b7f6cba702f21d143e0151d491ae` passed FullWorth CI #1600 and Dependency Security #697 before squash merge as `04a7c37ff36f97d1a5569b6bd5e06daa832f1ed9`.
+- PR #658 added the host/operator hardening runbook and fail-closed verifier for the dedicated deployment account, effective SSH policy, Docker-group restriction, unattended security updates, patch review cadence, and pending-reboot handling. Exact head `c94b6243811f131598626f7c71c4300866371e0d` passed FullWorth CI #1601 and Dependency Security #698 before squash merge as `cf94b9542bb8cd928023ecc0e6d96b04ba1a0abd`.
+- PR #659 separated steady-state PostgreSQL runtime authority from migration/bootstrap authority. The API now uses dedicated non-owner `fullworth_runtime` credentials with bounded DML/sequence rights; production startup migrations are disabled; schema changes run through one-shot owner-credential containers and grants are re-verified before candidate startup. Exact head `cfc5deaefb398b1af2737440c2c26444312debce` passed FullWorth CI #1602 and Dependency Security #699 before squash merge as `ac428de0a1e91079c93ad465d0aaa2b139cf31d4`.
+- PR #660 added a model-wide fail-closed regression requiring every database relationship between two `UserId`-scoped entities to carry the dependent and principal `UserId` at the same composite-key position. Exact head `8dae783fe663a0cfe6642dc2acb8013c9524b62e` passed FullWorth CI #1603 and Dependency Security #700 before squash merge as `0689383e38ec5045bb7df19f493b2cff7e98d882`.
+- PR #661 added an executable route-inventory ratchet requiring every non-admin GUID-addressable API resource route to map to explicit two-user negative evidence. Exact head `98d9b053117e5b2cb68f19f155d214544dc782c8` passed FullWorth CI #1604 and Dependency Security #701 before squash merge as `5dcebcc24b4ab4531473fae06fe0e3ca439a0457`.
+- PR #662 completed the persistence-side ownership sweep: subscription status and recent payday-plan history now have explicit two-user isolation coverage; subscription deletion proves another user's entitlement/redemption/program-membership graph survives; and every EF entity with `UserId` must map to executable negative-isolation evidence. Exact refreshed head `31ac6051c187f1aa6f1a228193075a52b8b23b17` passed FullWorth CI #1606 and Dependency Security #703 before squash merge as `c283463eba028570d9b1629a5740d2dcf4c64e85`.
+
+The four open #291 items are:
+
+1. immutable/off-host storage proof;
+2. compromised-host/clean-host recovery exercise;
+3. branch-governance decision for independent approving reviews;
+4. direct same-release deployed evidence before production-security claims.
+
+Branch-governance evidence currently shows active repository ruleset `FullWorth protected branches` on both `master` and `development`. It requires pull requests, blocks deletion and non-fast-forward updates, requires review-thread resolution, has no bypass actors, and reports `current_user_can_bypass: never`. Its `required_approving_review_count` remains 0. The available GitHub connector can read but not mutate this ruleset, so no approval-policy change is claimed.
+
+Current branch/release position:
+
+- `development`: `c283463eba028570d9b1629a5740d2dcf4c64e85`;
+- `master`: `7b0947385c93bc07509115ae8d6665ca4fa9dc90`;
+- GitHub comparison: `development` 146 commits ahead and 3 commits behind `master`;
+- verified live production release: `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
+
+Do not treat the newer repository security state as deployed. Immutable storage, compromised-host recovery, and production-security acceptance require direct real-environment evidence.
+
+## Secret non-disclosure release gate — 2026-10-03
+
+FullWorth now fails a release candidate when any configured protected value appears in public health, validation-error, not-found, or retained production service-log output. The verifier covers required database, parser, Web-session Redis, Plaid, and Restic credentials plus optional Stripe, Google, Apple, Resend, and AWS secrets when configured. It scans exact values and common percent/form/Base64 representations without printing the value; failures identify configuration names only.
+
+Linux production-container CI runs the verifier against deterministic sentinels after the real API, parser, Web, Redis, edge, and database stack is healthy. The guarded production deployment repeats the check against the protected host-local environment and cannot advance `.billwatch-release` after a disclosure. API and Web production exception-handler boundaries remain regression-locked, and the gate exercises generic application error output without creating persistent data. `SECRET_NON_DISCLOSURE.md` documents covered surfaces, representations, failure behavior, and scope.
+
+CI exposed three integration defects before acceptance: a deployment test fixture initially omitted the new verifier, a shell heredoc failure wrapper consumed the failure command as Python, and the first CI dotenv writer collapsed protected values after the first line. The final fixture copies/stubs and failure-tests the deployment gate, the verifier uses an explicit fail-closed wrapper, and CI writes one protected entry per line while preserving file precedence.
+
+Exact corrected PR #649 head `1735c7512416a3fbf284ba2087f7ffb175a56961` passed FullWorth CI #1582 (run `37146574448`: backend tests, MAUI Android, production images, live secret non-disclosure, parser containment, visual acceptance, HTTP security, encrypted backup, isolated restore, and API recovery) and Dependency Security #679 (run `37146574421`) before squash merge to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`.
+
+This completes repository and CI verification that configured secret values do not appear on the covered application response and retained-log surfaces. It does not claim stronger secret injection than ordinary container environment variables, protection from privileged Docker/root inspection, deployed production acceptance, or absence of every possible derived representation. No production deployment occurred.
+
+## Generated malicious/corrupt document corpus — 2026-10-03
+
+FullWorth now exercises a deterministic, source-generated document-security corpus without retaining customer statements, uploaded files, screenshots, account data, or private evaluation material. The corpus contains 21 named PDF, PNG, and JPEG cases, each bounded to 4 KiB: malformed PDF catalogs/xrefs/stream lengths/ASCIIHex/Flate data; truncated PNG/JPEG structures; zero or excessive dimensions; invalid PNG bit-depth/color, compression, filter, interlace, and IHDR CRC fields; and malformed JPEG marker/frame sequences.
+
+Production PNG admission now validates the complete fixed IHDR payload and CRC before calculating pixels or allowing native decode. Bit depth must be legal for the declared color type, compression/filter methods must be zero, interlace must be supported, dimensions must be non-zero, and the decoded working-set estimate must remain inside the existing ceiling. Corpus tests require every PDF to fail with FullWorth's fixed sanitized extraction message and every hostile image to fail before native decoding with a zero admitted pixel count. Separate invariants require unique descriptive names, deterministic bytes, supported media/extension pairs, and the per-case size bound. `DOCUMENT_SECURITY_CORPUS.md` documents coverage, data rules, residual risk, and the procedure for adding minimized synthetic regressions.
+
+Exact PR #647 head `576a1719c3ed7ba0ffb1753d91785dd360144889` passed FullWorth CI #1574 (run `37131915446`: backend build and tests, MAUI Android, production images, live parser containment and OCR, HTTP security, encrypted backup, isolated restore, and API recovery) and Dependency Security #671 (run `37131915489`) before squash merge to `development` as `c8c1f175624b837882146162e4389f5a1342b168`.
+
+This completes the malicious/corrupt document regression-corpus checklist item without storing user data. It does not claim detection of every malicious document or production containment of an unknown parser/native/kernel vulnerability. No production deployment occurred.
+
+## Parser native-library and resource boundary review — 2026-10-03
+
+FullWorth now has a documented and executable threat model for its untrusted statement parsing surface. The dedicated parser worker disables core dumps, caps open file descriptors at 512, retains its read-only root and private noexec/nosuid/nodev temporary store, publishes no host port, attaches only to the internal parser network, disables .NET diagnostics, and keeps finite container CPU, memory, swap, and PID ceilings. Its temporary four-capability bootstrap allowlist remains exact; the running UID 1654 supervisor has empty effective and bounding capability sets.
+
+The production-container gate now inspects those live Docker settings in addition to observing per-document and per-image cgroups, requiring 384 MiB child memory ceilings, zero child swap, finite CPU quotas, a 48-PID document ceiling, cgroup cleanup, kernel OOM-kill evidence, and parser readiness after containment. `deploy/tests/parser-native-boundary-tests.sh` regression-locks the Dockerfile, Compose, live verifier, and `PARSER_NATIVE_ATTACK_SURFACE.md` review.
+
+CI exposed two integration assumptions before acceptance. Docker's external init remains in the delegated parent cgroup and violates the cgroup-v2 no-internal-process rule needed for child controllers, so the corrected design deliberately keeps that parent empty and has the worker own/await native children. Docker inspect also reports added capabilities with a `CAP_` prefix; CI and deployment verification now normalize only that representation before enforcing the unchanged allowlist. Exact corrected head `899e42d7e20f2e15d47f3f1e8ceb396d0c914cf2` passed FullWorth CI #1572 (run `37129188455`: backend tests, MAUI Android, exact production images, live parser boundary and OOM containment, HTTP security, encrypted backup, isolated restore, and API recovery) and Dependency Security #669 (run `37129188469`) before squash merge to `development` as `c3f90a9a9dffd809fbd9c87664ea448aa4d1096e`.
+
+This completes the repository review of parser/native-library confinement and current OCR/import process/resource ceilings. It does not prove an exact release is deployed, that the host kernel/container runtime is patched, or that an unknown native exploit is contained in production. Those require guarded deployed-host evidence. No production deployment occurred.
+
+## Restored asset ownership and permission verification — 2026-10-03
+
+FullWorth now treats statement storage and isolated PostgreSQL restore storage as permission-sensitive recovery assets alongside both Data Protection rings. API startup runs under `umask 077`, rejects linked or special statement entries, and repairs statement directories to `0700` plus files to `0600`. Backup capture and isolated extraction share a fail-closed policy that rejects wrong owners, links, special files, and non-private modes. The disposable PostgreSQL restore tmpfs is mounted directly as Alpine PostgreSQL UID/GID `70:70` with mode `0700`, its root ownership/mode is a readiness condition, and CI audits final database directories/files after restore.
+
+Generated POSIX tests cover valid private trees and rejection of group-readable directories/files, symbolic links, FIFOs, and wrong owners. The production-container gate proves live statement permissions, encrypted capture, dual-ring extraction, statement reconciliation, database restore, and final PostgreSQL storage modes. `RECOVERY_PERMISSION_POLICY.md` documents the required owners/modes and the clean-host evidence boundary.
+
+PR #643 exposed three useful CI integration defects before acceptance: direct repository backup tests could not find the container-installed policy path; Compose consumed the initial `PGDATA` reference before the health shell saw it; and the restore tmpfs initially arrived root-owned. Policy discovery now supports both the checked repository sibling and installed image path, the health probe uses the fixed isolated data path, and the tmpfs establishes PostgreSQL ownership at mount time. Exact corrected head `548ce2b262028a5c35eb3568425f3e7527f9efba` passed FullWorth CI #1564 (run `37116611780`: backend tests, MAUI Android, production images, live parser containment, statement permission checks, encrypted backup, isolated file/database restore, and API recovery) and Dependency Security #661 (run `37116611783`) before squash merge to `development` as `8bc8f2f7af6562907caebc17730075443686a474`.
+
+This completes repository and CI verification that restored Data Protection keys, statements, and database storage retain their intended private permissions. It does not prove a clean production host restored the exact release or decrypted protected production values. No production deployment occurred.
+
+## Data Protection key lifecycle hardening — 2026-10-03
+
+FullWorth now treats both persisted ASP.NET Core Data Protection rings as explicit security-critical recovery assets. API and Web retain their separate legacy-compatible application discriminators, use an explicit 90-day rolling key lifetime, and start through a shared fail-closed entrypoint that applies `umask 077`, rejects relative/linked/nested/non-regular key-ring paths, and enforces mode `0700` on each ring directory plus `0600` on existing and newly generated files.
+
+Encrypted production backup capture now quiesces the edge plus both API and Web key writers, includes both separated key rings, and records their counts in a versioned checksum-protected manifest. The restore verifier extracts both rings only into disposable isolated storage, rejects unsafe entries or permissions, reconciles restored counts with the manifest, and retains the existing database/statement/recovery checks. `DATA_PROTECTION_KEY_LIFECYCLE.md` documents routine rotation, historical-key retention, compromise response, and the remaining clean-host production proof.
+
+PR #641 initially exposed two pre-container CI defects: changing the chaining around `SetApplicationName("BillWatch")` violated the literal compatibility guard even though the value was unchanged, and a string-replacement error duplicated the tail of the backup verifier. Both were corrected without changing the discriminators or weakening the lifecycle checks. Exact corrected head `ac201679ca04d6dc726168c7017e80cc175fad24` passed FullWorth CI #1551 (run `37111997150`: backend build/tests, MAUI Android, production images, live 0700/0600 key creation, encrypted dual-ring capture, isolated restore, parser containment, HTTP security, visual acceptance, and API recovery) and Dependency Security #648 (run `37111997119`) before squash merge to `development` as `2247b48e4cf8734fe27b3c6a79d8515683ae041c`.
+
+This completes the repository review of Data Protection key permissions, backup treatment, routine rotation semantics, and isolated recovery verification. It does not prove an exact release has been deployed, that a clean production host can decrypt protected values, or that a compromised-ring drill has occurred. Those require guarded same-release production evidence. No production deployment occurred.
+
+## HTTP framing and request media-type hardening — 2026-10-03
+
+FullWorth now rejects unsupported or missing media types on body-bearing unsafe application requests before authentication/model binding/provider/proxy work. The API boundary applies to `/api`; the Web boundary applies to `/auth` and `/bff`. Accepted families are the formats FullWorth intentionally uses: `application/json`, `application/*+json`, `application/x-www-form-urlencoded`, and `multipart/form-data`. Endpoint-specific validation remains narrower where required, including Stripe's JSON-only webhook contract and statement signature/type checks.
+
+The production HTTP verifier now exercises raw HTTP/1.1 framing through the real Caddy→Kestrel stack. A deliberately conflicting `Content-Length` paired with `Transfer-Encoding: chunked` must resolve to the complete chunked logout body and reach the API as HTTP 204 with the server-generated request ID. Conflicting duplicate `Content-Length` values must return HTTP 400 before the API boundary and therefore must not carry `X-FullWorth-Request-Id`. Existing Kestrel limits remain 8 KiB request line, 32 KiB aggregate headers, and 1 MiB ordinary request bodies, with the separately reviewed statement-upload limits unchanged.
+
+Initial PR #639 head `da26be652693aef4f3a7cce4338ee25e35b3099e` failed FullWorth CI #1544 because two existing Stripe tests sent JSON bodies without an `application/json` media type and the pre-container HTTP verifier harness had not yet modeled the new raw-TLS probes. Those fixture defects were corrected without weakening the production boundary; a final harness matcher ordering defect was also fixed before exact-head acceptance. Exact corrected head `8544659e8d4286fce181933bffe9ff338fe5846a` passed FullWorth CI #1547 (run `37102074906`: backend build/tests, MAUI Android, production images and Compose, live Caddy/Kestrel HTTP framing verification, parser containment, visual acceptance, and encrypted recovery) and Dependency Security #644 (run `37102074911`) before squash merge to `development` as `04ddb2f8b1c34b9b7727acd48c8f2f0c7ae39d09`.
+
+This completes the current content-type enforcement and HTTP request-framing/request-smuggling review item. It does not claim that the merged release is deployed or that an external production network path has been observed; guarded release and exact deployed-host evidence remain separate. No production deployment occurred.
+
+## Stripe webhook replay and input security — 2026-10-02
+
+FullWorth now persists a minimal receipt for each successfully handled Stripe event: the bounded provider event ID and completion timestamp only. The receipt primary key makes concurrent duplicate delivery database-enforced, while the ordinary lookup skips provider calls and entitlement reconciliation for later retries and process restarts. Receipt insertion and any paid-entitlement mutations share one EF `SaveChanges` transaction, so a failed handler does not leave a receipt that would suppress Stripe's retry. Customer-subscription events continue to reconcile current provider state rather than trusting delivery order.
+
+The endpoint retains its five-minute timestamp tolerance, raw-body HMAC-SHA256 verification, constant-time comparison, 256 KiB declared/chunked body bound, and hidden response when billing is unconfigured. It now also requires `application/json` and a bounded Stripe-shaped event ID. Completed receipts older than 32 days are pruned in batches of at most 500. `STRIPE_WEBHOOK_SECURITY.md` documents the authentication, replay, retention, and production-evidence boundaries without treating repository tests as live-provider proof.
+
+Initial PR #637 head `0b3da6609f9684ac554139caa944095d8a08b2ec` failed FullWorth CI #1537 because the new tests used synthetic event IDs containing disallowed underscores after `evt_`, and the custom chunked-body fixtures omitted their JSON content type. Those fixture defects were corrected without weakening the production validator. Exact corrected head `cf04ded9891a0c622db7d12bd1fa60d5deeafb23` passed FullWorth CI #1539 (run `37095790133`: 1,193 backend tests, EF pending-model verification, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #636 (run `37095790132`) before squash merge to `development` as `03f7ea6422bbc90a64c7bf8b3430f2982c6e939b`.
+
+This completes the repository webhook-authentication/replay-resistance checklist item. It does not prove live Stripe delivery, production clock health, edge source filtering, or deployed migration state; those require a guarded release and provider-observed evidence from that exact deployed release. No production deployment occurred.
+
+## Ownership-scoped resource-miss security alerts — 2026-10-02
+
+FullWorth now emits metadata-only security event 29004, `ownership_scoped_resource_not_found`, when an authenticated request receives 404 on one of fourteen fixed ownership-scoped API method/route templates. The signal preserves the existing non-enumerating 404 boundary and does not perform a second cross-owner existence lookup. It contains only the normalized method, application-owned route template, status, authentication state, and server-generated request ID; resource/user identifiers, raw URLs, IP addresses, credentials, provider data, statements, and financial values remain excluded.
+
+Twenty matching events in five minutes produce bounded alert 29105, `repeated_ownership_scoped_resource_misses`, through the existing fifteen-minute cooldown and hard 512-bucket cap. Because a 404 can also mean a genuinely missing resource, this is explicitly a scanning or stale-client probe signal rather than proof that another user's resource exists. Operator documentation requires separate evidence before describing it as a confirmed cross-user attempt and prohibits adding user/resource identifiers to the aggregation key.
+
+Exact documentation-complete PR #634 head `aad518d082d49dc0819843f75b6a8d374e399d0b` passed FullWorth CI #1535 (run `37091664148`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #632 (run `37091664144`) before squash merge to `development` as `8d7887ab26ddac87a164739c8ddcdc35a288af36`.
+
+This completes the current security-detection checklist across repeated authentication/authorization/rate-limit failures, ownership-scoped misses, administrative mutations, provider-attention transitions, and suspicious export/delete activity. The telemetry remains process-local under the current one-API-instance production rule. No production deployment occurred.
+
+## Financial operation abuse boundaries — 2026-10-02
+
+FullWorth now applies authenticated-user-partitioned named rate limits to the expensive financial operations identified by the executable endpoint inventory. The `financial-refresh` policy permits six requests per ten minutes for bill discovery, monitoring refresh, and Plaid account/transaction synchronization. The `financial-provider` policy permits twenty requests per ten minutes for Plaid Link creation, update, completion, and public-token exchange so normal interactive polling/retries remain viable without inheriting the broad API-wide budget.
+
+Matching policies run at exposed Web/BFF entry points before antiforgery body processing and proxy work, while the API policies independently protect direct clients. Rejections return 429 with a positive `Retry-After`. Integration tests exhaust every API and Web policy, prove a second authenticated user retains an independent budget, and the endpoint inventory now locks fourteen financial routes to the named policies. The reviewed inventory contains 44 named-policy method-route exposures in total.
+
+The initial PR head exposed a test-authentication mistake: Web's test user header is not an API authentication mechanism, so the API isolation assertion shared the IP fallback partition and correctly received 429. The corrected test uses real registered bearer sessions for API partitions. Exact corrected PR #633 head `76a144863af04abf0eda1836c0856d1d493a61d1` passed FullWorth CI #1532 (run `37080787691`: 1,174 backend tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #629 (run `37080787714`) before squash merge to `development` as `823721e88481c0df9174e6e5f4be20dfd3be4f81`.
+
+This completes the endpoint cost/sensitivity classification and rate-limit checklist item for the current 198-route inventory. Future routes remain fail-visible through the inventory snapshot and must receive an intentional classification. Content-type/request-smuggling review and webhook replay/idempotency review remain separate work. No production deployment occurred.
+
+## Executable endpoint security inventory — 2026-10-02
+
+FullWorth now has a runtime-derived, CI-enforced inventory of all 198 application-owned API and Web method-route exposures. The snapshot records each route template's authentication metadata and effective rate-limit class across 83 API exposures and 115 Web exposures. Any route addition, removal, HTTP-method change, authentication change, or endpoint rate-limit metadata change produces an exact test diff that requires intentional review.
+
+The inventory distinguishes the API host's partitioned 300-per-minute global limiter from Web routes that have no Web-layer limiter, rather than conflating missing endpoint metadata with a global control. Named authentication, statement upload/download, account export, subscription, and Web authentication policies remain visible per route. The accompanying `ENDPOINT_SECURITY_INVENTORY.md` documents counts, classification semantics, endpoint-family risk review, exclusions, and the required change procedure. Development-only OpenAPI exposure is explicitly identified, and static/framework infrastructure is excluded.
+
+Exact PR #631 head `bffdc39194240701513a1f7167304436082a6ff2` passed FullWorth CI #1529 (run `37076261576`: backend build/tests, MAUI Android, and the production-container relevance gate) and Dependency Security #626 (run `37076261741`) before squash merge to `development` as `2d3550a197d4760fc5f0009e83f9b3603ba15b09`.
+
+This completes the endpoint-inventory checklist item and establishes the review gate needed for broader endpoint cost/sensitivity classification. Cost-based limiter refinement, content-type/request-smuggling review, and webhook replay/idempotency review remain separate work. No production deployment occurred.
+
+## Bounded high-risk security-event alerts — 2026-10-02
+
+FullWorth now turns repeated high-risk authenticated events 29011–29014 into bounded `FullWorth.SecurityAlerts` records. Five-minute thresholds are five matching events for one allowlisted administrative action, ten application-wide account exports, three application-wide account deletions, and five provider-attention transitions for one allowlisted Plaid operation. Alert IDs 29111–29114 use a fifteen-minute per-key cooldown and report suppressed threshold crossings on the next emitted alert.
+
+The detector admits only twelve fixed keys: eight administrative actions, application-wide export and deletion scopes, and the two provider operations `accounts_sync` and `transactions_sync`. Unknown dimension values fail before state allocation. Alert payloads exclude source request IDs, actor/user/account identifiers, IP addresses, raw paths, provider identifiers and errors, token material, statements, and financial values. The operator guide records routing and initial threshold-tuning guidance, while retaining the existing process-local and single-API-instance boundary.
+
+Exact PR #629 head `211de20920023e9505fd9a418f9ef0559212bf27` passed FullWorth CI #1523 (run `37071364822`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #620 (run `37071364764`) before squash merge to `development` as `e252b98b6a5d7cbc922d93c303058df5990a1581`.
+
+This completes bounded alerting for the implemented request-boundary, administrative, account-export/deletion, and provider-attention security events. Cross-instance aggregation remains future work if the one-API-instance production rule changes. No production deployment occurred.
+
+## Security incident response and credential rotation runbook — 2026-10-02
+
+FullWorth now has a production security-incident runbook covering SEV-1 through SEV-3 classification, the first fifteen minutes of containment, secret-safe evidence handling, affected-user and broad identity containment, ordered credential rotation, compromised-host recovery, and an explicit closure gate. It prohibits feature-branch deployment, direct Identity-table edits, credential exposure in tickets or shell arguments, destructive evidence cleanup, and production claims based only on CI.
+
+The rotation matrix covers the production database, Web-session Redis, parser-worker authentication, Plaid, Stripe API/webhook, Resend, Google, Apple, operations-alert webhook, append-only backup storage, Restic keys, and the GitHub production SSH key. The session section is bound to the implemented strongly reauthenticated `sessions/revoke-all` path and `SecurityStamp` rotation: refresh access ends immediately, the current Web session signs out, and already-issued bearer access remains bounded by its existing fifteen-minute lifetime rather than being falsely described as instantly revoked.
+
+A new POSIX regression contract verifies every required section, every protected production setting, every referenced operational path, the feature-branch prohibition, the deployed-evidence boundary, the current revocation endpoint/mechanism, and the production-operations guide link. The contract runs from the existing production operations suite.
+
+Exact PR #627 head `95a4ce7ca4f8b2df30661ae02f3c6700ccec3cdb` passed FullWorth CI #1521 (run `37064373112`: backend build/tests, MAUI Android, Linux production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #618 (run `37064373180`) before squash merge to `development` as `a60f87f91fb58357e934fa52ccaddb6e81ac36ba`.
+
+This completes repository documentation and executable regression enforcement for incident response, credential rotation, and session-revocation procedures. It does not prove that operators have exercised a production incident or credential rotation; direct deployed-host/provider evidence remains required during a real incident or scheduled drill. No production deployment occurred.
+
+## Financial provider attention security event — 2026-10-02
+
+FullWorth now emits metadata-only security event 29014, `financial_provider_attention_required`, when a Plaid account- or transaction-sync error is classified as requiring user action and the owned bank connection is successfully persisted from `Active` to `RequiresAttention`. The event contains only the fixed provider name `plaid` and one allowlisted operation name, `accounts_sync` or `transactions_sync`.
+
+The event deliberately excludes Plaid error code/type, user IDs, bank-connection/item/account identifiers, institution data, provider request IDs, access tokens, request/response bodies, and financial values. Provider/API errors that do not require user action leave the connection active and do not emit this security event. A concurrent/no-op path that no longer transitions an active connection likewise emits nothing.
+
+Exact corrected PR #625 head `1da0811ec5208f8493b5846613c3a5e9bc06525f` passed FullWorth CI #1519 (run `37049123705`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #616 (run `37049123724`) before squash merge to `development` as `09ce3dbc539bc31835e890bed267fe8593f5ffcd`.
+
+This closes the first financial-provider failure telemetry slice. PR #629 subsequently added bounded alerting for provider-attention events, and PR #627 added the incident-response/credential-rotation runbook. Broader ownership-violation detection and other provider-failure classes remain separate follow-up work. No production deployment occurred.
+
+## High-risk authenticated action security events — 2026-10-02
+
+FullWorth now emits dedicated metadata-only `FullWorth.SecurityEvents` records when sensitive authenticated actions actually complete, closing the next observability gap after generic 401/403/429 telemetry. Event 29011 records only a fixed allowlisted administrative action name after persisted staff-role, entitlement, program-membership, or subscription-access-key mutations. Event 29012 records successful strongly reauthenticated account export, and event 29013 records committed account deletion, including the accepted statement-cleanup-pending case.
+
+These events deliberately exclude actor/target/resource IDs, emails, financial values, request bodies, credentials, provider tokens, statement content, and other user-controlled text. Account export/delete records include only a validated server-generated 128-bit lowercase-hex request ID; invalid values are replaced with `<unavailable>`. Staff-role mutation events are emitted only after the surrounding relational transaction commits, so a failed commit cannot produce a false “completed” security event. Focused tests lock the dedicated log category, fixed event IDs, admin-action allowlist, and fail-closed request-ID sanitization.
+
+Exact PR #623 head `bce1ff54fbc91f04b63b63e07b4c2e407dedcfeb` passed FullWorth CI #1515 (run `37046644058`: backend build/tests, MAUI gating, production image builds and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #612 (run `37046644044`) before squash merge to `development` as `91267421173ee7819a98a728b533fd0e66d97f28`.
+
+This completes telemetry for successful admin mutations and account export/deletion. PR #629 subsequently added bounded alerting for those actions, PR #625 added the first provider-attention event, and PR #627 added the incident-response/credential-rotation runbook. Broader ownership-violation detection remains separate follow-up work. No production deployment occurred.
+
+## Bounded repeated-security-event aggregation — 2026-10-02
+
+The API now turns repeated request-boundary 401, 403, and 429 events into a separate `FullWorth.SecurityAlerts` stream instead of requiring operators to alert on every ordinary authentication failure. Fixed five-minute thresholds are 25 matching authentication rejections, 10 matching authorization denials, and 5 matching rate-limit rejections. Each safe aggregation key can emit at most once every 15 minutes; threshold crossings during the cooldown are suppressed and reported on the next emitted alert.
+
+Aggregation keys contain only the fixed event name, normalized method, application-owned route template, and authentication state. Alerts omit request IDs, users, IP addresses, raw URLs, credentials, statements, and financial values. Process memory is hard-bounded to 512 buckets including a reserved overflow bucket; inactive buckets expire after 20 minutes, and excess dimensions produce a fixed capacity alert instead of allocating unbounded state. The operator document records alert IDs 29101–29104, routing, capacity handling, and the current process-local/single-API-instance boundary.
+
+Exact PR #620 head `85330b2e757a85ffc67f6760f9244c71a0163ee2` passed FullWorth CI #1511 (run `37038951999`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #608 (run `37038951995`) before squash merge to `development` as `3e6419cf00542b3b875aeb855623f61553279310`.
+
+This completes bounded repeated-event alerting for the request-boundary telemetry introduced by PR #618. PRs #623, #625, and #629 subsequently added high-risk action/provider events and their bounded alerts, and PR #627 added the incident-response runbook. Broader ownership-violation detection remains separate follow-up work. No production deployment occurred.
+
+## Structured request-boundary security events — 2026-10-02
+
+The API now emits authentication rejection, authorization denial, and rate-limit enforcement to the dedicated `FullWorth.SecurityEvents` category with fixed event IDs 29001–29003. The middleware surrounds rate limiting, authorization, and endpoint execution so downstream short circuits are observable. Events contain only a normalized fixed-set HTTP method, application-owned route template, response status, authentication state, and the existing server-generated request ID.
+
+Raw paths, query strings, bodies, email addresses, user IDs, provider IDs, IP addresses, claims, cookies, authorization headers, tokens, statement content, financial values, and custom HTTP method text are excluded. Focused tests prove the event mapping, ordinary-response silence, route-template use, sensitive-input exclusion, and custom-method normalization.
+
+Exact corrected PR #618 head `54c6e2abddb26880cc71629fc34d66e4e1303930` passed FullWorth CI #1509 (run `37032350735`: 1,148 backend tests, MAUI Android, production images and Compose, parser containment, visual/security boundaries, and encrypted recovery) and Dependency Security #606 (run `37032350638`) before squash merge to `development` as `5221c3ee8a81b81d6f8c699e5159ed1f41a7a5b8`.
+
+This establishes a separate secret-safe security-event stream. Repeated-event aggregation, bounded alert thresholds, broader ownership/provider/export/delete detection, and incident-response runbooks remain separate follow-up work. No production deployment occurred.
+
+## Provenance-preserving guarded release image deployment — 2026-10-02
+
+The guarded GitHub production workflow now resolves the successful FullWorth CI run for the exact approved `master` SHA, downloads the release-scoped API, parser-worker, and Web image artifact, verifies both build-provenance and SPDX SBOM attestations for every archive, and creates a checksum manifest before transfer over pinned SSH. The production host verifies that manifest, loads those application images without rebuilding them, validates the release labels, and requires each running application container to use the exact loaded image ID before the verified release marker can advance. The operations-only backup image remains host-built.
+
+Exact PR #616 head `8c167b11f0ba35895bd7d892649437c4a4950ea0` passed FullWorth CI #1505 (run `37024933210`: backend tests, MAUI Android, production-container deployment regressions, parser containment, visual/security boundaries, and encrypted recovery) and Dependency Security #602 (run `37024933482`) before squash merge to `development` as `bcd198c52ab2f19ed01757f1e437fcf201e80fa2`.
+
+This closes the repository path from GitHub-attested application image archives to guarded runtime image-identity verification. It does not establish production acceptance because no deployment occurred. Same-release deployed-host containment and provenance evidence remain required after promotion to `master`. A direct host build remains a recovery option but is explicitly not provenance-preserving.
+
+## Per-image OCR cgroup containment — 2026-10-02
+
+Every admitted standalone or PDF-extracted OCR image now runs in a fresh sibling cgroup-v2 leaf beneath the delegated parser-container parent. The one-shot image process is moved from its per-document cgroup into the image scope before encoded bytes are released or native Tesseract/Leptonica state is initialized. Linux execution fails closed when the scope cannot be created, constrained, entered, or verified. Each image scope enforces a finite 1-CPU quota, a 384 MiB hard memory ceiling, zero swap, and OOM-group behavior; configured image limits cannot exceed the enclosing document limits. Safe failure codes distinguish pre-decode admission rejection from containment setup failure without returning parser diagnostics or document content.
+
+The production-container gate sends two real admitted PNG requests, concurrently observes their live document and image scopes, verifies exact limits and process membership, proves unique names and cleanup, and then completes the existing kernel OOM, parser-survival, HTTPS, visual, security-boundary, and encrypted recovery checks. The initial red runs exposed a sequential observer race and then a malformed synthetic PNG whose Python byte literals contained escaped backslashes. The final binary fixture and bounded CI-only pre-input observation window make the kernel proof deterministic; production defaults to zero observation delay.
+
+Exact PR #611 head `470d65e195cd3a4dfc01a4f79ee6fa81af16ebe1` passed FullWorth CI #1503 (run `36996242801`: backend tests, MAUI Android, Linux production images/Compose, live document/image cgroups, visual acceptance, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #600 (run `36996242700`) before squash merge to `development` as `cfa9de2dde23f9818e4429f781776fab7064e9d3`.
+
+This closes repository and CI evidence for OCR process isolation, per-document cgroups, and hard OS-enforced per-image memory limits. It does not establish deployed-host containment. The guarded production deployment and same-release `deploy/verify-parser-containment.sh` evidence remain required after promotion to `master`. No production deployment occurred.
+
+## Release image SBOM attestations — 2026-10-02
+
+Master production-container builds now generate SPDX JSON SBOMs from the exact API, parser-worker, and Web images, bind each SBOM to its matching exported image archive with GitHub attestations, retain the SBOMs beside the seven-day image artifacts, and preserve the separate signed build-provenance attestations. The SBOM generator, Syft version, attestation action, and artifact action are immutable-pinned and regression-checked.
+
+Exact PR #613 head `ef0a16778b1beadf7723a247b5705e1cc06e730e` passed FullWorth CI #1477 (run `36983809331`) and Dependency Security #574 (run `36983809299`) before squash merge to `development` as `8d330e9fc635b456a2d13b7e180a01e59740a8b7`.
+
+These attestations prove what GitHub CI built and bound to each archive. They do not prove that the VPS deployed those exact bytes; consuming verified GitHub-built artifacts and checking deployed-image identity remain follow-up release work. No production deployment occurred.
+
+## Signed GitHub build provenance — 2026-10-02
+
+GitHub Actions now emits verifiable build provenance for the three production image archives built by the Linux production-container job on pushes to `master`. The container job alone receives the minimal `id-token: write` and `attestations: write` permissions; it exports the API, parser-worker, and Web images tagged with the exact Git commit, attests the resulting tar archives through the immutable commit-pinned `actions/attest-build-provenance` action, and retains those attested artifacts for seven days. A regression contract locks the permissions, master-only gate, exact action pin, subjects, image tags, and retention policy.
+
+Exact PR #609 head `3f736a1d75140e6d1fadaa3d897cf9b46b26167e` passed FullWorth CI #1466 (run `36977359332`) and Dependency Security #563 (run `36977359405`) before squash merge to `development` as `33aec7a027304d30edfcbc153d59c5a52e4195a9`.
+
+This provenance covers the image archives built by GitHub CI. PR #613 subsequently added SPDX SBOM generation and signed SBOM attestations for those exact archives. The guarded production deployment still rebuilds images on the VPS, so no claim is made that deployed images are derived from or covered by these attestations. A deploy path that consumes verified GitHub-built artifacts remains separate supply-chain work. No production deployment occurred.
+
+## Immutable production and recovery container inputs — 2026-10-02
+
+Every external container image used by FullWorth's production and isolated-recovery Dockerfiles and Compose topologies is now pinned to an immutable multi-architecture SHA-256 manifest digest while retaining a readable upstream version tag. This covers the .NET SDK/runtime bases for API, parser worker, and Web; the PostgreSQL backup base; PostgreSQL production and restore services; Redis; and Caddy. Repository-built `billwatch-*` images remain bound to the exact 40-character `BILLWATCH_RELEASE_ID` and are rebuilt from the guarded release checkout.
+
+A repository-wide POSIX shell contract rejects future mutable external `FROM`, Dockerfile frontend, and production/recovery Compose image references. The contract runs inside the Linux production-container gate, and `SUPPLY_CHAIN_SECURITY.md` records the review/update policy. Dependabot continues monitoring the Docker and Compose inputs on `development`; updates must advance reviewed digests rather than removing them.
+
+Exact PR #608 head `4bac7d005fa16e42f01d0b02e9b4376f92a42558` passed FullWorth CI #1465 (run `36976631341`: backend build/tests, MAUI Android, production image builds, production Compose readiness, parser isolation and per-document cgroup containment, visual acceptance, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #562 (run `36976631448`). It was squash-merged to `development` as `e42115887a80ffef917b4b8ea3b6ed1af01eeb6e`.
+
+This closes mutable external container inputs for production and recovery. Signed build provenance and SBOM publication for FullWorth-built release images remain separate supply-chain work. No production deployment occurred.
+
+## Immutable GitHub Actions supply chain — 2026-10-02
+
+Every external action used by FullWorth's GitHub workflows is now pinned to an immutable 40-character commit SHA. The production deployment checkout was pinned first in PR #604; PR #605 then pinned the Android/iOS packaging, production auth smoke, external readiness, repository-governance, and artifact transfer actions without changing their behavior. A repository-wide shell contract rejects future mutable external action tags and unpinned Docker action images while permitting repository-local actions. Every workflow-file change now enters the production-container validation path, so editing a previously unlisted workflow cannot bypass that contract.
+
+The first PR #605 exact-head run correctly exposed Android and iOS packaging contracts that still asserted mutable artifact tags. Those tests were corrected to require the exact reviewed artifact-action commits. Corrected head `31e370bb3957dbbd32cf085d57d1764cb3b1a5e4` passed FullWorth CI #1452 (run `36971569424`), Dependency Security #549 (run `36971569415`), Android Internal APK #63 (run `36971569617`, including signed package and emulator launch), and iOS Internal Simulator #57 (run `36971569427`, including simulator build/install/launch). PR #605 was squash-merged to `development` as `3a9d8a5617a39f0d0b1560fbbd65dbbae1892937`.
+
+PR #604 head `2be7933d815bddcba252fca862efd826acf6c7d3` separately passed FullWorth CI #1449 (run `36968503452`) and Dependency Security #546 (run `36968503734`) before squash merge as `a57b52b3a04e0a18dbd3e7f62b1156693e1e55cc`.
+
+This completes immutable pinning and regression enforcement for GitHub Actions references. Container base/runtime image digest pinning and signed build provenance remain separate supply-chain milestones. No production deployment occurred.
+
+## Per-document parser cgroup containment — 2026-10-01
+
+Every admitted PDF or OCR document now runs in a unique cgroup-v2 child scope before its bytes are released to the native parser. Each child is constrained to 1 CPU, 384 MiB memory, zero swap, and 48 PIDs, while the parent parser container remains capped at 1 CPU, 512 MiB memory, and 64 PIDs. The trusted bootstrap performs only cgroup subtree delegation, then executes the HTTP supervisor as UID/GID 1654 with cleared supplementary groups and an empty inheritable, ambient, effective, and bounding capability set.
+
+Production-container validation proves the running supervisor identity and capability boundary, two real OCR requests receive distinct finite cgroups, completed document cgroups are removed, and unmanaged page pressure produces a kernel cgroup-v2 `oom_kill` event without killing the supervisor. The guarded production deployment now runs `deploy/verify-parser-containment.sh` and refuses to advance the verified release marker unless live OCR placement, cleanup, hard memory enforcement, readiness survival, and sanitized recent logs all pass.
+
+Exact PR #601 head `de1f652c78c2f0364fb5d74e1da15acce15d4093` passed FullWorth CI #1446 (run `36953420697`: backend build/tests, production Compose security/deployment regressions, live parser cgroup delegation, hard cgroup OOM enforcement, isolated PDF/OCR paths, per-document uniqueness and cleanup, production-container readiness/security boundaries, and encrypted backup/restore) and Dependency Security #543 (run `36953420631`). It was squash-merged to `development` as `99feea1211d178b98139b56e5a15023243ed54be`.
+
+This completes repository- and CI-proven OCR process isolation, per-document cgroups, and hard OS-enforced native-image memory containment. It does not claim deployed-host acceptance. Direct production evidence remains a human/operator gate after this exact change reaches `master`; no production deployment occurred.
+
+## Standalone OCR image pre-decode admission — 2026-10-01
+
+Standalone PNG and JPEG statement uploads now pass a bounded, allocation-light header inspection before any native Tesseract/Leptonica decode. PNG admission requires the exact signature and canonical 13-byte IHDR, while JPEG admission safely walks length-delimited marker segments to a supported start-of-frame marker. Malformed, truncated, unsupported, zero-dimension, and over-limit inputs fail closed. Accepted dimensions reuse the PDF OCR memory admission model: encoded bytes plus a conservative eight decoded bytes per pixel must remain within 256 MiB.
+
+Focused tests cover bounded PNG/JPEG acceptance, an oversized 50-million-pixel PNG, malformed and unsupported inputs, zero dimensions, missing JPEG SOF, and truncated JPEG segments; existing memory-estimate tests retain exact-limit, over-limit, invalid, and 20-million-pixel coverage. The boundary and its limitations are documented in `PARSER_WORKER_BOUNDARY.md`.
+
+The initial PR build exposed missing media-type plumbing and was corrected on the same branch. Exact corrected PR #598 head `f3fa8d70d43e12983b53e0f8eaa005a5c39c1b5a` passed FullWorth CI #1397 (run `36903617911`: backend build/tests, migrations, transaction regression, MAUI Android, production images and Compose health, isolated parser path, HTTP security boundaries, and encrypted backup/restore) and Dependency Security #494 (run `36903618117`). It was squash-merged to `development` as `978f4729bc145f350c5467411517df709ac7c7e5`.
+
+This is defense-in-depth admission control, not hard native-memory containment. OCR still executes inside the API process; separate OCR isolation, a distinct per-document cgroup, a hard OS-enforced per-image peak-memory limit, and deployed-host containment evidence remain open. No production deployment occurred.
+
+## Pinned parser-worker transport encryption — 2026-10-01
+
+Production API-to-parser-worker traffic now requires HTTPS. The worker creates a fresh 3072-bit RSA certificate at startup, retains the private key only in memory, and atomically publishes only the public PEM certificate through a dedicated volume. The API mounts that volume read-only, requires an HTTPS worker endpoint outside development, and accepts a certificate only when its current DER bytes match the published pin through a fixed-time SHA-256 comparison. Reloading the public pin on each new TLS handshake permits certificate rotation after a worker restart without requiring an API restart.
+
+Exact corrected PR #596 head `578b7df2acd416ffd6c9998d7e883f6b372dbbf6` passed FullWorth CI #1394 (run `36874493467`: 1,115 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, pinned HTTPS extraction, replay rejection, body-substitution rejection, plaintext HTTP rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #491 (run `36874493170`). It was squash-merged to `development` as `40239ac793cb4ee32ee812a97e2fa3a0156e8e1c`.
+
+The first exact-head run correctly exposed use of a PEM loader that requires private-key material; the corrected implementation uses the certificate-only loader, preserving the design rule that the worker private key is never written or shared. This closes transport confidentiality for the production PDF text-layer worker channel. OCR isolation, a distinct per-document cgroup, a hard peak-memory bound for one permitted image, and deployed-host containment evidence remain open. No production deployment occurred.
+
+## Parser-worker request-body integrity — 2026-10-01
+
+The API now computes a bounded SHA-256 digest of every PDF sent to the isolated parser worker and includes that digest in the nonce- and timestamp-bound HMAC canonical request. Seekable streams are hashed in a bounded pre-pass and restored to their original position; non-seekable streams are staged in an owned, bounded 15 MiB memory buffer. The worker reads the already bounded body, compares its actual digest with the signed digest using a fixed-time comparison, and rejects a mismatch before launching the parser child process.
+
+Exact PR #594 head `57e356ceea2ac3f587d2fb4ba246180c43255815` passed FullWorth CI #1388 (run `36866395277`: 1,111 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, valid digest-bound PDF extraction, replay rejection, body-substitution rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #485 (run `36866395299`). It was squash-merged to `development` as `2abfa8c11fca0f66323495014cfd3439f8db27ad`.
+
+This closes exact-byte message integrity for the PDF text-layer worker request. Transport encryption, OCR isolation, a distinct per-document cgroup, a hard peak-memory bound for one permitted image, and deployed-host containment evidence remain open. No production deployment occurred.
+
+## Parser-worker per-request replay protection — 2026-10-01
+
+The API now signs every parser extraction request with HMAC-SHA-256 over the HTTP method, request path, Unix timestamp, and a fresh 128-bit random nonce while retaining the dedicated bearer credential. The worker rejects malformed, incorrectly signed, more-than-60-seconds stale or future, and previously consumed nonces before content-type validation or PDF body reads. Its process-local replay window is bounded at 4,096 entries and prunes expired entries.
+
+The first exact-head CI run exposed two canonicalization defects: the API signer read `AbsolutePath` from a relative request URI, and independent test/probe strings encoded literal backslash-n text instead of newline separators. The corrected implementation preserves the relative path safely and uses identical newline-delimited canonical bytes across API, worker, tests, and the production probe; no authentication boundary was relaxed.
+
+Exact corrected PR #592 head `7fd0ffe81ef7ec11b688ff0be986cf473c02b992` passed FullWorth CI #1386 (run `36860264539`: 1,110 backend tests, migration and transaction checks, MAUI Android, production images/Compose health, valid signed PDF extraction, duplicate signed-request rejection, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #483 (run `36860264674`). It was squash-merged to `development` as `93c3dd8e509f788740b321d0eae072c44e97dfe6`.
+
+This closes per-request replay protection for a running worker instance. The replay cache resets on worker restart, but the 60-second timestamp window continues to bound accepted requests. The signed metadata does not encrypt the internal channel or bind the PDF body; transport confidentiality and full message integrity remain open. OCR isolation, distinct per-document cgroups, hard peak memory for one permitted image, and deployed-host containment evidence also remain open. No production deployment occurred.
+
+## Adversarial parser-worker PDF corpus — 2026-10-01
+
+The isolated parser now independently rejects bodies without the PDF file signature before invoking PdfPig. A generated, user-data-free regression corpus covers non-PDF payloads, truncated object graphs, dangling trailer roots, oversized declared streams, invalid ASCIIHex and Flate data, and a valid high-compression expansion fixture. Rejections return stable codes without parser diagnostics or document content; the compressed-expansion fixture proves extracted output remains capped at 250,000 characters.
+
+Exact PR #590 head `99eb783b99165ac73d3190b4a5116715269aa991` passed FullWorth CI #1383 (run `36847786316`: backend build/tests, MAUI Android, production images/Compose health, authenticated parser request path, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #480 (run `36847786269`). It was squash-merged to `development` as `e1339a4455dc723bbab58d9a0b558ceb29d2623a`.
+
+This closes the generated malicious/corrupt PDF corpus gap for text-layer parsing. It does not isolate scanned-document OCR, establish a distinct per-document cgroup, provide replay protection or transport encryption, or prove containment on the deployed production host. No production deployment occurred.
+
+## Authenticated parser-worker boundary — 2026-10-01
+
+The API-to-parser-worker extract path now requires a dedicated bearer credential in addition to the internal-only Docker network. Production startup fails closed when the credential is missing or malformed; production environment validation requires at least 32 characters and rejects placeholder or reused database/Web-session credentials. The worker rejects missing, duplicate, malformed, and incorrect authorization before inspecting content type or reading the PDF body, using fixed-time comparison of SHA-256 token hashes. The API attaches the credential only to worker requests. CI exercises the authenticated production-container request path, unit tests cover exact/missing/wrong/duplicate credentials, and the container boundary test verifies both services receive the same strong credential.
+
+Exact PR #588 head `ce41a92784c61eba989122f983bf059eae091ffb` passed FullWorth CI #1379 (run `36840910131`: backend build/tests, MAUI Android, production images/Compose health, unauthenticated and incorrect-credential rejection, authenticated PDF extraction, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #476 (run `36840910005`). It was squash-merged to `development` as `52fd77c2cb405c9dc161d9bf822a41f7c6815173`.
+
+This is service authentication, not per-request replay protection or transport encryption. The worker network remains internal-only and attached only to the API and parser worker. No production deployment occurred.
+
+## Parser worker diagnostic-memory hardening — 2026-10-01
+
+PR #586 replaces the API process's unbounded parser-subprocess stderr string with a fixed 8 KiB discard buffer. A generated 32 MiB diagnostic-stream regression test verifies complete draining without materializing the stream as a result; cancellation remains connected to the parser deadline. `PARSER_WORKER_BOUNDARY.md` records this bound. This closes diagnostic-output accumulation in the API process; it does not add parser/worker transport authentication or move OCR out of the API.
+
+Exact PR #586 head `17d532c5d569e7bca9f429fc67e210c81c2c8834` passed FullWorth CI #1375 (run `36834026029`; backend build/tests and MAUI Android passed, and the Linux production-container job completed with container-only steps skipped as not applicable) and Dependency Security #472 (run `36834025989`). It was squash-merged to `development` as `95c2d8daf029c3f70f0cffc2505a970bcb10bae2`. No production deployment occurred.
+
+## Product strategy consolidation — 2026-09-30
+
+FullWorth's durable product strategy is centered on **financial change intelligence**: detect meaningful financial changes, explain why they happened, quantify their impact, prioritize what deserves attention, and preserve the evidence behind the answer. The recurring-bill promise — **Know when your bills change — and why** — remains the acquisition/product wedge.
+
+`FULLWORTH_PRODUCT_STRATEGY.md` defines the change-intelligence hierarchy, moat, change-first Financial Home direction, time-to-value and calm-state experience, monetization discipline, illustrative ARR scale math, growth strategy, business scorecard, stage gates, and guardrails. `FULLWORTH_ROADMAP.md` now links that strategy into its north star, Financial Home, revenue-readiness, and metrics sections.
+
+This is planning documentation only. It does not enable subscription enforcement, production AI, money movement, new data collection, or production deployment. Release, security, and financial-correctness gates remain ahead of speculative feature expansion. The strategic sequence is: trustworthy monitoring → retention → paid recurring value → repeatable acquisition → scalable recurring revenue.
+
+## Isolated PDF text parser worker — 2026-10-01
+
+PR #585 adds a dedicated production parser-worker service for PDF text-layer extraction. API uploads are streamed with a 15 MiB cap; the worker accepts one request at a time, runs PdfPig in a fresh bounded subprocess with a 20-second deadline, enforces 100 pages and 250,000 extracted characters, and limits its output. The production Compose worker is on an internal-only network with a read-only filesystem, dedicated unprivileged UID, no Linux capabilities, no-new-privileges, 64 PID cap, and 1 CPU / 512 MiB memory and swap limits. Readiness fails closed unless finite cgroup v2 limits are visible. OCR remains in the API process and is explicitly outside this isolation milestone.
+
+Exact PR #585 head `23b8184e9f8f1dac90b4c162a2c906d80fa0bd07` passed FullWorth CI #1372 (run `36831039032`: backend build/tests, MAUI Android, production images/Compose health, API-to-worker synthetic PDF request, visual acceptance, security boundaries, and encrypted backup/restore) and Dependency Security #469 (run `36831038995`). No production deployment occurred. API-to-worker authentication is not yet implemented and relies on internal network membership; OCR isolation, malicious-document corpus testing, and deployed-host containment verification remain follow-ups.
+
 ## PDF parser bound regression tests — 2026-09-29
 
 PR #559 adds synthetic valid-PDF tests for the existing 100-page processing ceiling and 250,000-character extraction ceiling. A generated 101-page PDF is rejected with the page-limit error; a generated 260,000-character text page returns no more than 250,000 extracted characters. No user financial documents are used.
@@ -576,13 +908,14 @@ Before trusted external beta invitations:
 12. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
 
 ## Immediate resume point
-- PR #542 added Fetch Metadata and strict same-origin checks for unsafe `/auth` and `/bff` requests while preserving antiforgery validation. Opaque `Origin: null` is accepted only with single-value `Sec-Fetch-Site: same-origin`, after which antiforgery still applies; regression tests cover blocked cross-site/missing metadata. Exact-head CI #1285 and dependency security #385 passed; merged to development as `9f1e60f5b085e470fd87437b22dfd2952ef76037`. No production deployment was performed.
 
-1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
-2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. The cookie review is complete through PRs #337/#339. PR #349 adds confirmed/unconfirmed email-recovery response coverage. PR #350 closes direct registration disclosure and verifies confirmation responses. Continue with mail-provider failure behavior and external registration/linking under the still-open enumeration item; patch only confirmed gaps.
-4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
-5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
-6. The current verified live production release is `7e8571a26447538db249c862ad009487cce119bc`, proven by successful guarded production deploy run #7 (`36221860082`). Do not claim newer GitHub code is deployed without guarded deployment evidence.
-7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
-8. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, container confinement, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build or architecture check pass.
+1. Read current GitHub `development`, open PRs, issue #291, this context, and the roadmap snapshot before changing architecture or release state.
+2. Repository-side security hardening is at **61/65** on #291. Do not invent additional generic security work to satisfy the four remaining evidence/governance items.
+3. The current `development` snapshot head is `c283463eba028570d9b1629a5740d2dcf4c64e85`; `master` is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`; the branches are 146 commits ahead / 3 behind from `development` to `master`. Re-check these values before release freeze because they can change.
+4. Issue #260 is closed. Preserve its existing zero-exception module/data-ownership ratchets; do not reopen old schema coupling such as `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId`.
+5. The branch ruleset already requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It currently requires 0 approving reviews. If independent approval is required, that is a repository-owner/admin policy action; do not claim it changed until GitHub evidence proves it.
+6. Immutable/off-host backup protection and compromised-host clean recovery require direct provider/host exercises against the actual recovery repository. CI simulation is not a substitute.
+7. The current verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). No newer GitHub merge is deployed unless a separate guarded deployment proves the exact release.
+8. The next code-side release step, once no new blockers exist, is deliberate release freeze and `development`/`master` reconciliation. Only blocker fixes should change a frozen candidate.
+9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
+10. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build, deployment, or acceptance check pass.

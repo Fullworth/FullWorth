@@ -5,7 +5,7 @@ public sealed class BillStatementDocumentTextReader
     private readonly SecureBillStatementStorageService
         _storageService;
 
-    private readonly PdfBillStatementTextExtractor
+    private readonly IPdfStatementTextExtractor
         _pdfTextExtractor;
 
     private readonly IBillStatementOcrEngine
@@ -13,7 +13,7 @@ public sealed class BillStatementDocumentTextReader
 
     public BillStatementDocumentTextReader(
         SecureBillStatementStorageService storageService,
-        PdfBillStatementTextExtractor pdfTextExtractor,
+        IPdfStatementTextExtractor pdfTextExtractor,
         IBillStatementOcrEngine ocrEngine)
     {
         _storageService =

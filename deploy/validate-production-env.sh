@@ -151,7 +151,9 @@ legacy_web_host=$(read_optional_value BILLWATCH_LEGACY_WEB_HOST)
 release_id=$(read_value BILLWATCH_RELEASE_ID)
 acme_email=$(read_value ACME_EMAIL)
 database_password=$(read_value BILLWATCH_DATABASE_PASSWORD)
+database_runtime_password=$(read_value BILLWATCH_DATABASE_RUNTIME_PASSWORD)
 web_session_redis_password=$(read_value BILLWATCH_WEB_SESSION_REDIS_PASSWORD)
+parser_auth_token=$(read_value BILLWATCH_PARSER_AUTH_TOKEN)
 plaid_client_id=$(read_value PLAID_CLIENT_ID)
 plaid_secret=$(read_value PLAID_SECRET)
 plaid_environment=$(read_value PLAID_ENVIRONMENT)
@@ -166,7 +168,9 @@ for required_pair in \
     "BILLWATCH_RELEASE_ID:$release_id" \
     "ACME_EMAIL:$acme_email" \
     "BILLWATCH_DATABASE_PASSWORD:$database_password" \
+    "BILLWATCH_DATABASE_RUNTIME_PASSWORD:$database_runtime_password" \
     "BILLWATCH_WEB_SESSION_REDIS_PASSWORD:$web_session_redis_password" \
+    "BILLWATCH_PARSER_AUTH_TOKEN:$parser_auth_token" \
     "PLAID_CLIENT_ID:$plaid_client_id" \
     "PLAID_SECRET:$plaid_secret" \
     "RESTIC_REPOSITORY:$restic_repository" \
@@ -210,6 +214,15 @@ esac
 [ "${#release_id}" -eq 40 ] ||
     fail "BILLWATCH_RELEASE_ID must be a lowercase 40-character Git commit."
 
+[ "${#parser_auth_token}" -ge 32 ] ||
+    fail "BILLWATCH_PARSER_AUTH_TOKEN must contain at least 32 characters."
+
+[ "$parser_auth_token" != "$database_password" ] ||
+    fail "BILLWATCH_PARSER_AUTH_TOKEN must be separate from the database password."
+
+[ "$parser_auth_token" != "$web_session_redis_password" ] ||
+    fail "BILLWATCH_PARSER_AUTH_TOKEN must be separate from the Web session password."
+
 case "$backup_client_mode" in
     append-only) ;;
     maintenance) fail "production .env must use BILLWATCH_BACKUP_CLIENT_MODE=append-only; delete-capable maintenance credentials belong on a separate trusted host." ;;
@@ -223,6 +236,18 @@ esac
 
 [ "${#database_password}" -ge 32 ] ||
     fail "BILLWATCH_DATABASE_PASSWORD must contain at least 32 characters."
+
+[ "${#database_runtime_password}" -ge 32 ] ||
+    fail "BILLWATCH_DATABASE_RUNTIME_PASSWORD must contain at least 32 characters."
+
+[ "$database_runtime_password" != "$database_password" ] ||
+    fail "BILLWATCH_DATABASE_RUNTIME_PASSWORD must be independent from BILLWATCH_DATABASE_PASSWORD."
+
+[ "$database_runtime_password" != "$web_session_redis_password" ] ||
+    fail "BILLWATCH_DATABASE_RUNTIME_PASSWORD must be independent from BILLWATCH_WEB_SESSION_REDIS_PASSWORD."
+
+[ "$database_runtime_password" != "$parser_auth_token" ] ||
+    fail "BILLWATCH_DATABASE_RUNTIME_PASSWORD must be independent from BILLWATCH_PARSER_AUTH_TOKEN."
 
 [ "${#web_session_redis_password}" -ge 32 ] ||
     fail "BILLWATCH_WEB_SESSION_REDIS_PASSWORD must contain at least 32 characters."
