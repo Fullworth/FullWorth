@@ -65,6 +65,53 @@ builder.Configuration.AddKeyPerFile(
     "/run/secrets",
     optional: true);
 
+var connectionString =
+    builder.Configuration.GetConnectionString(
+        "BillWatchDatabase");
+
+if (string.IsNullOrWhiteSpace(
+        connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'BillWatchDatabase' was not found.");
+}
+
+ProductionDatabaseConnectionSecurity.Validate(
+    connectionString,
+    builder.Environment.IsDevelopment());
+
+var migrationOnly =
+    builder.Configuration.GetValue<bool>(
+        "Database:MigrationOnly");
+
+var migrateOnStartup =
+    builder.Configuration.GetValue<bool>(
+        "Database:MigrateOnStartup");
+
+if (!builder.Environment.IsDevelopment() &&
+    migrateOnStartup &&
+    !migrationOnly)
+{
+    throw new InvalidOperationException(
+        "Database:MigrateOnStartup is reserved for the one-shot migration process outside development.");
+}
+
+if (migrationOnly)
+{
+    var migrationOptions =
+        new DbContextOptionsBuilder<FullWorthDbContext>()
+            .UseNpgsql(
+                connectionString)
+            .Options;
+
+    await using var migrationDbContext =
+        new FullWorthDbContext(
+            migrationOptions);
+
+    await migrationDbContext.Database.MigrateAsync();
+    return;
+}
+
 var parserWorkerBaseUrl =
     builder.Configuration["ParserWorker:BaseUrl"];
 
@@ -187,21 +234,6 @@ if (useForwardedHeaders)
             }
         });
 }
-
-var connectionString =
-    builder.Configuration.GetConnectionString(
-        "BillWatchDatabase");
-
-if (string.IsNullOrWhiteSpace(
-        connectionString))
-{
-    throw new InvalidOperationException(
-        "Connection string 'BillWatchDatabase' was not found.");
-}
-
-ProductionDatabaseConnectionSecurity.Validate(
-    connectionString,
-    builder.Environment.IsDevelopment());
 
 builder.Services.AddDbContext<FullWorthDbContext>(
     options =>
@@ -1025,8 +1057,7 @@ builder.Services.AddHostedService<
 var app =
     builder.Build();
 
-if (builder.Configuration.GetValue<bool>(
-        "Database:MigrateOnStartup"))
+if (migrateOnStartup)
 {
     await using var migrationScope =
         app.Services.CreateAsyncScope();
