@@ -3,8 +3,24 @@
 set -eu
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-config_file=$(mktemp)
-trap 'rm -f "$config_file"' EXIT HUP INT TERM
+temp_dir=$(mktemp -d)
+config_file="$temp_dir/compose.json"
+secret_env="$temp_dir/secrets.env"
+secret_directory="$temp_dir/container-secrets"
+trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM
+
+cat > "$secret_env" <<'ENV'
+BILLWATCH_DATABASE_PASSWORD=ci-database-password
+BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters
+PLAID_SECRET=ci-plaid-secret
+RESTIC_PASSWORD=ci-restic-password-with-more-than-24-chars
+ENV
+chmod 600 "$secret_env"
+sh "$root_dir/deploy/materialize-container-secrets.sh" \
+    "$secret_env" \
+    "$secret_directory" \
+    >/dev/null
 
 fail()
 {
@@ -13,6 +29,7 @@ fail()
 }
 
 env \
+    FULLWORTH_SECRET_DIRECTORY="$secret_directory" \
     ACME_EMAIL=ci@example.com \
     BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true \
     BILLWATCH_BACKUP_WORK_SIZE=1g \
