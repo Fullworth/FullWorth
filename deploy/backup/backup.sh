@@ -283,6 +283,7 @@ create_backup()
 {
     require_append_only_backup_role
     validate_retention_policy
+    cleanup_work
     prepare_database_passfile
     : "${BILLWATCH_RELEASE_ID:?BILLWATCH_RELEASE_ID must be configured for backup capture.}"
 
@@ -294,7 +295,6 @@ create_backup()
     esac
 
     require_repository
-    cleanup_work
     mkdir -p "$bundle_path"
 
     api_key_file_count="$(validate_key_ring /source/data-protection API)"
@@ -397,9 +397,9 @@ list_completed_snapshot()
 verify_restore()
 {
     validate_client_mode
+    cleanup_work
     prepare_database_passfile
     require_repository
-    cleanup_work
     mkdir -p "$restore_path"
 
     if ! pg_isready --host="$restore_database_host" --username=billwatch --dbname=postgres --timeout=5 >/dev/null 2>&1; then
