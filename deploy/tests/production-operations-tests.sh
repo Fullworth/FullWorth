@@ -109,7 +109,7 @@ grep -Fq 'validate_private_asset_tree /source/statements' \
 grep -Fq 'restored statement storage' "$root_dir/deploy/backup/backup.sh" ||
     fail "isolated restore does not verify restored statement permissions."
 
-grep -Fq 'find "${PGDATA}" -xdev -type f ! -perm 0600' \
+grep -Fq 'find "$${PGDATA}" -xdev -type f ! -perm 0600' \
     "$root_dir/compose.production.yml" ||
     fail "isolated PostgreSQL restore does not reject unsafe data-file modes."
 
