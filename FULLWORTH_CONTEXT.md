@@ -23,9 +23,10 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- `development`: `c283463eba028570d9b1629a5740d2dcf4c64e85`;
+- `development`: `80bb6494bf66646406829285eef4f71c009c546f`;
 - `master`: `7b0947385c93bc07509115ae8d6665ca4fa9dc90`;
-- GitHub comparison: `development` 146 commits ahead and 3 commits behind `master`;
+- GitHub comparison: `development` 149 commits ahead and 0 behind `master`;
+- PR #664 reconciled the three master-only release-promotion merge commits without changing the development tree. Exact head `432b839e9c30caf6a24a3d8a2e4eef376ef15068` had zero changed files, passed FullWorth CI #1608 and Dependency Security #705, and merged with merge-commit semantics as `80bb6494bf66646406829285eef4f71c009c546f`.
 - verified live production release: `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
 
 Do not treat the newer repository security state as deployed. Immutable storage, compromised-host recovery, and production-security acceptance require direct real-environment evidence.
@@ -911,11 +912,11 @@ Before trusted external beta invitations:
 
 1. Read current GitHub `development`, open PRs, issue #291, this context, and the roadmap snapshot before changing architecture or release state.
 2. Repository-side security hardening is at **61/65** on #291. Do not invent additional generic security work to satisfy the four remaining evidence/governance items.
-3. The current `development` snapshot head is `c283463eba028570d9b1629a5740d2dcf4c64e85`; `master` is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`; the branches are 146 commits ahead / 3 behind from `development` to `master`. Re-check these values before release freeze because they can change.
+3. The current `development` snapshot head is `80bb6494bf66646406829285eef4f71c009c546f`; `master` is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`; GitHub reports `development` 149 commits ahead / 0 behind. PR #664 already reconciled the old promotion-merge topology with zero file changes. Re-check these values before promotion because they can change.
 4. Issue #260 is closed. Preserve its existing zero-exception module/data-ownership ratchets; do not reopen old schema coupling such as `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId`.
 5. The branch ruleset already requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It currently requires 0 approving reviews. If independent approval is required, that is a repository-owner/admin policy action; do not claim it changed until GitHub evidence proves it.
 6. Immutable/off-host backup protection and compromised-host clean recovery require direct provider/host exercises against the actual recovery repository. CI simulation is not a substitute.
 7. The current verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). No newer GitHub merge is deployed unless a separate guarded deployment proves the exact release.
-8. The next code-side release step, once no new blockers exist, is deliberate release freeze and `development`/`master` reconciliation. Only blocker fixes should change a frozen candidate.
+8. The history-only `development`/`master` reconciliation is complete. The next code-side release step, once no new blockers exist, is to freeze the exact release candidate, record its SHA/acceptance bundle, and allow only blocker fixes before promotion.
 9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
 10. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build, deployment, or acceptance check pass.
