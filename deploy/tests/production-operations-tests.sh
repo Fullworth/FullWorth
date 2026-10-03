@@ -561,4 +561,44 @@ grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fa
 sh "$root_dir/deploy/tests/alert-observation-proof-tests.sh" || fail "alert observation proof regression suite failed."
 sh "$root_dir/deploy/tests/security-incident-response-runbook-tests.sh" || fail "security incident-response runbook regression suite failed."
 
+sh -n "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier has invalid shell syntax."
+
+for required_setting in \
+    'permitrootlogin no' \
+    'passwordauthentication no' \
+    'kbdinteractiveauthentication no' \
+    'permitemptypasswords no' \
+    'pubkeyauthentication yes' \
+    'allowtcpforwarding no' \
+    'x11forwarding no'
+do
+    grep -Fq "$required_setting" "$root_dir/deploy/verify-host-hardening.sh" ||
+        fail "host hardening verifier is missing required SSH setting: $required_setting"
+done
+
+grep -Fq 'max_auth_tries' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not bound SSH authentication attempts."
+
+grep -Fq 'login_grace_time' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not bound SSH login grace time."
+
+grep -Fq 'unattended-upgrades' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not require unattended security upgrades."
+
+grep -Fq 'apt-daily-upgrade.timer' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not require the security-upgrade timer."
+
+grep -Fq '/var/run/reboot-required' "$root_dir/deploy/verify-host-hardening.sh" ||
+    fail "host hardening verifier does not reject pending host reboots."
+
+grep -Fq 'sole explicit member of the `docker` group' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not document Docker-group privilege."
+
+grep -Fq 'SSH source restriction is also required' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not preserve the provider-firewall evidence boundary."
+
+grep -Fq 'at least weekly' "$root_dir/deploy/README-HOST-HARDENING.md" ||
+    fail "host hardening runbook does not define a patch review cadence."
+
 printf '%s\n' 'Production operation script tests passed.'
