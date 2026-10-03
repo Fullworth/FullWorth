@@ -85,6 +85,7 @@ grep -Fq 'oom_kill_delta' \
     fail "parser containment verifier does not report kernel OOM-kill evidence."
 
 sh "$root_dir/deploy/tests/data-protection-key-permission-tests.sh" >/dev/null
+sh "$root_dir/deploy/tests/backup-asset-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
 
@@ -100,6 +101,17 @@ grep -Fq 'web_data_protection_keys:/source/web-data-protection:ro' \
 
 grep -Fq 'web-data-protection.tar' "$root_dir/deploy/backup/backup.sh" ||
     fail "encrypted backup bundles do not include the Web Data Protection key ring."
+
+grep -Fq 'validate_private_asset_tree /source/statements' \
+    "$root_dir/deploy/backup/backup.sh" ||
+    fail "backup capture does not reject unsafe statement storage permissions."
+
+grep -Fq 'restored statement storage' "$root_dir/deploy/backup/backup.sh" ||
+    fail "isolated restore does not verify restored statement permissions."
+
+grep -Fq 'find "${PGDATA}" -xdev -type f ! -perm 0600' \
+    "$root_dir/compose.production.yml" ||
+    fail "isolated PostgreSQL restore does not reject unsafe data-file modes."
 
 grep -Fq 'SetDefaultKeyLifetime' "$root_dir/FullWorth.API/Program.cs" ||
     fail "API Data Protection rotation lifetime is not explicit."
