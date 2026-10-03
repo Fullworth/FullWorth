@@ -290,6 +290,7 @@ services:
       database:
         condition: service_healthy
     entrypoint:
+      - /bin/sh
       - /opt/fullworth/provision-runtime-role.sh
     command:
       - provision
