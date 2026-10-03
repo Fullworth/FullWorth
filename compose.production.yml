@@ -39,28 +39,22 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
       ParserWorker__BaseUrl: https://parser-worker:8081
-      ParserWorker__AuthenticationToken: ${BILLWATCH_PARSER_AUTH_TOKEN:?Set BILLWATCH_PARSER_AUTH_TOKEN}
       ParserWorker__ServerCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
-      ConnectionStrings__BillWatchDatabase: Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
       Database__MigrateOnStartup: "true"
       Subscription__EnforcementEnabled: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED:-false}
       Subscription__EnforcementCohort: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_COHORT:-All}
       StripeBilling__Enabled: ${BILLWATCH_STRIPE_ENABLED:-false}
-      StripeBilling__SecretKey: ${STRIPE_SECRET_KEY:-}
-      StripeBilling__WebhookSecret: ${STRIPE_WEBHOOK_SECRET:-}
       StripeBilling__MonthlyPriceId: ${STRIPE_MONTHLY_PRICE_ID:-}
       StripeBilling__YearlyPriceId: ${STRIPE_YEARLY_PRICE_ID:-}
       StripeBilling__PublicWebBaseUrl: https://${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
       DataProtection__KeysPath: /var/lib/billwatch/keys
       BillStatementStorage__RootPath: /var/lib/billwatch/statements
       Plaid__ClientId: ${PLAID_CLIENT_ID:?Set PLAID_CLIENT_ID}
-      Plaid__Secret: ${PLAID_SECRET:?Set PLAID_SECRET}
       Plaid__Environment: ${PLAID_ENVIRONMENT:?Set PLAID_ENVIRONMENT}
       ExternalIdentity__Google__Audience: ${FULLWORTH_GOOGLE_CLIENT_ID:-}
       ExternalIdentity__Apple__Audience: ${FULLWORTH_APPLE_CLIENT_ID:-}
       IdentityEmail__Enabled: ${BILLWATCH_IDENTITY_EMAIL_ENABLED:-false}
-      IdentityEmail__ApiKey: ${RESEND_API_KEY:-}
       IdentityEmail__FromAddress: ${BILLWATCH_IDENTITY_EMAIL_FROM_ADDRESS:-security@billbeacon.net}
       IdentityEmail__FromName: ${BILLWATCH_IDENTITY_EMAIL_FROM_NAME:-FullWorth}
       IdentityEmail__PublicWebBaseUrl: https://${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
@@ -70,10 +64,49 @@ services:
       StatementAi__Shadow__AllowProviderCalls: "false"
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=256m,uid=1654,gid=1654,mode=0700
-    volumes:
+    secrets:
+  api_database_connection:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/api-database-connection
+  database_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-password
+  parser_auth_token:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/parser-auth-token
+  plaid_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/plaid-secret
+  redis_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/redis-password
+  restic_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/restic-password
+  stripe_secret_key:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-secret-key
+  stripe_webhook_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-webhook-secret
+  resend_api_key:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/resend-api-key
+  google_client_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/google-client-secret
+  apple_client_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/apple-client-secret
+  aws_credentials:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/aws-credentials
+
+volumes:
       - data_protection_keys:/var/lib/billwatch/keys
       - statement_files:/var/lib/billwatch/statements
       - parser_worker_tls:/var/run/fullworth-parser-tls:ro
+    secrets:
+      - source: api_database_connection
+        target: ConnectionStrings__BillWatchDatabase
+      - source: parser_auth_token
+        target: ParserWorker__AuthenticationToken
+      - source: plaid_secret
+        target: Plaid__Secret
+      - source: stripe_secret_key
+        target: StripeBilling__SecretKey
+      - source: stripe_webhook_secret
+        target: StripeBilling__WebhookSecret
+      - source: resend_api_key
+        target: IdentityEmail__ApiKey
     networks:
       - data
       - api_edge
@@ -142,6 +175,9 @@ services:
         source: /sys/fs/cgroup
         target: /sys/fs/cgroup
         read_only: false
+    secrets:
+      - source: parser_auth_token
+        target: ParserWorker__AuthenticationToken
     networks:
       - parser_worker
 
@@ -177,17 +213,21 @@ services:
       FullWorthApi__BaseUrl: http://api:8080
       FullWorthApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ExternalIdentity__Google__ClientId: ${FULLWORTH_GOOGLE_CLIENT_ID:-}
-      ExternalIdentity__Google__ClientSecret: ${FULLWORTH_GOOGLE_CLIENT_SECRET:-}
       ExternalIdentity__Apple__ClientId: ${FULLWORTH_APPLE_CLIENT_ID:-}
-      ExternalIdentity__Apple__ClientSecret: ${FULLWORTH_APPLE_CLIENT_SECRET:-}
       DataProtection__KeysPath: /var/lib/billwatch-web/keys
       WebSession__RedisHost: web-session-cache
-      WebSession__RedisPassword: ${BILLWATCH_WEB_SESSION_REDIS_PASSWORD:?Set BILLWATCH_WEB_SESSION_REDIS_PASSWORD}
       ReverseProxy__KnownProxies__0: 172.31.0.10
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=256m,uid=1654,gid=1654,mode=0700
     volumes:
       - web_data_protection_keys:/var/lib/billwatch-web/keys
+    secrets:
+      - source: redis_password
+        target: WebSession__RedisPassword
+      - source: google_client_secret
+        target: ExternalIdentity__Google__ClientSecret
+      - source: apple_client_secret
+        target: ExternalIdentity__Apple__ClientSecret
     networks:
       - web_edge
       - web_api
@@ -206,16 +246,15 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    environment:
-      REDIS_PASSWORD: ${BILLWATCH_WEB_SESSION_REDIS_PASSWORD:?Set BILLWATCH_WEB_SESSION_REDIS_PASSWORD}
     command:
       - sh
       - -c
       - >-
+        REDIS_PASSWORD="$(cat /run/secrets/redis_password)"
         exec redis-server
         --save ''
         --appendonly no
-        --requirepass "$$REDIS_PASSWORD"
+        --requirepass "$REDIS_PASSWORD"
         --maxmemory 128mb
         --maxmemory-policy volatile-ttl
         --dir /data
@@ -224,7 +263,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          REDISCLI_AUTH="$$REDIS_PASSWORD"
+          REDISCLI_AUTH="$(cat /run/secrets/redis_password)"
           redis-cli --no-auth-warning ping |
           grep -qx PONG
       interval: 5s
@@ -233,6 +272,9 @@ services:
     tmpfs:
       - /data:rw,noexec,nosuid,nodev,size=160m,uid=999,gid=1000,mode=0700
       - /tmp:rw,noexec,nosuid,nodev,size=16m,uid=999,gid=1000,mode=0700
+    secrets:
+      - source: redis_password
+        target: redis_password
     networks:
       - web_session
 
@@ -244,7 +286,7 @@ services:
     environment:
       POSTGRES_DB: billwatch
       POSTGRES_USER: billwatch
-      POSTGRES_PASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -252,6 +294,9 @@ services:
       retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - source: database_password
+        target: database_password
     networks:
       data:
         aliases:
@@ -277,11 +322,10 @@ services:
       database:
         condition: service_healthy
     environment:
-      PGPASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
+      FULLWORTH_DATABASE_PASSWORD_FILE: /run/secrets/database_password
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?Set RESTIC_REPOSITORY}
-      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?Set RESTIC_PASSWORD}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      RESTIC_PASSWORD_FILE: /run/secrets/restic_password
+      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
       BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: ${BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY:-false}
       BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
@@ -301,6 +345,13 @@ services:
       - data_protection_keys:/source/data-protection:ro
       - web_data_protection_keys:/source/web-data-protection:ro
       - statement_files:/source/statements:ro
+    secrets:
+      - source: database_password
+        target: database_password
+      - source: restic_password
+        target: restic_password
+      - source: aws_credentials
+        target: aws_credentials
     networks:
       - data
       - backup_egress
@@ -315,7 +366,7 @@ services:
     environment:
       POSTGRES_DB: restore_host
       POSTGRES_USER: billwatch
-      POSTGRES_PASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_password
     healthcheck:
       test:
         - CMD-SHELL
@@ -328,6 +379,9 @@ services:
       retries: 30
     tmpfs:
       - /var/lib/postgresql/data:rw,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g},uid=70,gid=70,mode=0700
+    secrets:
+      - source: database_password
+        target: database_password
     networks:
       - data
     logging: *default-logging
