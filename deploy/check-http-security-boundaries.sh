@@ -44,6 +44,53 @@ curl_request()
     fi
 }
 
+raw_tls_request()
+{
+    url=$1
+    request=$2
+    output=$3
+
+    command -v openssl >/dev/null 2>&1 ||
+        fail "openssl is required for raw HTTP framing checks."
+
+    command -v timeout >/dev/null 2>&1 ||
+        fail "timeout is required for raw HTTP framing checks."
+
+    authority=${url#https://}
+    authority=${authority%%/*}
+
+    case "$authority" in
+        *:*)
+            connect_address=$authority
+            server_name=${authority%%:*}
+            ;;
+        *)
+            connect_address="${authority}:443"
+            server_name=$authority
+            ;;
+    esac
+
+    {
+        printf '%b' "$request"
+        sleep 1
+    } |
+        timeout 8             openssl s_client                 -quiet                 -connect "$connect_address"                 -servername "$server_name"                 >"$output" 2>/dev/null ||
+        true
+}
+
+assert_framing_rejected()
+{
+    response=$1
+    description=$2
+
+    grep -Eq '^HTTP/1\.[01] 400([[:space:]]|$)' "$response" ||
+        fail "$description was not rejected with HTTP 400 at the public edge."
+
+    if grep -i '^X-FullWorth-Request-Id:' "$response" >/dev/null; then
+        fail "$description reached the application instead of being rejected by the public edge."
+    fi
+}
+
 assert_header_contains()
 {
     headers=$1
@@ -88,6 +135,19 @@ assert_header_contains "$api_headers" 'X-Content-Type-Options' 'nosniff'
 assert_header_contains "$api_headers" 'X-Frame-Options' 'DENY'
 assert_header_contains "$api_headers" 'Referrer-Policy' 'no-referrer'
 phase 'protected API headers passed.'
+
+api_authority=${api_base_url#https://}
+api_authority=${api_authority%%/*}
+api_host=${api_authority%%:*}
+
+transfer_length_response="$temp_dir/transfer-content-length.response"
+raw_tls_request     "$api_base_url"     "POST /api/auth/login HTTP/1.1\r\nHost: ${api_host}\r\nContent-Type: application/json\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n0\r\n\r\n"     "$transfer_length_response"
+assert_framing_rejected     "$transfer_length_response"     'combined Transfer-Encoding and Content-Length request'
+
+conflicting_length_response="$temp_dir/conflicting-content-length.response"
+raw_tls_request     "$api_base_url"     "POST /api/auth/login HTTP/1.1\r\nHost: ${api_host}\r\nContent-Type: application/json\r\nContent-Length: 4\r\nContent-Length: 5\r\nConnection: close\r\n\r\n{}"     "$conflicting_length_response"
+assert_framing_rejected     "$conflicting_length_response"     'conflicting Content-Length request'
+phase 'ambiguous HTTP/1.1 framing rejected at the public edge.'
 
 register_headers="$temp_dir/register-get.headers"
 register_page="$temp_dir/register.html"
