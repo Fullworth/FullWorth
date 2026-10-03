@@ -1,3 +1,15 @@
+## Secret non-disclosure release gate — 2026-10-03
+
+FullWorth now fails a release candidate when any configured protected value appears in public health, validation-error, not-found, or retained production service-log output. The verifier covers required database, parser, Web-session Redis, Plaid, and Restic credentials plus optional Stripe, Google, Apple, Resend, and AWS secrets when configured. It scans exact values and common percent/form/Base64 representations without printing the value; failures identify configuration names only.
+
+Linux production-container CI runs the verifier against deterministic sentinels after the real API, parser, Web, Redis, edge, and database stack is healthy. The guarded production deployment repeats the check against the protected host-local environment and cannot advance `.billwatch-release` after a disclosure. API and Web production exception-handler boundaries remain regression-locked, and the gate exercises generic application error output without creating persistent data. `SECRET_NON_DISCLOSURE.md` documents covered surfaces, representations, failure behavior, and scope.
+
+CI exposed three integration defects before acceptance: a deployment test fixture initially omitted the new verifier, a shell heredoc failure wrapper consumed the failure command as Python, and the first CI dotenv writer collapsed protected values after the first line. The final fixture copies/stubs and failure-tests the deployment gate, the verifier uses an explicit fail-closed wrapper, and CI writes one protected entry per line while preserving file precedence.
+
+Exact corrected PR #649 head `1735c7512416a3fbf284ba2087f7ffb175a56961` passed FullWorth CI #1582 (run `37146574448`: backend tests, MAUI Android, production images, live secret non-disclosure, parser containment, visual acceptance, HTTP security, encrypted backup, isolated restore, and API recovery) and Dependency Security #679 (run `37146574421`) before squash merge to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`.
+
+This completes repository and CI verification that configured secret values do not appear on the covered application response and retained-log surfaces. It does not claim stronger secret injection than ordinary container environment variables, protection from privileged Docker/root inspection, deployed production acceptance, or absence of every possible derived representation. No production deployment occurred.
+
 ## Generated malicious/corrupt document corpus — 2026-10-03
 
 FullWorth now exercises a deterministic, source-generated document-security corpus without retaining customer statements, uploaded files, screenshots, account data, or private evaluation material. The corpus contains 21 named PDF, PNG, and JPEG cases, each bounded to 4 KiB: malformed PDF catalogs/xrefs/stream lengths/ASCIIHex/Flate data; truncated PNG/JPEG structures; zero or excessive dimensions; invalid PNG bit-depth/color, compression, filter, interlace, and IHDR CRC fields; and malformed JPEG marker/frame sequences.
