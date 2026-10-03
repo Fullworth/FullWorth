@@ -12,8 +12,11 @@ RUN apk add --no-cache \
     && chown --recursive 1654:1654 /cache /repository /work
 
 COPY backup.sh /usr/local/bin/billwatch-backup
+COPY permission-policy.sh /usr/local/lib/fullworth/backup-permission-policy.sh
 
-RUN chmod 0555 /usr/local/bin/billwatch-backup
+RUN chmod 0555 \
+        /usr/local/bin/billwatch-backup \
+        /usr/local/lib/fullworth/backup-permission-policy.sh
 
 ENV HOME=/work \
     TMPDIR=/work \
