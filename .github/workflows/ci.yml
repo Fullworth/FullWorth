@@ -393,6 +393,7 @@ jobs:
           sh deploy/tests/runtime-release-tests.sh
           sh deploy/tests/http-security-boundary-tests.sh
           sh deploy/tests/secret-non-disclosure-tests.sh
+          sh deploy/tests/file-backed-secret-tests.sh
           sh deploy/tests/runtime-watchdog-tests.sh
           sh deploy/tests/production-auth-smoke-workflow-tests.sh
 
@@ -694,9 +695,52 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Materialize file-backed container secrets
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import os
+          import pathlib
+
+          names = (
+              "BILLWATCH_DATABASE_PASSWORD",
+              "BILLWATCH_PARSER_AUTH_TOKEN",
+              "BILLWATCH_WEB_SESSION_REDIS_PASSWORD",
+              "PLAID_SECRET",
+              "RESTIC_PASSWORD",
+              "STRIPE_SECRET_KEY",
+              "STRIPE_WEBHOOK_SECRET",
+              "FULLWORTH_GOOGLE_CLIENT_SECRET",
+              "FULLWORTH_APPLE_CLIENT_SECRET",
+              "RESEND_API_KEY",
+              "AWS_ACCESS_KEY_ID",
+              "AWS_SECRET_ACCESS_KEY",
+          )
+
+          with pathlib.Path(".ci-container-secrets.env").open(
+              "w",
+              encoding="utf-8",
+          ) as handle:
+              for name in names:
+                  print(f"{name}={os.environ.get(name, '')}", file=handle)
+          PY
+          sh deploy/materialize-container-secrets.sh \
+            .ci-container-secrets.env \
+            .fullworth-secrets
+
       - name: Start production stack
         if: steps.container_changes.outputs.required == 'true'
         run: docker compose --file compose.production.yml up --detach --no-build
+
+      - name: Verify file-backed container secret boundary
+        if: steps.container_changes.outputs.required == 'true'
+        run: |
+          cp .ci-container-secrets.env .env.production
+          sh deploy/verify-file-backed-secrets.sh "$PWD"
+          rm -f .env.production
 
       - name: Verify parser cgroup delegation boundary
         if: steps.container_changes.outputs.required == 'true'
@@ -1566,4 +1610,7 @@ jobs:
 
       - name: Stop production stack
         if: always() && steps.container_changes.outputs.required == 'true'
-        run: docker compose --profile operations --file compose.production.yml down --volumes
+        run: |
+          docker compose --profile operations --file compose.production.yml down --volumes
+          rm -rf .fullworth-secrets
+          rm -f .ci-container-secrets.env .env.production
