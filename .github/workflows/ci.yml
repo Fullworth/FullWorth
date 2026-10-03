@@ -392,6 +392,7 @@ jobs:
           sh deploy/tests/release-integrity-tests.sh
           sh deploy/tests/runtime-release-tests.sh
           sh deploy/tests/http-security-boundary-tests.sh
+          sh deploy/tests/secret-non-disclosure-tests.sh
           sh deploy/tests/runtime-watchdog-tests.sh
           sh deploy/tests/production-auth-smoke-workflow-tests.sh
 
@@ -820,6 +821,44 @@ jobs:
       - name: Verify web HTTPS readiness
         if: steps.container_changes.outputs.required == 'true'
         run: curl --fail --insecure --retry 30 --retry-all-errors --retry-delay 2 --resolve web.localhost:443:127.0.0.1 https://web.localhost/health/ready
+
+      - name: Verify secret non-disclosure boundary
+        if: steps.container_changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f .env.production' EXIT
+
+          python3 - <<'PY'
+          import os
+          import pathlib
+
+          names = (
+              "BILLWATCH_DATABASE_PASSWORD",
+              "BILLWATCH_PARSER_AUTH_TOKEN",
+              "BILLWATCH_WEB_SESSION_REDIS_PASSWORD",
+              "PLAID_SECRET",
+              "RESTIC_PASSWORD",
+              "STRIPE_SECRET_KEY",
+              "STRIPE_WEBHOOK_SECRET",
+              "FULLWORTH_GOOGLE_CLIENT_SECRET",
+              "FULLWORTH_APPLE_CLIENT_SECRET",
+              "RESEND_API_KEY",
+              "AWS_SECRET_ACCESS_KEY",
+          )
+
+          pathlib.Path(".env.production").write_text(
+              "".join(f"{name}={os.environ.get(name, '')}\\n" for name in names),
+              encoding="utf-8",
+          )
+          PY
+
+          BILLWATCH_SECRET_VERIFICATION_ALLOW_INSECURE=true \
+            sh deploy/verify-secret-non-disclosure.sh \
+              . \
+              https://localhost \
+              https://web.localhost
 
       - name: Verify isolated PDF parser request path
         if: steps.container_changes.outputs.required == 'true'
