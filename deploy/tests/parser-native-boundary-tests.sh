@@ -33,7 +33,6 @@ require_parser()
         fail "$2"
 }
 
-require_parser '^    init: true$' "parser-worker must use a minimal init"
 require_parser '^    read_only: true$' "parser-worker root must be read-only"
 require_parser '^    pids_limit: 64$' "parser-worker PID ceiling changed"
 require_parser '^    cpus: ' "parser-worker CPU ceiling is missing"
@@ -52,6 +51,10 @@ if printf '%s\n' "$parser_service" | grep -Eq '^    ports:|^    expose:'; then
     fail "parser-worker must not publish or expose a host port"
 fi
 
+if printf '%s\n' "$parser_service" | grep -Eq '^    init:'; then
+    fail "an external init would occupy the delegated cgroup parent"
+fi
+
 grep -Fq 'HEALTHCHECK NONE' "$dockerfile" ||
     fail "Docker health-exec must stay disabled for the delegated cgroup parent"
 grep -Fq 'DOTNET_EnableDiagnostics=0' "$dockerfile" ||
@@ -61,7 +64,7 @@ grep -Fq 'libtesseract5' "$dockerfile" ||
 grep -Fq 'tesseract-ocr-eng' "$dockerfile" ||
     fail "the reviewed OCR model package is missing"
 
-for evidence in     'minimal init'     'root filesystem is writable'     'core dumps are not disabled'     'file-descriptor ceiling'     'publishes a host port'     'attached to more than one network'     'runtime diagnostics are enabled'     'effective Linux capabilities'     'bounding set'     'memory ceiling is not finite'     'CPU limit is not finite'     'PID limit is not finite'     'per-document OCR cgroup'     'per-image OCR cgroup'     'kernel OOM kill evidence'
+for evidence in     'root filesystem is writable'     'core dumps are not disabled'     'file-descriptor ceiling'     'publishes a host port'     'attached to more than one network'     'runtime diagnostics are enabled'     'effective Linux capabilities'     'bounding set'     'memory ceiling is not finite'     'CPU limit is not finite'     'PID limit is not finite'     'per-document OCR cgroup'     'per-image OCR cgroup'     'kernel OOM kill evidence'
 do
     grep -Fq "$evidence" "$verifier" ||
         fail "live verifier no longer checks: $evidence"
