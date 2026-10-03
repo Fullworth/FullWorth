@@ -51,6 +51,24 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+sh -n "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier has invalid shell syntax."
+
+grep -Fq 'Transfer-Encoding: chunked'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not probe Transfer-Encoding and Content-Length ambiguity."
+
+grep -Fq 'assert_transfer_length_canonicalized'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not require safe Transfer-Encoding canonicalization."
+
+grep -Fq '/api/auth/logout'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP framing canonicalization probe does not reach a body-reading API endpoint."
+
+grep -Fq 'Content-Length: 4\r\nContent-Length: 5'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP security boundary verifier does not probe conflicting Content-Length values."
+
+grep -Fq 'X-FullWorth-Request-Id'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+    fail "HTTP framing probes do not prove rejection before the application boundary."
+
 sh -n "$root_dir/deploy/verify-parser-containment.sh" ||
     fail "parser containment verifier has invalid shell syntax."
 

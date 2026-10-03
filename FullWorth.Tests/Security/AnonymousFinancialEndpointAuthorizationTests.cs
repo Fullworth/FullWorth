@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using FullWorth.Tests.Infrastructure;
 
 namespace FullWorth.Tests.Security;
@@ -73,7 +74,10 @@ public sealed class AnonymousFinancialEndpointAuthorizationTests
             HttpMethod.Post,
             "/api/subscription/webhooks/stripe")
         {
-            Content = new StringContent("{}")
+            Content = new StringContent(
+                "{}",
+                Encoding.UTF8,
+                "application/json")
         };
 
         using var response = await client.SendAsync(request);
