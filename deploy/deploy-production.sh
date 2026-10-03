@@ -96,6 +96,12 @@ esac
 [ -f "$root_dir/deploy/verify-file-backed-secrets.sh" ] ||
     fail "file-backed secret verifier is missing."
 
+[ -f "$root_dir/deploy/prepare-database-runtime.sh" ] ||
+    fail "database runtime preparation script is missing."
+
+[ -f "$root_dir/deploy/database/provision-runtime-role.sh" ] ||
+    fail "database runtime-role provisioner is missing."
+
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
 
@@ -252,11 +258,26 @@ if [ "$backup_required" = true ]; then
     printf '%s\n' \
         "Creating a verified encrypted recovery point before replacing the last verified FullWorth release."
 
-    "$root_dir/deploy/run-backup.sh" \
+    FULLWORTH_BACKUP_RESTORE_SERVICES=false \
+        "$root_dir/deploy/run-backup.sh" \
         "$root_dir"
 fi
 
 deployment_started=true
+
+if [ "$running_public_count" -eq 3 ]; then
+    compose stop \
+        --timeout 30 \
+        api \
+        parser-worker \
+        web \
+        web-session-cache \
+        edge
+fi
+
+sh "$root_dir/deploy/prepare-database-runtime.sh" \
+    "$root_dir"
+
 candidate_runtime_started=true
 
 compose up \
