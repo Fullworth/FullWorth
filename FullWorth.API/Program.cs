@@ -577,7 +577,10 @@ var dataProtectionBuilder =
     builder.Services
         .AddDataProtection()
         .SetApplicationName(
-            "BillWatch");
+            "BillWatch")
+        .SetDefaultKeyLifetime(
+            TimeSpan.FromDays(
+                90));
 
 var configuredDataProtectionPath =
     builder.Configuration[
