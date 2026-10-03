@@ -15,6 +15,8 @@ materializer="$root_dir/deploy/materialize-container-secrets.sh"
 provisioner="$root_dir/deploy/database/provision-runtime-role.sh"
 preparer="$root_dir/deploy/prepare-database-runtime.sh"
 deploy_script="$root_dir/deploy/deploy-production.sh"
+backup_runner="$root_dir/deploy/run-backup.sh"
+secret_verifier="$root_dir/deploy/verify-file-backed-secrets.sh"
 api_program="$root_dir/FullWorth.API/Program.cs"
 
 sh -n "$provisioner" ||
@@ -43,6 +45,10 @@ grep -Fq 'database-migrator:' "$compose_file" ||
 
 grep -Fq 'Database__MigrationOnly: "true"' "$compose_file" ||
     fail "database migrator does not use migration-only mode."
+
+grep -Fq '/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777' "$compose_file" ||
+    fail "database role provisioner cannot securely stage its temporary passfiles."
+
 
 grep -Fq 'source: migration_database_connection' "$compose_file" ||
     fail "database migrator does not receive the isolated owner connection."
@@ -98,7 +104,20 @@ grep -Fq 'database-role-provisioner \' "$preparer" ||
 grep -Fq 'database-migrator' "$preparer" ||
     fail "database preparation does not run the one-shot migrator."
 
+grep -Fq 'The API must be stopped before database role preparation or schema migration.' "$preparer" ||
+    fail "database preparation does not refuse schema changes while the steady API is running."
+
+
 grep -Fq 'database-role-provisioner \' "$preparer" ||
     fail "database preparation does not verify grants after migration."
+
+grep -Fq '[ "$exit_code" -ne 0 ] ||' "$backup_runner" ||
+    fail "pre-deploy backup failure does not restore the last verified runtime."
+
+grep -Fq 'Username=fullworth_runtime;' "$secret_verifier" ||
+    fail "live secret verification does not prove the API uses the runtime database role."
+
+grep -Fq 'retained a stopped container with elevated database credentials' "$secret_verifier" ||
+    fail "live secret verification does not reject retained migration/provisioning containers."
 
 printf '%s\n' "Database runtime/migration role-separation regression passed."
