@@ -78,6 +78,17 @@ raw_tls_request()
         true
 }
 
+assert_transfer_length_canonicalized()
+{
+    response=$1
+
+    grep -Eq '^HTTP/1\.[01] 204([[:space:]]|$)' "$response" ||
+        fail "combined Transfer-Encoding and Content-Length did not use the complete chunked body."
+
+    grep -i '^X-FullWorth-Request-Id:' "$response" >/dev/null ||
+        fail "canonicalized Transfer-Encoding request did not reach the API boundary."
+}
+
 assert_framing_rejected()
 {
     response=$1
@@ -141,13 +152,13 @@ api_authority=${api_authority%%/*}
 api_host=${api_authority%%:*}
 
 transfer_length_response="$temp_dir/transfer-content-length.response"
-raw_tls_request     "$api_base_url"     "POST /api/auth/login HTTP/1.1\r\nHost: ${api_host}\r\nContent-Type: application/json\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n0\r\n\r\n"     "$transfer_length_response"
-assert_framing_rejected     "$transfer_length_response"     'combined Transfer-Encoding and Content-Length request'
+raw_tls_request     "$api_base_url"     "POST /api/auth/logout HTTP/1.1\r\nHost: ${api_host}\r\nContent-Type: application/json\r\nContent-Length: 1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n14\r\n{\"refreshToken\":\"x\"}\r\n0\r\n\r\n"     "$transfer_length_response"
+assert_transfer_length_canonicalized     "$transfer_length_response"
 
 conflicting_length_response="$temp_dir/conflicting-content-length.response"
 raw_tls_request     "$api_base_url"     "POST /api/auth/login HTTP/1.1\r\nHost: ${api_host}\r\nContent-Type: application/json\r\nContent-Length: 4\r\nContent-Length: 5\r\nConnection: close\r\n\r\n{}"     "$conflicting_length_response"
 assert_framing_rejected     "$conflicting_length_response"     'conflicting Content-Length request'
-phase 'ambiguous HTTP/1.1 framing rejected at the public edge.'
+phase 'ambiguous HTTP/1.1 framing canonicalization and rejection passed.'
 
 register_headers="$temp_dir/register-get.headers"
 register_page="$temp_dir/register.html"
