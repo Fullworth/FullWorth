@@ -255,8 +255,9 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 As of 2026-10-03:
 
 - `master` is the release branch. Its current GitHub head at this snapshot is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`. A GitHub branch head is not deployment evidence.
-- `development` is the active integration branch. Its current head at this snapshot is `c283463eba028570d9b1629a5740d2dcf4c64e85`.
-- GitHub comparison reports `development` **146 commits ahead and 3 commits behind** `master`. This divergence must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
+- `development` is the active integration branch. Its current head at this snapshot is `80bb6494bf66646406829285eef4f71c009c546f`.
+- PR #664 completed a history-only reconciliation of the three old `master` promotion merges. Its exact head `432b839e9c30caf6a24a3d8a2e4eef376ef15068` had **zero changed files**, passed FullWorth CI #1608 and Dependency Security #705, and was merged with merge-commit semantics as `80bb6494bf66646406829285eef4f71c009c546f` so the `master` ancestry was preserved rather than squashed away.
+- GitHub comparison now reports `development` **149 commits ahead and 0 commits behind** `master`. The old three-commit behind state was release-promotion topology, not missing code.
 - The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
 - Repository merges after that release are **not** considered deployed merely because CI passed or the code reached `development`.
 - The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are CI-verified repository state, not production-host evidence.
@@ -2333,19 +2334,11 @@ After the intended security slice is complete:
 
 Only blocker fixes should change the frozen candidate.
 
-## Step 4 — Reconcile `development` and `master` deliberately
+## ~~Step 4 — Reconcile `development` and `master` deliberately~~
 
-At this snapshot GitHub reports `development` 134 commits ahead and 3 commits behind `master`.
+~~Completed through PR #664. The three `master`-only commits were inspected and confirmed to be release-promotion merge commits whose development-side parents were already ancestors of current `development`. No standalone master hotfix was found.~~
 
-Before promotion:
-
-- inspect the three master-only commits;
-- confirm whether they are release-merge history, required hotfixes, or substantive changes;
-- preserve all required production/release changes;
-- do not force-push either long-lived branch;
-- do not discard release-only work merely to make the graph look clean.
-
-Then open the normal reviewed promotion/release PR.
+~~PR #664 used a history-only merge commit with exactly the current development tree and `master` as the second parent. Exact head `432b839e9c30caf6a24a3d8a2e4eef376ef15068` contained zero changed files, passed FullWorth CI #1608 and Dependency Security #705, and merged as `80bb6494bf66646406829285eef4f71c009c546f`. GitHub now reports `development` 149 commits ahead and 0 behind `master`.~~
 
 ## Step 5 — Run exact-head release verification
 
