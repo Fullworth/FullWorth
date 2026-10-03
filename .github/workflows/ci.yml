@@ -848,10 +848,12 @@ jobs:
               "AWS_SECRET_ACCESS_KEY",
           )
 
-          pathlib.Path(".env.production").write_text(
-              "".join(f"{name}={os.environ.get(name, '')}\n" for name in names),
+          with pathlib.Path(".env.production").open(
+              "w",
               encoding="utf-8",
-          )
+          ) as handle:
+              for name in names:
+                  print(f"{name}={os.environ.get(name, '')}", file=handle)
           PY
 
           BILLWATCH_SECRET_VERIFICATION_ALLOW_INSECURE=true \
