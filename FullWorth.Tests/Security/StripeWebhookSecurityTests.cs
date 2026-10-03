@@ -10,6 +10,30 @@ public sealed class StripeWebhookSecurityTests
         256 * 1024;
 
     [Fact]
+    public async Task ConfiguredWebhook_RejectsNonJsonContentBeforeSignatureProcessing()
+    {
+        using var factory =
+            FullWorthApiFactory.WithStripeBilling();
+
+        using var client =
+            factory.CreateHttpsClient();
+
+        using var request =
+            CreateWebhookRequest(
+                new StringContent(
+                    "{}",
+                    Encoding.UTF8,
+                    "text/plain"));
+
+        using var response =
+            await client.SendAsync(request);
+
+        Assert.Equal(
+            HttpStatusCode.UnsupportedMediaType,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task ConfiguredWebhook_RejectsOversizedPayloadBeforeSignatureProcessing()
     {
         using var factory =
