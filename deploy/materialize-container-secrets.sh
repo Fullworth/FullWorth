@@ -96,6 +96,9 @@ fi
 
 write_secret api-database-connection     "Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=$database_password"
 write_secret database-password "$database_password"
+pgpass_password=$(printf '%s' "$database_password" | sed 's/:/\\:/g')
+write_secret database-pgpass "database:5432:*:billwatch:$pgpass_password
+restore-database:5432:*:billwatch:$pgpass_password"
 write_secret parser-auth-token "$parser_auth_token"
 write_secret plaid-secret "$plaid_secret"
 write_secret redis-password "$redis_password"
@@ -113,6 +116,7 @@ aws_secret_access_key=$aws_secret_access_key"
 find "$secret_directory" -mindepth 1 -maxdepth 1 -type f \
     ! -name api-database-connection \
     ! -name database-password \
+    ! -name database-pgpass \
     ! -name parser-auth-token \
     ! -name plaid-secret \
     ! -name redis-password \
