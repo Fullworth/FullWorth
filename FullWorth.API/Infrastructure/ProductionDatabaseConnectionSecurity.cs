@@ -78,11 +78,5 @@ internal static class ProductionDatabaseConnectionSecurity
             throw new InvalidOperationException(
                 "A non-local production database connection must use SSL Mode=VerifyFull.");
         }
-
-        if (connectionBuilder.TrustServerCertificate)
-        {
-            throw new InvalidOperationException(
-                "A non-local production database connection must validate the PostgreSQL server certificate.");
-        }
     }
 }
