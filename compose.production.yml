@@ -91,7 +91,13 @@ services:
         BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
     restart: unless-stopped
     stop_grace_period: 10s
+    init: true
     logging: *default-logging
+    ulimits:
+      core: 0
+      nofile:
+        soft: 512
+        hard: 512
     # Root exists only for the deterministic cgroup-v2 bootstrap. The entrypoint
     # immediately drops to UID/GID 1654 with an empty capability bounding set
     # before the HTTP worker starts.
