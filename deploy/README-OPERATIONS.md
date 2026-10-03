@@ -60,6 +60,19 @@ sh deploy/smoke-admin-api.sh https://api.billbeacon.net
 
 The admin smoke test proves that a fresh bearer session can satisfy `AdminOrOwner`; it does not mutate roles or access keys. Command-line smoke tests do not replace the guarded private-beta/BFF/Plaid/statement/Internal Beta 0 flows documented elsewhere in `deploy/`.
 
+## Host and operator hardening
+
+Use `deploy/README-HOST-HARDENING.md` for the dedicated deployment-account model, effective SSH baseline, Docker-group restriction, unattended security-update cadence, reboot handling, and secret-safe host verification.
+
+Before every guarded production release, and after SSH, operator, host-update, or container-runtime changes, run:
+
+```sh
+cd /opt/billwatch
+sudo FULLWORTH_DEPLOYMENT_USER=deploy sh deploy/verify-host-hardening.sh
+```
+
+A pass is direct host evidence for the settings the script can inspect. Provider firewall source restrictions, operator endpoint security, key custody, and provider-account MFA remain separate direct operator/provider evidence.
+
 ## Host firewall policy
 
 FullWorth's host firewall is a separate defense layer from Docker network
