@@ -143,14 +143,14 @@ grep -Fq \
     fail "production API is not wired to the Apple external identity audience."
 
 grep -Fq \
-    'ExternalIdentity__Google__ClientSecret: ${FULLWORTH_GOOGLE_CLIENT_SECRET:-}' \
+    'target: ExternalIdentity__Google__ClientSecret' \
     "$root_dir/compose.production.yml" ||
-    fail "production Web is not wired to the Google external identity secret."
+    fail "production Web is not wired to the file-backed Google external identity secret."
 
 grep -Fq \
-    'ExternalIdentity__Apple__ClientSecret: ${FULLWORTH_APPLE_CLIENT_SECRET:-}' \
+    'target: ExternalIdentity__Apple__ClientSecret' \
     "$root_dir/compose.production.yml" ||
-    fail "production Web is not wired to the Apple external identity secret."
+    fail "production Web is not wired to the file-backed Apple external identity secret."
 
 grep -Fq \
     'ReverseProxy__KnownProxies__0: 172.30.0.10' \
@@ -178,7 +178,7 @@ grep -Fq -- \
     fail "Redis password interpolation is consumed by Compose instead of the container."
 
 grep -Fq \
-    'REDISCLI_AUTH="$$REDIS_PASSWORD"' \
+    'REDISCLI_AUTH="$(cat /run/secrets/redis_password)"' \
     "$root_dir/compose.production.yml" ||
     fail "Redis healthcheck password interpolation is consumed by Compose instead of the container."
 
@@ -387,6 +387,8 @@ cp "$root_dir/deploy/monitor-readiness.sh" "$deployment_root/deploy/monitor-read
 cp "$root_dir/deploy/verify-running-release.sh" "$deployment_root/deploy/verify-running-release.sh"
 cp "$root_dir/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/check-http-security-boundaries.sh"
 cp "$root_dir/deploy/verify-secret-non-disclosure.sh" "$deployment_root/deploy/verify-secret-non-disclosure.sh"
+cp "$root_dir/deploy/materialize-container-secrets.sh" "$deployment_root/deploy/materialize-container-secrets.sh"
+cp "$root_dir/deploy/verify-file-backed-secrets.sh" "$deployment_root/deploy/verify-file-backed-secrets.sh"
 cp "$root_dir/deploy/run-backup.sh" "$deployment_root/deploy/run-backup.sh"
 cp "$root_dir/deploy/deploy-production.sh" "$deployment_root/deploy/deploy-production.sh"
 : > "$deployment_root/Dockerfile"
@@ -398,6 +400,7 @@ command_log="$temp_dir/deployment-commands.log"
 readiness_log="$temp_dir/deployment-readiness.log"
 security_log="$temp_dir/deployment-security.log"
 secret_log="$temp_dir/deployment-secret-non-disclosure.log"
+file_secret_log="$temp_dir/deployment-file-backed-secret.log"
 containment_log="$temp_dir/deployment-containment.log"
 release_id=0123456789abcdef0123456789abcdef01234567
 old_release=89abcdef0123456789abcdef0123456789abcdef
@@ -460,6 +463,13 @@ printf '%s|%s|%s\n' "$1" "$2" "$3" >> "$BILLWATCH_TEST_SECRET_LOG"
 [ "${BILLWATCH_TEST_FAIL_SECRET_DISCLOSURE:-false}" != true ] || exit 1
 SCRIPT
 
+cat > "$deployment_root/deploy/verify-file-backed-secrets.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s\n' "$1" >> "$BILLWATCH_TEST_FILE_SECRET_LOG"
+[ "${BILLWATCH_TEST_FAIL_FILE_SECRET:-false}" != true ] || exit 1
+SCRIPT
+
 cat > "$deployment_root/deploy/run-backup.sh" <<'SCRIPT'
 #!/bin/sh
 set -eu
@@ -477,6 +487,7 @@ run_deploy()
         BILLWATCH_TEST_READINESS_LOG="$readiness_log" \
         BILLWATCH_TEST_SECURITY_LOG="$security_log" \
         BILLWATCH_TEST_SECRET_LOG="$secret_log" \
+        BILLWATCH_TEST_FILE_SECRET_LOG="$file_secret_log" \
         BILLWATCH_TEST_CONTAINMENT_LOG="$containment_log" \
         "$@" \
         "$deployment_root/deploy/deploy-production.sh" \
@@ -485,6 +496,7 @@ run_deploy()
 
 : > "$command_log"
 : > "$secret_log"
+: > "$file_secret_log"
 run_deploy >/dev/null
 
 [ "$(cat "$deployment_root/.billwatch-release")" = "$release_id" ] || fail "deployment did not record the verified release."
@@ -497,6 +509,7 @@ grep -qx "$deployment_root" "$containment_log" || fail "deployment did not requi
 grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
 grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
 grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
+grep -qx "$deployment_root" "$file_secret_log" || fail "deployment did not verify file-backed secret scoping before acceptance."
 grep -qx "$deployment_root|https://api.fullworth.test|https://app.fullworth.test" "$secret_log" || fail "deployment did not verify secret non-disclosure before acceptance."
 
 printf '%s\n' "$old_release" > "$deployment_root/.billwatch-release"
@@ -521,6 +534,12 @@ grep -qx 'backup' "$command_log" || fail "stopped-runtime recovery did not creat
 grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."
+
+: > "$command_log"
+: > "$file_secret_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_FILE_SECRET=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "file-backed secret failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "file-backed secret failure did not stop the unverified candidate runtime."
 
 : > "$command_log"
 : > "$secret_log"
