@@ -23,12 +23,16 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- `development`: `c283463eba028570d9b1629a5740d2dcf4c64e85`;
-- `master`: `7b0947385c93bc07509115ae8d6665ca4fa9dc90`;
-- GitHub comparison: `development` 146 commits ahead and 3 commits behind `master`;
-- verified live production release: `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
+- `master`: `c092a9c76c5f4e811941400606c32d75a0a50a29`, the current frozen release candidate;
+- `development`: `bbf5f0e1a8016bc6dcaae52963d339d82681de2f`;
+- GitHub comparison: `development` is 2 history-only commits ahead and 0 behind `master`, with 0 file differences;
+- PR #666 promoted frozen candidate `80bb6494bf66646406829285eef4f71c009c546f` to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29` after FullWorth CI #1610 and Dependency Security #707 passed;
+- exact master-push FullWorth CI #1611 (`37158708276`) passed and produced `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29` with signed provenance/SBOM material required by the guarded deploy workflow;
+- repository-governance run #11 (`37158708332`) passed on the same master SHA;
+- PR #667 synced the master release-promotion ancestry back into `development` through exact-head FullWorth CI #1612 and Dependency Security #708, with no file-content change;
+- verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
 
-Do not treat the newer repository security state as deployed. Immutable storage, compromised-host recovery, and production-security acceptance require direct real-environment evidence.
+The master candidate is repository/CI-ready for guarded deployment, but it is **not deployed**. Immutable storage, compromised-host recovery, installed-device/provider/legal acceptance, and production-security claims still require direct real-environment evidence.
 
 ## Secret non-disclosure release gate — 2026-10-03
 
@@ -909,13 +913,13 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Read current GitHub `development`, open PRs, issue #291, this context, and the roadmap snapshot before changing architecture or release state.
-2. Repository-side security hardening is at **61/65** on #291. Do not invent additional generic security work to satisfy the four remaining evidence/governance items.
-3. The current `development` snapshot head is `c283463eba028570d9b1629a5740d2dcf4c64e85`; `master` is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`; the branches are 146 commits ahead / 3 behind from `development` to `master`. Re-check these values before release freeze because they can change.
-4. Issue #260 is closed. Preserve its existing zero-exception module/data-ownership ratchets; do not reopen old schema coupling such as `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId`.
-5. The branch ruleset already requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It currently requires 0 approving reviews. If independent approval is required, that is a repository-owner/admin policy action; do not claim it changed until GitHub evidence proves it.
-6. Immutable/off-host backup protection and compromised-host clean recovery require direct provider/host exercises against the actual recovery repository. CI simulation is not a substitute.
-7. The current verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). No newer GitHub merge is deployed unless a separate guarded deployment proves the exact release.
-8. The next code-side release step, once no new blockers exist, is deliberate release freeze and `development`/`master` reconciliation. Only blocker fixes should change a frozen candidate.
-9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
-10. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build, deployment, or acceptance check pass.
+1. Read current GitHub `master`, `development`, open PRs, issue #291, this context, and the roadmap snapshot before changing release state.
+2. Repository-side security hardening remains **61/65** on #291. The four remaining items are immutable/off-host storage proof, compromised-host clean recovery, the independent-review governance decision, and exact deployed-release evidence. Do not invent generic code work to make the count move.
+3. The frozen master release candidate is `c092a9c76c5f4e811941400606c32d75a0a50a29`. Exact master-push FullWorth CI #1611 passed and produced the required attested production-image artifact. Repository-governance run #11 also passed.
+4. `development` is `bbf5f0e1a8016bc6dcaae52963d339d82681de2f`, 2 history-only commits ahead and 0 behind `master`, with 0 file differences after PR #667 synced the release-promotion ancestry back.
+5. The current verified live production release is still `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). Do not describe `c092a9c7...` as deployed until a separate guarded production deployment proves it.
+6. The next release action is a **separately approved guarded production deployment** of exact master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29`. The production workflow is manual and requires explicit confirmation; do not substitute a normal GitHub merge for that approval.
+7. After deployment, collect one same-release evidence bundle: deployed-host security/containment, objective two-user ownership proof, provider/Plaid lifecycle evidence, controlled statement/OCR semantics, alert receipt, account deletion, reboot, immutable off-host backup proof, and clean-host recovery.
+8. Physical Android installed-PWA acceptance under #251 remains required; issue #293 still requires real Plaid payroll/sandbox acceptance; iOS issue #258 remains a separate re-test. Browser/CI evidence is not a substitute for those real-world checks.
+9. The branch ruleset requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It still requires 0 approving reviews; any independent-review requirement is a repository-owner/admin policy decision.
+10. Issue #260 is closed. Preserve its zero-exception module/data-ownership ratchets, and preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries.
