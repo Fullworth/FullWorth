@@ -85,8 +85,12 @@ require(
     set(host.get("CapDrop") or []) == {"ALL"},
     "the parser container does not drop all capabilities",
 )
+added_capabilities = {
+    capability.removeprefix("CAP_")
+    for capability in host.get("CapAdd") or []
+}
 require(
-    set(host.get("CapAdd") or []) == {"CHOWN", "SETGID", "SETPCAP", "SETUID"},
+    added_capabilities == {"CHOWN", "SETGID", "SETPCAP", "SETUID"},
     "the parser bootstrap capability allowlist changed",
 )
 require(
