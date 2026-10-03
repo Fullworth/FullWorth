@@ -1152,6 +1152,22 @@ namespace FullWorth.API.Data.Migrations
                     b.ToTable("SubscriptionAccessKeyRedemptions", (string)null);
                 });
 
+            modelBuilder.Entity("FullWorth.API.Data.Entities.StripeWebhookEventEntity", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.ToTable("StripeWebhookEvents", (string)null);
+                });
+
             modelBuilder.Entity("FullWorth.API.Data.Entities.SubscriptionEntitlementEntity", b =>
                 {
                     b.Property<Guid>("Id")
