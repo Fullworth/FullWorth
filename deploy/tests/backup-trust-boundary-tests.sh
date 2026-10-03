@@ -49,6 +49,41 @@ fi
 printf '%s\n' "$create_backup_body" | grep -q 'require_append_only_backup_role' ||
     fail "normal backup capture must require the append-only role."
 
+create_cleanup_line="$(
+    printf '%s\n' "$create_backup_body" |
+        grep -n 'cleanup_work' |
+        head -n 1 |
+        cut -d: -f1
+)"
+create_passfile_line="$(
+    printf '%s\n' "$create_backup_body" |
+        grep -n 'prepare_database_passfile' |
+        head -n 1 |
+        cut -d: -f1
+)"
+[ -n "$create_cleanup_line" ] && [ -n "$create_passfile_line" ] ||
+    fail "normal backup capture is missing passfile lifecycle steps."
+[ "$create_cleanup_line" -lt "$create_passfile_line" ] ||
+    fail "normal backup capture deletes its PostgreSQL passfile after preparing it."
+
+verify_restore_body=$(awk '/^verify_restore\(\)/,/^}/' "$backup_script")
+verify_cleanup_line="$(
+    printf '%s\n' "$verify_restore_body" |
+        grep -n 'cleanup_work' |
+        head -n 1 |
+        cut -d: -f1
+)"
+verify_passfile_line="$(
+    printf '%s\n' "$verify_restore_body" |
+        grep -n 'prepare_database_passfile' |
+        head -n 1 |
+        cut -d: -f1
+)"
+[ -n "$verify_cleanup_line" ] && [ -n "$verify_passfile_line" ] ||
+    fail "restore verification is missing passfile lifecycle steps."
+[ "$verify_cleanup_line" -lt "$verify_passfile_line" ] ||
+    fail "restore verification deletes its PostgreSQL passfile after preparing it."
+
 fake_bin="$temp_dir/bin"
 mkdir -p "$fake_bin"
 restic_log="$temp_dir/restic.log"
