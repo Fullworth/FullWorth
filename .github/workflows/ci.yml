@@ -849,7 +849,7 @@ jobs:
           )
 
           pathlib.Path(".env.production").write_text(
-              "".join(f"{name}={os.environ.get(name, '')}\\n" for name in names),
+              "".join(f"{name}={os.environ.get(name, '')}\n" for name in names),
               encoding="utf-8",
           )
           PY
