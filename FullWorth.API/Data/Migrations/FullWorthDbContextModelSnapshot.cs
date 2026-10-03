@@ -1155,6 +1155,7 @@ namespace FullWorth.API.Data.Migrations
             modelBuilder.Entity("FullWorth.API.Data.Entities.StripeWebhookEventEntity", b =>
                 {
                     b.Property<string>("EventId")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
