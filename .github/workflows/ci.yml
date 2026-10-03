@@ -251,6 +251,7 @@ jobs:
       BILLWATCH_BACKUP_WORK_SIZE: 1g
       BILLWATCH_BACKUP_CLIENT_MODE: append-only
       BILLWATCH_DATABASE_PASSWORD: ci-only-password
+      BILLWATCH_DATABASE_RUNTIME_PASSWORD: ci-runtime-database-password-more-than-32-characters
       BILLWATCH_PARSER_AUTH_TOKEN: ci-parser-worker-authentication-token-more-than-32-characters
       FULLWORTH_PARSER_IMAGE_OBSERVATION_DELAY_MS: "250"
       BILLWATCH_WEB_SESSION_REDIS_PASSWORD: ci-web-session-password-more-than-32-characters
@@ -386,6 +387,7 @@ jobs:
           sh deploy/tests/repository-governance-workflow-tests.sh
           sh deploy/tests/production-deploy-workflow-tests.sh
           sh deploy/tests/production-operations-tests.sh
+          sh deploy/tests/database-role-separation-tests.sh
           sh deploy/tests/parser-native-boundary-tests.sh
           sh deploy/tests/operations-alert-sender-tests.sh
           sh deploy/tests/backup-trust-boundary-tests.sh
@@ -707,6 +709,7 @@ jobs:
 
           names = (
               "BILLWATCH_DATABASE_PASSWORD",
+              "BILLWATCH_DATABASE_RUNTIME_PASSWORD",
               "BILLWATCH_PARSER_AUTH_TOKEN",
               "BILLWATCH_WEB_SESSION_REDIS_PASSWORD",
               "PLAID_SECRET",
@@ -730,6 +733,10 @@ jobs:
           sh deploy/materialize-container-secrets.sh \
             .ci-container-secrets.env \
             .fullworth-secrets
+
+      - name: Prepare least-privilege production database
+        if: steps.container_changes.outputs.required == 'true'
+        run: sh deploy/prepare-database-runtime.sh "$PWD"
 
       - name: Start production stack
         if: steps.container_changes.outputs.required == 'true'
@@ -880,6 +887,7 @@ jobs:
 
           names = (
               "BILLWATCH_DATABASE_PASSWORD",
+              "BILLWATCH_DATABASE_RUNTIME_PASSWORD",
               "BILLWATCH_PARSER_AUTH_TOKEN",
               "BILLWATCH_WEB_SESSION_REDIS_PASSWORD",
               "PLAID_SECRET",

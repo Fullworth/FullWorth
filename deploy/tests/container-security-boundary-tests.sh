@@ -11,6 +11,7 @@ trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM
 
 cat > "$secret_env" <<'ENV'
 BILLWATCH_DATABASE_PASSWORD=ci-database-password
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=ci-runtime-database-password-more-than-32-characters
 BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters
 BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters
 PLAID_SECRET=ci-plaid-secret

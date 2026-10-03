@@ -41,7 +41,7 @@ services:
       ParserWorker__BaseUrl: https://parser-worker:8081
       ParserWorker__ServerCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
-      Database__MigrateOnStartup: "true"
+      Database__MigrateOnStartup: "false"
       Subscription__EnforcementEnabled: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED:-false}
       Subscription__EnforcementCohort: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_COHORT:-All}
       StripeBilling__Enabled: ${BILLWATCH_STRIPE_ENABLED:-false}
@@ -275,6 +275,62 @@ services:
         aliases:
           - database
 
+  database-role-provisioner:
+    profiles:
+      - operations
+    image: postgres:17-bookworm@sha256:639ab7ceb90e13123085b741fb31ef493fba25463002f6da665352e7b534b652
+    restart: "no"
+    read_only: true
+    user: postgres
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      database:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - /opt/fullworth/provision-runtime-role.sh
+    command:
+      - provision
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    volumes:
+      - ./deploy/database/provision-runtime-role.sh:/opt/fullworth/provision-runtime-role.sh:ro
+    secrets:
+      - source: database_pgpass
+        target: database_pgpass
+      - source: database_runtime_password
+        target: database_runtime_password
+    networks:
+      - data
+
+  database-migrator:
+    profiles:
+      - operations
+    image: billwatch-api:${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__MigrationOnly: "true"
+      DataProtection__KeysPath: /tmp/fullworth-migration-keys
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,uid=1654,gid=1654,mode=0700
+    secrets:
+      - source: migration_database_connection
+        target: ConnectionStrings__BillWatchDatabase
+    networks:
+      - data
+
   backup:
     profiles:
       - operations
@@ -427,8 +483,12 @@ networks:
 secrets:
   api_database_connection:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/api-database-connection
+  migration_database_connection:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/migration-database-connection
   database_password:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-password
+  database_runtime_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-runtime-password
   database_pgpass:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-pgpass
   parser_auth_token:

@@ -77,6 +77,7 @@ write_secret()
 }
 
 database_password=$(read_value BILLWATCH_DATABASE_PASSWORD required)
+database_runtime_password=$(read_value BILLWATCH_DATABASE_RUNTIME_PASSWORD required)
 parser_auth_token=$(read_value BILLWATCH_PARSER_AUTH_TOKEN required)
 redis_password=$(read_value BILLWATCH_WEB_SESSION_REDIS_PASSWORD required)
 plaid_secret=$(read_value PLAID_SECRET required)
@@ -94,8 +95,12 @@ if { [ -n "$aws_access_key_id" ] && [ -z "$aws_secret_access_key" ]; } ||
     fail "AWS backup credentials must be configured as a complete pair."
 fi
 
-write_secret api-database-connection     "Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=$database_password"
+write_secret api-database-connection \
+    "Host=database;Port=5432;Database=billwatch;Username=fullworth_runtime;Password=$database_runtime_password"
+write_secret migration-database-connection \
+    "Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=$database_password"
 write_secret database-password "$database_password"
+write_secret database-runtime-password "$database_runtime_password"
 pgpass_password=$(printf '%s' "$database_password" | sed 's/:/\\:/g')
 write_secret database-pgpass "database:5432:*:billwatch:$pgpass_password
 restore-database:5432:*:billwatch:$pgpass_password"
@@ -115,7 +120,9 @@ aws_secret_access_key=$aws_secret_access_key"
 # Remove files from older layouts instead of allowing stale credentials to linger.
 find "$secret_directory" -mindepth 1 -maxdepth 1 -type f \
     ! -name api-database-connection \
+    ! -name migration-database-connection \
     ! -name database-password \
+    ! -name database-runtime-password \
     ! -name database-pgpass \
     ! -name parser-auth-token \
     ! -name plaid-secret \
