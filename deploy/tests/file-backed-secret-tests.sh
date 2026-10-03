@@ -24,6 +24,7 @@ write_env()
     output=$1
     cat > "$output" <<'ENV'
 BILLWATCH_DATABASE_PASSWORD=database:password-with-more-than-32-characters
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime:database-password-with-more-than-32-characters
 BILLWATCH_PARSER_AUTH_TOKEN=parser-worker-token-with-more-than-32-characters
 BILLWATCH_WEB_SESSION_REDIS_PASSWORD=web-session-password-with-more-than-32-characters
 PLAID_SECRET=test-plaid-secret
@@ -58,7 +59,9 @@ output="$(
 
 for secret_file in \
     api-database-connection \
+    migration-database-connection \
     database-password \
+    database-runtime-password \
     database-pgpass \
     parser-auth-token \
     plaid-secret \
@@ -79,8 +82,12 @@ done
 
 [ "$(cat "$secret_directory/database-password")" = "database:password-with-more-than-32-characters" ] ||
     fail "database password changed during materialization."
-[ "$(cat "$secret_directory/api-database-connection")" = "Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=database:password-with-more-than-32-characters" ] ||
-    fail "API connection string was not assembled correctly."
+[ "$(cat "$secret_directory/api-database-connection")" = "Host=database;Port=5432;Database=billwatch;Username=fullworth_runtime;Password=runtime:database-password-with-more-than-32-characters" ] ||
+    fail "API runtime connection string was not assembled correctly."
+[ "$(cat "$secret_directory/migration-database-connection")" = "Host=database;Port=5432;Database=billwatch;Username=billwatch;Password=database:password-with-more-than-32-characters" ] ||
+    fail "migration connection string was not assembled correctly."
+[ "$(cat "$secret_directory/database-runtime-password")" = "runtime:database-password-with-more-than-32-characters" ] ||
+    fail "runtime database password changed during materialization."
 grep -Fqx 'database:5432:*:billwatch:database\:password-with-more-than-32-characters' \
     "$secret_directory/database-pgpass" ||
     fail "database passfile did not escape the password field."
@@ -143,6 +150,11 @@ done
 
 for required in \
     'target: ConnectionStrings__BillWatchDatabase' \
+    'source: migration_database_connection' \
+    'source: database_runtime_password' \
+    'Database__MigrateOnStartup: "false"' \
+    'database-role-provisioner:' \
+    'database-migrator:' \
     'target: ParserWorker__AuthenticationToken' \
     'target: Plaid__Secret' \
     'target: WebSession__RedisPassword' \
