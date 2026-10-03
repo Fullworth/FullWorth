@@ -76,7 +76,10 @@ require(
 )
 require(host.get("NanoCpus", 0) > 0, "the parser container CPU ceiling is not finite")
 require(
-    "no-new-privileges" in host.get("SecurityOpt", []),
+    any(
+        item == "no-new-privileges" or item.startswith("no-new-privileges:")
+        for item in host.get("SecurityOpt", [])
+    ),
     "the parser container lacks no-new-privileges",
 )
 require(
