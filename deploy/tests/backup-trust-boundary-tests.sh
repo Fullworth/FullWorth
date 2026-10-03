@@ -63,6 +63,10 @@ esac
 EOF
 chmod 700 "$fake_bin/restic"
 
+restic_password_file="$temp_dir/restic-password"
+printf '%s' 'restic-password-with-more-than-24-characters' > "$restic_password_file"
+chmod 600 "$restic_password_file"
+
 common_env()
 {
     env \
@@ -70,7 +74,7 @@ common_env()
         BILLWATCH_TEST_RESTIC_LOG="$restic_log" \
         BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=false \
         RESTIC_REPOSITORY='rest:https://backup.example.test/billwatch' \
-        RESTIC_PASSWORD='restic-password-with-more-than-24-characters' \
+        RESTIC_PASSWORD_FILE="$restic_password_file" \
         BILLWATCH_BACKUP_RETENTION_ENABLED=true \
         BILLWATCH_BACKUP_KEEP_DAILY=14 \
         BILLWATCH_BACKUP_KEEP_WEEKLY=8 \
