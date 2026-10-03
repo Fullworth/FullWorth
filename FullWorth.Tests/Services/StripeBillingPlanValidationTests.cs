@@ -219,7 +219,7 @@ public sealed class StripeBillingPlanValidationTests
 
         var payload = JsonSerializer.Serialize(new
         {
-            id = "evt_delayed_active_test",
+            id = "evt_delayedactivetest",
             type = "customer.subscription.updated",
             data = new
             {
@@ -266,7 +266,7 @@ public sealed class StripeBillingPlanValidationTests
 
         var payload = JsonSerializer.Serialize(new
         {
-            id = "evt_replay_test",
+            id = "evt_replaytest",
             type = "invoice.created",
             data = new
             {
@@ -288,7 +288,7 @@ public sealed class StripeBillingPlanValidationTests
 
         var receipt = await service.Db.StripeWebhookEvents.SingleAsync();
 
-        Assert.Equal("evt_replay_test", receipt.EventId);
+        Assert.Equal("evt_replaytest", receipt.EventId);
         Assert.Equal(0, providerCalls);
     }
 
@@ -302,14 +302,14 @@ public sealed class StripeBillingPlanValidationTests
         service.Db.StripeWebhookEvents.Add(
             new StripeWebhookEventEntity
             {
-                EventId = "evt_expired_test",
+                EventId = "evt_expiredtest",
                 ProcessedAtUtc = DateTimeOffset.UtcNow.AddDays(-33)
             });
         await service.Db.SaveChangesAsync();
 
         var payload = JsonSerializer.Serialize(new
         {
-            id = "evt_current_test",
+            id = "evt_currenttest",
             type = "invoice.created",
             data = new
             {
@@ -328,7 +328,7 @@ public sealed class StripeBillingPlanValidationTests
 
         Assert.Collection(
             receipts,
-            receipt => Assert.Equal("evt_current_test", receipt.EventId));
+            receipt => Assert.Equal("evt_currenttest", receipt.EventId));
     }
 
     [Fact]
