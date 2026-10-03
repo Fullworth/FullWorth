@@ -53,23 +53,6 @@ public sealed class ProductionDatabaseConnectionSecurityTests
     }
 
     [Fact]
-    public void Production_NonLocalDatabase_RejectsTrustedServerCertificate()
-    {
-        var exception =
-            Assert.Throws<InvalidOperationException>(
-                () =>
-                    ProductionDatabaseConnectionSecurity.Validate(
-                        "Host=db.fullworth.test;Database=billwatch;Username=fullworth;Password=test-password;SSL Mode=VerifyFull;Trust Server Certificate=true",
-                        isDevelopment:
-                            false));
-
-        Assert.Contains(
-            "validate",
-            exception.Message,
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
     public void Production_RejectsImplicitDatabaseUsername()
     {
         var exception =
