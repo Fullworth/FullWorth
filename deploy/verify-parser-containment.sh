@@ -49,6 +49,71 @@ parser_container="$(compose ps -q parser-worker)"
 [ -n "$parser_container" ] ||
     fail "the parser-worker container could not be resolved." 69
 
+docker inspect "$parser_container" |
+    python3 -c '
+import json
+import sys
+
+containers = json.load(sys.stdin)
+if len(containers) != 1:
+    raise SystemExit("exactly one parser-worker container was not inspected")
+
+container = containers[0]
+host = container["HostConfig"]
+config = container["Config"]
+
+def require(condition, message):
+    if not condition:
+        raise SystemExit(message)
+
+require(host.get("Init") is True, "the parser worker does not use a minimal init")
+require(host.get("ReadonlyRootfs") is True, "the parser root filesystem is writable")
+require(host.get("PidsLimit") == 64, "the parser container PID ceiling is not 64")
+require(host.get("Memory", 0) > 0, "the parser container memory ceiling is not finite")
+require(
+    host.get("MemorySwap") == host.get("Memory"),
+    "the parser container swap ceiling does not match its memory ceiling",
+)
+require(host.get("NanoCpus", 0) > 0, "the parser container CPU ceiling is not finite")
+require(
+    "no-new-privileges" in host.get("SecurityOpt", []),
+    "the parser container lacks no-new-privileges",
+)
+require(
+    set(host.get("CapDrop") or []) == {"ALL"},
+    "the parser container does not drop all capabilities",
+)
+require(
+    set(host.get("CapAdd") or []) == {"CHOWN", "SETGID", "SETPCAP", "SETUID"},
+    "the parser bootstrap capability allowlist changed",
+)
+require(
+    not (host.get("PortBindings") or {}),
+    "the parser container publishes a host port",
+)
+require(
+    len(container["NetworkSettings"].get("Networks") or {}) == 1,
+    "the parser container is attached to more than one network",
+)
+
+limits = {
+    item["Name"]: (item["Soft"], item["Hard"])
+    for item in host.get("Ulimits") or []
+}
+require(limits.get("core") == (0, 0), "parser core dumps are not disabled")
+require(
+    limits.get("nofile") == (512, 512),
+    "the parser file-descriptor ceiling is not 512",
+)
+
+environment = set(config.get("Env") or [])
+require(
+    "DOTNET_EnableDiagnostics=0" in environment,
+    "runtime diagnostics are enabled in the parser container",
+)
+' ||
+    fail "the parser-worker container boundary configuration is unsafe." 77
+
 parser_pid="$(
     docker inspect \
         --format '{{.State.Pid}}' \
@@ -488,7 +553,8 @@ release_id="$(git -C "$deployment_directory" rev-parse --verify HEAD^{commit} 2>
 printf '%s\n' \
     "FullWorth parser containment verification passed." \
     "Release: $release_id" \
-    "Parser runtime: uid=1654 effective-capabilities=none bounding-capabilities=none" \
+    "Parser runtime: init=true read-only=true uid=1654 effective-capabilities=none bounding-capabilities=none core=0 nofile=512" \
+    "Container limits: cpu=finite memory=finite swap=disabled pids=64 network=internal-only host-ports=none diagnostics=disabled" \
     "Document limits: cpu.max=100000/100000 memory.max=402653184 memory.swap.max=0 pids.max=48" \
     "Kernel memory proof: $containment_summary" \
     "Synthetic OCR: per-document and per-image cgroups observed and removed; parser readiness survived."
