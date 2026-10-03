@@ -386,6 +386,7 @@ cp "$root_dir/deploy/validate-production-env.sh" "$deployment_root/deploy/valida
 cp "$root_dir/deploy/monitor-readiness.sh" "$deployment_root/deploy/monitor-readiness.sh"
 cp "$root_dir/deploy/verify-running-release.sh" "$deployment_root/deploy/verify-running-release.sh"
 cp "$root_dir/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/check-http-security-boundaries.sh"
+cp "$root_dir/deploy/verify-secret-non-disclosure.sh" "$deployment_root/deploy/verify-secret-non-disclosure.sh"
 cp "$root_dir/deploy/run-backup.sh" "$deployment_root/deploy/run-backup.sh"
 cp "$root_dir/deploy/deploy-production.sh" "$deployment_root/deploy/deploy-production.sh"
 : > "$deployment_root/Dockerfile"
@@ -396,6 +397,7 @@ write_valid_env "$deployment_root/.env.production"
 command_log="$temp_dir/deployment-commands.log"
 readiness_log="$temp_dir/deployment-readiness.log"
 security_log="$temp_dir/deployment-security.log"
+secret_log="$temp_dir/deployment-secret-non-disclosure.log"
 containment_log="$temp_dir/deployment-containment.log"
 release_id=0123456789abcdef0123456789abcdef01234567
 old_release=89abcdef0123456789abcdef0123456789abcdef
@@ -451,6 +453,13 @@ printf '%s\n' "$1" >> "$BILLWATCH_TEST_CONTAINMENT_LOG"
 [ "${BILLWATCH_TEST_FAIL_CONTAINMENT:-false}" != true ] || exit 1
 SCRIPT
 
+cat > "$deployment_root/deploy/verify-secret-non-disclosure.sh" <<'SCRIPT'
+#!/bin/sh
+set -eu
+printf '%s|%s|%s\n' "$1" "$2" "$3" >> "$BILLWATCH_TEST_SECRET_LOG"
+[ "${BILLWATCH_TEST_FAIL_SECRET_DISCLOSURE:-false}" != true ] || exit 1
+SCRIPT
+
 cat > "$deployment_root/deploy/run-backup.sh" <<'SCRIPT'
 #!/bin/sh
 set -eu
@@ -458,7 +467,7 @@ printf '%s\n' backup >> "$BILLWATCH_TEST_COMMAND_LOG"
 exit 0
 SCRIPT
 
-chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/verify-parser-containment.sh" "$deployment_root/deploy/run-backup.sh"
+chmod 755 "$fake_bin/git" "$fake_bin/docker" "$deployment_root/deploy/monitor-readiness.sh" "$deployment_root/deploy/check-http-security-boundaries.sh" "$deployment_root/deploy/verify-parser-containment.sh" "$deployment_root/deploy/verify-secret-non-disclosure.sh" "$deployment_root/deploy/run-backup.sh"
 
 run_deploy()
 {
@@ -467,6 +476,7 @@ run_deploy()
         BILLWATCH_TEST_COMMAND_LOG="$command_log" \
         BILLWATCH_TEST_READINESS_LOG="$readiness_log" \
         BILLWATCH_TEST_SECURITY_LOG="$security_log" \
+        BILLWATCH_TEST_SECRET_LOG="$secret_log" \
         BILLWATCH_TEST_CONTAINMENT_LOG="$containment_log" \
         "$@" \
         "$deployment_root/deploy/deploy-production.sh" \
@@ -474,6 +484,7 @@ run_deploy()
 }
 
 : > "$command_log"
+: > "$secret_log"
 run_deploy >/dev/null
 
 [ "$(cat "$deployment_root/.billwatch-release")" = "$release_id" ] || fail "deployment did not record the verified release."
@@ -486,6 +497,7 @@ grep -qx "$deployment_root" "$containment_log" || fail "deployment did not requi
 grep -qx 'https://api.fullworth.test' "$readiness_log" || fail "deployment did not verify API readiness."
 grep -qx 'https://app.fullworth.test' "$readiness_log" || fail "deployment did not verify web readiness."
 grep -qx 'https://api.fullworth.test|https://app.fullworth.test' "$security_log" || fail "deployment did not verify public HTTP security boundaries."
+grep -qx "$deployment_root|https://api.fullworth.test|https://app.fullworth.test" "$secret_log" || fail "deployment did not verify secret non-disclosure before acceptance."
 
 printf '%s\n' "$old_release" > "$deployment_root/.billwatch-release"
 chmod 600 "$deployment_root/.billwatch-release"
@@ -509,6 +521,12 @@ grep -qx 'backup' "$command_log" || fail "stopped-runtime recovery did not creat
 grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "HTTP security failure did not stop the unverified candidate runtime."
 if grep -q 'stop database' "$command_log"; then fail "candidate cleanup attempted to stop PostgreSQL."; fi
 [ ! -d "$deployment_root/.billwatch-deploy.lock" ] || fail "deployment lock was not removed after HTTP security boundary failure."
+
+: > "$command_log"
+: > "$secret_log"
+expect_failure run_deploy BILLWATCH_TEST_FAIL_SECRET_DISCLOSURE=true
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "secret disclosure failure changed the last verified release marker."
+grep -q 'stop api parser-worker web web-session-cache edge' "$command_log" || fail "secret disclosure failure did not stop the unverified candidate runtime."
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_FAIL_READINESS=true
