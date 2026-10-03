@@ -223,7 +223,7 @@ services:
       - sh
       - -c
       - >-
-        REDIS_PASSWORD="$$(cat /run/secrets/redis_password)"
+        REDIS_PASSWORD="$(cat /run/secrets/redis_password)";
         exec redis-server
         --save ''
         --appendonly no
