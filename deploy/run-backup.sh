@@ -16,6 +16,16 @@ environment_file="$deployment_directory/.env.production"
 FULLWORTH_SECRET_DIRECTORY="$deployment_directory/.fullworth-secrets"
 export FULLWORTH_SECRET_DIRECTORY
 
+restore_services_after_backup=${FULLWORTH_BACKUP_RESTORE_SERVICES:-true}
+
+case "$restore_services_after_backup" in
+    true|false) ;;
+    *)
+        echo "FULLWORTH_BACKUP_RESTORE_SERVICES must be true or false." >&2
+        exit 64
+        ;;
+esac
+
 if [ -f "$environment_file" ]; then
     environment_owner="$(stat -c '%u' "$environment_file")"
     environment_permissions="$(stat -c '%a' "$environment_file")"
@@ -201,8 +211,10 @@ finish_backup()
 
     trap - EXIT HUP INT TERM
 
-    if ! restore_services; then
-        exit_code=1
+    if [ "$restore_services_after_backup" = true ]; then
+        if ! restore_services; then
+            exit_code=1
+        fi
     fi
 
     rmdir "$lock_directory" 2>/dev/null || exit_code=1
@@ -251,6 +263,9 @@ compose --profile operations run \
     backup \
     backup
 
-restore_services
+if [ "$restore_services_after_backup" = true ]; then
+    restore_services
+fi
+
 rmdir "$lock_directory"
 trap - EXIT HUP INT TERM
