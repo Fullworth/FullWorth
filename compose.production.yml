@@ -224,11 +224,11 @@ services:
       - sh
       - -c
       - >-
-        REDIS_PASSWORD="$(cat /run/secrets/redis_password)"
+        REDIS_PASSWORD="$$(cat /run/secrets/redis_password)"
         exec redis-server
         --save ''
         --appendonly no
-        --requirepass "$REDIS_PASSWORD"
+        --requirepass "$$REDIS_PASSWORD"
         --maxmemory 128mb
         --maxmemory-policy volatile-ttl
         --dir /data
@@ -237,7 +237,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          REDISCLI_AUTH="$(cat /run/secrets/redis_password)"
+          REDISCLI_AUTH="$$(cat /run/secrets/redis_password)"
           redis-cli --no-auth-warning ping |
           grep -qx PONG
       interval: 5s
