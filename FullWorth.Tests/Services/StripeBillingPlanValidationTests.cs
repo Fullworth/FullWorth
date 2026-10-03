@@ -151,44 +151,52 @@ public sealed class StripeBillingPlanValidationTests
         var userId = Guid.NewGuid();
         var periodEnd = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds();
 
+        var providerCalls = 0;
+
         using var service = CreateService(
-            request => request.RequestUri!.AbsolutePath switch
+            request =>
             {
-                "/v1/customers/search" =>
-                    JsonSerializer.Serialize(new
-                    {
-                        data = new[]
+                providerCalls++;
+
+                return request.RequestUri!.AbsolutePath switch
+                {
+                    "/v1/customers/search" =>
+                        JsonSerializer.Serialize(new
                         {
-                            new
+                            data = new[]
                             {
-                                id = "cus_test",
-                                metadata = new Dictionary<string, string>
+                                new
                                 {
-                                    ["billwatch_user_id"] = userId.ToString("D")
-                                }
-                            }
-                        }
-                    }),
-                "/v1/subscriptions" =>
-                    JsonSerializer.Serialize(new
-                    {
-                        data = new[]
-                        {
-                            new
-                            {
-                                status = "canceled",
-                                current_period_end = periodEnd,
-                                items = new
-                                {
-                                    data = new[]
+                                    id = "cus_test",
+                                    metadata = new Dictionary<string, string>
                                     {
-                                        new { price = new { id = MonthlyPriceId } }
+                                        ["billwatch_user_id"] = userId.ToString("D")
                                     }
                                 }
                             }
-                        }
-                    }),
-                _ => throw new InvalidOperationException("Unexpected Stripe request.")
+                        }),
+                    "/v1/subscriptions" =>
+                        JsonSerializer.Serialize(new
+                        {
+                            data = new[]
+                            {
+                                new
+                                {
+                                    status = "canceled",
+                                    current_period_end = periodEnd,
+                                    items = new
+                                    {
+                                        data = new[]
+                                        {
+                                            new { price = new { id = MonthlyPriceId } }
+                                        }
+                                    }
+                                }
+                            }
+                        }),
+                    _ => throw new InvalidOperationException(
+                        "Unexpected Stripe request.")
+                };
             });
 
         service.Db.Users.Add(new ApplicationUser
@@ -225,13 +233,22 @@ public sealed class StripeBillingPlanValidationTests
                 }
             }
         });
+        var signature = CreateWebhookSignature(payload);
+
         await service.Billing.HandleWebhookAsync(
             payload,
-            CreateWebhookSignature(payload),
+            signature,
+            CancellationToken.None);
+
+        await service.Billing.HandleWebhookAsync(
+            payload,
+            signature,
             CancellationToken.None);
 
         var entitlement = await service.Db.SubscriptionEntitlements.SingleAsync();
         Assert.True(entitlement.IsRevoked);
+        Assert.Equal(2, providerCalls);
+        Assert.Single(await service.Db.StripeWebhookEvents.ToListAsync());
     }
 
     [Fact]
