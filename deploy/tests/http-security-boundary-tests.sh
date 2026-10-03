@@ -116,7 +116,7 @@ set -eu
 request=$(tr -d '\r')
 
 case "$request" in
-    *'Transfer-Encoding: chunked'*'Content-Length: 1'*)
+    *'Content-Length: 1'*'Transfer-Encoding: chunked'*)
         printf '%s\r\n' \
             'HTTP/1.1 204 No Content' \
             'X-FullWorth-Request-Id: 0123456789abcdef0123456789abcdef' \
