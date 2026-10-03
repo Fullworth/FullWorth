@@ -66,6 +66,9 @@ public sealed class FullWorthDbContext
     public DbSet<PlaidLinkSessionEntity> PlaidLinkSessions =>
         Set<PlaidLinkSessionEntity>();
 
+    public DbSet<StripeWebhookEventEntity> StripeWebhookEvents =>
+        Set<StripeWebhookEventEntity>();
+
     public DbSet<SubscriptionEntitlementEntity> SubscriptionEntitlements =>
         Set<SubscriptionEntitlementEntity>();
 

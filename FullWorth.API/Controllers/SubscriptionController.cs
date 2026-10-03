@@ -254,6 +254,11 @@ public sealed class SubscriptionController(
             return NotFound();
         }
 
+        if (!Request.HasJsonContentType())
+        {
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+
         if (Request.ContentLength is > StripeWebhookMaxPayloadBytes)
         {
             return StatusCode(StatusCodes.Status413PayloadTooLarge);

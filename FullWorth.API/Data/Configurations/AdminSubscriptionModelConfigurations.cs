@@ -4,6 +4,27 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FullWorth.API.Data.Configurations;
 
+internal sealed class StripeWebhookEventEntityConfiguration
+    : IEntityTypeConfiguration<StripeWebhookEventEntity>
+{
+    public void Configure(
+        EntityTypeBuilder<StripeWebhookEventEntity> entity)
+    {
+        entity.ToTable("StripeWebhookEvents");
+
+        entity.HasKey(webhookEvent => webhookEvent.EventId);
+
+        entity.Property(webhookEvent => webhookEvent.EventId)
+            .HasMaxLength(255)
+            .IsRequired();
+
+        entity.Property(webhookEvent => webhookEvent.ProcessedAtUtc)
+            .IsRequired();
+
+        entity.HasIndex(webhookEvent => webhookEvent.ProcessedAtUtc);
+    }
+}
+
 internal sealed class SubscriptionEntitlementEntityConfiguration
     : IEntityTypeConfiguration<SubscriptionEntitlementEntity>
 {
