@@ -391,7 +391,8 @@ verify_restore()
         sha256sum -c checksums.sha256
     )
 
-    grep -q '^FormatVersion=3    grep -q '^PostgreSqlMajor=17$' "$restored_bundle/manifest.txt"
+    grep -q '^FormatVersion=3$' "$restored_bundle/manifest.txt"
+    grep -q '^PostgreSqlMajor=17$' "$restored_bundle/manifest.txt"
     pg_restore --list "$restored_bundle/database.dump" >/dev/null
 
     mkdir -p \
