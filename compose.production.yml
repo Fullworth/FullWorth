@@ -295,7 +295,7 @@ services:
     command:
       - provision
     tmpfs:
-      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=0700
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
     volumes:
       - ./deploy/database/provision-runtime-role.sh:/opt/fullworth/provision-runtime-role.sh:ro
     secrets:
