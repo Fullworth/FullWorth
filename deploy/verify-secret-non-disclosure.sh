@@ -138,8 +138,7 @@ docker compose \
     >> "$observed_file" 2>&1 ||
     fail "production service logs could not be collected." 69
 
-python3 - "$environment_file" "$observed_file" <<'PY' ||
-    fail "a configured secret was disclosed through an application response or service log." 77
+if ! python3 - "$environment_file" "$observed_file" <<'PY'
 import base64
 import pathlib
 import sys
@@ -232,6 +231,9 @@ if disclosed:
         + ", ".join(sorted(disclosed))
     )
 PY
+then
+    fail "a configured secret was disclosed through an application response or service log." 77
+fi
 
 printf '%s\n' \
     "Secret non-disclosure verification passed for public health/error responses and production service logs."
