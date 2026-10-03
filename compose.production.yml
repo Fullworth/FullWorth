@@ -317,7 +317,7 @@ services:
         - >-
           test "$(stat -c %a "/var/lib/postgresql/data")" = 700 &&
           test "$(stat -c %u:%g "/var/lib/postgresql/data")" = "$(id -u postgres):$(id -g postgres)" &&
-          pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+          pg_isready -U billwatch -d restore_host
       interval: 2s
       timeout: 5s
       retries: 30
