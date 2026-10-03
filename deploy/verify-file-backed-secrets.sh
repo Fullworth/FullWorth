@@ -48,6 +48,10 @@ done
 
 compose exec -T api sh -ec '
     test -s /run/secrets/ConnectionStrings__BillWatchDatabase
+    grep -Fq "Username=fullworth_runtime;" /run/secrets/ConnectionStrings__BillWatchDatabase
+    ! grep -Fq "Username=billwatch;" /run/secrets/ConnectionStrings__BillWatchDatabase
+    test ! -e /run/secrets/migration-database-connection
+    test ! -e /run/secrets/database-runtime-password
     test -s /run/secrets/ParserWorker__AuthenticationToken
     test -s /run/secrets/Plaid__Secret
     test ! -e /run/secrets/WebSession__RedisPassword
@@ -84,5 +88,15 @@ compose exec -T web-session-cache sh -ec '
         redis-cli --no-auth-warning --raw ping |
         grep -qx PONG
 '
+
+for one_shot_service in database-role-provisioner database-migrator
+do
+    retained_container="$(
+        compose ps --all --quiet "$one_shot_service"
+    )"
+
+    [ -z "$retained_container" ] ||
+        fail "$one_shot_service retained a stopped container with elevated database credentials."
+done
 
 printf '%s\n' "File-backed container secret verification passed."
