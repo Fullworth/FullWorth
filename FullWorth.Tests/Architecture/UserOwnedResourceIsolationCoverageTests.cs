@@ -1,6 +1,7 @@
 using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.Tests.Services;
+using Security = FullWorth.Tests.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace FullWorth.Tests.Architecture;
