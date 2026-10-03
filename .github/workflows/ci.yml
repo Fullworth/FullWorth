@@ -724,7 +724,11 @@ jobs:
               for option in host.get("SecurityOpt", [])
           ), host
           assert set(host.get("CapDrop") or []) == {"ALL"}, host
-          assert set(host.get("CapAdd") or []) == {
+          added_capabilities = {
+              capability.removeprefix("CAP_")
+              for capability in host.get("CapAdd") or []
+          }
+          assert added_capabilities == {
               "CHOWN", "SETGID", "SETPCAP", "SETUID"
           }, host
           assert not (host.get("PortBindings") or {}), host
