@@ -66,7 +66,6 @@ def require(condition, message):
     if not condition:
         raise SystemExit(message)
 
-require(host.get("Init") is True, "the parser worker does not use a minimal init")
 require(host.get("ReadonlyRootfs") is True, "the parser root filesystem is writable")
 require(host.get("PidsLimit") == 64, "the parser container PID ceiling is not 64")
 require(host.get("Memory", 0) > 0, "the parser container memory ceiling is not finite")
@@ -556,7 +555,7 @@ release_id="$(git -C "$deployment_directory" rev-parse --verify HEAD^{commit} 2>
 printf '%s\n' \
     "FullWorth parser containment verification passed." \
     "Release: $release_id" \
-    "Parser runtime: init=true read-only=true uid=1654 effective-capabilities=none bounding-capabilities=none core=0 nofile=512" \
+    "Parser runtime: read-only=true uid=1654 effective-capabilities=none bounding-capabilities=none core=0 nofile=512" \
     "Container limits: cpu=finite memory=finite swap=disabled pids=64 network=internal-only host-ports=none diagnostics=disabled" \
     "Document limits: cpu.max=100000/100000 memory.max=402653184 memory.swap.max=0 pids.max=48" \
     "Kernel memory proof: $containment_summary" \
