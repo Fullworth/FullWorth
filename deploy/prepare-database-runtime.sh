@@ -39,6 +39,15 @@ compose()
     fi
 }
 
+running_services="$(compose ps --status running --services)"
+
+if printf '%s\n' "$running_services" |
+    grep --quiet --line-regexp api
+then
+    echo "The API must be stopped before database role preparation or schema migration." >&2
+    exit 75
+fi
+
 compose up \
     --detach \
     --wait \
