@@ -4,7 +4,14 @@ set -eu
 
 umask 077
 
-permission_policy_path="${FULLWORTH_BACKUP_PERMISSION_POLICY_PATH:-/usr/local/lib/fullworth/backup-permission-policy.sh}"
+if [ -n "${FULLWORTH_BACKUP_PERMISSION_POLICY_PATH:-}" ]; then
+    permission_policy_path=$FULLWORTH_BACKUP_PERMISSION_POLICY_PATH
+elif [ -f /usr/local/lib/fullworth/backup-permission-policy.sh ]; then
+    permission_policy_path=/usr/local/lib/fullworth/backup-permission-policy.sh
+else
+    script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+    permission_policy_path="$script_dir/permission-policy.sh"
+fi
 
 if [ ! -f "$permission_policy_path" ] || [ -L "$permission_policy_path" ]; then
     echo "The backup permission policy is missing or unsafe." >&2
