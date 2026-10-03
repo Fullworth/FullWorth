@@ -195,6 +195,10 @@ if (string.IsNullOrWhiteSpace(
         "Connection string 'BillWatchDatabase' was not found.");
 }
 
+ProductionDatabaseConnectionSecurity.Validate(
+    connectionString,
+    builder.Environment.IsDevelopment());
+
 builder.Services.AddDbContext<FullWorthDbContext>(
     options =>
         options.UseNpgsql(
