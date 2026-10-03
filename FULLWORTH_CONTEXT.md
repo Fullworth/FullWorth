@@ -1,3 +1,13 @@
+## Financial operation abuse boundaries — 2026-10-02
+
+FullWorth now applies authenticated-user-partitioned named rate limits to the expensive financial operations identified by the executable endpoint inventory. The `financial-refresh` policy permits six requests per ten minutes for bill discovery, monitoring refresh, and Plaid account/transaction synchronization. The `financial-provider` policy permits twenty requests per ten minutes for Plaid Link creation, update, completion, and public-token exchange so normal interactive polling/retries remain viable without inheriting the broad API-wide budget.
+
+Matching policies run at exposed Web/BFF entry points before antiforgery body processing and proxy work, while the API policies independently protect direct clients. Rejections return 429 with a positive `Retry-After`. Integration tests exhaust every API and Web policy, prove a second authenticated user retains an independent budget, and the endpoint inventory now locks fourteen financial routes to the named policies. The reviewed inventory contains 44 named-policy method-route exposures in total.
+
+The initial PR head exposed a test-authentication mistake: Web's test user header is not an API authentication mechanism, so the API isolation assertion shared the IP fallback partition and correctly received 429. The corrected test uses real registered bearer sessions for API partitions. Exact corrected PR #633 head `76a144863af04abf0eda1836c0856d1d493a61d1` passed FullWorth CI #1532 (run `37080787691`: 1,174 backend tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #629 (run `37080787714`) before squash merge to `development` as `823721e88481c0df9174e6e5f4be20dfd3be4f81`.
+
+This completes the endpoint cost/sensitivity classification and rate-limit checklist item for the current 198-route inventory. Future routes remain fail-visible through the inventory snapshot and must receive an intentional classification. Content-type/request-smuggling review and webhook replay/idempotency review remain separate work. No production deployment occurred.
+
 ## Executable endpoint security inventory — 2026-10-02
 
 FullWorth now has a runtime-derived, CI-enforced inventory of all 198 application-owned API and Web method-route exposures. The snapshot records each route template's authentication metadata and effective rate-limit class across 83 API exposures and 115 Web exposures. Any route addition, removal, HTTP-method change, authentication change, or endpoint rate-limit metadata change produces an exact test diff that requires intentional review.
