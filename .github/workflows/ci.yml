@@ -386,6 +386,7 @@ jobs:
           sh deploy/tests/repository-governance-workflow-tests.sh
           sh deploy/tests/production-deploy-workflow-tests.sh
           sh deploy/tests/production-operations-tests.sh
+          sh deploy/tests/parser-native-boundary-tests.sh
           sh deploy/tests/operations-alert-sender-tests.sh
           sh deploy/tests/backup-trust-boundary-tests.sh
           sh deploy/tests/release-integrity-tests.sh
@@ -703,6 +704,45 @@ jobs:
           set -euo pipefail
           container_id="$(docker compose --file compose.production.yml ps -q parser-worker)"
           test -n "$container_id"
+
+          docker inspect "$container_id" | python3 -c '
+          import json
+          import sys
+
+          container = json.load(sys.stdin)[0]
+          host = container["HostConfig"]
+          config = container["Config"]
+
+          assert host.get("ReadonlyRootfs") is True, host
+          assert host.get("PidsLimit") == 64, host
+          assert host.get("Memory", 0) > 0, host
+          assert host.get("MemorySwap") == host.get("Memory"), host
+          assert host.get("NanoCpus", 0) > 0, host
+          assert any(
+              option == "no-new-privileges"
+              or option.startswith("no-new-privileges:")
+              for option in host.get("SecurityOpt", [])
+          ), host
+          assert set(host.get("CapDrop") or []) == {"ALL"}, host
+          added_capabilities = {
+              capability.removeprefix("CAP_")
+              for capability in host.get("CapAdd") or []
+          }
+          assert added_capabilities == {
+              "CHOWN", "SETGID", "SETPCAP", "SETUID"
+          }, host
+          assert not (host.get("PortBindings") or {}), host
+          assert len(container["NetworkSettings"].get("Networks") or {}) == 1, container
+
+          limits = {
+              item["Name"]: (item["Soft"], item["Hard"])
+              for item in host.get("Ulimits") or []
+          }
+          assert limits.get("core") == (0, 0), limits
+          assert limits.get("nofile") == (512, 512), limits
+          assert "DOTNET_EnableDiagnostics=0" in set(config.get("Env") or []), config
+          '
+
           parser_pid="$(docker inspect --format '{{.State.Pid}}' "$container_id")"
           test "$parser_pid" -gt 0
 
