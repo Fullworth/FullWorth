@@ -1,3 +1,13 @@
+## Generated malicious/corrupt document corpus — 2026-10-03
+
+FullWorth now exercises a deterministic, source-generated document-security corpus without retaining customer statements, uploaded files, screenshots, account data, or private evaluation material. The corpus contains 21 named PDF, PNG, and JPEG cases, each bounded to 4 KiB: malformed PDF catalogs/xrefs/stream lengths/ASCIIHex/Flate data; truncated PNG/JPEG structures; zero or excessive dimensions; invalid PNG bit-depth/color, compression, filter, interlace, and IHDR CRC fields; and malformed JPEG marker/frame sequences.
+
+Production PNG admission now validates the complete fixed IHDR payload and CRC before calculating pixels or allowing native decode. Bit depth must be legal for the declared color type, compression/filter methods must be zero, interlace must be supported, dimensions must be non-zero, and the decoded working-set estimate must remain inside the existing ceiling. Corpus tests require every PDF to fail with FullWorth's fixed sanitized extraction message and every hostile image to fail before native decoding with a zero admitted pixel count. Separate invariants require unique descriptive names, deterministic bytes, supported media/extension pairs, and the per-case size bound. `DOCUMENT_SECURITY_CORPUS.md` documents coverage, data rules, residual risk, and the procedure for adding minimized synthetic regressions.
+
+Exact PR #647 head `576a1719c3ed7ba0ffb1753d91785dd360144889` passed FullWorth CI #1574 (run `37131915446`: backend build and tests, MAUI Android, production images, live parser containment and OCR, HTTP security, encrypted backup, isolated restore, and API recovery) and Dependency Security #671 (run `37131915489`) before squash merge to `development` as `c8c1f175624b837882146162e4389f5a1342b168`.
+
+This completes the malicious/corrupt document regression-corpus checklist item without storing user data. It does not claim detection of every malicious document or production containment of an unknown parser/native/kernel vulnerability. No production deployment occurred.
+
 ## Parser native-library and resource boundary review — 2026-10-03
 
 FullWorth now has a documented and executable threat model for its untrusted statement parsing surface. The dedicated parser worker disables core dumps, caps open file descriptors at 512, retains its read-only root and private noexec/nosuid/nodev temporary store, publishes no host port, attaches only to the internal parser network, disables .NET diagnostics, and keeps finite container CPU, memory, swap, and PID ceilings. Its temporary four-capability bootstrap allowlist remains exact; the running UID 1654 supervisor has empty effective and bounding capability sets.
