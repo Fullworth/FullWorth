@@ -3,6 +3,7 @@ using FullWorth.API.Services.Bills;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullWorth.API.Controllers;
 
@@ -26,6 +27,7 @@ public sealed class BillMonitoringController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting("financial-refresh")]
     public async Task<IActionResult> Refresh(
         CancellationToken cancellationToken)
     {
