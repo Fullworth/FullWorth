@@ -211,7 +211,8 @@ finish_backup()
 
     trap - EXIT HUP INT TERM
 
-    if [ "$restore_services_after_backup" = true ]; then
+    if [ "$exit_code" -ne 0 ] ||
+       [ "$restore_services_after_backup" = true ]; then
         if ! restore_services; then
             exit_code=1
         fi
