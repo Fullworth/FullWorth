@@ -4,6 +4,16 @@ set -eu
 
 umask 077
 
+permission_policy_path="${FULLWORTH_BACKUP_PERMISSION_POLICY_PATH:-/usr/local/lib/fullworth/backup-permission-policy.sh}"
+
+if [ ! -f "$permission_policy_path" ] || [ -L "$permission_policy_path" ]; then
+    echo "The backup permission policy is missing or unsafe." >&2
+    exit 78
+fi
+
+# shellcheck source=/usr/local/lib/fullworth/backup-permission-policy.sh
+. "$permission_policy_path"
+
 : "${RESTIC_REPOSITORY:?RESTIC_REPOSITORY must be configured.}"
 : "${RESTIC_PASSWORD:?RESTIC_PASSWORD must be configured.}"
 
@@ -259,6 +269,7 @@ create_backup()
 
     api_key_file_count="$(validate_key_ring /source/data-protection API)"
     web_key_file_count="$(validate_key_ring /source/web-data-protection Web)"
+    validate_private_asset_tree /source/statements "source statement storage" 1654 1654 >/dev/null
 
     pg_dump \
         --host=database \
@@ -402,6 +413,13 @@ verify_restore()
     tar -C "$restore_path/extracted/data-protection" -xf "$restored_bundle/data-protection.tar"
     tar -C "$restore_path/extracted/web-data-protection" -xf "$restored_bundle/web-data-protection.tar"
     tar -C "$restore_path/extracted/statements" -xf "$restored_bundle/statements.tar"
+
+    validate_private_asset_tree \
+        "$restore_path/extracted/statements" \
+        "restored statement storage" \
+        1654 \
+        1654 \
+        >/dev/null
 
     restored_api_key_count="$(validate_key_ring "$restore_path/extracted/data-protection" "restored API")"
     restored_web_key_count="$(validate_key_ring "$restore_path/extracted/web-data-protection" "restored Web")"
