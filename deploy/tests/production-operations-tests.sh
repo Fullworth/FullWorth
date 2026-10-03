@@ -178,7 +178,7 @@ grep -Fq -- \
     fail "Redis password interpolation is consumed by Compose instead of the container."
 
 grep -Fq \
-    'REDISCLI_AUTH="$(cat /run/secrets/redis_password)"' \
+    'REDISCLI_AUTH="$$(cat /run/secrets/redis_password)"' \
     "$root_dir/compose.production.yml" ||
     fail "Redis healthcheck password interpolation is consumed by Compose instead of the container."
 
