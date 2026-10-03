@@ -149,7 +149,8 @@ for required in \
     'POSTGRES_PASSWORD_FILE: /run/secrets/database_password' \
     'RESTIC_PASSWORD_FILE: /run/secrets/restic_password' \
     'AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials' \
-    'REDIS_PASSWORD="$$(cat /run/secrets/redis_password)"'
+    'REDIS_PASSWORD="$(cat /run/secrets/redis_password)";' \
+    'redis-cli --no-auth-warning --raw ping'
 do
     grep -Fq "$required" "$compose_file" ||
         fail "Compose is missing a required file-backed secret boundary."
@@ -163,6 +164,10 @@ grep -Fq 'file-backed-secret-tests.sh' "$root_dir/.github/workflows/ci.yml" ||
     fail "CI does not run the file-backed secret regression suite."
 grep -Fq 'Verify file-backed container secret boundary' "$root_dir/.github/workflows/ci.yml" ||
     fail "CI does not inspect the live container boundary."
+grep -Fq 'grep -q "^NOAUTH"' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
+    fail "live secret verification does not prove unauthenticated Redis access is denied."
+grep -Fq 'redis-cli --no-auth-warning --raw ping' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
+    fail "live secret verification does not prove mounted Redis authentication succeeds."
 grep -Fq '.fullworth-secrets/' "$root_dir/.gitignore" ||
     fail "materialized secrets are not ignored by Git."
 grep -Fxq '.fullworth-secrets' "$root_dir/.dockerignore" ||
