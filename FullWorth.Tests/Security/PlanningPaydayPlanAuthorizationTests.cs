@@ -110,6 +110,114 @@ public sealed class PlanningPaydayPlanAuthorizationTests
     }
 
     [Fact]
+    public async Task RecentPaydayPlans_DoNotReturnAnotherUsersHistory()
+    {
+        await using var factory =
+            new FullWorthApiFactory();
+
+        using var ownerClient =
+            factory.CreateHttpsClient();
+
+        using var attackerClient =
+            factory.CreateHttpsClient();
+
+        var owner =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                ownerClient);
+
+        var attacker =
+            await TestUserAuthentication.RegisterAndLoginAsync(
+                attackerClient);
+
+        var ownerUserId =
+            await TestUserAuthentication.GetUserIdAsync(
+                factory,
+                owner.Email);
+
+        var runId =
+            Guid.NewGuid();
+
+        await using (var scope =
+                     factory.Services.CreateAsyncScope())
+        {
+            var dbContext =
+                scope.ServiceProvider
+                    .GetRequiredService<FullWorthDbContext>();
+
+            dbContext.PlanningPaycheckPlanRuns.Add(
+                new PlanningPaycheckPlanRunEntity
+                {
+                    Id = runId,
+                    UserId = ownerUserId,
+                    PayrollTransactionId =
+                        Guid.NewGuid(),
+                    PaycheckPostedDate =
+                        new DateOnly(
+                            2026,
+                            9,
+                            25),
+                    PaycheckAmount = 1000m,
+                    CurrencyCode = "USD",
+                    RecommendedSetAside = 300m,
+                    PaycheckRemainingAfterPlan = 700m,
+                    Shortfall = 0m,
+                    CreatedAtUtc =
+                        DateTimeOffset.UtcNow
+                });
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        TestUserAuthentication.Authorize(
+            attackerClient,
+            attacker);
+
+        using var attackerResponse =
+            await attackerClient.GetAsync(
+                "/api/planning/payday-plans/recent");
+
+        attackerResponse.EnsureSuccessStatusCode();
+
+        var attackerPlans =
+            await attackerResponse.Content
+                .ReadFromJsonAsync<
+                    List<RecentPaydayPlanPayload>>();
+
+        Assert.NotNull(
+            attackerPlans);
+
+        Assert.DoesNotContain(
+            attackerPlans,
+            plan =>
+                plan.Id ==
+                runId);
+
+        TestUserAuthentication.Authorize(
+            ownerClient,
+            owner);
+
+        using var ownerResponse =
+            await ownerClient.GetAsync(
+                "/api/planning/payday-plans/recent");
+
+        ownerResponse.EnsureSuccessStatusCode();
+
+        var ownerPlans =
+            await ownerResponse.Content
+                .ReadFromJsonAsync<
+                    List<RecentPaydayPlanPayload>>();
+
+        Assert.NotNull(
+            ownerPlans);
+
+        Assert.Contains(
+            ownerPlans,
+            plan =>
+                plan.Id ==
+                runId);
+    }
+
+    [Fact]
     public async Task PaydayPlan_PersistsRecommendation_AndReplayIsStable()
     {
         await using var factory =
@@ -383,6 +491,11 @@ public sealed class PlanningPaydayPlanAuthorizationTests
             UpdatedAtUtc =
                 now
         };
+    }
+
+    private sealed class RecentPaydayPlanPayload
+    {
+        public Guid Id { get; set; }
     }
 
     private sealed class PaydayPlanPayload
