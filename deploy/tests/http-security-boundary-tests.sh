@@ -109,6 +109,33 @@ SCRIPT
 
 chmod 755 "$fake_bin/curl"
 
+cat > "$fake_bin/openssl" <<'SCRIPT'
+#!/bin/sh
+set -eu
+
+request=$(tr -d '\r')
+
+case "$request" in
+    *'Transfer-Encoding: chunked'*'Content-Length: 1'*)
+        printf '%s\r\n' \
+            'HTTP/1.1 204 No Content' \
+            'X-FullWorth-Request-Id: 0123456789abcdef0123456789abcdef' \
+            ''
+        ;;
+    *'Content-Length: 4'*'Content-Length: 5'*)
+        printf '%s\r\n' \
+            'HTTP/1.1 400 Bad Request' \
+            ''
+        ;;
+    *)
+        printf '%s\n' 'Unexpected raw HTTP framing probe.' >&2
+        exit 4
+        ;;
+esac
+SCRIPT
+
+chmod 755 "$fake_bin/openssl"
+
 PATH="$fake_bin:$PATH" \
     sh "$root_dir/deploy/check-http-security-boundaries.sh" \
     'https://api.fullworth.test' \
