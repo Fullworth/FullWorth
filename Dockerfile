@@ -85,9 +85,11 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY --from=build /app/publish/ ./
+COPY deploy/application-entrypoint.sh /usr/local/bin/fullworth-application-entrypoint
 
 RUN mkdir --parents /var/lib/billwatch/keys /var/lib/billwatch/statements \
-    && chown --recursive "$APP_UID:$APP_UID" /var/lib/billwatch
+    && chown --recursive "$APP_UID:$APP_UID" /var/lib/billwatch \
+    && chmod 0700 /var/lib/billwatch/keys
 
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0
@@ -99,4 +101,5 @@ USER $APP_UID
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl --fail --silent --header "Host: $AllowedHosts" http://localhost:8080/health/ready || exit 1
 
-ENTRYPOINT ["dotnet", "FullWorth.API.dll"]
+ENTRYPOINT ["sh", "/usr/local/bin/fullworth-application-entrypoint"]
+CMD ["dotnet", "FullWorth.API.dll"]

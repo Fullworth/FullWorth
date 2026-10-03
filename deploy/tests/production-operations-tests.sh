@@ -84,8 +84,29 @@ grep -Fq 'oom_kill_delta' \
     "$root_dir/deploy/verify-parser-containment.sh" ||
     fail "parser containment verifier does not report kernel OOM-kill evidence."
 
+sh "$root_dir/deploy/tests/data-protection-key-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
+
+grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile" ||
+    fail "API image does not apply the protected key-ring entrypoint."
+
+grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile.web" ||
+    fail "Web image does not apply the protected key-ring entrypoint."
+
+grep -Fq 'web_data_protection_keys:/source/web-data-protection:ro' \
+    "$root_dir/compose.production.yml" ||
+    fail "encrypted backups do not receive the Web Data Protection key ring."
+
+grep -Fq 'web-data-protection.tar' "$root_dir/deploy/backup/backup.sh" ||
+    fail "encrypted backup bundles do not include the Web Data Protection key ring."
+
+grep -Fq 'SetDefaultKeyLifetime' "$root_dir/FullWorth.API/Program.cs" ||
+    fail "API Data Protection rotation lifetime is not explicit."
+
+grep -Fq 'SetDefaultKeyLifetime' \
+    "$root_dir/FullWorth.Web/Infrastructure/WebHostingExtensions.cs" ||
+    fail "Web Data Protection rotation lifetime is not explicit."
 
 backup_service="$root_dir/deploy/systemd/billwatch-backup.service"
 

@@ -48,6 +48,57 @@ cleanup_work()
     rm -rf "$bundle_path" "$restore_path"
 }
 
+validate_key_ring()
+{
+    key_root=$1
+    key_label=$2
+
+    if [ ! -d "$key_root" ] || [ -L "$key_root" ]; then
+        echo "$key_label Data Protection key ring is not a real directory." >&2
+        return 1
+    fi
+
+    unexpected_entry="$(find "$key_root" -mindepth 1 -maxdepth 1 ! -type f -print -quit)"
+
+    if [ -n "$unexpected_entry" ]; then
+        echo "$key_label Data Protection key ring contains a non-regular entry." >&2
+        return 1
+    fi
+
+    if [ "$(stat -c '%a' "$key_root")" != 700 ]; then
+        echo "$key_label Data Protection key directory must have mode 0700." >&2
+        return 1
+    fi
+
+    key_count=0
+
+    for key_file in "$key_root"/key-*.xml
+    do
+        [ -e "$key_file" ] || continue
+
+        if [ ! -f "$key_file" ] ||
+           [ -L "$key_file" ] ||
+           [ ! -s "$key_file" ]; then
+            echo "$key_label Data Protection key ring contains an invalid key file." >&2
+            return 1
+        fi
+
+        if [ "$(stat -c '%a' "$key_file")" != 600 ]; then
+            echo "$key_label Data Protection key files must have mode 0600." >&2
+            return 1
+        fi
+
+        key_count=$((key_count + 1))
+    done
+
+    if [ "$key_count" -lt 1 ]; then
+        echo "$key_label Data Protection key ring does not contain a non-empty key." >&2
+        return 1
+    fi
+
+    printf '%s\n' "$key_count"
+}
+
 require_positive_integer()
 {
     name="$1"
@@ -206,12 +257,8 @@ create_backup()
     cleanup_work
     mkdir -p "$bundle_path"
 
-    key_file_count="$(find /source/data-protection -type f -name 'key-*.xml' -size +0c | wc -l | tr -d ' ')"
-
-    if [ "$key_file_count" -lt 1 ]; then
-        echo "The Data Protection key ring does not contain a non-empty key." >&2
-        exit 1
-    fi
+    api_key_file_count="$(validate_key_ring /source/data-protection API)"
+    web_key_file_count="$(validate_key_ring /source/web-data-protection Web)"
 
     pg_dump \
         --host=database \
@@ -240,6 +287,7 @@ create_backup()
     fi
 
     tar -C /source/data-protection -cf "$bundle_path/data-protection.tar" .
+    tar -C /source/web-data-protection -cf "$bundle_path/web-data-protection.tar" .
     tar -C /source/statements -cf "$bundle_path/statements.tar" .
 
     latest_migration="$(psql --host=database --username=billwatch --dbname=billwatch --no-psqlrc --tuples-only --no-align --command='SELECT "MigrationId" FROM "__EFMigrationsHistory" ORDER BY "MigrationId" DESC LIMIT 1;')"
@@ -251,17 +299,18 @@ create_backup()
 
     printf '%s\n' \
         'BillWatch encrypted production backup' \
-        'FormatVersion=2' \
+        'FormatVersion=3' \
         "ReleaseId=$BILLWATCH_RELEASE_ID" \
         'PostgreSqlMajor=17' \
         "LatestMigration=$latest_migration" \
-        "DataProtectionKeyFiles=$key_file_count" \
+        "ApiDataProtectionKeyFiles=$api_key_file_count" \
+        "WebDataProtectionKeyFiles=$web_key_file_count" \
         "StatementUploads=$upload_count" \
         > "$bundle_path/manifest.txt"
 
     (
         cd "$bundle_path"
-        sha256sum database.dump data-protection.tar statements.tar statement-files.txt manifest.txt > checksums.sha256
+        sha256sum database.dump data-protection.tar web-data-protection.tar statements.tar statement-files.txt manifest.txt > checksums.sha256
     )
 
     backup_output="/work/restic-backup.json"
@@ -342,18 +391,26 @@ verify_restore()
         sha256sum -c checksums.sha256
     )
 
-    grep -q '^FormatVersion=2$' "$restored_bundle/manifest.txt"
+    grep -q '^FormatVersion=3$' "$restored_bundle/manifest.txt"
     grep -q '^PostgreSqlMajor=17$' "$restored_bundle/manifest.txt"
     pg_restore --list "$restored_bundle/database.dump" >/dev/null
 
-    mkdir -p "$restore_path/extracted/data-protection" "$restore_path/extracted/statements"
+    mkdir -p \
+        "$restore_path/extracted/data-protection" \
+        "$restore_path/extracted/web-data-protection" \
+        "$restore_path/extracted/statements"
     tar -C "$restore_path/extracted/data-protection" -xf "$restored_bundle/data-protection.tar"
+    tar -C "$restore_path/extracted/web-data-protection" -xf "$restored_bundle/web-data-protection.tar"
     tar -C "$restore_path/extracted/statements" -xf "$restored_bundle/statements.tar"
 
-    restored_key_count="$(find "$restore_path/extracted/data-protection" -type f -name 'key-*.xml' -size +0c | wc -l | tr -d ' ')"
+    restored_api_key_count="$(validate_key_ring "$restore_path/extracted/data-protection" "restored API")"
+    restored_web_key_count="$(validate_key_ring "$restore_path/extracted/web-data-protection" "restored Web")"
+    manifest_api_key_count="$(sed -n 's/^ApiDataProtectionKeyFiles=//p' "$restored_bundle/manifest.txt")"
+    manifest_web_key_count="$(sed -n 's/^WebDataProtectionKeyFiles=//p' "$restored_bundle/manifest.txt")"
 
-    if [ "$restored_key_count" -lt 1 ]; then
-        echo "The restored key ring is empty." >&2
+    if [ "$restored_api_key_count" != "$manifest_api_key_count" ] ||
+       [ "$restored_web_key_count" != "$manifest_web_key_count" ]; then
+        echo "The restored Data Protection key counts do not match the manifest." >&2
         exit 1
     fi
 
@@ -444,3 +501,4 @@ case "${1:-backup}" in
         exit 64
         ;;
 esac
+

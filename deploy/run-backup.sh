@@ -67,6 +67,34 @@ wait_for_api_health()
     return 1
 }
 
+wait_for_web_health()
+{
+    attempt=1
+
+    while [ "$attempt" -le 60 ]
+    do
+        web_container="$(compose ps -q web 2>/dev/null || true)"
+
+        if [ -n "$web_container" ]; then
+            health_status="$(
+                docker inspect \
+                    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+                    "$web_container" \
+                    2>/dev/null || true
+            )"
+
+            if [ "$health_status" = "healthy" ]; then
+                return 0
+            fi
+        fi
+
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
 wait_for_parser_readiness()
 {
     attempt=1
@@ -89,6 +117,7 @@ wait_for_parser_readiness()
 }
 
 api_was_running=false
+web_was_running=false
 edge_was_running=false
 
 if compose ps \
@@ -97,6 +126,14 @@ if compose ps \
         | grep --quiet --line-regexp api
 then
     api_was_running=true
+fi
+
+if compose ps \
+        --status running \
+        --services \
+        | grep --quiet --line-regexp web
+then
+    web_was_running=true
 fi
 
 if compose ps \
@@ -123,6 +160,15 @@ restore_services()
            wait_for_api_health &&
            wait_for_parser_readiness; then
             api_was_running=false
+        else
+            restore_result=1
+        fi
+    fi
+
+    if [ "$web_was_running" = true ]; then
+        if compose up --detach --no-build web &&
+           wait_for_web_health; then
+            web_was_running=false
         else
             restore_result=1
         fi
@@ -166,6 +212,12 @@ if [ "$edge_was_running" = true ]; then
     compose stop \
         --timeout 30 \
         edge
+fi
+
+if [ "$web_was_running" = true ]; then
+    compose stop \
+        --timeout 30 \
+        web
 fi
 
 if [ "$api_was_running" = true ]; then

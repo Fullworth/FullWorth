@@ -111,9 +111,16 @@ public static class WebHostingExtensions
 
         var dataProtectionBuilder =
             builder.Services
-                .AddDataProtection()
-                .SetApplicationName(
-                    "BillWatch.Web");
+                .AddDataProtection();
+
+        dataProtectionBuilder
+            .SetApplicationName(
+                "BillWatch.Web");
+
+        dataProtectionBuilder
+            .SetDefaultKeyLifetime(
+                TimeSpan.FromDays(
+                    90));
 
         if (!string.IsNullOrWhiteSpace(
                 configuredDataProtectionPath))

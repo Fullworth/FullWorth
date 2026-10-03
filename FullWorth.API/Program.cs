@@ -575,9 +575,16 @@ builder.Services.AddRateLimiter(
  */
 var dataProtectionBuilder =
     builder.Services
-        .AddDataProtection()
-        .SetApplicationName(
-            "BillWatch");
+        .AddDataProtection();
+
+dataProtectionBuilder
+    .SetApplicationName(
+        "BillWatch");
+
+dataProtectionBuilder
+    .SetDefaultKeyLifetime(
+        TimeSpan.FromDays(
+            90));
 
 var configuredDataProtectionPath =
     builder.Configuration[
