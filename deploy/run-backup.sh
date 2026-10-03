@@ -13,6 +13,8 @@ fi
 deployment_directory="$(cd "$deployment_directory" && pwd -P)"
 
 environment_file="$deployment_directory/.env.production"
+FULLWORTH_SECRET_DIRECTORY="$deployment_directory/.fullworth-secrets"
+export FULLWORTH_SECRET_DIRECTORY
 
 if [ -f "$environment_file" ]; then
     environment_owner="$(stat -c '%u' "$environment_file")"
@@ -23,6 +25,14 @@ if [ -f "$environment_file" ]; then
         echo ".env.production must be owned by the deployment account and inaccessible to group/other users." >&2
         exit 77
     fi
+
+    sh "$deployment_directory/deploy/validate-production-env.sh" "$environment_file"
+    sh "$deployment_directory/deploy/materialize-container-secrets.sh" \
+        "$environment_file" \
+        "$FULLWORTH_SECRET_DIRECTORY"
+elif [ ! -d "$FULLWORTH_SECRET_DIRECTORY" ]; then
+    echo "File-backed container secrets are missing." >&2
+    exit 66
 fi
 
 compose()
