@@ -1,3 +1,35 @@
+## Repository-side security closure checkpoint — 2026-10-03
+
+The October 3 repository-side security program has advanced to **61 completed checks and 4 open checks** on issue #291. The remaining items are real-environment/provider/governance gates rather than missing generic application code.
+
+Completed exact-head slices in this closure sequence:
+
+- PR #653 required explicit production PostgreSQL credentials and `SSL Mode=VerifyFull` for any future non-local PostgreSQL host while preserving the current internal-only Docker database path. Exact head `655c9b3e6e5d6225d66a846bec2ce6b3d314a8ca` passed FullWorth CI #1592 and Dependency Security #689 before squash merge as `fd8520b722a4f8c61596340cf8398e236905f044`.
+- PR #657 moved protected production values into least-scoped file-backed mounts, fixed PostgreSQL passfile lifetime through backup/restore, and proved Redis denies unauthenticated access while accepting the mounted secret. Exact corrected head `98f4317c0bc0b7f6cba702f21d143e0151d491ae` passed FullWorth CI #1600 and Dependency Security #697 before squash merge as `04a7c37ff36f97d1a5569b6bd5e06daa832f1ed9`.
+- PR #658 added the host/operator hardening runbook and fail-closed verifier for the dedicated deployment account, effective SSH policy, Docker-group restriction, unattended security updates, patch review cadence, and pending-reboot handling. Exact head `c94b6243811f131598626f7c71c4300866371e0d` passed FullWorth CI #1601 and Dependency Security #698 before squash merge as `cf94b9542bb8cd928023ecc0e6d96b04ba1a0abd`.
+- PR #659 separated steady-state PostgreSQL runtime authority from migration/bootstrap authority. The API now uses dedicated non-owner `fullworth_runtime` credentials with bounded DML/sequence rights; production startup migrations are disabled; schema changes run through one-shot owner-credential containers and grants are re-verified before candidate startup. Exact head `cfc5deaefb398b1af2737440c2c26444312debce` passed FullWorth CI #1602 and Dependency Security #699 before squash merge as `ac428de0a1e91079c93ad465d0aaa2b139cf31d4`.
+- PR #660 added a model-wide fail-closed regression requiring every database relationship between two `UserId`-scoped entities to carry the dependent and principal `UserId` at the same composite-key position. Exact head `8dae783fe663a0cfe6642dc2acb8013c9524b62e` passed FullWorth CI #1603 and Dependency Security #700 before squash merge as `0689383e38ec5045bb7df19f493b2cff7e98d882`.
+- PR #661 added an executable route-inventory ratchet requiring every non-admin GUID-addressable API resource route to map to explicit two-user negative evidence. Exact head `98d9b053117e5b2cb68f19f155d214544dc782c8` passed FullWorth CI #1604 and Dependency Security #701 before squash merge as `5dcebcc24b4ab4531473fae06fe0e3ca439a0457`.
+- PR #662 completed the persistence-side ownership sweep: subscription status and recent payday-plan history now have explicit two-user isolation coverage; subscription deletion proves another user's entitlement/redemption/program-membership graph survives; and every EF entity with `UserId` must map to executable negative-isolation evidence. Exact refreshed head `31ac6051c187f1aa6f1a228193075a52b8b23b17` passed FullWorth CI #1606 and Dependency Security #703 before squash merge as `c283463eba028570d9b1629a5740d2dcf4c64e85`.
+
+The four open #291 items are:
+
+1. immutable/off-host storage proof;
+2. compromised-host/clean-host recovery exercise;
+3. branch-governance decision for independent approving reviews;
+4. direct same-release deployed evidence before production-security claims.
+
+Branch-governance evidence currently shows active repository ruleset `FullWorth protected branches` on both `master` and `development`. It requires pull requests, blocks deletion and non-fast-forward updates, requires review-thread resolution, has no bypass actors, and reports `current_user_can_bypass: never`. Its `required_approving_review_count` remains 0. The available GitHub connector can read but not mutate this ruleset, so no approval-policy change is claimed.
+
+Current branch/release position:
+
+- `development`: `c283463eba028570d9b1629a5740d2dcf4c64e85`;
+- `master`: `7b0947385c93bc07509115ae8d6665ca4fa9dc90`;
+- GitHub comparison: `development` 146 commits ahead and 3 commits behind `master`;
+- verified live production release: `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
+
+Do not treat the newer repository security state as deployed. Immutable storage, compromised-host recovery, and production-security acceptance require direct real-environment evidence.
+
 ## Secret non-disclosure release gate — 2026-10-03
 
 FullWorth now fails a release candidate when any configured protected value appears in public health, validation-error, not-found, or retained production service-log output. The verifier covers required database, parser, Web-session Redis, Plaid, and Restic credentials plus optional Stripe, Google, Apple, Resend, and AWS secrets when configured. It scans exact values and common percent/form/Base64 representations without printing the value; failures identify configuration names only.
@@ -876,13 +908,14 @@ Before trusted external beta invitations:
 12. Run the trusted-beta launch evidence verifier only after every underlying real-world fact is genuinely complete.
 
 ## Immediate resume point
-- PR #542 added Fetch Metadata and strict same-origin checks for unsafe `/auth` and `/bff` requests while preserving antiforgery validation. Opaque `Origin: null` is accepted only with single-value `Sec-Fetch-Site: same-origin`, after which antiforgery still applies; regression tests cover blocked cross-site/missing metadata. Exact-head CI #1285 and dependency security #385 passed; merged to development as `9f1e60f5b085e470fd87437b22dfd2952ef76037`. No production deployment was performed.
 
-1. Read current GitHub `development`, open PRs, issue #291, issue #260, and this checkpoint before making changes.
-2. PRs #305–#314 are merged. External OIDC invariants are regression-locked; security-changing actions rotate revocation state; refresh tokens are single-use within bounded families; current-session logout revokes its refresh family; account-wide revocation invalidates every existing refresh token; and the Web exposes a strongly reauthenticated sign-out-everywhere control with accurate 15-minute bearer-token semantics.
-3. Continue security issue #291 in small reviewable slices. The strong-reauthentication audit is complete through PR #324, and the MFA enrollment/disable/setup-reset/recovery-enumeration review is complete through PR #335. The cookie review is complete through PRs #337/#339. PR #349 adds confirmed/unconfirmed email-recovery response coverage. PR #350 closes direct registration disclosure and verifies confirmation responses. Continue with mail-provider failure behavior and external registration/linking under the still-open enumeration item; patch only confirmed gaps.
-4. Do not reopen or replace the framework Identity bearer-token/bounded refresh-family design without new evidence. Preserve the completed session-revocation semantics while auditing strong reauthentication.
-5. Issue #260 remains open for remaining bounded-domain ownership enforcement. Inspect current source before choosing the next domain; do not restore already-removed `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId` schema coupling.
-6. The current verified live production release is `7e8571a26447538db249c862ad009487cce119bc`, proven by successful guarded production deploy run #7 (`36221860082`). Do not claim newer GitHub code is deployed without guarded deployment evidence.
-7. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
-8. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, container confinement, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build or architecture check pass.
+1. Read current GitHub `development`, open PRs, issue #291, this context, and the roadmap snapshot before changing architecture or release state.
+2. Repository-side security hardening is at **61/65** on #291. Do not invent additional generic security work to satisfy the four remaining evidence/governance items.
+3. The current `development` snapshot head is `c283463eba028570d9b1629a5740d2dcf4c64e85`; `master` is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`; the branches are 146 commits ahead / 3 behind from `development` to `master`. Re-check these values before release freeze because they can change.
+4. Issue #260 is closed. Preserve its existing zero-exception module/data-ownership ratchets; do not reopen old schema coupling such as `BillAlerts -> BillChanges` or `BankTransactions.BillStreamId`.
+5. The branch ruleset already requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It currently requires 0 approving reviews. If independent approval is required, that is a repository-owner/admin policy action; do not claim it changed until GitHub evidence proves it.
+6. Immutable/off-host backup protection and compromised-host clean recovery require direct provider/host exercises against the actual recovery repository. CI simulation is not a substitute.
+7. The current verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). No newer GitHub merge is deployed unless a separate guarded deployment proves the exact release.
+8. The next code-side release step, once no new blockers exist, is deliberate release freeze and `development`/`master` reconciliation. Only blocker fixes should change a frozen candidate.
+9. Physical Android installed-PWA acceptance under #251 remains required. Browser/Chromium/emulator evidence is not a substitute. iOS issue #258 remains separate.
+10. Preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries. Never weaken them to make a build, deployment, or acceptance check pass.

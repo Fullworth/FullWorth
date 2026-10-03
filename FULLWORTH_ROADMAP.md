@@ -255,10 +255,11 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 As of 2026-10-03:
 
 - `master` is the release branch. Its current GitHub head at this snapshot is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`. A GitHub branch head is not deployment evidence.
-- `development` is the active integration branch and currently diverges from `master`: GitHub comparison reports 134 commits ahead and 3 commits behind. This must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
-- The currently verified live production release is `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
-- Newer security, document-isolation, supply-chain, Stripe, request-boundary, and recovery work on `development` is **not** considered deployed merely because it is merged.
-- PR #649, **Gate releases on secret non-disclosure**, passed FullWorth CI #1582 and Dependency Security #679 on exact head `1735c7512416a3fbf284ba2087f7ffb175a56961`, then merged to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`. Its context record merged through PR #652 as `bc8e89479f55db7f9095b0c7470acc1fb91b8263`.
+- `development` is the active integration branch. Its current head at this snapshot is `c283463eba028570d9b1629a5740d2dcf4c64e85`.
+- GitHub comparison reports `development` **146 commits ahead and 3 commits behind** `master`. This divergence must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
+- The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
+- Repository merges after that release are **not** considered deployed merely because CI passed or the code reached `development`.
+- The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are CI-verified repository state, not production-host evidence.
 
 ### Release-readiness estimate
 
@@ -268,13 +269,13 @@ Current technical-lead planning estimate:
 - engineering/code implementation: **approximately 90–92%**;
 - next deployable production release candidate: **approximately 87–89%**.
 
-These percentages are planning estimates, not release gates. A high percentage never substitutes for exact-head CI, guarded deployment, same-release production evidence, real-device/provider acceptance, recovery proof, or legal/governance requirements.
+These percentages remain intentionally conservative despite the security-code progress because the remaining release risk is dominated by real-environment/provider/device/legal evidence rather than missing generic application code. A high percentage never substitutes for exact-head CI, guarded deployment, same-release production evidence, real-device/provider acceptance, recovery proof, or legal/governance requirements.
 
 ## 4.2 Active release-critical work
 
 ### Security hardening program — issue #291
 
-Issue #291 currently records **52 completed checks and 13 open checks**.
+Issue #291 currently records **61 completed checks and 4 open checks**.
 
 Major completed areas include:
 
@@ -284,6 +285,8 @@ Major completed areas include:
 - OIDC state/nonce/PKCE/correlation-cookie invariants;
 - response-enumeration hardening;
 - ownership and module-boundary ratchets;
+- route-level and model-wide negative cross-user ownership coverage;
+- model-wide same-user composite foreign-key enforcement for `UserId`-scoped relationships;
 - endpoint inventory and cost-aware rate limits;
 - body/header/request-line/content-type boundaries;
 - Fetch Metadata / Origin CSRF defense in depth;
@@ -294,23 +297,23 @@ Major completed areas include:
 - per-document and per-image cgroup CPU/memory/PID containment;
 - malicious/corrupt PDF/PNG/JPEG regression corpus;
 - Data Protection key permission/rotation/recovery hardening;
+- least-scoped file-backed production secret injection and live secret non-disclosure verification;
+- future non-local PostgreSQL certificate-verified TLS requirements;
+- dedicated least-privilege `fullworth_runtime` PostgreSQL role and one-shot migration/runtime credential separation;
+- SSH/operator hardening and host/kernel/container patch-cadence verifier/runbook;
 - immutable/pinned Actions and container-image references;
 - signed build provenance and release SBOMs;
 - bounded security-event logging, aggregation, and incident-response runbooks;
 - encrypted backup/restore verification and restored-asset permission checks.
 
-Release-relevant open security/governance work still includes:
+The four remaining #291 items are now evidence/governance gates rather than ordinary feature-code work:
 
-- broader negative cross-user tests where coverage is not yet exhaustive;
-- stronger secret injection than ordinary container environment variables where operationally available;
-- stronger secret injection remains open; PR #649 completed repository/CI non-disclosure verification, while deployed-release proof remains separate;
-- database runtime-role least privilege and migration/runtime privilege separation;
-- continued same-user composite constraints where security-critical;
-- SSH/operator access hardening and host/kernel/container patch-cadence review;
-- immutable/off-host backup protection proof;
-- compromised-host recovery exercise;
-- required CI/security status checks in the active `master`/`development` protected-branch ruleset;
-- direct deployed-release evidence before making production-security claims.
+- complete immutable/off-host storage proof before relying on backups for destructive incidents;
+- exercise compromised-host recovery, not only ordinary failure recovery;
+- finish the branch-governance decision for independent approving reviews where GitHub permissions allow;
+- make no production-security claim without direct evidence from the exact deployed release.
+
+Repository ruleset `FullWorth protected branches` is active for both `master` and `development`, requires pull requests, blocks deletion/non-fast-forward updates, requires review-thread resolution, has no bypass actors, and reports this connection cannot bypass it. Its current required approving review count is **0**, so the branch-governance checklist item remains open until that policy decision is deliberately completed through an admin-capable GitHub path.
 
 ### Document parser and OCR containment
 
@@ -2304,22 +2307,18 @@ The shortest credible path to production release is now **security closure → r
 
 ~~PR #649 exact head `1735c7512416a3fbf284ba2087f7ffb175a56961` passed FullWorth CI #1582 and Dependency Security #679, then merged to `development` as `998cd63c654be7a0fb012544865173a95e61e7e7`. PR #652 recorded the milestone after its own exact-head checks passed.~~
 
-## Step 2 — Close the remaining release-critical #291 security gaps
+## Step 2 — Finish the evidence/governance remainder of #291
 
-Prioritize the open items that materially change public-release risk:
+The ordinary repository-side security-hardening slices are complete through PR #662. Issue #291 is now **61/65 complete**.
 
-- negative cross-user coverage for remaining resource types;
-- stronger production secret injection where operationally available;
-- database runtime-role least privilege;
-- migration/runtime privilege separation;
-- security-critical same-user composite relationships;
-- SSH/operator and host patching hardening;
-- immutable/off-host backup proof;
-- compromised-host recovery exercise;
-- required status checks in the active protected-branch ruleset;
-- direct deployed-release security evidence.
+The remaining four items require real evidence or repository-owner policy, not another generic application-code sprint:
 
-Do not prolong the release merely to chase cosmetic checklist work, but do not defer a real P0/P1 trust boundary.
+- configure and prove immutable/off-host backup protection suitable for destructive-incident recovery;
+- run a compromised-host/clean-host recovery exercise against the actual off-host recovery repository;
+- decide whether `master`/`development` must require at least one independent approving review and apply that through an admin-capable GitHub path if required;
+- preserve the rule that no production-security claim is valid without direct evidence from the exact deployed release.
+
+Do not manufacture CI substitutes for provider-enforced immutability, clean-host recovery, or deployed-host evidence. Do not add unrelated security code merely to increase the checklist count.
 
 ## Step 3 — Freeze the next release candidate
 
