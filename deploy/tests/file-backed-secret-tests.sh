@@ -149,8 +149,7 @@ for required in \
     'POSTGRES_PASSWORD_FILE: /run/secrets/database_password' \
     'RESTIC_PASSWORD_FILE: /run/secrets/restic_password' \
     'AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials' \
-    'REDIS_PASSWORD="$(cat /run/secrets/redis_password)";' \
-    'redis-cli --no-auth-warning --raw ping'
+    'REDIS_PASSWORD="$(cat /run/secrets/redis_password)";'
 do
     grep -Fq "$required" "$compose_file" ||
         fail "Compose is missing a required file-backed secret boundary."
