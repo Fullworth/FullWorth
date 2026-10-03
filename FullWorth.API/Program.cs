@@ -42,6 +42,12 @@ const string StatementDownloadRateLimitPolicy =
 const string SubscriptionRedemptionRateLimitPolicy =
     "subscription-redemption";
 
+const string FinancialRefreshRateLimitPolicy =
+    "financial-refresh";
+
+const string FinancialProviderRateLimitPolicy =
+    "financial-provider";
+
 const long DefaultRequestBodyLimit =
     1L * 1024 * 1024;
 
@@ -518,6 +524,44 @@ builder.Services.AddRateLimiter(
                             true),
                     permitLimit:
                         5,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+
+        /*
+         * Manual discovery and sync operations can fan out across a user's
+         * financial graph and invoke provider-backed work. Keep that work
+         * substantially below the broad request-rate boundary.
+         */
+        options.AddPolicy(
+            FinancialRefreshRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext,
+                        preferAuthenticatedUser:
+                            true),
+                    permitLimit:
+                        6,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+
+        /*
+         * Plaid Link lifecycle calls are interactive but still cross the
+         * provider boundary. This larger budget accommodates normal polling
+         * and retries without permitting the API-wide default rate.
+         */
+        options.AddPolicy(
+            FinancialProviderRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext,
+                        preferAuthenticatedUser:
+                            true),
+                    permitLimit:
+                        20,
                     window:
                         TimeSpan.FromMinutes(
                             10)));
