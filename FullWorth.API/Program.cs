@@ -1304,9 +1304,7 @@ static bool IsAllowedRequestContentType(
     }
 
     var parameterSeparator =
-        contentType.IndexOf(
-            ';',
-            StringComparison.Ordinal);
+        contentType.IndexOf(';');
 
     var mediaType =
         (parameterSeparator >= 0
