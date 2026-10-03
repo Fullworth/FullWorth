@@ -28,10 +28,10 @@ least one non-empty key.
 Restore verification extracts into disposable storage under `umask 077`,
 then revalidates both key rings and the entire statement tree before loading
 the database dump. Every database statement record must still resolve to a
-regular restored file with the recorded size. The isolated PostgreSQL service
-is healthy only when its data root and descendants retain the required owner
-and exact private modes; the recovery verifier therefore cannot begin against
-an over-permissioned database store.
+regular restored file with the recorded size. The isolated PostgreSQL service is healthy only when its data root retains the
+required owner and mode. After the dump has been loaded and the recovery checks
+finish, CI audits every data directory and regular file for the exact private
+modes before accepting the restore.
 
 These checks do not mutate a Restic snapshot or restore over the live
 application volumes.
