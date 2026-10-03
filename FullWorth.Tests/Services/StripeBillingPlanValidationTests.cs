@@ -211,6 +211,7 @@ public sealed class StripeBillingPlanValidationTests
 
         var payload = JsonSerializer.Serialize(new
         {
+            id = "evt_delayed_active_test",
             type = "customer.subscription.updated",
             data = new
             {
@@ -224,18 +225,93 @@ public sealed class StripeBillingPlanValidationTests
                 }
             }
         });
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var signature = Convert.ToHexString(HMACSHA256.HashData(
-            Encoding.UTF8.GetBytes("whsec_billwatch_test"),
-            Encoding.UTF8.GetBytes($"{timestamp}.{payload}"))).ToLowerInvariant();
-
         await service.Billing.HandleWebhookAsync(
             payload,
-            $"t={timestamp},v1={signature}",
+            CreateWebhookSignature(payload),
             CancellationToken.None);
 
         var entitlement = await service.Db.SubscriptionEntitlements.SingleAsync();
         Assert.True(entitlement.IsRevoked);
+    }
+
+    [Fact]
+    public async Task CompletedWebhook_ReplaySkipsProcessingAndRetainsOneReceipt()
+    {
+        var providerCalls = 0;
+
+        using var service = CreateService(
+            _ =>
+            {
+                providerCalls++;
+                throw new InvalidOperationException(
+                    "An unhandled event must not call Stripe.");
+            });
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            id = "evt_replay_test",
+            type = "invoice.created",
+            data = new
+            {
+                @object = new { }
+            }
+        });
+
+        var signature = CreateWebhookSignature(payload);
+
+        await service.Billing.HandleWebhookAsync(
+            payload,
+            signature,
+            CancellationToken.None);
+
+        await service.Billing.HandleWebhookAsync(
+            payload,
+            signature,
+            CancellationToken.None);
+
+        var receipt = await service.Db.StripeWebhookEvents.SingleAsync();
+
+        Assert.Equal("evt_replay_test", receipt.EventId);
+        Assert.Equal(0, providerCalls);
+    }
+
+    [Fact]
+    public async Task CompletedWebhook_PrunesExpiredReceipts()
+    {
+        using var service = CreateService(
+            _ => throw new InvalidOperationException(
+                "An unhandled event must not call Stripe."));
+
+        service.Db.StripeWebhookEvents.Add(
+            new StripeWebhookEventEntity
+            {
+                EventId = "evt_expired_test",
+                ProcessedAtUtc = DateTimeOffset.UtcNow.AddDays(-33)
+            });
+        await service.Db.SaveChangesAsync();
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            id = "evt_current_test",
+            type = "invoice.created",
+            data = new
+            {
+                @object = new { }
+            }
+        });
+
+        await service.Billing.HandleWebhookAsync(
+            payload,
+            CreateWebhookSignature(payload),
+            CancellationToken.None);
+
+        var receipts = await service.Db.StripeWebhookEvents
+            .AsNoTracking()
+            .ToListAsync();
+
+        Assert.Collection(
+            receipts,
+            receipt => Assert.Equal("evt_current_test", receipt.EventId));
     }
 
     [Fact]
@@ -251,6 +327,19 @@ public sealed class StripeBillingPlanValidationTests
             "provider unavailable",
             exception.Message,
             StringComparison.Ordinal);
+    }
+
+    private static string CreateWebhookSignature(
+        string payload)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var signature = Convert.ToHexString(
+            HMACSHA256.HashData(
+                Encoding.UTF8.GetBytes("whsec_billwatch_test"),
+                Encoding.UTF8.GetBytes($"{timestamp}.{payload}")))
+            .ToLowerInvariant();
+
+        return $"t={timestamp},v1={signature}";
     }
 
     private static TestService CreateService(Func<HttpRequestMessage, string> respond)
