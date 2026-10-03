@@ -140,6 +140,7 @@ docker compose \
 
 if ! python3 - "$environment_file" "$observed_file" <<'PY'
 import base64
+import os
 import pathlib
 import sys
 import urllib.parse
@@ -184,6 +185,11 @@ for raw_line in environment_path.read_text(encoding="utf-8").splitlines():
 
     if name in secret_names:
         configured[name] = value
+
+for name in secret_names:
+    environment_value = os.environ.get(name)
+    if environment_value:
+        configured[name] = environment_value
 
 missing = sorted(
     name
