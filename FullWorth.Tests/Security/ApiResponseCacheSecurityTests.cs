@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using FullWorth.Tests.Infrastructure;
 
 namespace FullWorth.Tests.Security;
@@ -45,7 +46,10 @@ public sealed class ApiResponseCacheSecurityTests
         using var client = factory.CreateHttpsClient();
         using var response = await client.PostAsync(
             "/api/subscription/webhooks/stripe",
-            new StringContent("{}"));
+            new StringContent(
+                "{}",
+                Encoding.UTF8,
+                "application/json"));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         AssertNoStore(response);
