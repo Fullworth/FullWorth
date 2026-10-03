@@ -109,9 +109,13 @@ grep -Fq 'validate_private_asset_tree /source/statements' \
 grep -Fq 'restored statement storage' "$root_dir/deploy/backup/backup.sh" ||
     fail "isolated restore does not verify restored statement permissions."
 
-grep -Fq 'find "$${PGDATA}" -xdev -type f ! -perm 0600' \
+grep -Fq 'stat -c %a "$${PGDATA}"' \
     "$root_dir/compose.production.yml" ||
-    fail "isolated PostgreSQL restore does not reject unsafe data-file modes."
+    fail "isolated PostgreSQL restore readiness does not require a private data root."
+
+grep -Fq 'find "$PGDATA" -xdev -type f ! -perm 600' \
+    "$root_dir/.github/workflows/ci.yml" ||
+    fail "isolated PostgreSQL restore does not audit final data-file modes."
 
 grep -Fq 'SetDefaultKeyLifetime' "$root_dir/FullWorth.API/Program.cs" ||
     fail "API Data Protection rotation lifetime is not explicit."
