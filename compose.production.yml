@@ -312,7 +312,14 @@ services:
       POSTGRES_USER: billwatch
       POSTGRES_PASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        - CMD-SHELL
+        - >-
+          test "$$(stat -c %a "$${PGDATA}")" = 700 &&
+          test "$$(stat -c %u:%g "$${PGDATA}")" = "$$(id -u postgres):$$(id -g postgres)" &&
+          test -z "$$(find "$${PGDATA}" -xdev -type d ! -perm 0700 -print -quit)" &&
+          test -z "$$(find "$${PGDATA}" -xdev -type f ! -perm 0600 -print -quit)" &&
+          pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 2s
       timeout: 5s
       retries: 30
