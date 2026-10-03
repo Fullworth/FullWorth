@@ -61,6 +61,10 @@ var builder =
     WebApplication.CreateBuilder(
         args);
 
+builder.Configuration.AddKeyPerFile(
+    "/run/secrets",
+    optional: true);
+
 var parserWorkerBaseUrl =
     builder.Configuration["ParserWorker:BaseUrl"];
 
