@@ -109,7 +109,7 @@ grep -Fq 'validate_private_asset_tree /source/statements' \
 grep -Fq 'restored statement storage' "$root_dir/deploy/backup/backup.sh" ||
     fail "isolated restore does not verify restored statement permissions."
 
-grep -Fq 'stat -c %a "/var/lib/postgresql/data"' \
+grep -Fq 'stat -c %a /var/lib/postgresql/data' \
     "$root_dir/compose.production.yml" ||
     fail "isolated PostgreSQL restore readiness does not require a private data root."
 
