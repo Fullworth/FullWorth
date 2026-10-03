@@ -47,6 +47,7 @@ mkdir -p "$fake_bin" "$deployment_directory"
 
 cat > "$deployment_directory/.env.production" <<'EOF_ENV'
 BILLWATCH_DATABASE_PASSWORD=database-password-sentinel
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-database-password-sentinel
 BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-more-than-32-characters
 BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-more-than-32-characters
 PLAID_SECRET=plaid-secret-sentinel
