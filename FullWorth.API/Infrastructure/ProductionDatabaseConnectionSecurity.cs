@@ -27,11 +27,17 @@ internal static class ProductionDatabaseConnectionSecurity
                 new NpgsqlConnectionStringBuilder(
                     connectionString);
         }
-        catch (ArgumentException exception)
+        catch (ArgumentException)
         {
+            /*
+             * Do not preserve the parser exception as an inner exception.
+             * Connection-string parser failures are configuration errors, and
+             * the original exception is not required for recovery. Keeping a
+             * secret-bearing input anywhere in the exception chain would make
+             * accidental diagnostic disclosure harder to reason about.
+             */
             throw new InvalidOperationException(
-                "The production database connection string is invalid.",
-                exception);
+                "The production database connection string is invalid.");
         }
 
         if (string.IsNullOrWhiteSpace(
