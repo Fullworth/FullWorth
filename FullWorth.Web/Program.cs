@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
-using System.Security.Claims;
-using System.Threading.RateLimiting;
 using FullWorth.Web.Components;
 using FullWorth.Web.Infrastructure;
 using FullWorth.Web.Services;
@@ -298,6 +296,30 @@ builder.Services.AddRateLimiter(
                     window:
                         TimeSpan.FromMinutes(
                             1)));
+
+        options.AddPolicy(
+            BffEndpointMappings.FinancialRefreshRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext),
+                    permitLimit:
+                        6,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
+
+        options.AddPolicy(
+            BffEndpointMappings.FinancialProviderRateLimitPolicy,
+            httpContext =>
+                CreateFixedWindowPartition(
+                    GetRateLimitPartitionKey(
+                        httpContext),
+                    permitLimit:
+                        20,
+                    window:
+                        TimeSpan.FromMinutes(
+                            10)));
     });
 
 var hostingConfiguration =
