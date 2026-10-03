@@ -166,6 +166,14 @@ expect_failure env \
 
 expect_failure env \
     PATH="$fake_bin:$PATH" \
+    FULLWORTH_TEST_DISCLOSURE_CHANNEL=encoded-response \
+    sh "$verifier" \
+    "$deployment_directory" \
+    'https://api.fullworth.test' \
+    'https://app.fullworth.test'
+
+expect_failure env \
+    PATH="$fake_bin:$PATH" \
     FULLWORTH_TEST_DISCLOSURE_CHANNEL=logs \
     sh "$verifier" \
     "$deployment_directory" \
