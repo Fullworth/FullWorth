@@ -2,22 +2,25 @@
 
 This file contains only work that cannot be completed safely through the current automated FullWorth development tooling.
 
-## GitHub branch protection — required
+## GitHub protected-branch required checks — remaining
 
-**Status:** Human action required.
+**Status:** Partial human action required.
 
-**Why a human is needed:** GitHub currently reports both `master` and `development` as unprotected, and the connected GitHub tooling can detect that condition but does not expose a repository-administration action for creating branch protection/rulesets.
+GitHub now has an active repository ruleset named `FullWorth protected branches` targeting both `master` and `development`. It blocks branch deletion and non-fast-forward updates and requires pull requests, with no bypass actor configured.
+
+The remaining gap is that the ruleset does not currently contain a required-status-check rule, so repository policy does not itself require the existing CI/security checks before merge.
+
+**Why a human is needed:** The connected GitHub tooling can verify rulesets but does not expose the repository-administration mutation needed to change this ruleset.
 
 **Action:**
 1. Open the FullWorth repository on GitHub.
-2. Go to **Settings → Rules → Rulesets** (or the equivalent branch-protection page).
-3. Create protection that targets both `master` and `development`.
-4. Require pull requests before changes are merged.
-5. Require the repository's existing CI/security checks to pass before merge.
-6. Block force pushes and branch deletion for both branches.
-7. Save/enable the ruleset.
+2. Go to **Settings → Rules → Rulesets**.
+3. Edit **FullWorth protected branches**.
+4. Preserve the existing pull-request, deletion, and non-fast-forward protections.
+5. Add the repository's required CI/security status checks so a failing required check blocks merge.
+6. Keep the ruleset active for both `master` and `development`.
 
-**Verify:** GitHub's branch API should report `protected: true` for both `master` and `development`, and the repository protection detector refreshed by PR #513 should pass.
+**Verify:** GitHub should continue to report both branches as protected, and the active ruleset should include required status checks in addition to the existing pull-request/deletion/non-fast-forward rules.
 
 ## Commercial legal/license review — required before commercial launch
 
@@ -36,18 +39,18 @@ This file contains only work that cannot be completed safely through the current
 Do not put credentials, tokens, recovery codes, financial data, private statements, or other secrets in this file.
 
 
-## OCR containment production proof
+## Parser containment deployed-host proof
 
-**Status:** Awaiting an exact-`master` guarded production deployment after PR #601 is merged.
+**Status:** Human release/deployment evidence is still required.
 
-PR #601 makes `deploy/deploy-production.sh` run `deploy/verify-parser-containment.sh` before a candidate release can receive the verified release marker. That host verifier checks the running parser supervisor identity/capabilities, finite delegated cgroup controls, a real synthetic OCR child in its own finite subgroup, subgroup cleanup, a kernel-observed per-document OOM kill under the 384 MiB ceiling, parser survival/readiness, and absence of the synthetic raw-document marker, parser credential, and native OCR diagnostic markers from API/parser container logs.
+Repository and CI coverage now exercise the parser/OCR isolation boundary, including per-document and per-image cgroups, finite CPU/memory/PID limits, zero child swap, containment cleanup, kernel OOM-kill evidence, parser readiness, native-library boundary checks, and generated malicious/corrupt document regressions.
 
-The remaining human action is the intentionally manual production release decision:
+That is repository/CI evidence only. The remaining human action is the intentionally guarded production release decision:
 
-1. Merge only after the exact PR #601 head passes full CI and dependency security.
-2. Promote the verified `development` state to `master` through the normal reviewed release path.
-3. Dispatch the guarded production workflow for that exact current `master` SHA.
-4. Preserve the workflow log containing the sanitized containment verifier output and release SHA as deployed-host evidence.
-5. Review the production systemd journal for the proof window if systemd-level log evidence is required; the automated verifier intentionally does not grant itself broader journal privileges or export journal contents.
+1. Promote only a current `development` head whose exact release candidate has passed all required CI and security gates.
+2. Merge that reviewed promotion to `master`.
+3. Dispatch the guarded production deployment for that exact `master` SHA.
+4. Preserve the sanitized deployed-host containment evidence produced by the release's required verifiers, including `deploy/verify-parser-containment.sh`.
+5. If host-level journal evidence is required, review it directly on the production host without exporting credentials, document contents, financial data, or raw statement material.
 
-Do not mark production containment accepted merely from GitHub CI. Acceptance requires the exact deployed `master` release to pass the host verifier.
+Do not mark production containment accepted merely from GitHub CI. Acceptance requires the exact deployed `master` release to pass the guarded host verification.
