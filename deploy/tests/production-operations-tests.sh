@@ -113,6 +113,9 @@ grep -Fq 'stat -c %a /var/lib/postgresql/data' \
     "$root_dir/compose.production.yml" ||
     fail "isolated PostgreSQL restore readiness does not require a private data root."
 
+grep -Fq 'uid=70,gid=70,mode=0700' "$root_dir/compose.production.yml" ||
+    fail "isolated PostgreSQL tmpfs is not mounted with private PostgreSQL ownership."
+
 grep -Fq 'find "$PGDATA" -xdev -type f ! -perm 600' \
     "$root_dir/.github/workflows/ci.yml" ||
     fail "isolated PostgreSQL restore does not audit final data-file modes."
