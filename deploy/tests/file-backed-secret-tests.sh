@@ -179,6 +179,10 @@ grep -Fq 'grep -q "^NOAUTH"' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
     fail "live secret verification does not prove unauthenticated Redis access is denied."
 grep -Fq 'redis-cli --no-auth-warning --raw ping' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
     fail "live secret verification does not prove mounted Redis authentication succeeds."
+grep -Fq 'Username=fullworth_runtime;' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
+    fail "live secret verification does not prove the API receives only the runtime database role."
+grep -Fq 'retained a stopped container with elevated database credentials' "$root_dir/deploy/verify-file-backed-secrets.sh" ||
+    fail "live secret verification does not enforce one-shot migration credential cleanup."
 grep -Fq '.fullworth-secrets/' "$root_dir/.gitignore" ||
     fail "materialized secrets are not ignored by Git."
 grep -Fxq '.fullworth-secrets' "$root_dir/.dockerignore" ||
