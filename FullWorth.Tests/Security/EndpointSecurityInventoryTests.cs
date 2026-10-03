@@ -295,6 +295,30 @@ public sealed class EndpointSecurityInventoryTests
                     "|named:",
                     StringComparison.Ordinal));
 
+        Assert.Equal(
+            44,
+            ExpectedInventory.Count(
+                row =>
+                    row.Contains(
+                        "|named:",
+                        StringComparison.Ordinal)));
+
+        Assert.Equal(
+            7,
+            ExpectedInventory.Count(
+                row =>
+                    row.EndsWith(
+                        "|named:financial-refresh",
+                        StringComparison.Ordinal)));
+
+        Assert.Equal(
+            7,
+            ExpectedInventory.Count(
+                row =>
+                    row.EndsWith(
+                        "|named:financial-provider",
+                        StringComparison.Ordinal)));
+
         Assert.Contains(
             ExpectedInventory,
             row =>
