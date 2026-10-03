@@ -129,7 +129,7 @@ public sealed class EncodedOcrImageAdmissionTests
         uint width,
         uint height)
     {
-        byte[] image = new byte[24];
+        byte[] image = new byte[33];
         byte[] signature =
         [
             0x89, 0x50, 0x4E, 0x47,
@@ -149,7 +149,36 @@ public sealed class EncodedOcrImageAdmissionTests
         BinaryPrimitives.WriteUInt32BigEndian(
             image.AsSpan(20, 4),
             height);
+        image[24] = 8;
+        image[25] = 2;
+        BinaryPrimitives.WriteUInt32BigEndian(
+            image.AsSpan(29, 4),
+            ComputeCrc32(
+                image.AsSpan(12, 17)));
         return image;
+    }
+
+    private static uint ComputeCrc32(
+        ReadOnlySpan<byte> value)
+    {
+        var crc = uint.MaxValue;
+
+        foreach (var item in value)
+        {
+            crc ^= item;
+
+            for (var bit = 0;
+                 bit < 8;
+                 bit++)
+            {
+                crc =
+                    (crc & 1) != 0
+                        ? (crc >> 1) ^ 0xEDB88320u
+                        : crc >> 1;
+            }
+        }
+
+        return ~crc;
     }
 
     private static byte[] CreateJpegHeader(
