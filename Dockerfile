@@ -89,7 +89,7 @@ COPY deploy/application-entrypoint.sh /usr/local/bin/fullworth-application-entry
 
 RUN mkdir --parents /var/lib/billwatch/keys /var/lib/billwatch/statements \
     && chown --recursive "$APP_UID:$APP_UID" /var/lib/billwatch \
-    && chmod 0700 /var/lib/billwatch/keys
+    && chmod 0700 /var/lib/billwatch/keys /var/lib/billwatch/statements
 
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0
