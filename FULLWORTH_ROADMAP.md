@@ -254,22 +254,24 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 As of 2026-10-03:
 
-- `master` is the release branch. Its current GitHub head at this snapshot is `7b0947385c93bc07509115ae8d6665ca4fa9dc90`. A GitHub branch head is not deployment evidence.
-- `development` is the active integration branch. Its current head at this snapshot is `c283463eba028570d9b1629a5740d2dcf4c64e85`.
-- GitHub comparison reports `development` **146 commits ahead and 3 commits behind** `master`. This divergence must be deliberately reconciled at release-freeze time; do not force-push, discard, or blindly merge either side.
-- The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`).
-- Repository merges after that release are **not** considered deployed merely because CI passed or the code reached `development`.
-- The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are CI-verified repository state, not production-host evidence.
+- `master` is the release branch and now holds frozen release candidate `c092a9c76c5f4e811941400606c32d75a0a50a29`.
+- `development` is the active integration branch at `bbf5f0e1a8016bc6dcaae52963d339d82681de2f`.
+- GitHub comparison reports `development` **2 history-only commits ahead and 0 behind** `master`, with **0 file differences**. PR #667 deliberately synced the master promotion ancestry back into development after release promotion.
+- PR #666 promoted frozen candidate `80bb6494bf66646406829285eef4f71c009c546f` to `master` only after FullWorth CI #1610 and Dependency Security #707 passed.
+- Exact master-push FullWorth CI #1611 (`37158708276`) passed on `c092a9c76c5f4e811941400606c32d75a0a50a29` and produced attested artifact `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29`.
+- Repository-governance run #11 (`37158708332`) passed on the same master SHA.
+- The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). The new master candidate is not deployed merely because promotion and master CI passed.
+- The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are now present in the master release candidate but still require deployed-host evidence before production-security claims.
 
 ### Release-readiness estimate
 
 Current technical-lead planning estimate:
 
-- broad public production release: **approximately 77%**;
-- engineering/code implementation: **approximately 90–92%**;
-- next deployable production release candidate: **approximately 87–89%**.
+- broad public production release: **approximately 78%**;
+- engineering/code implementation: **approximately 92–94%**;
+- current master release candidate: **repository/CI-ready for guarded deployment**.
 
-These percentages remain intentionally conservative despite the security-code progress because the remaining release risk is dominated by real-environment/provider/device/legal evidence rather than missing generic application code. A high percentage never substitutes for exact-head CI, guarded deployment, same-release production evidence, real-device/provider acceptance, recovery proof, or legal/governance requirements.
+The release-candidate-preparation portion is complete, but the public-release percentage remains intentionally conservative because the remaining risk is dominated by real-environment/provider/device/legal evidence rather than generic application code. A promoted master SHA and attested artifacts do not substitute for guarded deployment, same-release production evidence, real-device/provider acceptance, immutable/off-host recovery proof, or legal/governance requirements.
 
 ## 4.2 Active release-critical work
 
@@ -2320,50 +2322,21 @@ The remaining four items require real evidence or repository-owner policy, not a
 
 Do not manufacture CI substitutes for provider-enforced immutability, clean-host recovery, or deployed-host evidence. Do not add unrelated security code merely to increase the checklist count.
 
-## Step 3 — Freeze the next release candidate
+## ~~Step 3 — Freeze the next release candidate~~
 
-After the intended security slice is complete:
+~~Release candidate `80bb6494bf66646406829285eef4f71c009c546f` was frozen on `development` with the known release-blocker inventory recorded on PR #666. AI-derived persistence remained disabled and deterministic extraction remained the production persistence authority. Only release/history documentation changed after the frozen tree.~~
 
-- stop unrelated feature additions;
-- inventory the exact `development` head;
-- identify every release-blocking open PR/issue;
-- confirm migrations and compatibility requirements;
-- confirm AI-derived persistence remains disabled unless separately approved;
-- record the candidate SHA and expected acceptance bundle.
+## ~~Step 4 — Reconcile `development` and `master` deliberately~~
 
-Only blocker fixes should change the frozen candidate.
+~~The three former master-only commits were verified as release-promotion merge history with zero file differences. PR #664 reconciled that ancestry into `development` without changing the tree. PR #666 then promoted the frozen candidate to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29`. PR #667 synced the new promotion ancestry back into `development` with zero file changes. Current comparison is development 2 history-only commits ahead / 0 behind with 0 file differences. No force-push or destructive history rewrite was used.~~
 
-## Step 4 — Reconcile `development` and `master` deliberately
+## ~~Step 5 — Run exact-head release verification~~
 
-At this snapshot GitHub reports `development` 134 commits ahead and 3 commits behind `master`.
-
-Before promotion:
-
-- inspect the three master-only commits;
-- confirm whether they are release-merge history, required hotfixes, or substantive changes;
-- preserve all required production/release changes;
-- do not force-push either long-lived branch;
-- do not discard release-only work merely to make the graph look clean.
-
-Then open the normal reviewed promotion/release PR.
-
-## Step 5 — Run exact-head release verification
-
-The final promotion head must pass every required release gate, including the applicable:
-
-- backend build/tests;
-- ownership/security tests;
-- Web/PWA/browser acceptance;
-- production-container verification;
-- dependency security;
-- migration/model checks;
-- parser/OCR containment checks;
-- recovery checks;
-- release provenance/SBOM checks.
-
-An earlier green commit is not proof for a changed release head.
+~~PR #666 exact head `80bb6494bf66646406829285eef4f71c009c546f` passed FullWorth CI #1610 and Dependency Security #707 before promotion. Exact master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29` then passed master-push FullWorth CI #1611, including backend/tests, migration/model verification, production container and recovery, parser/OCR containment, secret boundaries, MAUI Android, provenance/SBOM generation and attestation. The run produced the exact release artifact `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29`. Repository-governance run #11 also passed on that SHA.~~
 
 ## Step 6 — Guarded-deploy the exact `master` release
+
+**Current next release action:** separately approve and dispatch the guarded production workflow for exact master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29`. The workflow is manual, requires explicit confirmation, and must refuse any stale/non-master SHA.
 
 Deploy only the exact verified current `master` SHA.
 
