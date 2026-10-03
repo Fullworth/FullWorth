@@ -69,6 +69,8 @@ services:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/api-database-connection
   database_password:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-password
+  database_pgpass:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-pgpass
   parser_auth_token:
     file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/parser-auth-token
   plaid_secret:
@@ -322,7 +324,7 @@ volumes:
       database:
         condition: service_healthy
     environment:
-      FULLWORTH_DATABASE_PASSWORD_FILE: /run/secrets/database_password
+      FULLWORTH_DATABASE_PGPASS_FILE: /run/secrets/database_pgpass
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?Set RESTIC_REPOSITORY}
       RESTIC_PASSWORD_FILE: /run/secrets/restic_password
       AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
@@ -346,8 +348,8 @@ volumes:
       - web_data_protection_keys:/source/web-data-protection:ro
       - statement_files:/source/statements:ro
     secrets:
-      - source: database_password
-        target: database_password
+      - source: database_pgpass
+        target: database_pgpass
       - source: restic_password
         target: restic_password
       - source: aws_credentials
