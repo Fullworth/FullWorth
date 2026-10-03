@@ -35,6 +35,10 @@ CultureInfo.DefaultThreadCurrentUICulture =
 var builder =
     WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddKeyPerFile(
+    "/run/secrets",
+    optional: true);
+
 builder.WebHost.ConfigureKestrel(
     options =>
     {

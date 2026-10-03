@@ -90,6 +90,12 @@ esac
 [ -f "$root_dir/deploy/verify-secret-non-disclosure.sh" ] ||
     fail "secret non-disclosure verifier is missing."
 
+[ -f "$root_dir/deploy/materialize-container-secrets.sh" ] ||
+    fail "file-backed secret materializer is missing."
+
+[ -f "$root_dir/deploy/verify-file-backed-secrets.sh" ] ||
+    fail "file-backed secret verifier is missing."
+
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
 
@@ -126,6 +132,13 @@ current_release=$(git -C "$root_dir" rev-parse HEAD 2>/dev/null) ||
 if ! mkdir "$lock_dir" 2>/dev/null; then
     fail "another deployment is active or a stale deployment lock requires operator review."
 fi
+
+FULLWORTH_SECRET_DIRECTORY="$root_dir/.fullworth-secrets"
+export FULLWORTH_SECRET_DIRECTORY
+
+sh "$root_dir/deploy/materialize-container-secrets.sh" \
+    "$env_file" \
+    "$FULLWORTH_SECRET_DIRECTORY"
 
 compose()
 {
@@ -310,6 +323,9 @@ sh "$root_dir/deploy/verify-parser-containment.sh" \
 sh "$root_dir/deploy/check-http-security-boundaries.sh" \
     "https://$api_host" \
     "https://$web_host"
+
+sh "$root_dir/deploy/verify-file-backed-secrets.sh" \
+    "$root_dir"
 
 sh "$root_dir/deploy/verify-secret-non-disclosure.sh" \
     "$root_dir" \

@@ -3,8 +3,24 @@
 set -eu
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-config_file=$(mktemp)
-trap 'rm -f "$config_file"' EXIT HUP INT TERM
+temp_dir=$(mktemp -d)
+config_file="$temp_dir/compose.json"
+secret_env="$temp_dir/secrets.env"
+secret_directory="$temp_dir/container-secrets"
+trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM
+
+cat > "$secret_env" <<'ENV'
+BILLWATCH_DATABASE_PASSWORD=ci-database-password
+BILLWATCH_PARSER_AUTH_TOKEN=ci-parser-worker-authentication-token-more-than-32-characters
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=ci-web-session-password-more-than-32-characters
+PLAID_SECRET=ci-plaid-secret
+RESTIC_PASSWORD=ci-restic-password-with-more-than-24-chars
+ENV
+chmod 600 "$secret_env"
+sh "$root_dir/deploy/materialize-container-secrets.sh" \
+    "$secret_env" \
+    "$secret_directory" \
+    >/dev/null
 
 fail()
 {
@@ -13,6 +29,7 @@ fail()
 }
 
 env \
+    FULLWORTH_SECRET_DIRECTORY="$secret_directory" \
     ACME_EMAIL=ci@example.com \
     BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true \
     BILLWATCH_BACKUP_WORK_SIZE=1g \
@@ -243,14 +260,20 @@ if (
 ):
     fail("API must mount the parser-worker certificate volume read-only.")
 
-api_parser_token = api_environment.get("ParserWorker__AuthenticationToken")
-worker_parser_token = parser_worker.get("environment", {}).get(
-    "ParserWorker__AuthenticationToken"
-)
-if not api_parser_token or len(api_parser_token) < 32:
-    fail("API must receive a strong parser-worker authentication token.")
-if api_parser_token != worker_parser_token:
-    fail("API and parser-worker must receive the same authentication token.")
+def secret_targets(service):
+    return {
+        item.get("target")
+        for item in service.get("secrets", [])
+    }
+
+if "ParserWorker__AuthenticationToken" not in secret_targets(services["api"]):
+    fail("API must receive parser authentication through a mounted secret.")
+if "ParserWorker__AuthenticationToken" not in secret_targets(parser_worker):
+    fail("parser-worker must receive parser authentication through a mounted secret.")
+if "ParserWorker__AuthenticationToken" in api_environment:
+    fail("API parser authentication must not remain in the ordinary environment.")
+if "ParserWorker__AuthenticationToken" in parser_worker.get("environment", {}):
+    fail("parser-worker authentication must not remain in the ordinary environment.")
 
 session_cache = services["web-session-cache"]
 
@@ -273,18 +296,20 @@ if session_cache.get("user") != "999:1000":
     fail("web-session-cache must run as the Redis unprivileged user.")
 
 redis_environment = session_cache.get("environment", {})
-redis_password = redis_environment.get("REDIS_PASSWORD")
-
-if not redis_password or len(redis_password) < 32:
-    fail("web-session-cache must receive a strong runtime password.")
+if "REDIS_PASSWORD" in redis_environment:
+    fail("web-session-cache password must not remain in the ordinary environment.")
+if "redis_password" not in secret_targets(session_cache):
+    fail("web-session-cache must receive a mounted password file.")
 
 web_environment = services["web"].get("environment", {})
 
 if web_environment.get("WebSession__RedisHost") != "web-session-cache":
     fail("Web must resolve its session store only through the isolated cache service.")
 
-if web_environment.get("WebSession__RedisPassword") != redis_password:
-    fail("Web and session cache must use the same protected session-cache credential.")
+if "WebSession__RedisPassword" in web_environment:
+    fail("Web session password must not remain in the ordinary environment.")
+if "WebSession__RedisPassword" not in secret_targets(services["web"]):
+    fail("Web must receive its session password through a mounted secret.")
 
 if session_cache.get("volumes"):
     fail("web-session-cache must remain ephemeral and must not mount persistent volumes.")
@@ -292,6 +317,7 @@ if session_cache.get("volumes"):
 redis_command = " ".join(session_cache.get("command", []))
 
 for required_fragment in (
+    "cat /run/secrets/redis_password",
     "--requirepass",
     "--appendonly no",
     "--maxmemory 128mb",

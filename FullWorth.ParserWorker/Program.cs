@@ -206,6 +206,9 @@ if (args.Length == 3 && args[0] == "--ocr")
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddKeyPerFile(
+    "/run/secrets",
+    optional: true);
 var tlsCertificate =
     builder.Environment.IsDevelopment()
         ? null

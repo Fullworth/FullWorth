@@ -22,11 +22,18 @@ fi
 . "$permission_policy_path"
 
 : "${RESTIC_REPOSITORY:?RESTIC_REPOSITORY must be configured.}"
-: "${RESTIC_PASSWORD:?RESTIC_PASSWORD must be configured.}"
+: "${RESTIC_PASSWORD_FILE:?RESTIC_PASSWORD_FILE must be configured.}"
 
-if [ "${#RESTIC_PASSWORD}" -lt 24 ] ||
-   [ "$RESTIC_PASSWORD" = "replace-with-a-separate-long-random-backup-password" ]; then
-    echo "RESTIC_PASSWORD must be a separate random value of at least 24 characters." >&2
+if [ ! -f "$RESTIC_PASSWORD_FILE" ] ||
+   [ -L "$RESTIC_PASSWORD_FILE" ]; then
+    echo "RESTIC_PASSWORD_FILE must be a regular mounted secret." >&2
+    exit 64
+fi
+
+restic_password_length="$(wc -c < "$RESTIC_PASSWORD_FILE" | tr -d ' ')"
+if [ "$restic_password_length" -lt 24 ] ||
+   grep -qx 'replace-with-a-separate-long-random-backup-password' "$RESTIC_PASSWORD_FILE"; then
+    echo "The Restic password file must contain a separate random value of at least 24 characters." >&2
     exit 64
 fi
 
@@ -51,6 +58,7 @@ candidate_tag="billwatch-candidate"
 complete_tag="billwatch-complete"
 bundle_path="/work/bundle"
 restore_path="/work/restore"
+database_passfile="/work/.pgpass"
 restore_database_host="${RESTORE_DATABASE_HOST:-restore-database}"
 retention_enabled="${BILLWATCH_BACKUP_RETENTION_ENABLED:-false}"
 retention_keep_daily="${BILLWATCH_BACKUP_KEEP_DAILY:-14}"
@@ -62,7 +70,22 @@ maintenance_allow="${BILLWATCH_BACKUP_MAINTENANCE_ALLOW:-false}"
 
 cleanup_work()
 {
-    rm -rf "$bundle_path" "$restore_path"
+    rm -rf "$bundle_path" "$restore_path" "$database_passfile"
+}
+
+prepare_database_passfile()
+{
+    : "${FULLWORTH_DATABASE_PGPASS_FILE:?FULLWORTH_DATABASE_PGPASS_FILE must be configured.}"
+
+    if [ ! -f "$FULLWORTH_DATABASE_PGPASS_FILE" ] ||
+       [ -L "$FULLWORTH_DATABASE_PGPASS_FILE" ]; then
+        echo "The database passfile secret is missing or unsafe." >&2
+        exit 64
+    fi
+
+    cp "$FULLWORTH_DATABASE_PGPASS_FILE" "$database_passfile"
+    chmod 0600 "$database_passfile"
+    export PGPASSFILE="$database_passfile"
 }
 
 validate_key_ring()
@@ -260,7 +283,8 @@ create_backup()
 {
     require_append_only_backup_role
     validate_retention_policy
-    : "${PGPASSWORD:?Database credentials must be configured for backup capture.}"
+    cleanup_work
+    prepare_database_passfile
     : "${BILLWATCH_RELEASE_ID:?BILLWATCH_RELEASE_ID must be configured for backup capture.}"
 
     case "$BILLWATCH_RELEASE_ID" in
@@ -271,7 +295,6 @@ create_backup()
     esac
 
     require_repository
-    cleanup_work
     mkdir -p "$bundle_path"
 
     api_key_file_count="$(validate_key_ring /source/data-protection API)"
@@ -374,9 +397,9 @@ list_completed_snapshot()
 verify_restore()
 {
     validate_client_mode
-    : "${PGPASSWORD:?Database credentials must be configured for restore verification.}"
-    require_repository
     cleanup_work
+    prepare_database_passfile
+    require_repository
     mkdir -p "$restore_path"
 
     if ! pg_isready --host="$restore_database_host" --username=billwatch --dbname=postgres --timeout=5 >/dev/null 2>&1; then
