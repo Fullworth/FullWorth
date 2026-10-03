@@ -57,7 +57,7 @@ sh -n "$root_dir/deploy/check-http-security-boundaries.sh" ||
 grep -Fq 'Transfer-Encoding: chunked'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
     fail "HTTP security boundary verifier does not probe Transfer-Encoding and Content-Length ambiguity."
 
-grep -Fq 'Content-Length: 4\\r\\nContent-Length: 5'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
+grep -Fq 'Content-Length: 4\r\nContent-Length: 5'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
     fail "HTTP security boundary verifier does not probe conflicting Content-Length values."
 
 grep -Fq 'X-FullWorth-Request-Id'     "$root_dir/deploy/check-http-security-boundaries.sh" ||
