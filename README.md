@@ -131,7 +131,7 @@ Subscription enforcement is controlled by `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_EN
 
 ### Encrypted backups
 
-`deploy/run-backup.sh` briefly stops the API, creates a PostgreSQL custom-format dump, and sends that dump plus the matching statement files and Data Protection key ring to Restic in one encrypted snapshot. A restart trap brings the API back even when backup fails. The backup container receives the sensitive volumes read-only and drops every Linux capability.
+`deploy/run-backup.sh` briefly stops the public edge plus the API and Web key-ring writers, creates a PostgreSQL custom-format dump, and sends that dump, matching statement files, and both separated Data Protection key rings to Restic in one encrypted snapshot. A restart trap restores the previously running services even when backup fails. The backup container receives the sensitive volumes read-only and drops every Linux capability. See `DATA_PROTECTION_KEY_LIFECYCLE.md` for permission, rotation, compromise, and clean-host recovery rules.
 
 Create a manual backup:
 
