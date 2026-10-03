@@ -91,9 +91,13 @@ grep -q -- '--prune' "$root_dir/deploy/backup/backup.sh" || fail "enabled backup
 grep -q '        snapshot' "$root_dir/deploy/check-backup-snapshot.sh" || fail "backup snapshot checker must use the constrained backup snapshot command."
 grep -q '        policy' "$root_dir/deploy/check-backup-policy.sh" || fail "backup policy checker must use the non-destructive policy command."
 
+restic_password_file="$temp_dir/restic-password"
+printf '%s' 'ci-restic-password-with-32-characters' > "$restic_password_file"
+chmod 600 "$restic_password_file"
+
 retention_env="
 RESTIC_REPOSITORY=/repository
-RESTIC_PASSWORD=ci-restic-password-with-32-characters
+RESTIC_PASSWORD_FILE=$restic_password_file
 PGPASSWORD=ci-database-password
 BILLWATCH_RELEASE_ID=ci
 BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY=true
