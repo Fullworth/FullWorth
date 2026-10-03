@@ -64,35 +64,7 @@ services:
       StatementAi__Shadow__AllowProviderCalls: "false"
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=256m,uid=1654,gid=1654,mode=0700
-    secrets:
-  api_database_connection:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/api-database-connection
-  database_password:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-password
-  database_pgpass:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-pgpass
-  parser_auth_token:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/parser-auth-token
-  plaid_secret:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/plaid-secret
-  redis_password:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/redis-password
-  restic_password:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/restic-password
-  stripe_secret_key:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-secret-key
-  stripe_webhook_secret:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-webhook-secret
-  resend_api_key:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/resend-api-key
-  google_client_secret:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/google-client-secret
-  apple_client_secret:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/apple-client-secret
-  aws_credentials:
-    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/aws-credentials
-
-volumes:
+    volumes:
       - data_protection_keys:/var/lib/billwatch/keys
       - statement_files:/var/lib/billwatch/statements
       - parser_worker_tls:/var/run/fullworth-parser-tls:ro
@@ -452,6 +424,34 @@ networks:
   web_egress:
   backup_egress:
   edge_egress:
+
+secrets:
+  api_database_connection:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/api-database-connection
+  database_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-password
+  database_pgpass:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/database-pgpass
+  parser_auth_token:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/parser-auth-token
+  plaid_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/plaid-secret
+  redis_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/redis-password
+  restic_password:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/restic-password
+  stripe_secret_key:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-secret-key
+  stripe_webhook_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/stripe-webhook-secret
+  resend_api_key:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/resend-api-key
+  google_client_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/google-client-secret
+  apple_client_secret:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/apple-client-secret
+  aws_credentials:
+    file: ${FULLWORTH_SECRET_DIRECTORY:-./.fullworth-secrets}/aws-credentials
 
 volumes:
   backup_cache:
