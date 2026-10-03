@@ -188,7 +188,7 @@ for raw_line in environment_path.read_text(encoding="utf-8").splitlines():
 
 for name in secret_names:
     environment_value = os.environ.get(name)
-    if environment_value:
+    if environment_value and not configured.get(name):
         configured[name] = environment_value
 
 missing = sorted(
