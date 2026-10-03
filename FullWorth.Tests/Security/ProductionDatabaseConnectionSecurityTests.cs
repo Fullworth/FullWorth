@@ -102,7 +102,7 @@ public sealed class ProductionDatabaseConnectionSecurityTests
 
         Assert.DoesNotContain(
             secret,
-            exception.Message,
+            exception.ToString(),
             StringComparison.Ordinal);
     }
 }
