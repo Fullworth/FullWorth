@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using FullWorth.Tests.Infrastructure;
 
@@ -201,6 +202,9 @@ public sealed class StripeWebhookSecurityTests
     private static HttpRequestMessage CreateWebhookRequest(
         HttpContent content)
     {
+        content.Headers.ContentType ??=
+            new MediaTypeHeaderValue("application/json");
+
         var request =
             new HttpRequestMessage(
                 HttpMethod.Post,
