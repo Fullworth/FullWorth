@@ -66,7 +66,12 @@ internal static class EncodedOcrImageAdmission
     {
         pixelCount = 0;
 
-        if (encodedImage.Length < 24 ||
+        /*
+         * A PNG signature and dimensions are not enough to admit native decode.
+         * Validate the complete fixed IHDR chunk, including its constrained
+         * fields and CRC, before estimating the working set.
+         */
+        if (encodedImage.Length < 33 ||
             !encodedImage[..8].SequenceEqual(PngSignature) ||
             BinaryPrimitives.ReadUInt32BigEndian(
                 encodedImage.Slice(8, 4)) != 13 ||
@@ -75,9 +80,37 @@ internal static class EncodedOcrImageAdmission
             return false;
         }
 
+        var bitDepth =
+            encodedImage[24];
+
+        var colorType =
+            encodedImage[25];
+
+        if (!IsValidPngBitDepth(
+                bitDepth,
+                colorType) ||
+            encodedImage[26] != 0 ||
+            encodedImage[27] != 0 ||
+            encodedImage[28] > 1)
+        {
+            return false;
+        }
+
+        var expectedCrc =
+            BinaryPrimitives.ReadUInt32BigEndian(
+                encodedImage.Slice(29, 4));
+
+        if (ComputePngCrc32(
+                encodedImage.Slice(12, 17)) !=
+            expectedCrc)
+        {
+            return false;
+        }
+
         var width =
             BinaryPrimitives.ReadUInt32BigEndian(
                 encodedImage.Slice(16, 4));
+
         var height =
             BinaryPrimitives.ReadUInt32BigEndian(
                 encodedImage.Slice(20, 4));
@@ -86,6 +119,44 @@ internal static class EncodedOcrImageAdmission
             width,
             height,
             out pixelCount);
+    }
+
+    private static bool IsValidPngBitDepth(
+        byte bitDepth,
+        byte colorType) =>
+        colorType switch
+        {
+            0 => bitDepth is 1 or 2 or 4 or 8 or 16,
+            2 => bitDepth is 8 or 16,
+            3 => bitDepth is 1 or 2 or 4 or 8,
+            4 => bitDepth is 8 or 16,
+            6 => bitDepth is 8 or 16,
+            _ => false
+        };
+
+    private static uint ComputePngCrc32(
+        ReadOnlySpan<byte> value)
+    {
+        var crc =
+            uint.MaxValue;
+
+        foreach (var item in value)
+        {
+            crc ^=
+                item;
+
+            for (var bit = 0;
+                 bit < 8;
+                 bit++)
+            {
+                crc =
+                    (crc & 1) != 0
+                        ? (crc >> 1) ^ 0xEDB88320u
+                        : crc >> 1;
+            }
+        }
+
+        return ~crc;
     }
 
     private static bool TryReadJpegPixelCount(
