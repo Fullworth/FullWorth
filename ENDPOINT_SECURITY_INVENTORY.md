@@ -10,9 +10,9 @@ class that the application actually exposes.
 
 | Host | Method-route exposures | Authenticated | Explicit anonymous | Implicit anonymous | Named rate limit |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| API | 83 | 69 | 6 | 8 | 23 |
-| Web | 115 | 86 | 5 | 24 | 7 |
-| **Total** | **198** | **155** | **11** | **32** | **30** |
+| API | 83 | 69 | 6 | 8 | 33 |
+| Web | 115 | 86 | 5 | 24 | 11 |
+| **Total** | **198** | **155** | **11** | **32** | **44** |
 
 The complete, reviewable list is embedded in
 `FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs`. A route addition,
@@ -54,11 +54,15 @@ the inventory does not claim that route is production-exposed.
 | API statement download | Authenticated | `statement-download` (30/10 min/user) | Bounds repeated sensitive-file reads |
 | API account export | Authenticated | `account-export` (5/hour/user) | Bounds expensive, privacy-sensitive export work |
 | API subscription writes | Authenticated | `subscription-redemption` (5/10 min/user) | Bounds checkout, portal, sync, and access-key activity |
+| API financial refresh/discovery/sync | Authenticated | `financial-refresh` (6/10 min/user) | Bounds bill discovery, monitoring refresh, and account/transaction sync fan-out |
+| API Plaid Link lifecycle | Authenticated | `financial-provider` (20/10 min/user) | Bounds provider-backed link creation, update, completion, and token exchange while allowing interactive retries |
 | Stripe webhook | Explicit anonymous | API global limiter plus Stripe signature verification | Signature behavior is tested separately; replay/idempotency remains a dedicated review item |
-| Other API account, admin, financial, planning, Plaid, and alert routes | Authenticated | API global limiter | Exact route/auth state is protected by the snapshot; further cost-based policy refinement remains reviewable work |
+| Other API account, admin, financial, planning, and alert routes | Authenticated | API global limiter | Primarily bounded CRUD/read work; exact route/auth state remains protected by the snapshot |
 | Web public pages | Anonymous | None at Web layer | Primarily page rendering; authentication form posts use the named policy below |
 | Web authentication posts | Anonymous or authenticated | `web-authentication` (20/min/IP) | Bounds login, registration, recovery, and external-auth completion |
-| Web application pages and BFF | Authenticated | None at Web layer; downstream API controls apply | Unsafe BFF requests also require antiforgery; statement upload has its own Web policy |
+| Web application pages and ordinary BFF | Authenticated | None at Web layer; downstream API controls apply | Unsafe BFF requests require antiforgery; sensitive downstream API policies still apply |
+| Web financial refresh BFF | Authenticated | `financial-refresh` (6/10 min/user) | Rejects refresh abuse before proxy work and matches the API budget |
+| Web Plaid Link BFF | Authenticated | `financial-provider` (20/10 min/user) | Rejects provider-lifecycle abuse before proxy work and matches the API budget |
 | Web statement upload BFF | Authenticated | `statement-upload` (12/10 min/user) | Prevents the Web proxy from becoming an unbounded upload path |
 
 ## Change procedure
