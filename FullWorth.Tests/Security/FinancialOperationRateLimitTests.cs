@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using FullWorth.Tests.Infrastructure;
 
 namespace FullWorth.Tests.Security;
@@ -22,10 +23,49 @@ public sealed class FinancialOperationRateLimitTests
         using var client =
             factory.CreateHttpsClient();
 
-        await AssertPerUserLimitAsync(
-            client,
-            path,
-            permitLimit);
+        var firstUser =
+            await TestUserAuthentication
+                .RegisterAndLoginAsync(
+                    client);
+
+        for (var attempt = 1;
+             attempt <= permitLimit;
+             attempt++)
+        {
+            using var response =
+                await client.SendAsync(
+                    CreateApiRequest(
+                        path,
+                        firstUser.AccessToken));
+
+            Assert.NotEqual(
+                HttpStatusCode.TooManyRequests,
+                response.StatusCode);
+        }
+
+        using var limitedResponse =
+            await client.SendAsync(
+                CreateApiRequest(
+                    path,
+                    firstUser.AccessToken));
+
+        AssertRateLimited(
+            limitedResponse);
+
+        var secondUser =
+            await TestUserAuthentication
+                .RegisterAndLoginAsync(
+                    client);
+
+        using var secondUserResponse =
+            await client.SendAsync(
+                CreateApiRequest(
+                    path,
+                    secondUser.AccessToken));
+
+        Assert.NotEqual(
+            HttpStatusCode.TooManyRequests,
+            secondUserResponse.StatusCode);
     }
 
     [Theory]
@@ -45,17 +85,6 @@ public sealed class FinancialOperationRateLimitTests
         using var client =
             factory.CreateHttpsClient();
 
-        await AssertPerUserLimitAsync(
-            client,
-            path,
-            permitLimit);
-    }
-
-    private static async Task AssertPerUserLimitAsync(
-        HttpClient client,
-        string path,
-        int permitLimit)
-    {
         var firstUserId =
             Guid.NewGuid();
 
@@ -65,7 +94,7 @@ public sealed class FinancialOperationRateLimitTests
         {
             using var response =
                 await client.SendAsync(
-                    CreateRequest(
+                    CreateWebRequest(
                         path,
                         firstUserId));
 
@@ -76,16 +105,33 @@ public sealed class FinancialOperationRateLimitTests
 
         using var limitedResponse =
             await client.SendAsync(
-                CreateRequest(
+                CreateWebRequest(
                     path,
                     firstUserId));
 
+        AssertRateLimited(
+            limitedResponse);
+
+        using var secondUserResponse =
+            await client.SendAsync(
+                CreateWebRequest(
+                    path,
+                    Guid.NewGuid()));
+
+        Assert.NotEqual(
+            HttpStatusCode.TooManyRequests,
+            secondUserResponse.StatusCode);
+    }
+
+    private static void AssertRateLimited(
+        HttpResponseMessage response)
+    {
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
-            limitedResponse.StatusCode);
+            response.StatusCode);
 
         Assert.True(
-            limitedResponse.Headers.TryGetValues(
+            response.Headers.TryGetValues(
                 "Retry-After",
                 out var retryAfterValues));
 
@@ -98,19 +144,26 @@ public sealed class FinancialOperationRateLimitTests
         Assert.True(
             retryAfterSeconds >
             0);
-
-        using var secondUserResponse =
-            await client.SendAsync(
-                CreateRequest(
-                    path,
-                    Guid.NewGuid()));
-
-        Assert.NotEqual(
-            HttpStatusCode.TooManyRequests,
-            secondUserResponse.StatusCode);
     }
 
-    private static HttpRequestMessage CreateRequest(
+    private static HttpRequestMessage CreateApiRequest(
+        string path,
+        string accessToken)
+    {
+        var request =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                path);
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        return request;
+    }
+
+    private static HttpRequestMessage CreateWebRequest(
         string path,
         Guid userId)
     {
