@@ -1167,6 +1167,45 @@ app.Use(
     });
 
 /*
+ * Reject body-bearing unsafe API requests with an unsupported or missing
+ * media type before authentication, model binding, or endpoint work.
+ *
+ * Kestrel owns HTTP framing validation. This application boundary narrows the
+ * parsed request formats to the three families FullWorth intentionally uses.
+ */
+app.Use(
+    async (
+        context,
+        next) =>
+    {
+        var request = context.Request;
+        var isUnsafeMethod =
+            HttpMethods.IsPost(request.Method) ||
+            HttpMethods.IsPut(request.Method) ||
+            HttpMethods.IsPatch(request.Method) ||
+            HttpMethods.IsDelete(request.Method);
+
+        var canHaveBody =
+            context.Features
+                .Get<
+                    Microsoft.AspNetCore.Http.Features.IHttpRequestBodyDetectionFeature>()?
+                .CanHaveBody ==
+            true;
+
+        if (request.Path.StartsWithSegments("/api") &&
+            isUnsafeMethod &&
+            canHaveBody &&
+            !IsAllowedRequestContentType(request.ContentType))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status415UnsupportedMediaType;
+            return;
+        }
+
+        await next();
+    });
+
+/*
  * Authentication intentionally precedes named rate-limit policies because
  * sensitive FullWorth endpoints are partitioned by authenticated UserId.
  *
@@ -1255,6 +1294,42 @@ authenticationGroup
         RefreshTokenReplayEndpointFilter>();
 
 app.Run();
+
+static bool IsAllowedRequestContentType(
+    string? contentType)
+{
+    if (string.IsNullOrWhiteSpace(contentType))
+    {
+        return false;
+    }
+
+    var parameterSeparator =
+        contentType.IndexOf(
+            ';',
+            StringComparison.Ordinal);
+
+    var mediaType =
+        (parameterSeparator >= 0
+            ? contentType[..parameterSeparator]
+            : contentType)
+        .Trim();
+
+    return mediaType.Equals(
+               "application/json",
+               StringComparison.OrdinalIgnoreCase) ||
+           (mediaType.StartsWith(
+                "application/",
+                StringComparison.OrdinalIgnoreCase) &&
+            mediaType.EndsWith(
+                "+json",
+                StringComparison.OrdinalIgnoreCase)) ||
+           mediaType.Equals(
+               "application/x-www-form-urlencoded",
+               StringComparison.OrdinalIgnoreCase) ||
+           mediaType.Equals(
+               "multipart/form-data",
+               StringComparison.OrdinalIgnoreCase);
+}
 
 static string GetRateLimitPartitionKey(
     HttpContext httpContext,
