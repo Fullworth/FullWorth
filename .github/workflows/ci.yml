@@ -887,6 +887,7 @@ jobs:
 
           names = (
               "BILLWATCH_DATABASE_PASSWORD",
+              "BILLWATCH_DATABASE_RUNTIME_PASSWORD",
               "BILLWATCH_PARSER_AUTH_TOKEN",
               "BILLWATCH_WEB_SESSION_REDIS_PASSWORD",
               "PLAID_SECRET",
