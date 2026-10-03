@@ -1,3 +1,13 @@
+## Ownership-scoped resource-miss security alerts — 2026-10-02
+
+FullWorth now emits metadata-only security event 29004, `ownership_scoped_resource_not_found`, when an authenticated request receives 404 on one of fourteen fixed ownership-scoped API method/route templates. The signal preserves the existing non-enumerating 404 boundary and does not perform a second cross-owner existence lookup. It contains only the normalized method, application-owned route template, status, authentication state, and server-generated request ID; resource/user identifiers, raw URLs, IP addresses, credentials, provider data, statements, and financial values remain excluded.
+
+Twenty matching events in five minutes produce bounded alert 29105, `repeated_ownership_scoped_resource_misses`, through the existing fifteen-minute cooldown and hard 512-bucket cap. Because a 404 can also mean a genuinely missing resource, this is explicitly a scanning or stale-client probe signal rather than proof that another user's resource exists. Operator documentation requires separate evidence before describing it as a confirmed cross-user attempt and prohibits adding user/resource identifiers to the aggregation key.
+
+Exact documentation-complete PR #634 head `aad518d082d49dc0819843f75b6a8d374e399d0b` passed FullWorth CI #1535 (run `37091664148`: backend build/tests, MAUI Android, production images and Compose, parser containment, HTTP security boundaries, and encrypted recovery) and Dependency Security #632 (run `37091664144`) before squash merge to `development` as `8d7887ab26ddac87a164739c8ddcdc35a288af36`.
+
+This completes the current security-detection checklist across repeated authentication/authorization/rate-limit failures, ownership-scoped misses, administrative mutations, provider-attention transitions, and suspicious export/delete activity. The telemetry remains process-local under the current one-API-instance production rule. No production deployment occurred.
+
 ## Financial operation abuse boundaries — 2026-10-02
 
 FullWorth now applies authenticated-user-partitioned named rate limits to the expensive financial operations identified by the executable endpoint inventory. The `financial-refresh` policy permits six requests per ten minutes for bill discovery, monitoring refresh, and Plaid account/transaction synchronization. The `financial-provider` policy permits twenty requests per ten minutes for Plaid Link creation, update, completion, and public-token exchange so normal interactive polling/retries remain viable without inheriting the broad API-wide budget.
