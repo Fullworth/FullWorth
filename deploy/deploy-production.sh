@@ -87,6 +87,9 @@ esac
 [ -f "$root_dir/deploy/verify-parser-containment.sh" ] ||
     fail "parser containment verifier is missing."
 
+[ -f "$root_dir/deploy/verify-secret-non-disclosure.sh" ] ||
+    fail "secret non-disclosure verifier is missing."
+
 [ -x "$root_dir/deploy/run-backup.sh" ] ||
     fail "backup wrapper is not executable."
 
@@ -305,6 +308,11 @@ sh "$root_dir/deploy/verify-parser-containment.sh" \
     "https://$web_host"
 
 sh "$root_dir/deploy/check-http-security-boundaries.sh" \
+    "https://$api_host" \
+    "https://$web_host"
+
+sh "$root_dir/deploy/verify-secret-non-disclosure.sh" \
+    "$root_dir" \
     "https://$api_host" \
     "https://$web_host"
 
