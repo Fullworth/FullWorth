@@ -17,6 +17,10 @@ public sealed class SecurityEventAlertAggregatorTests
         SecurityEventNames.RateLimitRejected,
         5,
         SecurityEventAlertNames.RepeatedRateLimitRejections)]
+    [InlineData(
+        SecurityEventNames.OwnershipScopedResourceNotFound,
+        20,
+        SecurityEventAlertNames.RepeatedOwnershipScopedResourceMisses)]
     public void Thresholds_EmitOneBoundedAlert(
         string securityEventName,
         int threshold,
@@ -348,6 +352,9 @@ public sealed class SecurityEventAlertAggregatorTests
 
                 SecurityEventNames.RateLimitRejected =>
                     429,
+
+                SecurityEventNames.OwnershipScopedResourceNotFound =>
+                    404,
 
                 _ =>
                     throw new ArgumentOutOfRangeException(
