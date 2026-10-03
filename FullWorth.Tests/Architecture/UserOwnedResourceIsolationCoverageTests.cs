@@ -8,6 +8,13 @@ namespace FullWorth.Tests.Architecture;
 
 public sealed class UserOwnedResourceIsolationCoverageTests
 {
+    /*
+     * CrossUserIdentifierCoverageTests independently ratchets every
+     * identifier-addressable non-admin API route. This model-wide check covers
+     * the complementary persistence boundary so nested and non-route
+     * UserId-scoped resources cannot silently appear without negative
+     * cross-user evidence.
+     */
     [Fact]
     public void EveryUserIdScopedEntity_HasNegativeIsolationEvidence()
     {
