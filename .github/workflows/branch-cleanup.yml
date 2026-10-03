@@ -1,9 +1,12 @@
 name: FullWorth Branch Cleanup
 
 on:
-  issue_comment:
-    types:
-      - created
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type cleanup-merged-branches to run the guarded cleanup
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -17,11 +20,9 @@ jobs:
   cleanup:
     name: Delete proven stale branches
     if: >-
-      github.event.issue.number == 245 &&
-      github.event.issue.pull_request == null &&
-      github.event.comment.body == '/cleanup-merged-branches' &&
       github.repository == 'Fullworth/FullWorth' &&
-      github.actor == 'RealizmModz'
+      github.actor == 'RealizmModz' &&
+      inputs.confirmation == 'cleanup-merged-branches'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -49,9 +50,9 @@ jobs:
               return 0
             fi
 
-            # A run that started before serialization was added may have
-            # deleted this ref after enumeration. Accept the failed DELETE
-            # only after the repository confirms the branch is now absent.
+            # A prior serialized run or maintainer may have removed the ref
+            # after enumeration. Accept the failed DELETE only after GitHub
+            # confirms the branch is now absent.
             current_after="$(
               gh api --paginate \
                 "repos/$REPOSITORY/branches?per_page=100" \
