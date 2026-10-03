@@ -73,6 +73,16 @@ compose exec -T database sh -ec '
 '
 compose exec -T web-session-cache sh -ec '
     test -s /run/secrets/redis_password
+
+    unauthenticated_response="$(
+        redis-cli --raw ping 2>&1 || true
+    )"
+    printf "%s\n" "$unauthenticated_response" |
+        grep -q "^NOAUTH"
+
+    REDISCLI_AUTH="$(cat /run/secrets/redis_password)" \
+        redis-cli --no-auth-warning --raw ping |
+        grep -qx PONG
 '
 
 printf '%s\n' "File-backed container secret verification passed."
