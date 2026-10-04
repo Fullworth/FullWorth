@@ -7,6 +7,9 @@ temp_dir=$(mktemp -d)
 
 trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM
 
+sh "$root_dir/deploy/tests/release-handoff-consistency-tests.sh"
+
+
 fail()
 {
     printf '%s\n' "Release integrity test failed: $1" >&2
