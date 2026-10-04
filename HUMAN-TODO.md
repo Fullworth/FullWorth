@@ -6,7 +6,7 @@ Current release candidate on `master`:
 
 `97516073e8c02c34805e4f3526411f563c0b9710`
 
-`development` contains the same file tree as `master`; it is one ancestry-only merge commit ahead after PR #691. No runtime or source-file delta exists between the branches.
+`development` is two commits ahead of `master` after PR #691's ancestry sync and PR #692's handoff refresh. The only file differences are `FULLWORTH_CONTEXT.md`, `FULLWORTH_ROADMAP.md`, and `HUMAN-TODO.md`; runtime/application files remain aligned.
 
 Current verified live production release marker remains:
 
