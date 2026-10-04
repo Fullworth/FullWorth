@@ -56,7 +56,8 @@ awk -v prefix="$key=" '
         value = substr($0, length(prefix) + 1)
 
         if (value == "") {
-            exit 2
+            bad = 2
+            exit
         }
 
         if (seen == 0) {
@@ -66,13 +67,18 @@ awk -v prefix="$key=" '
         }
 
         if (value != first) {
-            exit 3
+            bad = 3
+            exit
         }
 
         seen++
     }
 
     END {
+        if (bad != 0) {
+            exit bad
+        }
+
         if (seen < 2) {
             exit 4
         }
