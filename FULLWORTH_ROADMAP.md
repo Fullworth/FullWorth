@@ -254,14 +254,14 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 As of 2026-10-04:
 
-- `master` is the frozen release branch at candidate `bc9c73954e3443f98ea56f003eac28df49122034`.
+- `master` is the frozen release branch at candidate `87be14e5407ed475f45d459e7674fc6600888119`.
 - `development` is ahead only for non-runtime repository maintenance: release/handoff documentation plus CI change-detection/regression coverage. Application and runtime files remain aligned with the current `master` release tree.
 - PR #674 promoted the repaired production candidate to `master` as `bc9c73954e3443f98ea56f003eac28df49122034`.
 - Exact master-push FullWorth CI #1620 (run `37173901198`) and Repository Governance #13 (run `37173901252`) passed on that SHA.
 - The exact attested production artifact is `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034` (artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`).
 - PRs #680/#681 fixed and regression-locked root-Markdown docs-only CI classification so routine handoff documentation no longer spends backend/MAUI/container build time unnecessarily; PR #682 recorded that maintenance state.
 - The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `bc9c7395...` is not deployed merely because promotion and master CI passed.
-- Issue #669 tracks the guarded deployment and same-release acceptance bundle for `bc9c73954e3443f98ea56f003eac28df49122034`.
+- Issue #669 tracks the guarded deployment and same-release acceptance bundle for `87be14e5407ed475f45d459e7674fc6600888119`.
 - The October 3 repository-side security closure remains **61/65** on issue #291; the four remaining checks require real production/provider/governance evidence rather than generic application code.
 
 ### Release-readiness estimate
@@ -2337,7 +2337,7 @@ Do not manufacture CI substitutes for provider-enforced immutability, clean-host
 
 ## Step 6 — Guarded-deploy the exact `master` release
 
-**Current next release action:** separately approve and dispatch the guarded production workflow for exact master SHA `bc9c73954e3443f98ea56f003eac28df49122034`, tracked by issue #669. The workflow is manual, requires explicit confirmation, and must refuse any stale/non-master SHA.
+**Current next release action:** land the production-secret migration repair after exact-head CI passes, promote that repair to `master`, wait for fresh exact-master artifacts, then separately approve and dispatch the guarded production workflow for that exact new master SHA, tracked by issue #669. The workflow is manual, requires explicit confirmation, and must refuse any stale/non-master SHA.
 
 Guarded deploy runs #10 and #11 are failure evidence rather than production acceptance. Run #10 failed before production-host access because release-SHA validation rejected a valid SHA; PR #670 fixed that path. Run #11 reached the host but failed closed on duplicate protected runtime-database-password entries before candidate containers started or the verified release marker advanced; PR #673 fixed that path.
 
