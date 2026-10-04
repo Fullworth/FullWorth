@@ -42,6 +42,15 @@ grep -Fq 'git rev-parse origin/master' "$workflow" ||
     fail "workflow does not reject a stale master release."
 grep -Fq 'git status --porcelain --untracked-files=normal' "$workflow" ||
     fail "workflow does not require clean source checkouts."
+grep -Fq 'case "$release" in' "$workflow" ||
+    fail "workflow does not use deterministic release SHA character validation."
+grep -Fq "*[!0-9a-f]*" "$workflow" ||
+    fail "workflow does not reject non-lowercase-hex release SHA characters."
+grep -Fq '[[ "${#release}" -ne 40 ]]' "$workflow" ||
+    fail "workflow does not enforce exact 40-character release SHA length."
+if grep -Fq '[[ ! "$release" =~ ^[0-9a-f]{40}$ ]]' "$workflow"; then
+    fail "workflow still uses the release SHA regex that rejected the valid production dispatch."
+fi
 grep -Fq 'git merge --ff-only "$release"' "$workflow" ||
     fail "production checkout update is not constrained to a fast-forward."
 
