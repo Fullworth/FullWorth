@@ -41,13 +41,13 @@ Do not put credentials, tokens, recovery codes, financial data, private statemen
 
 ## Current guarded production candidate acceptance — issue #669
 
-**Status:** Human release decision and same-release production evidence required. The repository/CI candidate is master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29`; the verified live release remains `7e8571a26447538db249c862ad009487cce119bc`. No deployment authorization or production acceptance is recorded for the candidate.
+**Status:** Human release decision and same-release production evidence required. The repository/CI candidate is master SHA `bc9c73954e3443f98ea56f003eac28df49122034`; the verified live release remains `7e8571a26447538db249c862ad009487cce119bc`. No deployment authorization or production acceptance is recorded for the candidate. Earlier guarded deploy run #10 stopped before host access; run #11 failed closed on duplicate protected runtime-password entries before candidate containers started or the release marker advanced. PR #670/#673 repaired those defects, and PR #674 promoted the corrected candidate.
 
 **Why a human is needed:** Deployment requires the production environment's authorized reviewer, an explicit release decision, access to the protected production environment, and real controlled accounts/devices/provider integrations. CI cannot establish these facts.
 
 **Action:**
-1. Review the current checklist in [issue #669](https://github.com/Fullworth/FullWorth/issues/669) and confirm `master` still points exactly to `c092a9c76c5f4e811941400606c32d75a0a50a29`.
-2. If the release owner explicitly approves deployment, dispatch **FullWorth Production Deploy** from `master` with `release_sha=c092a9c76c5f4e811941400606c32d75a0a50a29` and `confirm_guarded_deploy=true`. The workflow must complete its guarded checks; do not substitute a branch head or stale SHA.
+1. Review the current checklist in [issue #669](https://github.com/Fullworth/FullWorth/issues/669) and confirm `master` still points exactly to `bc9c73954e3443f98ea56f003eac28df49122034`.
+2. If the release owner explicitly approves deployment, dispatch **FullWorth Production Deploy** from `master` with `release_sha=bc9c73954e3443f98ea56f003eac28df49122034` and `confirm_guarded_deploy=true`. The workflow must complete its guarded checks; do not substitute a branch head or stale SHA.
 3. Preserve sanitized output that proves the exact release marker, readiness/auth smoke, deployed parser containment, secret non-disclosure, runtime database-role boundary, and image provenance. Never include credential values, user data, statement contents, or raw sensitive logs.
 4. Against that same deployed SHA, complete the objective two-user isolation checks, controlled statement/Plaid/provider flows, external alert receipt, account deletion and reboot checks, and physical Android acceptance listed in #669.
 5. Do not mark #669 or #291's deployed-evidence items complete until evidence identifies the same release and each real-world check passed.
