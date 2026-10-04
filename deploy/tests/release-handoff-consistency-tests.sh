@@ -65,9 +65,30 @@ roadmap_master="$(extract_first_sha_from_line "$roadmap" '- `master` is the froz
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
     is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs."
-    [ "$candidate" = "$master_sha" ] ||
-        fail "handoff master release SHA does not match origin/master."
 done
+
+[ "$todo_master" = "$context_master" ] ||
+    fail "HUMAN-TODO and FULLWORTH_CONTEXT disagree on the current master release."
+
+[ "$todo_master" = "$roadmap_master" ] ||
+    fail "HUMAN-TODO and FULLWORTH_ROADMAP disagree on the current master release."
+
+documented_master="$todo_master"
+
+if [ "${GITHUB_EVENT_NAME:-}" = push ] &&
+   [ "${GITHUB_REF:-}" = refs/heads/master ]; then
+    previous_master_sha="$(
+        git -C "$root_dir" rev-parse --verify "$master_sha^1" 2>/dev/null
+    )" || fail "previous master commit is unavailable during master-push validation."
+
+    if [ "$documented_master" != "$master_sha" ] &&
+       [ "$documented_master" != "$previous_master_sha" ]; then
+        fail "master-push handoff must name the new master SHA or its immediate pre-promotion parent."
+    fi
+else
+    [ "$documented_master" = "$master_sha" ] ||
+        fail "handoff master release SHA does not match origin/master."
+fi
 
 todo_live="$(extract_first_sha_after "$todo" 'Current verified live production release marker remains:')"
 context_live="$(extract_first_sha_from_line "$context" 'Verified live production remains')"
