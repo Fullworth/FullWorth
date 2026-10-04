@@ -23,18 +23,19 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- `master`: `c092a9c76c5f4e811941400606c32d75a0a50a29`, the frozen release candidate.
-- `development`: `01166949d1f9af81d02729a986a1715f1be59909`.
-- GitHub comparison: `development` is 3 commits ahead and 0 behind `master`; the current diff is limited to `FULLWORTH_CONTEXT.md` and `FULLWORTH_ROADMAP.md`.
-- PR #666 promoted `80bb6494bf66646406829285eef4f71c009c546f` to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29`. Its exact-head FullWorth CI #1610 and Dependency Security #707 passed.
-- Master-push FullWorth CI #1611 (`37158708276`) passed on `c092a9c76c5f4e811941400606c32d75a0a50a29` and produced the exact-release image artifacts with signed provenance/SBOM attestations. Repository Governance #11 (`37158708332`) also passed on that SHA.
-- PR #667 synchronized the promotion ancestry into `development`; PR #668 then recorded the release/deploy boundary. PR #668 exact head `aef55b7ee1e6994b8cf8e8ec4870134ac0e47e08` passed FullWorth CI #1613 (`37159585980`) and Dependency Security #709 (`37159586061`) before merge as `01166949d1f9af81d02729a986a1715f1be59909`.
-- PR #657 exact corrected head `98f4317c0bc0b7f6cba702f21d143e0151d491ae` passed FullWorth CI #1600 and Dependency Security #697 before merge as `04a7c37ff36f97d1a5569b6bd5e06daa832f1ed9`.
-- The active `FullWorth protected branches` ruleset targets `master` and `development`, requires PRs and review-thread resolution, blocks deletion/non-fast-forward updates, and has no bypass actors. It currently has zero required approving reviews and no required-status-check rule.
-- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. Issue #669 tracks candidate `c092a9c76c5f4e811941400606c32d75a0a50a29`; the guarded deployment has not been authorized or run for that candidate.
-- Same-release production evidence, provider-enforced immutable/off-host storage, compromised-host clean-host recovery, independent-review policy, installed-device/provider/legal acceptance, and required-check ruleset configuration remain human/operator gates. See `HUMAN-TODO.md` and issue #669 for exact actions.
+- `master`: `bc9c73954e3443f98ea56f003eac28df49122034`, the current frozen release candidate.
+- `development`: `6d8c4f1a930fd30c5d51c93bffbff793609a3699`.
+- GitHub comparison: `development` is 2 commits ahead and 0 behind `master`, with no file differences.
+- PR #670 fixed runner-side release-SHA validation. Its exact head `defe30292d9c84d54f3b873c443574e95d74fc34` passed FullWorth CI #1615 (`37167477045`) and Dependency Security #711 (`37167477082`) before merge as `e43c725bac00a9c0e30cbb6102ae87d7c61a68a7`.
+- PR #673 added secret-safe repair for identical duplicate runtime database password entries. Its exact head `f0ad457932b7b27599c840647f542b78d170685e` passed FullWorth CI #1618 (`37172820886`) and Dependency Security #713 (`37172820948`) before merge as `4d0385ec80242bc2b8839a9887d7841df1e28448`.
+- PR #674 promoted that repair to `master` as `bc9c73954e3443f98ea56f003eac28df49122034`. Exact master-push FullWorth CI #1620 (`37173901198`), Repository Governance #13 (`37173901252`), and release-artifact workflow #? passed. The attested production artifact is `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034` (artifact ID `11292127567`).
+- PR #675 synchronized master promotion ancestry back into `development` as `6d8c4f1a930fd30c5d51c93bffbff793609a3699`; the current compare is 2 commits ahead and has no source-file diff.
+- Older candidates `c092a9c76c5f4e811941400606c32d75a0a50a29` and `86d95c03c76792445913665ffdf353a45504133d` are superseded. Deploy run #10 stopped before production-host access; run #11 reached the host but correctly failed closed on duplicate protected `.env.production` runtime-password entries before starting candidate containers or advancing the release marker.
+- Active `FullWorth protected branches` ruleset targets `master` and `development`, requires PRs/review-thread resolution, blocks deletion/non-fast-forward updates, and has no bypass actors. It currently requires zero approving reviews and no status checks.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. Issue #669 tracks candidate `bc9c73954e3443f98ea56f003eac28df49122034`; it explicitly does not authorize deployment.
+- Guarded deployment of the current candidate, same-release production acceptance, provider-enforced immutable/off-host storage, compromised-host clean-host recovery, independent-review policy, installed-device/provider/legal acceptance, and required-check ruleset configuration remain human/operator gates. See `HUMAN-TODO.md` and issue #669 for exact actions.
 
-The candidate is repository/CI-ready for the guarded deployment decision; it is **not deployed or production-accepted**. Do not combine evidence from other releases or infer deployed security from CI.
+The candidate is repository/CI-ready for a guarded deployment decision; it is **not deployed or production-accepted**. Do not combine evidence from other releases or infer deployed security from CI.
 
 ## Secret non-disclosure release gate — 2026-10-03
 
