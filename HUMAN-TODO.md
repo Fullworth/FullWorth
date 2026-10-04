@@ -2,105 +2,160 @@
 
 This file contains only work that cannot be completed safely through the current automated FullWorth development tooling.
 
-## GitHub protected-branch required checks — remaining
+Do not put credentials, tokens, recovery codes, financial data, private statements, provider responses, device identifiers, raw production logs, or other secrets in this file.
 
-**Status:** Partial human action required.
+## Current release state
 
-GitHub now has an active repository ruleset named `FullWorth protected branches` targeting both `master` and `development`. It blocks branch deletion and non-fast-forward updates and requires pull requests, with no bypass actor configured.
+**Status:** Repository/CI release candidate ready; production deployment still requires explicit human approval.
 
-The remaining gap is that the ruleset does not currently contain a required-status-check rule, so repository policy does not itself require the existing CI/security checks before merge.
+Current release candidate on `master`:
 
-**Why a human is needed:** The connected GitHub tooling can verify rulesets but does not expose the repository-administration mutation needed to change this ruleset.
+`bc9c73954e3443f98ea56f003eac28df49122034`
+
+Current `development` head after PR #675 synchronized the master promotion history:
+
+`6d8c4f1a930fd30c5d51c93bffbff793609a3699`
+
+Current verified live production release marker remains:
+
+`7e8571a26447538db249c862ad009487cce119bc`
+
+Repository evidence for the current candidate:
+
+- [x] PR #673 added the secret-safe repair for identical duplicate `BILLWATCH_DATABASE_RUNTIME_PASSWORD` entries.
+- [x] PR #674 promoted the repaired release to `master`.
+- [x] FullWorth CI #1620 (run `37173901198`) passed on the exact master SHA.
+- [x] Repository Governance #13 passed on the exact master SHA.
+- [x] Exact production artifact exists: `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034`.
+- [x] Artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`.
+- [x] PR #675 synchronized master release ancestry back into `development` with zero source-file changes.
+- [ ] No guarded production deploy run exists yet for `bc9c73954e3443f98ea56f003eac28df49122034`.
+
+Historical failed deploys:
+
+- Run #10 failed before production-host access because the workflow rejected a valid SHA; PR #670 fixed that validator.
+- Run #11 reached the production host and fast-forwarded the checkout to `86d95c03c76792445913665ffdf353a45504133d`, then failed closed because protected `.env.production` contained duplicate runtime-database-password entries. Candidate containers were not started and the verified release marker did not advance. PR #673 fixed this path so future deploys repair identical duplicates before mutating the production checkout and fail closed if duplicate values conflict.
+
+The source checkout on the production host may therefore be newer than the verified live release marker. Treat `.billwatch-release`, the running verified services, and guarded-deploy evidence as the production truth until the next deployment succeeds.
+
+## Guarded production deployment and same-release acceptance — issue #669
+
+**Status:** Human release approval and production evidence required.
+
+**Why a human is needed:** The workflow requires explicit production approval, and the remaining acceptance work depends on the real host, controlled user accounts, physical devices, provider behavior, and external systems.
 
 **Action:**
-1. Open the FullWorth repository on GitHub.
-2. Go to **Settings → Rules → Rulesets**.
-3. Edit **FullWorth protected branches**.
-4. Preserve the existing pull-request, deletion, and non-fast-forward protections.
-5. Add the repository's required CI/security status checks so a failing required check blocks merge.
-6. Keep the ruleset active for both `master` and `development`.
 
-**Verify:** GitHub should continue to report both branches as protected, and the active ruleset should include required status checks in addition to the existing pull-request/deletion/non-fast-forward rules.
+1. Confirm `master` still points exactly to `bc9c73954e3443f98ea56f003eac28df49122034`.
+2. In GitHub, open **Actions → FullWorth Production Deploy → Run workflow**.
+3. Select `master`.
+4. Set:
+   - `release_sha=bc9c73954e3443f98ea56f003eac28df49122034`
+   - `confirm_guarded_deploy=true`
+5. Do not substitute a different branch, shortened SHA, stale release, or manually bypass the guarded script.
+6. If the deploy fails, stop acceptance work and fix the exact failure first.
+7. If the deploy succeeds, confirm the automatic production auth smoke also succeeds and that the public API/Web readiness checks pass.
+8. Record only sanitized, release-correlated evidence in issue #669.
 
-## Commercial legal/license review — required before commercial launch
+**Verify:** The successful guarded-deploy evidence, production release marker, running release, public readiness, and production auth smoke all identify the same exact master SHA.
 
-**Status:** Human action required before commercial launch.
+A successful merge or CI run alone is not production acceptance.
 
-**Why a human is needed:** Draft PR #368 contains proposed proprietary FullWorth license language and a third-party license policy. Selecting the legal entity/copyright holder, confirming commercial rights and obligations, and approving customer-facing legal terms require qualified legal judgment and cannot be established by CI or repository automation.
+## Deployed-host security and ownership proof — issue #669 / #291
 
-**Action:**
-1. Review the closed draft PR #368 and the current dependency/model/runtime license inventory.
-2. Confirm the correct copyright holder/legal entity for FullWorth.
-3. Have qualified counsel review the proprietary source license, third-party notice obligations, and alignment with the Terms of Service and Privacy Policy.
-4. After approval, recreate the approved legal text from the then-current `development` head and send it through normal PR/CI review.
+**Status:** Human production evidence required after the guarded deploy succeeds.
 
-**Verify:** The legally approved license/notice text is merged from a current-development PR before commercial launch, and no repository documentation claims legal approval before that review is complete.
-
-Do not put credentials, tokens, recovery codes, financial data, private statements, or other secrets in this file.
-
-
-## Current guarded production candidate acceptance — issue #669
-
-**Status:** Human release decision and same-release production evidence required. The repository/CI candidate is master SHA `bc9c73954e3443f98ea56f003eac28df49122034`; the verified live release remains `7e8571a26447538db249c862ad009487cce119bc`. No deployment authorization or production acceptance is recorded for the candidate. Earlier guarded deploy run #10 stopped before host access; run #11 failed closed on duplicate protected runtime-password entries before candidate containers started or the release marker advanced. PR #670/#673 repaired those defects, and PR #674 promoted the corrected candidate.
-
-**Why a human is needed:** Deployment requires the production environment's authorized reviewer, an explicit release decision, access to the protected production environment, and real controlled accounts/devices/provider integrations. CI cannot establish these facts.
+Repository and CI coverage already exercise these controls. The remaining work is to prove the same controls on the exact deployed release.
 
 **Action:**
-1. Review the current checklist in [issue #669](https://github.com/Fullworth/FullWorth/issues/669) and confirm `master` still points exactly to `bc9c73954e3443f98ea56f003eac28df49122034`.
-2. If the release owner explicitly approves deployment, dispatch **FullWorth Production Deploy** from `master` with `release_sha=bc9c73954e3443f98ea56f003eac28df49122034` and `confirm_guarded_deploy=true`. The workflow must complete its guarded checks; do not substitute a branch head or stale SHA.
-3. Preserve sanitized output that proves the exact release marker, readiness/auth smoke, deployed parser containment, secret non-disclosure, runtime database-role boundary, and image provenance. Never include credential values, user data, statement contents, or raw sensitive logs.
-4. Against that same deployed SHA, complete the objective two-user isolation checks, controlled statement/Plaid/provider flows, external alert receipt, account deletion and reboot checks, and physical Android acceptance listed in #669.
-5. Do not mark #669 or #291's deployed-evidence items complete until evidence identifies the same release and each real-world check passed.
 
-**Verify:** The guarded deployment identifies the exact SHA and issue #669 contains a sanitized, release-correlated evidence record. A successful merge or CI run alone is not production acceptance.
+1. Run the deployed parser/OCR containment verification and retain only sanitized metadata.
+2. Run deployed secret non-disclosure verification without printing protected values.
+3. Run the production host/operator hardening verifier and record only pass/fail metadata.
+4. Prove the steady-state API uses the dedicated runtime database role and does not retain migration/bootstrap credentials.
+5. With two controlled test identities, perform objective Web/BFF/API ownership checks.
+6. Confirm manipulated cross-user identifiers return the intended non-disclosing 404 behavior.
+7. Process controlled representative text-PDF, scanned-PDF, and JPG/PNG statements.
+8. Verify extraction, Bill Stream matching, historical comparison, deterministic monthly/annualized math, evidence-grounded explanation, and alert behavior against operator-known facts.
+9. Confirm an external alert reaches the intended destination.
+10. Complete disposable-account deletion without affecting another controlled user.
+11. Perform the controlled production reboot and prove the exact release returns healthy.
 
-## Off-host immutable backup and compromised-host recovery — issue #669
+**Verify:** All evidence is tied to the exact deployed release. CI or a different release does not satisfy this gate.
+
+## Off-host immutable backup and compromised-host recovery — issue #669 / #291
 
 **Status:** Human/provider action required before relying on backups for destructive incidents.
 
 **Action:**
-1. Configure provider-enforced Object Lock, WORM, immutable snapshots, or an equivalent append-only control for the actual encrypted Restic repository.
-2. Verify from the provider control plane that the retention control applies to recovery points and cannot be removed by credentials available to the application host.
-3. Run a compromised-host/clean-host recovery exercise against that actual off-host repository; restore database, statements, and both Data Protection rings into an isolated clean host.
-4. Confirm file ownership/modes, application readiness, and release identity. Record only sanitized metadata in #669.
 
-**Verify:** Provider enforcement and the clean-host restore are both demonstrated against the real repository. Repository tests or a local restore are not substitutes.
+1. Confirm the actual encrypted Restic repository is off-host and reachable through the documented recovery path.
+2. Configure provider-enforced Object Lock, WORM, immutable snapshots, or an equivalent control.
+3. Verify from the provider control plane that production-host credentials cannot remove or weaken the protected recovery points.
+4. Run a compromised-host / clean-host recovery exercise against the real off-host repository.
+5. Restore the database, statement files, API Data Protection ring, and Web Data Protection ring into an isolated clean host.
+6. Confirm restored ownership/modes, migration consistency, application readiness, and release identity.
+7. Record only sanitized metadata in issue #669.
 
-## Branch ruleset governance decision
+**Verify:** Both provider-enforced immutability and a real clean-host restore are demonstrated. Local CI restore tests are not substitutes.
 
-**Status:** Human repository-administrator action required. The active `FullWorth protected branches` ruleset covers `master` and `development`, but currently requires zero approving reviews and no status checks.
+## Installed-device and external-provider acceptance — issues #251, #258, #293
 
-**Action:**
-1. Decide whether an independent approving review is required for both protected branches.
-2. In **Settings → Rules → Rulesets → FullWorth protected branches**, preserve existing PR, review-thread, deletion, and non-fast-forward protections; add the required PR CI/security checks and the chosen approval count.
-3. Confirm the ruleset still targets both branches and has no unintended bypass actor.
-
-**Verify:** GitHub's active ruleset readback shows the selected approval policy and required CI/security checks for both branches. Repository automation can inspect but cannot make this administration change.
-
-## Installed-device, external-provider, and legal acceptance
-
-**Status:** Human acceptance required for the applicable launch scope.
+**Status:** Human/device/provider acceptance required after the current candidate is successfully deployed.
 
 **Action:**
-1. Complete Android installed-PWA acceptance on the exact deployed release; retest iOS issue #258 separately if it remains in scope.
-2. Complete controlled Plaid connect/update/reconnect and real payroll/sandbox acceptance; observe Hosted Link return behavior.
-3. Have qualified counsel review the exact customer-facing Terms/Privacy, commercial license, and third-party/model/runtime notices.
-4. Preserve only sanitized acceptance metadata and link it to the release in #669.
 
-**Verify:** Physical-device, provider, and legal evidence is reviewable and tied to the exact release. Emulator, repository tests, and draft legal text do not satisfy these gates.
+1. After the new release is verified live, re-pin installed-device acceptance issue #251 from the old release to the exact new production SHA before recording evidence.
+2. Complete all required Android installed-PWA checks on a physical Android device.
+3. Record Android acceptance only after every required check passes.
+4. Re-test iOS Safari Add to Home Screen on a real iPhone for issue #258 if iOS remains in launch scope.
+5. Complete controlled Plaid connect/update/reconnect lifecycle and Hosted Link return observation.
+6. Complete issue #293's remaining real-world sandbox acceptance with Plaid payroll transactions.
+7. Confirm provider failure/reconnect behavior without exposing provider tokens or raw provider payloads.
 
-## Parser containment deployed-host proof
+**Verify:** Physical-device and provider evidence is tied to the exact live release. Browser emulation, simulator-only evidence, repository tests, and a previous production SHA do not satisfy these gates.
 
-**Status:** Human release/deployment evidence is still required.
+## GitHub protected-branch governance
 
-Repository and CI coverage now exercise the parser/OCR isolation boundary, including per-document and per-image cgroups, finite CPU/memory/PID limits, zero child swap, containment cleanup, kernel OOM-kill evidence, parser readiness, native-library boundary checks, and generated malicious/corrupt document regressions.
+**Status:** Human repository-administrator action required.
 
-That is repository/CI evidence only. The remaining human action is the intentionally guarded production release decision:
+The active repository ruleset **FullWorth protected branches** targets both `master` and `development`. Current verified configuration:
 
-1. Promote only a current `development` head whose exact release candidate has passed all required CI and security gates.
-2. Merge that reviewed promotion to `master`.
-3. Dispatch the guarded production deployment for that exact `master` SHA.
-4. Preserve the sanitized deployed-host containment evidence produced by the release's required verifiers, including `deploy/verify-parser-containment.sh`.
-5. If host-level journal evidence is required, review it directly on the production host without exporting credentials, document contents, financial data, or raw statement material.
+- active enforcement;
+- pull requests required;
+- deletion blocked;
+- non-fast-forward updates blocked;
+- review-thread resolution required;
+- extra approval required for unattributed changes;
+- no bypass actors;
+- current connection cannot bypass;
+- required approving review count: **0**;
+- required status-check rule: **not configured**.
 
-Do not mark production containment accepted merely from GitHub CI. Acceptance requires the exact deployed `master` release to pass the guarded host verification.
+**Why a human is needed:** Current connected GitHub tooling can inspect the ruleset but cannot mutate the repository-administration settings.
+
+**Action:**
+
+1. Open **GitHub → FullWorth repository → Settings → Rules → Rulesets → FullWorth protected branches**.
+2. Preserve the existing protections for both `master` and `development`.
+3. Add the actual CI/security check contexts that must block merge when failing.
+4. Decide whether at least one independent approving review is required and set the approval count accordingly.
+5. Keep bypass actors empty unless a deliberate, documented emergency policy is later approved.
+
+**Verify:** GitHub ruleset readback shows the intended approval policy and required status checks for both protected branches.
+
+## Commercial legal/license review
+
+**Status:** Human action required before commercial launch.
+
+**Why a human is needed:** Legal entity selection, commercial rights, customer-facing terms, third-party obligations, model/runtime licenses, and proprietary licensing require qualified legal judgment.
+
+**Action:**
+
+1. Review closed draft PR #368 only as historical draft material; do not treat it as current approved legal text.
+2. Confirm the correct FullWorth copyright holder/legal entity.
+3. Have qualified counsel review the exact customer-facing Terms of Service and Privacy Policy intended for launch.
+4. Have qualified counsel review the proprietary source-license approach and third-party/model/runtime notice obligations.
+5. After approval, recreate the approved text from the then-current `development` head and send it through normal PR/CI review.
+
+**Verify:** The legally approved versions are merged from current source before commercial launch, and repository/product documentation does not claim legal approval before that review is complete.
