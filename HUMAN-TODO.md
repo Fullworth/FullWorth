@@ -1,18 +1,12 @@
-# Human TODO
-
-This file contains only work that cannot be completed safely through the current automated FullWorth development tooling.
-
-Do not put credentials, tokens, recovery codes, financial data, private statements, provider responses, device identifiers, raw production logs, or other secrets in this file.
-
 ## Current release state
 
-**Status:** Repository/CI release candidate ready; production deployment still requires explicit human approval.
+**Status:** Repository and CI evidence is complete for a guarded-deployment decision; production deployment still requires explicit human approval.
 
 Current release candidate on `master`:
 
-`87be14e5407ed475f45d459e7674fc6600888119`
+`97516073e8c02c34805e4f3526411f563c0b9710`
 
-`development` is currently ahead of the release tree only for non-runtime repository maintenance: release/handoff documentation plus CI change-detection/regression coverage. Re-read its live head before release work; the application/runtime tree remains aligned with the current `master` release candidate as of this handoff refresh.
+`development` contains the same file tree as `master`; it is one ancestry-only merge commit ahead after PR #691. No runtime or source-file delta exists between the branches.
 
 Current verified live production release marker remains:
 
@@ -20,14 +14,14 @@ Current verified live production release marker remains:
 
 Repository evidence for the current candidate:
 
-- [x] PR #673 added the secret-safe repair for identical duplicate `BILLWATCH_DATABASE_RUNTIME_PASSWORD` entries.
-- [x] PR #674 promoted the repaired release to `master`.
-- [x] FullWorth CI #1620 (run `37173901198`) passed on the exact master SHA.
-- [x] Repository Governance #13 passed on the exact master SHA.
-- [x] Exact production artifact exists: `fullworth-production-image-artifacts-87be14e5407ed475f45d459e7674fc6600888119`.
-- [x] Artifact ID `11298447582`.
-- [x] PR #675 synchronized master release ancestry back into `development` with zero source-file changes; later `development` changes are non-runtime repository maintenance only (release/handoff documentation plus CI change-detection/regression coverage).
-- [x] Guarded production deploy run `37190632437` attempted `87be14e5407ed475f45d459e7674fc6600888119` and failed closed before candidate startup because `BILLWATCH_PARSER_AUTH_TOKEN` was missing from the legacy production environment. PR #687 repairs this upgrade path together with the Web-session Redis secret.
+- [x] PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicates.
+- [x] PR #688 promoted that repair to `master` as `97516073e8c02c34805e4f3526411f563c0b9710`.
+- [x] Master-push FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`) passed on the exact SHA.
+- [x] Exact production artifact: `fullworth-production-image-artifacts-97516073e8c02c34805e4f3526411f563c0b9710` (artifact ID `11299287390`, digest `sha256:b6d70eba9f867961dc19210adfe2ecb0d6e32ba134c93de5fe7a102bccb30279`; expires 2026-10-11).
+- [x] PR #691 synchronized master ancestry back into `development`; exact-head FullWorth CI #1641 and Dependency Security #733 passed with zero file changes.
+- [x] PR #687 repairs the failure seen when candidate `87be14e5407ed475f45d459e7674fc6600888119` was attempted in deploy run `37190632437`; candidate startup was blocked and the verified release marker did not advance.
+
+Do not dispatch production deployment without the separate explicit release-owner approval recorded for issue #669. The current candidate is not deployed or production-accepted.
 
 Historical failed deploys:
 
@@ -44,11 +38,11 @@ The source checkout on the production host may therefore be newer than the verif
 
 **Action:**
 
-1. After the production-secret migration repair is promoted, confirm `master` points exactly to the newly promoted repair SHA.
+1. Obtain the separate release-owner decision to deploy; if approved, confirm `master` points exactly to the current candidate SHA recorded in issue #669.
 2. In GitHub, open **Actions → FullWorth Production Deploy → Run workflow**.
 3. Select `master`.
 4. Set:
-   - `release_sha=<exact newly promoted master SHA>`
+   - `release_sha=<exact current master SHA from issue #669>`
    - `confirm_guarded_deploy=true`
 5. Do not substitute a different branch, shortened SHA, stale release, or manually bypass the guarded script.
 6. If the deploy fails, stop acceptance work and fix the exact failure first.
