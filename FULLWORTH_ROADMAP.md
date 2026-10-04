@@ -2303,7 +2303,7 @@ Persistent identifiers require explicit migration.
 
 # 30. Critical path from today
 
-The shortest credible path to production release is now **security closure → release freeze → guarded deployment → same-release acceptance**, not another feature sprint.
+The shortest credible path to production release is now **guarded deployment → same-release acceptance → external/device/governance closure**, not another feature sprint.
 
 ## ~~Step 1 — Complete the exact-head secret non-disclosure milestone~~
 
@@ -2322,23 +2322,25 @@ The remaining four items require real evidence or repository-owner policy, not a
 
 Do not manufacture CI substitutes for provider-enforced immutability, clean-host recovery, or deployed-host evidence. Do not add unrelated security code merely to increase the checklist count.
 
-## ~~Step 3 — Freeze the next release candidate~~
+## ~~Step 3 — Freeze the current release candidate~~
 
-~~Release candidate `80bb6494bf66646406829285eef4f71c009c546f` was frozen on `development` with the known release-blocker inventory recorded on PR #666. AI-derived persistence remained disabled and deterministic extraction remained the production persistence authority. Only release/history documentation changed after the frozen tree.~~
+~~The security-hardened candidate `c092a9c76c5f4e811941400606c32d75a0a50a29` was superseded by deployment-path fixes discovered through guarded deploy attempts. PR #670 fixed runner-side release-SHA validation. PR #673 added secret-safe repair for identical duplicate runtime-database-password entries. PR #674 promoted the repaired candidate to `master` as `bc9c73954e3443f98ea56f003eac28df49122034`. AI-derived persistence remains disabled and deterministic extraction remains the production persistence authority.~~
 
 ## ~~Step 4 — Reconcile `development` and `master` deliberately~~
 
-~~The three former master-only commits were verified as release-promotion merge history with zero file differences. PR #664 reconciled that ancestry into `development` without changing the tree. PR #666 then promoted the frozen candidate to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29`. PR #667 synced the new promotion ancestry back into `development` with zero file changes. Current comparison is development 2 history-only commits ahead / 0 behind with 0 file differences. No force-push or destructive history rewrite was used.~~
+~~PR #675 synchronized the `bc9c7395...` master promotion ancestry back into `development` with zero source-file changes. Subsequent `development` changes are release/handoff documentation only; application/runtime code remains aligned with the current master release tree. No force-push or destructive history rewrite was used.~~
 
 ## ~~Step 5 — Run exact-head release verification~~
 
-~~PR #666 exact head `80bb6494bf66646406829285eef4f71c009c546f` passed FullWorth CI #1610 and Dependency Security #707 before promotion. Exact master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29` then passed master-push FullWorth CI #1611, including backend/tests, migration/model verification, production container and recovery, parser/OCR containment, secret boundaries, MAUI Android, provenance/SBOM generation and attestation. The run produced the exact release artifact `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29`. Repository-governance run #11 also passed on that SHA.~~
+~~PR #673 exact corrected head `f0ad457932b7b27599c840647f542b78d170685e` passed FullWorth CI #1618 and Dependency Security #713 before merge as `4d0385ec80242bc2b8839a9887d7841df1e28448`. PR #674 promoted that repair to exact master SHA `bc9c73954e3443f98ea56f003eac28df49122034`. Master-push FullWorth CI #1620 and Repository Governance #13 passed, and the exact attested production artifact is `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034` (artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`).~~
 
 ## Step 6 — Guarded-deploy the exact `master` release
 
-**Current next release action:** separately approve and dispatch the guarded production workflow for exact master SHA `c092a9c76c5f4e811941400606c32d75a0a50a29`. The workflow is manual, requires explicit confirmation, and must refuse any stale/non-master SHA.
+**Current next release action:** separately approve and dispatch the guarded production workflow for exact master SHA `bc9c73954e3443f98ea56f003eac28df49122034`, tracked by issue #669. The workflow is manual, requires explicit confirmation, and must refuse any stale/non-master SHA.
 
-Deploy only the exact verified current `master` SHA.
+Guarded deploy runs #10 and #11 are failure evidence rather than production acceptance. Run #10 failed before production-host access because release-SHA validation rejected a valid SHA; PR #670 fixed that path. Run #11 reached the host but failed closed on duplicate protected runtime-database-password entries before candidate containers started or the verified release marker advanced; PR #673 fixed that path.
+
+The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc` until a successful guarded deployment proves otherwise.
 
 The guarded deployment must preserve:
 
@@ -2350,15 +2352,15 @@ The guarded deployment must preserve:
 - image provenance/SBOM integrity;
 - rollback/kill-switch paths where applicable.
 
-For the parser/OCR work, preserve sanitized deployed-host evidence from `deploy/verify-parser-containment.sh`.
+For parser/OCR controls, preserve sanitized deployed-host evidence from `deploy/verify-parser-containment.sh`.
 
-For the PR #649 secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
+For secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
 
 ## Step 7 — Build one same-release private-beta evidence bundle
 
 Against the exact deployed candidate, complete and correlate:
 
-1. objective cross-user Web/BFF ownership proof with two controlled identities and real controlled foreign-owned resources;
+1. objective cross-user Web/BFF/API ownership proof with two controlled identities and controlled foreign-owned resources;
 2. controlled Plaid connect/update/reconnect lifecycle plus Hosted Link human-return observation;
 3. controlled representative PDF/scanned-PDF/JPG/PNG statement lifecycle;
 4. semantic/OCR review against operator-known facts;
@@ -2403,6 +2405,7 @@ Do not ship an ambiguous half-enabled AI persistence path.
 Before commercial/public launch:
 
 - add required CI/security checks to the active protected-branch ruleset for `master` and `development`;
+- decide and enforce the independent-approval policy through an admin-capable path;
 - complete qualified commercial license review;
 - complete qualified review of the exact customer-facing Terms/Privacy version;
 - resolve third-party/model/runtime notice obligations;
@@ -2410,7 +2413,7 @@ Before commercial/public launch:
 
 ## Step 12 — Run Internal Beta 0
 
-Use the same release candidate and real controlled bills.
+Use the same deployed release and real controlled bills.
 
 Track:
 
