@@ -41,6 +41,31 @@ if printf '%s' "$single_output" | grep -Fq 'runtime-password-sentinel-one'; then
     fail "canonical no-op output disclosed the credential."
 fi
 
+missing="$temp_dir/missing.env"
+printf '%s\n%s' \
+    'BILLWATCH_HOST=api.fullworth.test' \
+    'BILLWATCH_WEB_HOST=fullworth.test' > "$missing"
+chmod 600 "$missing"
+
+missing_output=$(sh "$repair" "$missing")
+
+[ "$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { count++ } END { print count + 0 }' "$missing")" -eq 1 ] ||
+    fail "missing runtime database credential was not created exactly once."
+generated_value=$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { print substr($0, length($1) + 2); exit }' "$missing")
+printf '%s\n' "$generated_value" | grep -Eq '^[0-9a-f]{64}$' ||
+    fail "generated runtime database credential is not a 256-bit lowercase hexadecimal value."
+[ "$(stat -c '%a' "$missing")" = 600 ] ||
+    fail "missing-credential repair did not preserve private file permissions."
+grep -Fxq 'BILLWATCH_HOST=api.fullworth.test' "$missing" ||
+    fail "missing-credential repair removed an unrelated setting."
+grep -Fxq 'BILLWATCH_WEB_HOST=fullworth.test' "$missing" ||
+    fail "missing-credential repair corrupted a file that lacked a trailing newline."
+printf '%s' "$missing_output" | grep -Fq 'created securely without exposing its value' ||
+    fail "missing-credential repair did not report the intended metadata-only result."
+if printf '%s' "$missing_output" | grep -Fq "$generated_value"; then
+    fail "missing-credential repair output disclosed the generated credential."
+fi
+
 duplicate="$temp_dir/duplicate.env"
 cat > "$duplicate" <<'EOF_DUPLICATE'
 # preserve comments and ordering

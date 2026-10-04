@@ -55,7 +55,15 @@ jobs:
           $required = $false
 
           foreach ($file in $changedFiles) {
-            $safe = $backendSafeExactFiles -contains $file
+            $rootMarkdown =
+              -not $file.Contains("/") -and
+              $file.EndsWith(
+                ".md",
+                [System.StringComparison]::OrdinalIgnoreCase)
+
+            $safe =
+              $rootMarkdown -or
+              ($backendSafeExactFiles -contains $file)
 
             if (-not $safe) {
               foreach ($prefix in $backendSafePrefixes) {
@@ -188,8 +196,15 @@ jobs:
           $requiresMaui = $false
 
           foreach ($file in $changedFiles) {
+            $rootMarkdown =
+              -not $file.Contains("/") -and
+              $file.EndsWith(
+                ".md",
+                [System.StringComparison]::OrdinalIgnoreCase)
+
             $safe =
-              $safeExactFiles -contains $file
+              $rootMarkdown -or
+              ($safeExactFiles -contains $file)
 
             if (-not $safe) {
               foreach ($prefix in $safePrefixes) {
