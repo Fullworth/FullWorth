@@ -2328,7 +2328,7 @@ Do not manufacture CI substitutes for provider-enforced immutability, clean-host
 
 ## ~~Step 4 — Reconcile `development` and `master` deliberately~~
 
-~~PR #675 synchronized the `bc9c7395...` master promotion ancestry back into `development` with zero source-file changes. Subsequent `development` changes are release/handoff documentation only; application/runtime code remains aligned with the current master release tree. No force-push or destructive history rewrite was used.~~
+~~PR #675 synchronized the `bc9c7395...` master promotion ancestry back into `development` with zero source-file changes. Subsequent `development` changes are non-runtime repository maintenance only: release/handoff documentation plus CI change-detection/regression coverage. Application/runtime code remains aligned with the current master release tree. No force-push or destructive history rewrite was used.~~
 
 ## ~~Step 5 — Run exact-head release verification~~
 
