@@ -231,23 +231,27 @@ jobs:
           set -euo pipefail
 
           remote_bundle=".fullworth-release-$RELEASE_SHA.tar"
+          remote_env_repair=".fullworth-env-repair-$RELEASE_SHA.sh"
           scp -q release-images.tar "fullworth-production:$remote_bundle"
+          scp -q deploy/repair-production-env.sh "fullworth-production:$remote_env_repair"
 
-          ssh fullworth-production sh -s -- "$RELEASE_SHA" "$remote_bundle" <<'REMOTE'
+          ssh fullworth-production sh -s -- "$RELEASE_SHA" "$remote_bundle" "$remote_env_repair" <<'REMOTE'
           set -eu
 
           release=$1
           remote_bundle=$2
+          remote_env_repair=$3
           root=/opt/billwatch
           artifact_dir=
           bundle="$HOME/$remote_bundle"
+          env_repair="$HOME/$remote_env_repair"
 
           cleanup_release_artifacts()
           {
               status=$?
               trap - EXIT HUP INT TERM
               [ -z "$artifact_dir" ] || rm -rf "$artifact_dir"
-              rm -f "$bundle"
+              rm -f "$bundle" "$env_repair"
               exit "$status"
           }
 
@@ -269,6 +273,14 @@ jobs:
               printf '%s\n' "Remote deployment refused: /opt/billwatch is not a Git checkout." >&2
               exit 66
           }
+
+          [ -f "$env_repair" ] && [ ! -L "$env_repair" ] || {
+              printf '%s\n' "Remote deployment refused: production environment repair helper is missing or unsafe." >&2
+              exit 66
+          }
+
+          chmod 600 "$env_repair"
+          sh "$env_repair" "$root/.env.production"
 
           cd "$root"
 
