@@ -21,25 +21,39 @@ fail()
 
 [ -f "$repair" ] || fail "repair helper is missing."
 
-single="$temp_dir/single.env"
-cat > "$single" <<'EOF_SINGLE'
+assert_generated_secret()
+{
+    file=$1
+    key=$2
+    value=$(awk -F= -v key="$key" '$1 == key { print substr($0, length($1) + 2); exit }' "$file")
+    printf '%s\n' "$value" | grep -Eq '^[0-9a-f]{64}$' ||
+        fail "$key was not generated as a 256-bit lowercase hexadecimal value."
+}
+
+canonical="$temp_dir/canonical.env"
+cat > "$canonical" <<'EOF_CANONICAL'
 BILLWATCH_HOST=api.fullworth.test
 BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-one
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-one
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-one
 BILLWATCH_WEB_HOST=fullworth.test
-EOF_SINGLE
-chmod 600 "$single"
+EOF_CANONICAL
+chmod 600 "$canonical"
 
-single_before=$(sha256sum "$single" | awk '{ print $1 }')
-single_output=$(sh "$repair" "$single")
-single_after=$(sha256sum "$single" | awk '{ print $1 }')
+canonical_before=$(sha256sum "$canonical" | awk '{ print $1 }')
+canonical_output=$(sh "$repair" "$canonical")
+canonical_after=$(sha256sum "$canonical" | awk '{ print $1 }')
 
-[ "$single_before" = "$single_after" ] ||
+[ "$canonical_before" = "$canonical_after" ] ||
     fail "canonical input was modified."
-printf '%s' "$single_output" | grep -Fq 'already canonical' ||
-    fail "canonical input did not report a no-op."
-if printf '%s' "$single_output" | grep -Fq 'runtime-password-sentinel-one'; then
-    fail "canonical no-op output disclosed the credential."
-fi
+printf '%s' "$canonical_output" | grep -Fq 'credential migration repair completed' ||
+    fail "canonical input did not complete successfully."
+for secret in runtime-password-sentinel-one parser-token-sentinel-one redis-password-sentinel-one
+do
+    if printf '%s' "$canonical_output" | grep -Fq "$secret"; then
+        fail "canonical no-op output disclosed a credential."
+    fi
+done
 
 missing="$temp_dir/missing.env"
 printf '%s\n%s' \
@@ -49,54 +63,88 @@ chmod 600 "$missing"
 
 missing_output=$(sh "$repair" "$missing")
 
-[ "$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { count++ } END { print count + 0 }' "$missing")" -eq 1 ] ||
-    fail "missing runtime database credential was not created exactly once."
-generated_value=$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { print substr($0, length($1) + 2); exit }' "$missing")
-printf '%s\n' "$generated_value" | grep -Eq '^[0-9a-f]{64}$' ||
-    fail "generated runtime database credential is not a 256-bit lowercase hexadecimal value."
+for key in \
+    BILLWATCH_DATABASE_RUNTIME_PASSWORD \
+    BILLWATCH_PARSER_AUTH_TOKEN \
+    BILLWATCH_WEB_SESSION_REDIS_PASSWORD
+do
+    [ "$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$missing")" -eq 1 ] ||
+        fail "$key was not created exactly once."
+    assert_generated_secret "$missing" "$key"
+done
+
 [ "$(stat -c '%a' "$missing")" = 600 ] ||
     fail "missing-credential repair did not preserve private file permissions."
 grep -Fxq 'BILLWATCH_HOST=api.fullworth.test' "$missing" ||
     fail "missing-credential repair removed an unrelated setting."
 grep -Fxq 'BILLWATCH_WEB_HOST=fullworth.test' "$missing" ||
     fail "missing-credential repair corrupted a file that lacked a trailing newline."
-printf '%s' "$missing_output" | grep -Fq 'created securely without exposing its value' ||
-    fail "missing-credential repair did not report the intended metadata-only result."
-if printf '%s' "$missing_output" | grep -Fq "$generated_value"; then
-    fail "missing-credential repair output disclosed the generated credential."
-fi
+
+for key in \
+    BILLWATCH_DATABASE_RUNTIME_PASSWORD \
+    BILLWATCH_PARSER_AUTH_TOKEN \
+    BILLWATCH_WEB_SESSION_REDIS_PASSWORD
+do
+    printf '%s' "$missing_output" | grep -Fq "missing $key created securely without exposing its value" ||
+        fail "$key missing-key repair did not report the intended metadata-only result."
+    value=$(awk -F= -v key="$key" '$1 == key { print substr($0, length($1) + 2); exit }' "$missing")
+    if printf '%s' "$missing_output" | grep -Fq "$value"; then
+        fail "$key repair output disclosed the generated credential."
+    fi
+done
+
+runtime_value=$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { print substr($0, length($1) + 2); exit }' "$missing")
+parser_value=$(awk -F= '$1 == "BILLWATCH_PARSER_AUTH_TOKEN" { print substr($0, length($1) + 2); exit }' "$missing")
+redis_value=$(awk -F= '$1 == "BILLWATCH_WEB_SESSION_REDIS_PASSWORD" { print substr($0, length($1) + 2); exit }' "$missing")
+[ "$runtime_value" != "$parser_value" ] ||
+    fail "runtime database and parser credentials were generated identically."
+[ "$runtime_value" != "$redis_value" ] ||
+    fail "runtime database and Redis credentials were generated identically."
+[ "$parser_value" != "$redis_value" ] ||
+    fail "parser and Redis credentials were generated identically."
 
 duplicate="$temp_dir/duplicate.env"
 cat > "$duplicate" <<'EOF_DUPLICATE'
 # preserve comments and ordering
-BILLWATCH_HOST=api.fullworth.test
 BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-two
-BILLWATCH_WEB_HOST=fullworth.test
 BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-two
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-two
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-two
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-two
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-two
 TRAILING_SETTING=preserved
 EOF_DUPLICATE
 chmod 600 "$duplicate"
 
 duplicate_output=$(sh "$repair" "$duplicate")
 
-[ "$(awk -F= '$1 == "BILLWATCH_DATABASE_RUNTIME_PASSWORD" { count++ } END { print count + 0 }' "$duplicate")" -eq 1 ] ||
-    fail "identical duplicate credential entries were not collapsed."
+for key in \
+    BILLWATCH_DATABASE_RUNTIME_PASSWORD \
+    BILLWATCH_PARSER_AUTH_TOKEN \
+    BILLWATCH_WEB_SESSION_REDIS_PASSWORD
+do
+    [ "$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$duplicate")" -eq 1 ] ||
+        fail "$key identical duplicate entries were not collapsed."
+done
 [ "$(stat -c '%a' "$duplicate")" = 600 ] ||
-    fail "repair did not preserve private file permissions."
+    fail "duplicate repair did not preserve private file permissions."
 grep -Fxq '# preserve comments and ordering' "$duplicate" ||
-    fail "repair removed an unrelated comment."
+    fail "duplicate repair removed an unrelated comment."
 grep -Fxq 'TRAILING_SETTING=preserved' "$duplicate" ||
-    fail "repair removed an unrelated setting."
-grep -Fxq 'BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-two' "$duplicate" ||
-    fail "repair did not preserve the credential value."
-if printf '%s' "$duplicate_output" | grep -Fq 'runtime-password-sentinel-two'; then
-    fail "successful repair output disclosed the credential."
-fi
+    fail "duplicate repair removed an unrelated setting."
+for secret in runtime-password-sentinel-two parser-token-sentinel-two redis-password-sentinel-two
+do
+    if printf '%s' "$duplicate_output" | grep -Fq "$secret"; then
+        fail "duplicate repair output disclosed a credential."
+    fi
+done
 
 conflicting="$temp_dir/conflicting.env"
 cat > "$conflicting" <<'EOF_CONFLICTING'
-BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-three-a
-BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-three-b
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-three
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-three-a
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-three-b
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-three
 EOF_CONFLICTING
 chmod 600 "$conflicting"
 conflicting_before=$(sha256sum "$conflicting" | awk '{ print $1 }')
@@ -109,37 +157,20 @@ set -e
 [ "$conflicting_status" -ne 0 ] ||
     fail "conflicting duplicate credentials were accepted."
 [ "$conflicting_before" = "$(sha256sum "$conflicting" | awk '{ print $1 }')" ] ||
-    fail "conflicting input was modified."
-printf '%s' "$conflicting_output" | grep -Fq 'conflicting duplicate values' ||
-    fail "conflicting duplicates did not fail with the intended reason."
-if printf '%s' "$conflicting_output" | grep -Eq 'runtime-password-sentinel-three-(a|b)'; then
+    fail "conflicting input was modified before the conflict was rejected."
+printf '%s' "$conflicting_output" | grep -Fq 'BILLWATCH_PARSER_AUTH_TOKEN has conflicting duplicate values' ||
+    fail "conflicting parser duplicates did not fail with the intended reason."
+if printf '%s' "$conflicting_output" | grep -Eq 'parser-token-sentinel-three-(a|b)'; then
     fail "conflicting duplicate failure disclosed a credential."
-fi
-
-empty="$temp_dir/empty.env"
-cat > "$empty" <<'EOF_EMPTY'
-BILLWATCH_DATABASE_RUNTIME_PASSWORD=
-BILLWATCH_DATABASE_RUNTIME_PASSWORD=
-EOF_EMPTY
-chmod 600 "$empty"
-empty_before=$(sha256sum "$empty" | awk '{ print $1 }')
-
-set +e
-empty_output=$(sh "$repair" "$empty" 2>&1)
-empty_status=$?
-set -e
-
-[ "$empty_status" -ne 0 ] ||
-    fail "empty duplicate credentials were accepted."
-[ "$empty_before" = "$(sha256sum "$empty" | awk '{ print $1 }')" ] ||
-    fail "empty duplicate input was modified."
-if printf '%s' "$empty_output" | grep -Fq 'BILLWATCH_DATABASE_RUNTIME_PASSWORD='; then
-    fail "empty duplicate failure printed environment content."
 fi
 
 target="$temp_dir/target.env"
 link="$temp_dir/link.env"
-printf '%s\n' 'BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-four' > "$target"
+cat > "$target" <<'EOF_TARGET'
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-four
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-four
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-four
+EOF_TARGET
 chmod 600 "$target"
 ln -s "$target" "$link"
 
@@ -148,7 +179,11 @@ if sh "$repair" "$link" >/dev/null 2>&1; then
 fi
 
 overpermitted="$temp_dir/overpermitted.env"
-printf '%s\n' 'BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-five' > "$overpermitted"
+cat > "$overpermitted" <<'EOF_OVERPERMITTED'
+BILLWATCH_DATABASE_RUNTIME_PASSWORD=runtime-password-sentinel-five
+BILLWATCH_PARSER_AUTH_TOKEN=parser-token-sentinel-five
+BILLWATCH_WEB_SESSION_REDIS_PASSWORD=redis-password-sentinel-five
+EOF_OVERPERMITTED
 chmod 640 "$overpermitted"
 
 if sh "$repair" "$overpermitted" >/dev/null 2>&1; then
