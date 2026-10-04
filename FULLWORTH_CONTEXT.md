@@ -23,16 +23,18 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- `master`: `c092a9c76c5f4e811941400606c32d75a0a50a29`, the current frozen release candidate;
-- `development`: `bbf5f0e1a8016bc6dcaae52963d339d82681de2f`;
-- GitHub comparison: `development` is 2 history-only commits ahead and 0 behind `master`, with 0 file differences;
-- PR #666 promoted frozen candidate `80bb6494bf66646406829285eef4f71c009c546f` to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29` after FullWorth CI #1610 and Dependency Security #707 passed;
-- exact master-push FullWorth CI #1611 (`37158708276`) passed and produced `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29` with signed provenance/SBOM material required by the guarded deploy workflow;
-- repository-governance run #11 (`37158708332`) passed on the same master SHA;
-- PR #667 synced the master release-promotion ancestry back into `development` through exact-head FullWorth CI #1612 and Dependency Security #708, with no file-content change;
-- verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`, guarded deploy run #7 (`36221860082`).
+- `master`: `c092a9c76c5f4e811941400606c32d75a0a50a29`, the frozen release candidate.
+- `development`: `01166949d1f9af81d02729a986a1715f1be59909`.
+- GitHub comparison: `development` is 3 commits ahead and 0 behind `master`; the current diff is limited to `FULLWORTH_CONTEXT.md` and `FULLWORTH_ROADMAP.md`.
+- PR #666 promoted `80bb6494bf66646406829285eef4f71c009c546f` to `master` as `c092a9c76c5f4e811941400606c32d75a0a50a29`. Its exact-head FullWorth CI #1610 and Dependency Security #707 passed.
+- Master-push FullWorth CI #1611 (`37158708276`) passed on `c092a9c76c5f4e811941400606c32d75a0a50a29` and produced the exact-release image artifacts with signed provenance/SBOM attestations. Repository Governance #11 (`37158708332`) also passed on that SHA.
+- PR #667 synchronized the promotion ancestry into `development`; PR #668 then recorded the release/deploy boundary. PR #668 exact head `aef55b7ee1e6994b8cf8e8ec4870134ac0e47e08` passed FullWorth CI #1613 (`37159585980`) and Dependency Security #709 (`37159586061`) before merge as `01166949d1f9af81d02729a986a1715f1be59909`.
+- PR #657 exact corrected head `98f4317c0bc0b7f6cba702f21d143e0151d491ae` passed FullWorth CI #1600 and Dependency Security #697 before merge as `04a7c37ff36f97d1a5569b6bd5e06daa832f1ed9`.
+- The active `FullWorth protected branches` ruleset targets `master` and `development`, requires PRs and review-thread resolution, blocks deletion/non-fast-forward updates, and has no bypass actors. It currently has zero required approving reviews and no required-status-check rule.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. Issue #669 tracks candidate `c092a9c76c5f4e811941400606c32d75a0a50a29`; the guarded deployment has not been authorized or run for that candidate.
+- Same-release production evidence, provider-enforced immutable/off-host storage, compromised-host clean-host recovery, independent-review policy, installed-device/provider/legal acceptance, and required-check ruleset configuration remain human/operator gates. See `HUMAN-TODO.md` and issue #669 for exact actions.
 
-The master candidate is repository/CI-ready for guarded deployment, but it is **not deployed**. Immutable storage, compromised-host recovery, installed-device/provider/legal acceptance, and production-security claims still require direct real-environment evidence.
+The candidate is repository/CI-ready for the guarded deployment decision; it is **not deployed or production-accepted**. Do not combine evidence from other releases or infer deployed security from CI.
 
 ## Secret non-disclosure release gate — 2026-10-03
 
