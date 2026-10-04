@@ -10,7 +10,7 @@ Do not put credentials, tokens, recovery codes, financial data, private statemen
 
 Current release candidate on `master`:
 
-`bc9c73954e3443f98ea56f003eac28df49122034`
+`87be14e5407ed475f45d459e7674fc6600888119`
 
 `development` is currently ahead of the release tree only for non-runtime repository maintenance: release/handoff documentation plus CI change-detection/regression coverage. Re-read its live head before release work; the application/runtime tree remains aligned with the current `master` release candidate as of this handoff refresh.
 
@@ -24,10 +24,10 @@ Repository evidence for the current candidate:
 - [x] PR #674 promoted the repaired release to `master`.
 - [x] FullWorth CI #1620 (run `37173901198`) passed on the exact master SHA.
 - [x] Repository Governance #13 passed on the exact master SHA.
-- [x] Exact production artifact exists: `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034`.
-- [x] Artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`.
+- [x] Exact production artifact exists: `fullworth-production-image-artifacts-87be14e5407ed475f45d459e7674fc6600888119`.
+- [x] Artifact ID `11298447582`.
 - [x] PR #675 synchronized master release ancestry back into `development` with zero source-file changes; later `development` changes are non-runtime repository maintenance only (release/handoff documentation plus CI change-detection/regression coverage).
-- [ ] No guarded production deploy run exists yet for `bc9c73954e3443f98ea56f003eac28df49122034`.
+- [x] Guarded production deploy run `37190632437` attempted `87be14e5407ed475f45d459e7674fc6600888119` and failed closed before candidate startup because `BILLWATCH_PARSER_AUTH_TOKEN` was missing from the legacy production environment. PR #687 repairs this upgrade path together with the Web-session Redis secret.
 
 Historical failed deploys:
 
@@ -44,11 +44,11 @@ The source checkout on the production host may therefore be newer than the verif
 
 **Action:**
 
-1. Confirm `master` still points exactly to `bc9c73954e3443f98ea56f003eac28df49122034`.
+1. After the production-secret migration repair is promoted, confirm `master` points exactly to the newly promoted repair SHA.
 2. In GitHub, open **Actions → FullWorth Production Deploy → Run workflow**.
 3. Select `master`.
 4. Set:
-   - `release_sha=bc9c73954e3443f98ea56f003eac28df49122034`
+   - `release_sha=<exact newly promoted master SHA>`
    - `confirm_guarded_deploy=true`
 5. Do not substitute a different branch, shortened SHA, stale release, or manually bypass the guarded script.
 6. If the deploy fails, stop acceptance work and fix the exact failure first.
