@@ -252,16 +252,17 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 ## 4.1 Branch and release position
 
-As of 2026-10-03:
+As of 2026-10-04:
 
-- `master` is the release branch and now holds frozen release candidate `c092a9c76c5f4e811941400606c32d75a0a50a29`.
-- `development` is the active integration branch at `bbf5f0e1a8016bc6dcaae52963d339d82681de2f`.
-- GitHub comparison reports `development` **2 history-only commits ahead and 0 behind** `master`, with **0 file differences**. PR #667 deliberately synced the master promotion ancestry back into development after release promotion.
-- PR #666 promoted frozen candidate `80bb6494bf66646406829285eef4f71c009c546f` to `master` only after FullWorth CI #1610 and Dependency Security #707 passed.
-- Exact master-push FullWorth CI #1611 (`37158708276`) passed on `c092a9c76c5f4e811941400606c32d75a0a50a29` and produced attested artifact `fullworth-production-image-artifacts-c092a9c76c5f4e811941400606c32d75a0a50a29`.
-- Repository-governance run #11 (`37158708332`) passed on the same master SHA.
-- The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`, proven by guarded production deploy run #7 (`36221860082`). The new master candidate is not deployed merely because promotion and master CI passed.
-- The October 3 repository-side security closure materially advanced through PRs #653, #657, #658, #659, #660, #661, and #662. These changes are now present in the master release candidate but still require deployed-host evidence before production-security claims.
+- `master` is the frozen release branch at candidate `bc9c73954e3443f98ea56f003eac28df49122034`.
+- `development` is ahead only for non-runtime repository maintenance: release/handoff documentation plus CI change-detection/regression coverage. Application and runtime files remain aligned with the current `master` release tree.
+- PR #674 promoted the repaired production candidate to `master` as `bc9c73954e3443f98ea56f003eac28df49122034`.
+- Exact master-push FullWorth CI #1620 (run `37173901198`) and Repository Governance #13 (run `37173901252`) passed on that SHA.
+- The exact attested production artifact is `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034` (artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`).
+- PRs #680/#681 fixed and regression-locked root-Markdown docs-only CI classification so routine handoff documentation no longer spends backend/MAUI/container build time unnecessarily; PR #682 recorded that maintenance state.
+- The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `bc9c7395...` is not deployed merely because promotion and master CI passed.
+- Issue #669 tracks the guarded deployment and same-release acceptance bundle for `bc9c73954e3443f98ea56f003eac28df49122034`.
+- The October 3 repository-side security closure remains **61/65** on issue #291; the four remaining checks require real production/provider/governance evidence rather than generic application code.
 
 ### Release-readiness estimate
 
