@@ -13,6 +13,8 @@ fail()
 
 [ -f "$workflow" ] || fail "workflow is missing."
 
+sh "$root_dir/deploy/tests/production-env-repair-tests.sh"
+
 grep -Fq 'workflow_dispatch:' "$workflow" ||
     fail "workflow is not manual-dispatch only."
 grep -Fq 'release_sha:' "$workflow" ||
@@ -53,6 +55,18 @@ if grep -Fq '[[ ! "$release" =~ ^[0-9a-f]{40}$ ]]' "$workflow"; then
 fi
 grep -Fq 'git merge --ff-only "$release"' "$workflow" ||
     fail "production checkout update is not constrained to a fast-forward."
+grep -Fq 'scp -q deploy/repair-production-env.sh' "$workflow" ||
+    fail "workflow does not transfer the exact-release production environment repair helper."
+grep -Fq 'sh "$env_repair" "$root/.env.production"' "$workflow" ||
+    fail "workflow does not run the production environment repair helper on the protected host-local file."
+
+repair_line=$(grep -n 'sh "$env_repair" "$root/.env.production"' "$workflow" | head -n 1 | cut -d: -f1)
+merge_line=$(grep -n 'git merge --ff-only "$release"' "$workflow" | head -n 1 | cut -d: -f1)
+
+[ -n "$repair_line" ] && [ -n "$merge_line" ] ||
+    fail "workflow repair/merge ordering could not be determined."
+[ "$repair_line" -lt "$merge_line" ] ||
+    fail "workflow mutates the production checkout before repairing the known safe environment duplication."
 
 grep -Fq 'FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY' "$workflow" ||
     fail "workflow is missing the protected SSH private-key input."
