@@ -12,7 +12,7 @@ Current release candidate on `master`:
 
 `bc9c73954e3443f98ea56f003eac28df49122034`
 
-`development` is currently documentation-only ahead of the release tree. Re-read its live head before release work; the application/runtime tree remains aligned with the current `master` release candidate as of this handoff refresh.
+`development` is currently ahead of the release tree only for non-runtime repository maintenance: release/handoff documentation plus CI change-detection/regression coverage. Re-read its live head before release work; the application/runtime tree remains aligned with the current `master` release candidate as of this handoff refresh.
 
 Current verified live production release marker remains:
 
@@ -26,7 +26,7 @@ Repository evidence for the current candidate:
 - [x] Repository Governance #13 passed on the exact master SHA.
 - [x] Exact production artifact exists: `fullworth-production-image-artifacts-bc9c73954e3443f98ea56f003eac28df49122034`.
 - [x] Artifact ID `11292127567`, digest `sha256:d5ba31fb2d7222718bfd74c9518fcde5bbd45af59ca752a350f41db466bb2d1a`.
-- [x] PR #675 synchronized master release ancestry back into `development` with zero source-file changes; later `development` changes are release/handoff documentation only.
+- [x] PR #675 synchronized master release ancestry back into `development` with zero source-file changes; later `development` changes are non-runtime repository maintenance only (release/handoff documentation plus CI change-detection/regression coverage).
 - [ ] No guarded production deploy run exists yet for `bc9c73954e3443f98ea56f003eac28df49122034`.
 
 Historical failed deploys:
