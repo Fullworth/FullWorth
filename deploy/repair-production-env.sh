@@ -11,7 +11,6 @@ fail()
 }
 
 env_file=${1:-.env.production}
-key=BILLWATCH_DATABASE_RUNTIME_PASSWORD
 temporary=
 
 cleanup()
@@ -40,133 +39,153 @@ case "$mode" in
     *) fail "environment file must not grant permissions to group/other users." ;;
 esac
 
-original_identity=$(stat -c '%d:%i:%u:%a' "$env_file") ||
-    fail "environment file identity cannot be read."
-
-count=$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$env_file")
-
-if [ "$count" -eq 1 ]; then
-    printf '%s\n' "Production environment runtime database credential structure is already canonical."
-    exit 0
-fi
-
-temporary=$(mktemp "${env_file}.tmp.XXXXXX") ||
-    fail "temporary environment file could not be created."
-
-if [ "$count" -eq 0 ]; then
+generate_secret()
+{
     [ -r /dev/urandom ] ||
         fail "secure operating-system randomness is unavailable."
 
     command -v od >/dev/null 2>&1 ||
-        fail "od is required to generate the missing runtime database credential."
+        fail "od is required to generate a missing production credential."
 
     generated=$(
         od -An -N32 -tx1 /dev/urandom |
             tr -d ' \n'
-    ) || fail "missing runtime database credential could not be generated securely."
+    ) || fail "missing production credential could not be generated securely."
 
     case "$generated" in
         ''|*[!0-9a-f]*)
-            fail "generated runtime database credential has an invalid format."
+            fail "generated production credential has an invalid format."
             ;;
     esac
 
     [ "${#generated}" -eq 64 ] ||
-        fail "generated runtime database credential has an invalid length."
+        fail "generated production credential has an invalid length."
 
-    cat "$env_file" > "$temporary" ||
-        fail "canonical environment file could not be prepared."
+    printf '%s' "$generated"
+}
 
-    if [ -s "$env_file" ]; then
-        last_byte=$(
-            tail -c 1 "$env_file" |
-                od -An -tx1 |
-                tr -d ' \n'
-        ) || fail "environment file ending could not be inspected safely."
+repair_key()
+{
+    key=$1
+    count=$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$env_file")
 
-        [ "$last_byte" = 0a ] ||
-            printf '\n' >> "$temporary"
+    if [ "$count" -eq 1 ]; then
+        printf '%s\n' "Production environment $key structure is already canonical."
+        return
     fi
 
-    printf '%s=%s\n' "$key" "$generated" >> "$temporary" ||
-        fail "missing runtime database credential could not be appended."
+    original_identity=$(stat -c '%d:%i:%u:%a' "$env_file") ||
+        fail "environment file identity cannot be read."
 
-    generated=
-else
-    comparison_status=0
-    awk -v prefix="$key=" '
-        index($0, prefix) == 1 {
-            value = substr($0, length(prefix) + 1)
+    temporary=$(mktemp "${env_file}.tmp.XXXXXX") ||
+        fail "temporary environment file could not be created."
 
-            if (value == "") {
-                bad = 2
-                exit
+    if [ "$count" -eq 0 ]; then
+        generated=$(generate_secret)
+
+        cat "$env_file" > "$temporary" ||
+            fail "canonical environment file could not be prepared."
+
+        if [ -s "$env_file" ]; then
+            last_byte=$(
+                tail -c 1 "$env_file" |
+                    od -An -tx1 |
+                    tr -d ' \n'
+            ) || fail "environment file ending could not be inspected safely."
+
+            [ "$last_byte" = 0a ] ||
+                printf '\n' >> "$temporary"
+        fi
+
+        printf '%s=%s\n' "$key" "$generated" >> "$temporary" ||
+            fail "missing production credential could not be appended."
+        generated=
+    else
+        comparison_status=0
+        awk -v prefix="$key=" '
+            index($0, prefix) == 1 {
+                value = substr($0, length(prefix) + 1)
+
+                if (value == "") {
+                    bad = 2
+                    exit
+                }
+
+                if (seen == 0) {
+                    first = value
+                    seen = 1
+                    next
+                }
+
+                if (value != first) {
+                    bad = 3
+                    exit
+                }
+
+                seen++
             }
 
-            if (seen == 0) {
-                first = value
-                seen = 1
-                next
+            END {
+                if (bad != 0) {
+                    exit bad
+                }
+
+                if (seen < 2) {
+                    exit 4
+                }
+            }
+        ' "$env_file" || comparison_status=$?
+
+        case "$comparison_status" in
+            0) ;;
+            2) fail "$key has duplicate entries containing an empty value; refusing automatic repair." ;;
+            3) fail "$key has conflicting duplicate values; refusing automatic repair." ;;
+            *) fail "$key duplicate entries could not be compared safely." ;;
+        esac
+
+        awk -F= -v key="$key" '
+            $1 == key {
+                if (seen > 0) {
+                    next
+                }
+                seen++
             }
 
-            if (value != first) {
-                bad = 3
-                exit
-            }
+            { print }
+        ' "$env_file" > "$temporary" ||
+            fail "canonical environment file could not be prepared."
+    fi
 
-            seen++
-        }
+    chmod "$mode" "$temporary" ||
+        fail "temporary environment file permissions could not be secured."
 
-        END {
-            if (bad != 0) {
-                exit bad
-            }
+    current_identity=$(stat -c '%d:%i:%u:%a' "$env_file") ||
+        fail "environment file identity cannot be re-read."
 
-            if (seen < 2) {
-                exit 4
-            }
-        }
-    ' "$env_file" || comparison_status=$?
+    [ "$current_identity" = "$original_identity" ] ||
+        fail "environment file changed during repair; refusing to overwrite it."
 
-    case "$comparison_status" in
-        0) ;;
-        2) fail "$key has duplicate entries containing an empty value; refusing automatic repair." ;;
-        3) fail "$key has conflicting duplicate values; refusing automatic repair." ;;
-        *) fail "$key duplicate entries could not be compared safely." ;;
-    esac
+    repaired_count=$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$temporary")
+    [ "$repaired_count" -eq 1 ] ||
+        fail "$key repair did not produce exactly one entry."
 
-    awk -F= -v key="$key" '
-        $1 == key {
-            if (seen > 0) {
-                next
-            }
-            seen++
-        }
+    mv -f "$temporary" "$env_file" ||
+        fail "canonical environment file could not be installed."
+    temporary=
 
-        { print }
-    ' "$env_file" > "$temporary" ||
-        fail "canonical environment file could not be prepared."
-fi
+    if [ "$count" -eq 0 ]; then
+        printf '%s\n' "Production environment missing $key created securely without exposing its value."
+    else
+        printf '%s\n' "Production environment duplicate $key entry repaired without exposing its value."
+    fi
+}
 
-chmod "$mode" "$temporary" ||
-    fail "temporary environment file permissions could not be secured."
+for key in \
+    BILLWATCH_DATABASE_RUNTIME_PASSWORD \
+    BILLWATCH_PARSER_AUTH_TOKEN \
+    BILLWATCH_WEB_SESSION_REDIS_PASSWORD
+do
+    repair_key "$key"
+done
 
-current_identity=$(stat -c '%d:%i:%u:%a' "$env_file") ||
-    fail "environment file identity cannot be re-read."
-
-[ "$current_identity" = "$original_identity" ] ||
-    fail "environment file changed during repair; refusing to overwrite it."
-
-repaired_count=$(awk -F= -v key="$key" '$1 == key { count++ } END { print count + 0 }' "$temporary")
-[ "$repaired_count" -eq 1 ] ||
-    fail "$key repair did not produce exactly one entry."
-
-mv -f "$temporary" "$env_file" ||
-    fail "canonical environment file could not be installed."
-temporary=
-
-if [ "$count" -eq 0 ]; then
-    printf '%s\n' "Production environment missing runtime database credential created securely without exposing its value."
-else
-    printf '%s\n' "Production environment duplicate runtime database credential entry repaired without exposing its value."
-fi
+printf '%s\n' "Production environment credential migration repair completed."
