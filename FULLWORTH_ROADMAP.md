@@ -254,7 +254,7 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 As of 2026-10-04:
 
-- `master` is the release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
+- `master` is the frozen release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
 - `development` is aligned with `master` on runtime/application files after PR #691. Only the three handoff documents differ; PRs #692 and #693 updated them. PR #693's exact head `cd56e9f72d8f7b14d0969aac7ecaa0b7fca68019` passed backend/tests, Linux production-container, MAUI Android, and dependency review before merge as `3173b8cc57428f19438911724d59093249baf8fb`.
 - PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicate entries; PR #688 promoted it to `master`.
 - Exact master checks passed: FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`).
