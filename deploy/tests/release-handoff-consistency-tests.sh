@@ -25,7 +25,7 @@ master_sha="$(
 
 is_sha()
 {
-    awk 'length($0) == 40 && $0 !~ /[^0-9a-f]/ { valid = 1 } END { exit !valid }'
+    printf '%s\n' "$1" | awk 'length($0) == 40 && $0 !~ /[^0-9a-f]/ { valid = 1 } END { exit !valid }'
 }
 
 extract_first_sha_after()
@@ -64,7 +64,7 @@ roadmap_master="$(extract_first_sha_from_line "$roadmap" 'release branch at cand
 
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
-    is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs (todo=${todo_master:-empty}, context=${context_master:-empty}, roadmap=${roadmap_master:-empty})."
+    is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs."
 done
 
 [ "$todo_master" = "$context_master" ] ||
