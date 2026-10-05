@@ -17,7 +17,7 @@ Current release candidate on `master`:
 - [ ] Inspect the live Compose state read-only before any service repair or retry.
 - [ ] Reconcile the runtime safely, then re-run guarded deployment only after all host preflights pass.
 
-The host checkout and configured `BILLWATCH_RELEASE_ID` advanced to the candidate, but existing containers were not changed and the verified release marker did not advance. The verified live production release remains:
+The host checkout and configured `BILLWATCH_RELEASE_ID` advanced to the candidate, but existing containers were not changed and the verified release marker did not advance. Current verified live production release marker remains:
 
 `7e8571a26447538db249c862ad009487cce119bc`
 
