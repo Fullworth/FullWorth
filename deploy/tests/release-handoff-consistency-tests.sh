@@ -58,7 +58,7 @@ extract_first_sha_from_line()
     ' "$file"
 }
 
-todo_master="$(extract_first_sha_after "$todo" 'Current release candidate on `master`:')"
+todo_master="$(extract_first_sha_after "$todo" 'Current release candidate on master:')"
 context_master="$(extract_first_sha_from_line "$context" 'master:')"
 roadmap_master="$(extract_first_sha_from_line "$roadmap" 'master is the release branch at candidate')"
 
@@ -91,8 +91,8 @@ else
 fi
 
 todo_live="$(extract_first_sha_after "$todo" 'Current verified live production release marker remains:')"
-context_live="$(extract_first_sha_from_line "$context" 'Verified live production remains')"
-roadmap_live="$(extract_first_sha_from_line "$roadmap" 'currently verified **live production** release remains')"
+context_live="$(extract_first_sha_from_line "$context" 'verified live production release remains')"
+roadmap_live="$(extract_first_sha_from_line "$roadmap" 'verified live production release remains')"
 
 for candidate in "$todo_live" "$context_live" "$roadmap_live"
 do
