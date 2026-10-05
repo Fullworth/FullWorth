@@ -255,7 +255,7 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 As of 2026-10-04:
 
 - `master` is the release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
-- `development` is aligned with `master` on runtime/application files after PR #691; its only differences are the three handoff documents updated by PRs #692 and #693. Its only file differences are `FULLWORTH_CONTEXT.md`, `FULLWORTH_ROADMAP.md`, and `HUMAN-TODO.md`; runtime/application files remain aligned. PR #693's exact head `cd56e9f72d8f7b14d0969aac7ecaa0b7fca68019` passed backend/tests, Linux production-container, MAUI Android, and dependency review before merge as `3173b8cc57428f19438911724d59093249baf8fb`.
+- `development` is aligned with `master` on runtime/application files after PR #691. Only the three handoff documents differ; PRs #692 and #693 updated them. PR #693's exact head `cd56e9f72d8f7b14d0969aac7ecaa0b7fca68019` passed backend/tests, Linux production-container, MAUI Android, and dependency review before merge as `3173b8cc57428f19438911724d59093249baf8fb`.
 - PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicate entries; PR #688 promoted it to `master`.
 - Exact master checks passed: FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`).
 - The exact attested production artifact is `fullworth-production-image-artifacts-97516073e8c02c34805e4f3526411f563c0b9710` (artifact ID `11299287390`, digest `sha256:b6d70eba9f867961dc19210adfe2ecb0d6e32ba134c93de5fe7a102bccb30279`; expires 2026-10-11).
