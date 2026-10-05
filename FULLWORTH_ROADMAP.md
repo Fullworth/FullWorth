@@ -254,13 +254,13 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 As of 2026-10-05:
 
-- `master` is at candidate `f401a591a8abdade557827c09412dc3166fb9de2`, promoted from development by PR #704.
+- The `master` release branch at candidate `f401a591a8abdade557827c09412dc3166fb9de2` was promoted from development by PR #704.
 - Exact release checks passed: PR FullWorth CI #1679, Dependency Security #771, master FullWorth CI #1680, Repository Governance #18, and CodeQL #58.
 - Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
 - PR #704 merged the release into master. The current development base is `ed48c32c7d078e94084af2c60bf214e4a3bb165c`; PR #705 is open to improve the guarded deploy's sanitized partial-runtime diagnostic.
 - Guarded deployment run #15 failed closed before candidate containers started because API, Web, and edge were only partially running. The run advanced the production checkout and configured release ID to the candidate, but did not change running containers or advance the verified-live marker. Auth smoke #7 was skipped; public API readiness refuses connections.
 - The run did not record the per-service state. Inspect the host read-only before service repair or any deployment retry; no service restart is implied.
-- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `f401a591a8abdade557827c09412dc3166fb9de2` is not deployed or production-accepted.
+- The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `f401a591a8abdade557827c09412dc3166fb9de2` is not deployed or production-accepted.
 - Issue #669 tracks same-release acceptance. The explicit approval was used for run #15; the current blocker is safe reconciliation of the partial runtime.
 - Issue #291 remains 61/65, with four real-evidence/governance gates: immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence.
 
