@@ -561,6 +561,7 @@ if grep -q 'up --detach' "$command_log"; then
 fi
 if grep -q 'stop api parser-worker web web-session-cache edge' "$command_log"; then
     fail "partial-runtime refusal modified the existing runtime."
+fi
 
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
