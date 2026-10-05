@@ -252,28 +252,21 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 ## 4.1 Branch and release position
 
-As of 2026-10-04:
+As of 2026-10-05:
 
-- `master` is the frozen release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
-- `development` is aligned with `master` on runtime/application files after PR #691. Only the three handoff documents differ; PRs #692 and #693 updated them. PR #693's exact head `cd56e9f72d8f7b14d0969aac7ecaa0b7fca68019` passed backend/tests, Linux production-container, MAUI Android, and dependency review before merge as `3173b8cc57428f19438911724d59093249baf8fb`.
-- PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicate entries; PR #688 promoted it to `master`.
-- Exact master checks passed: FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`).
-- The exact attested production artifact is `fullworth-production-image-artifacts-97516073e8c02c34805e4f3526411f563c0b9710` (artifact ID `11299287390`, digest `sha256:b6d70eba9f867961dc19210adfe2ecb0d6e32ba134c93de5fe7a102bccb30279`; expires 2026-10-11).
-- PR #691 synchronized master ancestry to `development`; exact-head CI #1641 and Dependency Security #733 passed with no file differences. Documentation PR #693 corrected the branch delta after PR #692 and passed all four exact-head checks before merge. Branch cleanup run #120 then succeeded on `master` at `97516073e8c02c34805e4f3526411f563c0b9710`: three proven stale branches were deleted (the merged-PR source branches for #692/#693 and `sync/master-ancestry-after-688`); `master`/`development` stayed protected, and three branches without a matching merged-PR head were preserved for later review.
-- The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `97516073e8c02c34805e4f3526411f563c0b9710` is not deployed or production-accepted.
-- Issue #669 tracks the separately approved guarded deployment and same-release acceptance. Repository-side #291 remains 61/65; its four open checks require real production/provider/governance evidence rather than generic application code.
+- `master` is at candidate `f401a591a8abdade557827c09412dc3166fb9de2`, promoted from development by PR #704.
+- Exact release checks passed: PR FullWorth CI #1679, Dependency Security #771, master FullWorth CI #1680, Repository Governance #18, and CodeQL #58.
+- Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
+- PR #704 merged the release into master. The current development base is `ed48c32c7d078e94084af2c60bf214e4a3bb165c`; PR #705 is open to improve the guarded deploy's sanitized partial-runtime diagnostic.
+- Guarded deployment run #15 failed closed before candidate containers started because API, Web, and edge were only partially running. The run advanced the production checkout and configured release ID to the candidate, but did not change running containers or advance the verified-live marker. Auth smoke #7 was skipped; public API readiness refuses connections.
+- The run did not record the per-service state. Inspect the host read-only before service repair or any deployment retry; no service restart is implied.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `f401a591a8abdade557827c09412dc3166fb9de2` is not deployed or production-accepted.
+- Issue #669 tracks same-release acceptance. The explicit approval was used for run #15; the current blocker is safe reconciliation of the partial runtime.
+- Issue #291 remains 61/65, with four real-evidence/governance gates: immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence.
 
 ### Release-readiness estimate
 
-Current technical-lead planning estimate:
-
-- broad public production release: **approximately 78%**;
-- engineering/code implementation: **approximately 92–94%**;
-- current master release candidate: **repository/CI-ready for guarded deployment**.
-
-The release-candidate-preparation portion is complete, but the public-release percentage remains intentionally conservative because the remaining risk is dominated by real-environment/provider/device/legal evidence rather than generic application code. A promoted master SHA and attested artifacts do not substitute for guarded deployment, same-release production evidence, real-device/provider acceptance, immutable/off-host recovery proof, or legal/governance requirements.
-
-## 4.2 Active release-critical work
+The candidate has repository/CI release evidence and an attested artifact, but guarded deployment failed before candidate startup. Production deployment and same-release acceptance are incomplete. Public-release readiness remains blocked by the live host state and the remaining provider, recovery, device, legal, and governance evidence—not by the candidate's CI status.
 
 ### Security hardening program — issue #291
 
@@ -2336,25 +2329,13 @@ Do not manufacture CI substitutes for provider-enforced immutability, clean-host
 
 ## Step 6 — Guarded-deploy the exact `master` release
 
-**Current next action:** the current candidate `97516073e8c02c34805e4f3526411f563c0b9710` is promoted, master CI/governance and the exact production artifact are verified, and PR #691 has synchronized its ancestry into `development`. Issue #669 still requires a separate explicit release-owner approval before dispatching the guarded production workflow. If approved, deploy only this exact master SHA; the workflow requires explicit confirmation and rejects stale/non-master SHAs. Deployment and same-release acceptance remain incomplete.
+**Current state:** master candidate `f401a591a8abdade557827c09412dc3166fb9de2` passed its exact PR/master CI, dependency, governance, CodeQL, and artifact checks. The separately approved guarded deployment was dispatched as run #15.
 
-Guarded deploy runs #10 and #11 are failure evidence rather than production acceptance. Run #10 failed before production-host access because release-SHA validation rejected a valid SHA; PR #670 fixed that path. Run #11 reached the host but failed closed on duplicate protected runtime-database-password entries before candidate containers started or the verified release marker advanced; PR #673 fixed that path.
+Run #15 failed closed before candidate startup because the production host's public API/Web/edge set was only partially running. It advanced the checkout and configured release ID to the candidate, but left running containers untouched and did not advance the verified release marker. The automatic auth smoke was skipped, and public API readiness currently refuses connections. The workflow did not report the per-service running state.
 
-The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc` until a successful guarded deployment proves otherwise.
+**Next action:** inspect the host's service state read-only, determine why the public runtime is partial, and reconcile it safely before another deployment attempt. PR #705 adds a sanitized per-service state summary for future refusals but does not repair the current host.
 
-The guarded deployment must preserve:
-
-- production configuration and secrets;
-- database state;
-- statement storage;
-- Data Protection keys;
-- encrypted backup/recovery capability;
-- image provenance/SBOM integrity;
-- rollback/kill-switch paths where applicable.
-
-For parser/OCR controls, preserve sanitized deployed-host evidence from `deploy/verify-parser-containment.sh`.
-
-For secret controls, collect deployed-release secret non-disclosure evidence without printing protected values.
+The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc` until a successful guarded deployment proves otherwise. Keep existing production configuration/secrets, database and statement state, Data Protection keys, backup/recovery capability, image provenance, and rollback paths intact. Same-release acceptance remains incomplete.
 
 ## Step 7 — Build one same-release private-beta evidence bundle
 
