@@ -157,7 +157,7 @@ compose()
 compose config --quiet
 
 running_services=$(compose ps --status running --services)
-runtime_summary=$(printf '%s\\n' "$running_services" | sh "$root_dir/deploy/format-public-runtime-state.sh")
+runtime_summary=$(printf '%s\n' "$running_services" | sh "$root_dir/deploy/format-public-runtime-state.sh")
 running_api=false
 running_web=false
 running_edge=false
