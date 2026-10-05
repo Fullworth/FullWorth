@@ -60,7 +60,7 @@ extract_first_sha_after_or_from_line()
 
 todo_master="$(extract_first_sha_after "$todo" 'Current release candidate on')"
 context_master="$(extract_first_sha_from_line "$context" 'current release candidate')"
-roadmap_master="$(extract_first_sha_from_line "$roadmap" 'frozen release branch at candidate')"
+roadmap_master="$(extract_first_sha_from_line "$roadmap" 'release branch at candidate')"
 
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
