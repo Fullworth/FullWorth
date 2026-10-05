@@ -58,16 +58,9 @@ extract_first_sha_after_or_from_line()
     extract_first_sha_after "$file" "$marker"
 }
 
-extract_first_documented_sha()
-{
-    file="$1"
-
-    grep -Eo '[0-9a-f]{40}' "$file" | sed -n '1p'
-}
-
-todo_master="$(extract_first_documented_sha "$todo")"
-context_master="$(extract_first_documented_sha "$context")"
-roadmap_master="$(extract_first_documented_sha "$roadmap")"
+todo_master="$(extract_first_sha_after "$todo" 'Current release candidate on')"
+context_master="$(extract_first_sha_from_line "$context" 'current release candidate')"
+roadmap_master="$(extract_first_sha_from_line "$roadmap" 'frozen release branch at candidate')"
 
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
@@ -76,7 +69,6 @@ done
 
 [ "$todo_master" = "$context_master" ] ||
     fail "HUMAN-TODO and FULLWORTH_CONTEXT disagree on the current master release."
-
 [ "$todo_master" = "$roadmap_master" ] ||
     fail "HUMAN-TODO and FULLWORTH_ROADMAP disagree on the current master release."
 
@@ -98,8 +90,8 @@ else
 fi
 
 todo_live="$(extract_first_sha_after "$todo" 'Current verified live production release marker remains:')"
-context_live="$(extract_first_sha_from_line "$context" 'verified live production release remains')"
-roadmap_live="$(extract_first_sha_from_line "$roadmap" 'verified live production release remains')"
+context_live="$(extract_first_sha_after_or_from_line "$context" 'Verified live production remains')"
+roadmap_live="$(extract_first_sha_after_or_from_line "$roadmap" 'currently verified')"
 
 for candidate in "$todo_live" "$context_live" "$roadmap_live"
 do
