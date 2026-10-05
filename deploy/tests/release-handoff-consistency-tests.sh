@@ -64,7 +64,7 @@ roadmap_master="$(extract_first_sha_from_line "$roadmap" 'release branch at cand
 
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
-    is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs."
+    is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs (todo=${todo_master:-empty}, context=${context_master:-empty}, roadmap=${roadmap_master:-empty})."
 done
 
 [ "$todo_master" = "$context_master" ] ||
