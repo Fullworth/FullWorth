@@ -23,12 +23,12 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- `master`: `f401a591a8abdade557827c09412dc3166fb9de2`, the current candidate. PR #704 promoted development to master on 2026-10-05.
+- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`. PR #704 promoted development to master on 2026-10-05.
 - Exact release checks passed: PR #704 FullWorth CI #1679 and Dependency Security #771; master FullWorth CI #1680, Repository Governance #18, and CodeQL #58. Exact artifact `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` is artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b` (expires 2026-10-12).
 - PR #704 merged master to development; the current development base is `ed48c32c7d078e94084af2c60bf214e4a3bb165c`. PR #705 is open against development to add sanitized service-state diagnostics to the guarded deployment's partial-runtime refusal.
 - Guarded deployment run #15 for the exact master candidate failed closed before candidate containers started. The host checkout and configured release ID advanced to `f401a591a8abdade557827c09412dc3166fb9de2`; running containers were not changed, and the verified release marker did not advance. Production auth smoke #7 was skipped.
 - The failure indicates that the existing public API/Web/edge services are only partially running; the failed run did not provide the per-service state. The public API readiness endpoint refuses connections. Inspect the real host service state before any repair or retry; do not guess which service to restart.
-- The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. The current master candidate is not deployed or production-accepted.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. The current master candidate is not deployed or production-accepted.
 - Issue #669 tracks same-release acceptance for `f401a591a8abdade557827c09412dc3166fb9de2`. Its explicit deployment approval was used for run #15; the current blocker is the failed host preflight.
 - Repository-side issue #291 remains 61/65, with four real-evidence/governance gates: immutable/off-host storage, compromised-host clean restore, the independent-review policy decision, and direct exact-deployed-release evidence.
 - Do not infer production security from CI, combine evidence across releases, or retry deployment until the live host's partial-service state has been inspected and safely reconciled.
