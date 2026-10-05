@@ -58,9 +58,24 @@ extract_first_sha_from_line()
     ' "$file"
 }
 
-todo_master="$(extract_first_sha_after "$todo" 'Current release candidate on master:')"
-context_master="$(extract_first_sha_after "$context" 'Current branch/release position:')"
-roadmap_master="$(extract_first_sha_after "$roadmap" '4.1 Branch and release position')"
+extract_first_sha_after_or_from_line()
+{
+    file="$1"
+    marker="$2"
+
+    candidate="$(extract_first_sha_from_line "$file" "$marker")"
+    if is_sha "$candidate"; then
+        printf '%s\n' "$candidate"
+        return
+    fi
+
+    extract_first_sha_after "$file" "$marker"
+}
+
+
+todo_master="$(extract_first_sha_after_or_from_line "$todo" 'Current release candidate on master:')"
+context_master="$(extract_first_sha_after_or_from_line "$context" 'Current branch/release position:')"
+roadmap_master="$(extract_first_sha_after_or_from_line "$roadmap" '4.1 Branch and release position')"
 
 for candidate in "$todo_master" "$context_master" "$roadmap_master"
 do
