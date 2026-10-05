@@ -931,3 +931,17 @@ Before trusted external beta invitations:
 9. Physical Android installed-PWA acceptance under #251 remains required; issue #293 still requires real Plaid payroll/sandbox acceptance; iOS issue #258 remains a separate re-test. Browser/CI evidence is not a substitute for those real-world checks.
 10. The active branch ruleset requires PRs for `master` and `development`, blocks deletion/non-fast-forward updates, has no bypass actors, and requires review-thread resolution. It still requires 0 approving reviews and has no required-status-check rule configured; those governance changes require an admin-capable path.
 11. Issue #260 is closed. Preserve its zero-exception module/data-ownership ratchets, and preserve authentication, server-side BFF sessions, antiforgery, HTTPS, ownership, provider-token, statement-storage, network isolation, parser containment, secret scoping, database role separation, backup/recovery, migration, and financial-data boundaries.
+
+
+---
+
+## Backup migration operational instruction (2026-10-05)
+
+When migrating the encrypted backup repository between hosts, use a copy-first, verify-before-cutover workflow:
+
+- Use a short-lived Cloudflare R2 **Object Read only** credential scoped only to `billwatch-production-backups-01`; never expose credential values in chat, logs, shell history, or source control.
+- Copy the complete Restic-compatible object tree to a mounted private destination on the replacement VPS. Verify source/destination object count and aggregate bytes, but treat that only as object-level parity.
+- Do not delete, repoint, or retire the R2 repository until Restic integrity and clean-host restore verification succeeds with the separately escrowed `RESTIC_PASSWORD`, including database, statements, Data Protection keys, release relationship, and permissions.
+- Revoke the temporary migration credential after verification. Keep a second independent recovery path.
+
+The current migration copied 426 objects / 6,479,351 bytes to `/home/debian/fullworth-backup-r2-migration` on the replacement VPS. Encrypted repository readability and clean-host recovery remain open gates. This is not evidence of production deployment, production security, or hard CPU/RAM isolation.
