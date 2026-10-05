@@ -676,21 +676,21 @@ jobs:
 
       - name: Attest API image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: provenance/billwatch-api.tar
           sbom-path: provenance/billwatch-api.spdx.json
 
       - name: Attest parser worker image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: provenance/billwatch-parser-worker.tar
           sbom-path: provenance/billwatch-parser-worker.spdx.json
 
       - name: Attest web image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
         with:
           subject-path: provenance/billwatch-web.tar
           sbom-path: provenance/billwatch-web.spdx.json
