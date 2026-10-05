@@ -23,7 +23,7 @@ RUN dotnet publish FullWorth.API/FullWorth.API.csproj \
     --output /app/parser-worker-publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f AS parser-worker-final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS parser-worker-final
 
 ARG BILLWATCH_RELEASE_ID=unknown
 
@@ -71,7 +71,7 @@ HEALTHCHECK NONE
 ENTRYPOINT ["/usr/local/bin/fullworth-parser-worker-entrypoint"]
 CMD ["dotnet", "FullWorth.ParserWorker.dll"]
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS final
 
 ARG BILLWATCH_RELEASE_ID=unknown
 
