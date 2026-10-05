@@ -33,7 +33,7 @@ extract_first_sha_after()
     file="$1"
     marker="$2"
 
-    awk -v marker="$marker" 'index($0, marker) { capture = 1; next } capture { print }' "$file" | grep -Eo '[0-9a-f]{40}' | head -n 1
+    awk -v marker="$marker" 'index($0, marker) { capture = 1; next } capture { print }' "$file" | grep -Eo '[0-9a-f]{40}' | sed -n '1p'
 }
 
 extract_first_sha_from_line()
@@ -41,7 +41,7 @@ extract_first_sha_from_line()
     file="$1"
     marker="$2"
 
-    awk -v marker="$marker" 'index($0, marker) { print; exit }' "$file" | grep -Eo '[0-9a-f]{40}' | head -n 1
+    awk -v marker="$marker" 'index($0, marker) { print; exit }' "$file" | grep -Eo '[0-9a-f]{40}' | sed -n '1p'
 }
 
 extract_first_sha_after_or_from_line()
@@ -62,7 +62,7 @@ extract_first_documented_sha()
 {
     file="$1"
 
-    grep -Eo '[0-9a-f]{40}' "$file" | head -n 1
+    grep -Eo '[0-9a-f]{40}' "$file" | sed -n '1p'
 }
 
 todo_master="$(extract_first_documented_sha "$todo")"
