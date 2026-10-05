@@ -157,6 +157,7 @@ compose()
 compose config --quiet
 
 running_services=$(compose ps --status running --services)
+runtime_summary=$(printf '%s\\n' "$running_services" | sh "$root_dir/deploy/format-public-runtime-state.sh")
 running_api=false
 running_web=false
 running_edge=false
@@ -172,7 +173,7 @@ running_public_count=0
 
 if [ "$running_public_count" -ne 0 ] &&
    [ "$running_public_count" -ne 3 ]; then
-    fail "the existing public application runtime is only partially running; restore or stop API, Web, and edge consistently before deploying."
+    fail "the existing public application runtime is only partially running ($runtime_summary); restore or stop API, Web, and edge consistently before deploying."
 fi
 
 if [ "$running_public_count" -eq 3 ]; then
