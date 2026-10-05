@@ -52,6 +52,25 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+runtime_status_helper="$root_dir/deploy/format-public-runtime-state.sh"
+[ -f "$runtime_status_helper" ] ||
+    fail "public runtime status formatter is missing."
+
+all_running_status=$(printf '%s\\n' "api web edge" | sh "$runtime_status_helper")
+[ "$all_running_status" = "api=running web=running edge=running" ] ||
+    fail "public runtime formatter did not report all services as running."
+
+partial_status=$(printf '%s\\n' "api edge" | sh "$runtime_status_helper")
+[ "$partial_status" = "api=running web=stopped edge=running" ] ||
+    fail "public runtime formatter did not identify the missing Web service."
+
+stopped_status=$(printf '%s\\n' "" | sh "$runtime_status_helper")
+[ "$stopped_status" = "api=stopped web=stopped edge=stopped" ] ||
+    fail "public runtime formatter did not report a stopped runtime."
+
+grep -Fq '($runtime_summary)' "$root_dir/deploy/deploy-production.sh" ||
+    fail "partial-runtime deployment refusal does not include the sanitized service summary."
+
 sh -n "$root_dir/deploy/check-http-security-boundaries.sh" ||
     fail "HTTP security boundary verifier has invalid shell syntax."
 
