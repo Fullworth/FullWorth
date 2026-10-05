@@ -25,7 +25,7 @@ master_sha="$(
 
 is_sha()
 {
-    printf '%s\n' "$1" | grep -Eq '^[0-9a-f]{40}$'
+    awk 'length($0) == 40 && $0 !~ /[^0-9a-f]/ { valid = 1 } END { exit !valid }'
 }
 
 extract_first_sha_after()
