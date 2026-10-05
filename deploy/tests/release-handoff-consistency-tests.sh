@@ -33,21 +33,7 @@ extract_first_sha_after()
     file="$1"
     marker="$2"
 
-    awk -v marker="$marker" '
-        index($0, marker) {
-            capture = 1
-            next
-        }
-        capture {
-            token_count = split($0, tokens, /[^0-9a-f]+/)
-            for (i = 1; i <= token_count; i++) {
-                if (length(tokens[i]) == 40) {
-                    print tokens[i]
-                    exit
-                }
-            }
-        }
-    ' "$file"
+    awk -v marker="$marker" 'index($0, marker) { capture = 1; next } capture { print }' "$file" | grep -Eo '[0-9a-f]{40}' | head -n 1
 }
 
 extract_first_sha_from_line()
@@ -55,17 +41,7 @@ extract_first_sha_from_line()
     file="$1"
     marker="$2"
 
-    awk -v marker="$marker" '
-        index($0, marker) {
-            token_count = split($0, tokens, /[^0-9a-f]+/)
-            for (i = 1; i <= token_count; i++) {
-                if (length(tokens[i]) == 40) {
-                    print tokens[i]
-                    exit
-                }
-            }
-        }
-    ' "$file"
+    awk -v marker="$marker" 'index($0, marker) { print; exit }' "$file" | grep -Eo '[0-9a-f]{40}' | head -n 1
 }
 
 extract_first_sha_after_or_from_line()
