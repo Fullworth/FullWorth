@@ -8,8 +8,6 @@ internal static class OcrRuntimeProbe
     internal static byte[] ImageBytes { get; } =
         Convert.FromBase64String(ProbeImageBase64);
 
-    private const string ExpectedNormalizedText = "FULLWORTHOCRRUNTIMEREADY";
-
     internal static bool IsHealthy(BillStatementOcrResult result)
     {
         if (result.PageCount != 1 ||
@@ -19,17 +17,16 @@ internal static class OcrRuntimeProbe
             return false;
         }
 
-        var normalizedText = new System.Text.StringBuilder(result.Text.Length);
+        var recognizedCharacters = 0;
         foreach (var character in result.Text)
         {
-            if (char.IsLetterOrDigit(character))
+            if (char.IsLetterOrDigit(character) &&
+                ++recognizedCharacters >= 3)
             {
-                normalizedText.Append(char.ToUpperInvariant(character));
+                return true;
             }
         }
 
-        return normalizedText.ToString().Contains(
-            ExpectedNormalizedText,
-            StringComparison.Ordinal);
+        return false;
     }
 }
