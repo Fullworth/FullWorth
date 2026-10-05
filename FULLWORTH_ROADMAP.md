@@ -254,13 +254,13 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 As of 2026-10-04:
 
-- `master` is the release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
+- `master` is the frozen release branch at candidate `97516073e8c02c34805e4f3526411f563c0b9710`.
 - `development` is aligned with `master` on runtime/application files after PR #691. Only the three handoff documents differ; PRs #692 and #693 updated them. PR #693's exact head `cd56e9f72d8f7b14d0969aac7ecaa0b7fca68019` passed backend/tests, Linux production-container, MAUI Android, and dependency review before merge as `3173b8cc57428f19438911724d59093249baf8fb`.
 - PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicate entries; PR #688 promoted it to `master`.
 - Exact master checks passed: FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`).
 - The exact attested production artifact is `fullworth-production-image-artifacts-97516073e8c02c34805e4f3526411f563c0b9710` (artifact ID `11299287390`, digest `sha256:b6d70eba9f867961dc19210adfe2ecb0d6e32ba134c93de5fe7a102bccb30279`; expires 2026-10-11).
 - PR #691 synchronized master ancestry to `development`; exact-head CI #1641 and Dependency Security #733 passed with no file differences. Documentation PR #693 corrected the branch delta after PR #692 and passed all four exact-head checks before merge. Branch cleanup run #120 then succeeded on `master` at `97516073e8c02c34805e4f3526411f563c0b9710`: three proven stale branches were deleted (the merged-PR source branches for #692/#693 and `sync/master-ancestry-after-688`); `master`/`development` stayed protected, and three branches without a matching merged-PR head were preserved for later review.
-- The verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `97516073e8c02c34805e4f3526411f563c0b9710` is not deployed or production-accepted.
+- The currently verified **live production** release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `97516073e8c02c34805e4f3526411f563c0b9710` is not deployed or production-accepted.
 - Issue #669 tracks the separately approved guarded deployment and same-release acceptance. Repository-side #291 remains 61/65; its four open checks require real production/provider/governance evidence rather than generic application code.
 
 ### Release-readiness estimate
