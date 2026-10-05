@@ -2491,3 +2491,18 @@ When updating:
 - avoid duplicating detailed production procedures already documented elsewhere.
 
 This roadmap is a sequencing and decision document, not a substitute for tests, source code, production evidence, or security review.
+
+
+---
+
+## Backup migration runbook (Cloudflare R2 to a replacement VPS)
+
+When moving hosts, treat backup migration as a copy-and-verify operation. Do not delete or repoint the existing R2 repository until the replacement host has been independently verified.
+
+1. Create a short-lived Cloudflare R2 credential with **Object Read only** permission scoped only to the source bucket `billwatch-production-backups-01`. Never commit or paste the credential into chat, source control, shell history, or logs.
+2. Copy the complete Restic-compatible object tree to a private destination on the replacement host, using a mounted destination path and a pinned transfer tool.
+3. Compare the source object count and aggregate byte count with the destination. A matching object count/size proves a complete object copy, not that encrypted Restic contents are readable.
+4. Run the repository's Restic integrity and restore verification with the separately escrowed `RESTIC_PASSWORD`; verify the database, statements, Data Protection keys, release relationship, and permissions before treating the migration as a recovery proof.
+5. Keep the original R2 repository unchanged until the restore proof and a second independent recovery path are complete. Revoke the temporary migration credential after verification.
+
+The 2026-10-05 host-migration checkpoint copied 426 objects from `billwatch-production-backups-01` to `/home/debian/fullworth-backup-r2-migration` on the replacement VPS, totaling 6,479,351 bytes at the destination. Object-level parity is recorded; encrypted repository integrity and clean-host restore remain open acceptance gates. This migration does not establish production security or hard CPU/RAM isolation.
