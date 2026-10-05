@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="PdfPig" Version="0.1.16" />
-    <PackageReference Include="TesseractOCR" Version="5.3.5" />
+    <PackageReference Include="TesseractOCR" Version="5.5.2" />
     <PackageReference Include="Tesseract.Data.English" Version="4.0.0" PrivateAssets="all" />
   </ItemGroup>
 </Project>
