@@ -237,12 +237,16 @@ var authentication =
         builder.Environment.IsDevelopment());
 
 var app = builder.Build();
+var ocrRuntimeReady =
+    app.Environment.IsDevelopment() ||
+    await ProbeOcrRuntimeAsync(jsonOptions);
 using var requestGate = new SemaphoreSlim(1, 1);
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", () =>
     WorkerResourceLimits.AreCurrentContainerLimitsEnforced() &&
-    DocumentProcessCgroup.IsDelegationReady()
+    DocumentProcessCgroup.IsDelegationReady() &&
+    ocrRuntimeReady
         ? Results.Ok(new { status = "ready" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
@@ -634,6 +638,31 @@ static async Task<byte[]> RunOcrProcessAsync(
         {
             TryKillWorkerTree(process);
         }
+    }
+}
+
+static async Task<bool> ProbeOcrRuntimeAsync(
+    JsonSerializerOptions jsonOptions)
+{
+    try
+    {
+        var output = await RunOcrProcessAsync(
+            OcrRuntimeProbe.ImageBytes,
+            "image/png",
+            ".png",
+            CancellationToken.None,
+            jsonOptions);
+        var result = JsonSerializer.Deserialize<BillStatementOcrResult>(
+            output,
+            jsonOptions);
+
+        return result is not null &&
+               OcrRuntimeProbe.IsHealthy(result);
+    }
+    catch
+    {
+        // Keep OCR text and native diagnostics out of logs and readiness responses.
+        return false;
     }
 }
 
