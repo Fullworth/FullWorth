@@ -183,6 +183,22 @@ public sealed class ParserWorkerResourceLimitTests
             image);
     }
 
+    [Theory]
+    [InlineData("nested/leaf")]
+    [InlineData(@"nested\\leaf")]
+    public void OcrImageCgroupRejectsDirectorySeparatorsInInstanceId(string instanceId)
+    {
+        var parent = Path.Combine(Path.GetTempPath(), "fullworth-parser-container");
+
+
+        Assert.ThrowsAny<ArgumentOutOfRangeException>(
+            () => OcrImageProcessCgroup.BuildCgroupPath(
+                parent,
+                4321,
+                instanceId));
+    }
+
+
     [Fact]
     public async Task ProtocolRejectsWhenResourceLimitsAreUnverified()
     {

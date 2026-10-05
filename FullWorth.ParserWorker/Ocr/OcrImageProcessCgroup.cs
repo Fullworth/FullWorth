@@ -224,6 +224,7 @@ public sealed class OcrImageProcessCgroup : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
 
         if (processId <= 0 ||
+            instanceId.IndexOfAny(new[] { '/', '\\' }) >= 0 ||
             instanceId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(processId));
