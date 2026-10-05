@@ -58,39 +58,27 @@ extract_first_sha_after_or_from_line()
     extract_first_sha_after "$file" "$marker"
 }
 
-has_sha_after_or_from_line()
+extract_first_documented_sha()
 {
-    file="$1"
-    marker="$2"
-    sha="$3"
-
-    awk -v marker="$marker" -v sha="$sha" '
-        index($0, marker) {
-            if (index($0, sha)) {
-                found = 1
-                exit
-            }
-            capture = 1
-            next
-        }
-        capture && index($0, sha) {
-            found = 1
-            exit
-        }
-        END { exit !found }
-    ' "$file"
+    grep -Eo '[0-9a-f]{40}' "$1" | head -n 1
 }
 
-has_sha_after_or_from_line "$todo" 'Current release candidate on master:' "$master_sha" ||
-    fail "HUMAN-TODO does not record the current master release SHA."
+todo_master="$(extract_first_documented_sha "$todo")"
+context_master="$(extract_first_documented_sha "$context")"
+roadmap_master="$(extract_first_documented_sha "$roadmap")"
 
-has_sha_after_or_from_line "$context" 'Current branch/release position:' "$master_sha" ||
-    fail "FULLWORTH_CONTEXT does not record the current master release SHA."
+for candidate in "$todo_master" "$context_master" "$roadmap_master"
+do
+    is_sha "$candidate" || fail "could not extract a valid current master release SHA from handoff docs."
+done
 
-has_sha_after_or_from_line "$roadmap" '4.1 Branch and release position' "$master_sha" ||
-    fail "FULLWORTH_ROADMAP does not record the current master release SHA."
+[ "$todo_master" = "$context_master" ] ||
+    fail "HUMAN-TODO and FULLWORTH_CONTEXT disagree on the current master release."
 
-documented_master="$master_sha"
+[ "$todo_master" = "$roadmap_master" ] ||
+    fail "HUMAN-TODO and FULLWORTH_ROADMAP disagree on the current master release."
+
+documented_master="$todo_master"
 
 if [ "${GITHUB_EVENT_NAME:-}" = push ] &&
    [ "${GITHUB_REF:-}" = refs/heads/master ]; then
