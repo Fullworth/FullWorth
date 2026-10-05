@@ -1,57 +1,47 @@
 ## Current release state
 
-**Status:** Repository and CI evidence is complete for a guarded-deployment decision; production deployment still requires explicit human approval.
+**Status:** Guarded deployment is blocked by a failed host preflight. The candidate has not been deployed.
 
 Current release candidate on `master`:
 
-`97516073e8c02c34805e4f3526411f563c0b9710`
+`f401a591a8abdade557827c09412dc3166fb9de2`
 
-`development` is aligned with `master` on runtime/application files after PR #691. Only the three handoff documents differ; PRs #692 and #693 updated them. PR #693's exact head passed all four checks before merge as `3173b8cc57428f19438911724d59093249baf8fb`. Branch cleanup run #120 succeeded on `master` at `97516073e8c02c34805e4f3526411f563c0b9710`: it removed three proven stale refs and preserved three branches whose current heads had no matching merged PR, along with protected `master` and `development`.
+- [x] PR #704 promoted development to master.
+- [x] Exact-head PR FullWorth CI #1679 and Dependency Security #771 passed.
+- [x] Master-push FullWorth CI #1680, Repository Governance #18, and CodeQL #58 passed.
+- [x] Exact production artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
+- [x] Cloudflare DNS points apex, `api`, and `www` to OVH `40.160.137.55` (DNS-only).
+- [x] Run #15 was manually dispatched for this exact SHA with explicit confirmation.
+- [ ] Run #15 failed closed before candidate startup because the host's public API/Web/edge set is only partially running. The failed run did not report which service(s) are running.
+- [ ] Public API readiness currently refuses connections; production auth smoke #7 was skipped.
+- [ ] Inspect the live Compose state read-only before any service repair or retry.
+- [ ] Reconcile the runtime safely, then re-run guarded deployment only after all host preflights pass.
 
-Current verified live production release marker remains:
+The host checkout and configured `BILLWATCH_RELEASE_ID` advanced to the candidate, but existing containers were not changed and the verified release marker did not advance. The verified live production release remains:
 
 `7e8571a26447538db249c862ad009487cce119bc`
 
-Repository evidence for the current candidate:
-
-- [x] PR #687 repaired migration of missing runtime-only secrets and safe handling of identical duplicates.
-- [x] PR #688 promoted that repair to `master` as `97516073e8c02c34805e4f3526411f563c0b9710`.
-- [x] Master-push FullWorth CI #1640 (run `37192001483`), Repository Governance #15 (run `37192001532`), and Push on master #56 (run `37192001559`) passed on the exact SHA.
-- [x] Exact production artifact: `fullworth-production-image-artifacts-97516073e8c02c34805e4f3526411f563c0b9710` (artifact ID `11299287390`, digest `sha256:b6d70eba9f867961dc19210adfe2ecb0d6e32ba134c93de5fe7a102bccb30279`; expires 2026-10-11).
-- [x] PR #691 synchronized master ancestry back into `development`; exact-head FullWorth CI #1641 and Dependency Security #733 passed with zero file changes.
-- [x] PR #687 repairs the failure seen when candidate `87be14e5407ed475f45d459e7674fc6600888119` was attempted in deploy run `37190632437`; candidate startup was blocked and the verified release marker did not advance.
-
-Do not dispatch production deployment without the separate explicit release-owner approval recorded for issue #669. The current candidate is not deployed or production-accepted.
-
-Historical failed deploys:
-
-- Run #10 failed before production-host access because the workflow rejected a valid SHA; PR #670 fixed that validator.
-- Run #11 reached the production host and fast-forwarded the checkout to `86d95c03c76792445913665ffdf353a45504133d`, then failed closed because protected `.env.production` contained duplicate runtime-database-password entries. Candidate containers were not started and the verified release marker did not advance. PR #673 fixed this path so future deploys repair identical duplicates before mutating the production checkout and fail closed if duplicate values conflict.
-
-The source checkout on the production host may therefore be newer than the verified live release marker. Treat `.billwatch-release`, the running verified services, and guarded-deploy evidence as the production truth until the next deployment succeeds.
+The explicit release approval was used for run #15. The current blocker is the partial-runtime preflight, not missing approval. Do not treat the source checkout, CI, or artifact as proof that the new release is live.
 
 ## Guarded production deployment and same-release acceptance — issue #669
 
-**Status:** Human release approval and production evidence required.
-
-**Why a human is needed:** The workflow requires explicit production approval, and the remaining acceptance work depends on the real host, controlled user accounts, physical devices, provider behavior, and external systems.
+**Status:** Blocked until the production host's actual service state is inspected and safely reconciled.
 
 **Action:**
 
-1. Obtain the separate release-owner decision to deploy; if approved, confirm `master` points exactly to the current candidate SHA recorded in issue #669.
-2. In GitHub, open **Actions → FullWorth Production Deploy → Run workflow**.
-3. Select `master`.
-4. Set:
-   - `release_sha=<exact current master SHA from issue #669>`
+1. Use the production host's read-only Docker Compose status command to record whether API, Web, and edge are running and healthy. Do not restart or stop anything yet.
+2. Identify the exact partial state and investigate why public API readiness refuses connections. Keep credentials, environment values, and service logs out of chat.
+3. Restore a consistent healthy API/Web/edge runtime using the documented recovery procedure; do not guess which service to restart.
+4. Confirm the current master still equals `f401a591a8abdade557827c09412dc3166fb9de2` and that the exact attested artifact is still available.
+5. Only after the service state and workflow preflights are healthy, dispatch **Actions → FullWorth Production Deploy** from `master` with:
+   - `release_sha=f401a591a8abdade557827c09412dc3166fb9de2`
    - `confirm_guarded_deploy=true`
-5. Do not substitute a different branch, shortened SHA, stale release, or manually bypass the guarded script.
-6. If the deploy fails, stop acceptance work and fix the exact failure first.
-7. If the deploy succeeds, confirm the automatic production auth smoke also succeeds and that the public API/Web readiness checks pass.
-8. Record only sanitized, release-correlated evidence in issue #669.
+6. If deployment fails, stop same-release acceptance and resolve the exact new failure before retrying.
+7. If it succeeds, confirm the automatic production auth smoke, public API/Web readiness, exact release marker, and running release all identify the same SHA.
 
-**Verify:** The successful guarded-deploy evidence, production release marker, running release, public readiness, and production auth smoke all identify the same exact master SHA.
+PR #705 improves future diagnostics by reporting only fixed `api/web/edge=running|stopped` labels when the partial-runtime guard refuses deployment. It does not fix or inspect the current production host.
 
-A successful merge or CI run alone is not production acceptance.
+A successful merge, CI run, or updated host checkout alone is not production acceptance.
 
 ## Deployed-host security and ownership proof — issue #669 / #291
 
