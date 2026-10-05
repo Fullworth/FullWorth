@@ -60,15 +60,9 @@ extract_first_sha_after_or_from_line()
 
 extract_first_documented_sha()
 {
-    awk '{
-        for (i = 1; i <= length($0) - 39; i++) {
-            token = substr($0, i, 40)
-            if (token !~ /[^0-9a-f]/) {
-                print token
-                exit
-            }
-        }
-    }' "$1"
+    file="$1"
+
+    grep -Eo '[0-9a-f]{40}' "$file" | head -n 1
 }
 
 todo_master="$(extract_first_documented_sha "$todo")"
