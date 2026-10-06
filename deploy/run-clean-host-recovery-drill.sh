@@ -128,6 +128,52 @@ case "$aws_credentials_file" in
         ;;
 esac
 
+
+if ! awk '
+    function trim(value) {
+        sub(/^[ \t]+/, "", value)
+        sub(/[ \t]+$/, "", value)
+        return value
+    }
+    BEGIN {
+        profile = ""
+        default_sections = 0
+        access_key_count = 0
+        secret_key_count = 0
+        invalid_value = 0
+    }
+    {
+        line = $0
+        sub(/\r$/, "", line)
+        trimmed = trim(line)
+        if (trimmed == "" || trimmed ~ /^[#;]/) next
+        if (trimmed ~ /^\[[^]]+\]$/) {
+            profile = substr(trimmed, 2, length(trimmed) - 2)
+            if (profile == "default") default_sections++
+            next
+        }
+        if (profile != "default") next
+        equals = index(trimmed, "=")
+        if (equals == 0) next
+        key = trim(substr(trimmed, 1, equals - 1))
+        value = trim(substr(trimmed, equals + 1))
+        if (key == "aws_access_key_id") {
+            access_key_count++
+            if (value == "") invalid_value = 1
+        }
+        if (key == "aws_secret_access_key") {
+            secret_key_count++
+            if (value == "") invalid_value = 1
+        }
+    }
+    END {
+        if (default_sections != 1 || access_key_count != 1 ||
+            secret_key_count != 1 || invalid_value) exit 1
+    }
+' "$aws_credentials_file"; then
+    fail "the recovery AWS credentials file must contain one [default] profile with non-empty access and secret keys."
+fi
+
 restic_password=$(read_required_env_value RESTIC_PASSWORD "$env_file")
 database_password=$(read_required_env_value BILLWATCH_DATABASE_PASSWORD "$env_file")
 
