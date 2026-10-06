@@ -27,7 +27,7 @@ Current verified live production release marker remains:
 
 1. Use the approved secret-handling path to install the separate least-privilege R2 Object Read credential on the verified recovery host. Do not paste its value into chat or write it into source control or shell history.
 2. Re-run the isolated recovery drill against the remote repository and require encrypted-repository integrity plus successful database, statement, and Data Protection key restoration.
-3. Reconcile the production workflow's SSH destination with the host inspected at `40.160.137.55`; preserve the current live release and do not guess at service restarts.
+3. In GitHub Environment `production`, set the non-secret variable `FULLWORTH_PRODUCTION_SSH_HOST` to `40.160.137.55` only after verifying the pinned `FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS` entry is this OVH server. At workflow dispatch, type the same host into `confirm_production_host`; preserve the current live release and do not guess at service restarts.
 4. Only after recovery and target identity are verified, check the exact master artifact and all guarded deployment preflights, then dispatch the guarded workflow for that exact SHA.
 5. Confirm automatic auth smoke, public API/Web readiness, running release, and verified marker all agree on the deployed SHA.
 
