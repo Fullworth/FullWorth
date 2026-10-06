@@ -2340,7 +2340,7 @@ Do not assume the workflow and interactive SSH inspection reached the same machi
 
 1. Through the approved secret-handling path, install the dedicated least-privilege R2 Object Read credential on the verified recovery host. Keep values out of chat, source control, shell history, and logs.
 2. Re-run the isolated recovery drill against the remote encrypted repository. Require Restic integrity verification and restoration of the database, statements, and both Data Protection key rings; record sanitized evidence only.
-3. Reconcile the guarded workflow's SSH destination with the host inspected at `40.160.137.55`. Verify Compose project, containers, volumes, and release marker read-only; do not restart or stop services based on the conflicting run report.
+3. In GitHub Environment `production`, make `FULLWORTH_PRODUCTION_SSH_HOST` an inspectable non-secret variable set to `40.160.137.55` only after verifying the pinned host-key entry belongs to that OVH server. The workflow now requires typing the same target into `confirm_production_host` and refuses a mismatch before artifact download or SSH. Verify Compose project, containers, volumes, and release marker read-only; do not restart or stop services based on the conflicting run report.
 4. Preserve the existing live release and data. Do not deploy until the actual target is identified, recovery succeeds, the exact-master artifact remains valid, and every guarded preflight passes.
 5. Only then use the guarded production workflow for the current exact `master` SHA. Require its automatic auth smoke, public API/Web readiness, and release marker to confirm the same deployed SHA.
 
