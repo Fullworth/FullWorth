@@ -634,7 +634,7 @@ jobs:
 
       - name: Generate API image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c
         with:
           image: billwatch-api:${{ github.sha }}
           format: spdx-json
@@ -645,7 +645,7 @@ jobs:
 
       - name: Generate parser worker image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c
         with:
           image: billwatch-parser-worker:${{ github.sha }}
           format: spdx-json
@@ -656,7 +656,7 @@ jobs:
 
       - name: Generate web image SBOM
         if: steps.container_changes.outputs.required == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: anchore/sbom-action@da167eac915b4e86f08b264dbdbc867b61be6f0c
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c
         with:
           image: billwatch-web:${{ github.sha }}
           format: spdx-json
