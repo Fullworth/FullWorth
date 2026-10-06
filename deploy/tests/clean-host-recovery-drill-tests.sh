@@ -44,10 +44,15 @@ fi
 grep -Fq 'internal: true' "$compose_file" || fail "recovery drill network must remain isolated from external ingress."
 grep -Fq 'BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: "false"' "$compose_file" || fail "recovery verifier must force local repositories off."
 grep -Fq 'RESTIC_PASSWORD_FILE: /run/secrets/restic_password' "$compose_file" || fail "recovery verifier must read Restic credentials from a mounted secret file."
+grep -Fq 'FULLWORTH_DATABASE_PGPASS_FILE: /run/secrets/database_pgpass' "$compose_file" || fail "recovery verifier must read database credentials from a mounted passfile secret."
+if grep -Eq '^[[:space:]]*PGPASSWORD:' "$compose_file"; then
+    fail "recovery verifier must not receive the database password through its environment."
+fi
 if grep -Eq '^[[:space:]]*RESTIC_PASSWORD:' "$compose_file"; then
     fail "recovery verifier must not receive the Restic password through its environment."
 fi
 grep -Fq 'file: ${BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE:?Set BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE}' "$compose_file" || fail "recovery Restic secret must be mounted from the protected temporary file."
+grep -Fq 'file: ${BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE:?Set BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE}' "$compose_file" || fail "recovery database passfile must be mounted from the protected temporary file."
 grep -Fq 'run --rm --no-deps verifier verify' "$runner" || fail "runner must invoke the existing cryptographic/database/file verifier."
 grep -Fq 'down --volumes --remove-orphans' "$runner" || fail "runner must tear down isolated recovery state."
 
@@ -87,11 +92,18 @@ done
 
 secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=//p' "$supplemental_env_file")"
 [ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ]
-[ "$(stat -c '%a' "$secret_file")" = 600 ]
+[ "$(stat -c '%a' "$secret_file")" = 644 ]
+[ "$(stat -c '%a' "${secret_file%/*}")" = 700 ]
+[ "$(stat -c '%a' "$supplemental_env_file")" = 600 ]
 [ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ]
+database_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=//p' "$supplemental_env_file")"
+[ -n "$database_secret_file" ] && [ -f "$database_secret_file" ] && [ ! -L "$database_secret_file" ]
+[ "$(stat -c '%a' "$database_secret_file")" = 644 ]
+[ "$(stat -c '%a' "${database_secret_file%/*}")" = 700 ]
+[ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\:isolated-restore-password' ]
 
 printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
-printf '%s\n' "$secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
+printf '%s\n' "$secret_file" "$database_secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
 EOF
 chmod 755 "$fake_bin/docker"
 
@@ -108,7 +120,7 @@ BILLWATCH_RECOVERY_DRILL_ALLOW=$allow_value
 BILLWATCH_RELEASE_ID=$release_value
 RESTIC_REPOSITORY=$repository_value
 RESTIC_PASSWORD=ci-recovery-password-with-32-characters
-BILLWATCH_DATABASE_PASSWORD=ci-isolated-restore-password
+BILLWATCH_DATABASE_PASSWORD=ci:isolated-restore-password
 EOF
     chmod 600 "$env_file"
 }
@@ -141,6 +153,7 @@ fi
 
 write_env true 's3:https://backup.example.invalid/billwatch' "$head_sha"
 : > "$docker_log"
+: > "$secret_file_log"
 run_runner >/dev/null || fail "valid isolated recovery drill configuration was rejected."
 
 if grep -Fq 'compose.production.yml' "$docker_log"; then
@@ -152,8 +165,10 @@ grep -Fq 'up --detach --wait restore-database' "$docker_log" || fail "recovery d
 grep -Fq 'run --rm --no-deps verifier verify' "$docker_log" || fail "recovery drill did not run encrypted snapshot verification."
 grep -Fq 'down --volumes --remove-orphans' "$docker_log" || fail "recovery drill did not clean up isolated state."
 
-secret_file="$(tail -n 1 "$secret_file_log")"
-[ -z "$secret_file" ] || [ ! -e "$secret_file" ] || fail "temporary Restic secret file was not removed after the drill."
+while IFS= read -r secret_file
+do
+    [ -z "$secret_file" ] || [ ! -e "$secret_file" ] || fail "temporary recovery secret file was not removed after the drill."
+done < "$secret_file_log"
 
 sh "$root_dir/deploy/tests/private-beta-technical-evidence-tests.sh" || fail "private-beta technical evidence regression suite failed."
 

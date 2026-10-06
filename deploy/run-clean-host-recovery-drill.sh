@@ -105,16 +105,20 @@ case "$repository" in
 esac
 
 restic_password=$(read_required_env_value RESTIC_PASSWORD "$env_file")
-read_required_env_value BILLWATCH_DATABASE_PASSWORD "$env_file" >/dev/null
+database_password=$(read_required_env_value BILLWATCH_DATABASE_PASSWORD "$env_file")
 
 secret_dir=$(mktemp -d "${TMPDIR:-/tmp}/fullworth-recovery-secret.XXXXXX") || fail "a private temporary recovery-secret directory could not be created."
 chmod 700 "$secret_dir"
 restic_password_file="$secret_dir/restic_password"
+database_pgpass_file="$secret_dir/database_pgpass"
 compose_env_file="$secret_dir/compose.env"
 printf '%s' "$restic_password" > "$restic_password_file"
-unset restic_password
-printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\n' "$restic_password_file" > "$compose_env_file"
-chmod 600 "$restic_password_file" "$compose_env_file"
+pgpass_password=$(printf '%s' "$database_password" | sed 's/:/\\:/g')
+printf 'restore-database:5432:*:billwatch:%s\n' "$pgpass_password" > "$database_pgpass_file"
+unset restic_password database_password pgpass_password
+printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\nBILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=%s\n' "$restic_password_file" "$database_pgpass_file" > "$compose_env_file"
+chmod 644 "$restic_password_file" "$database_pgpass_file"
+chmod 600 "$compose_env_file"
 
 command -v docker >/dev/null 2>&1 || fail "Docker is required on the clean recovery host."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required on the clean recovery host."
