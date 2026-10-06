@@ -19,8 +19,8 @@ do
     [ -f "$file" ] || fail "required handoff file is missing: $file"
 done
 
-inventory_marker='OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.'
-r2_marker='Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required.'
+inventory_marker="OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report."
+r2_marker="Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required."
 
 for file in "$context" "$roadmap" "$todo"
 do
