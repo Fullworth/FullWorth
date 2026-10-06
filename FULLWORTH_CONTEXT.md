@@ -23,8 +23,8 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
-- Current `development` head: `ae84e5f0b91fadfd8e0d41b3786c9af94c793fe1`. PR #707 fixed PostgreSQL passfile escaping for recovery and merged with exact-head FullWorth CI #1703 and Dependency Security #794 passing. This does not establish remote R2 access or production recovery. PR #709's production-host confirmation gate is also merged; neither change deploys production.
+- Current release candidate on `master`: `c8858a38b38d7eb0888d273b9a1a409308e565b4`, promoted by PR #711; it is not deployed. Exact PR checks passed (FullWorth CI #1707, Dependency Security #798, PR workflow #59); master FullWorth CI #1708, Repository Governance #20, and CodeQL #60 passed. Attested artifact `fullworth-production-image-artifacts-c8858a38b38d7eb0888d273b9a1a409308e565b4` (ID `11435103773`, digest `sha256:39d566b68cdbef5dfd52ef616ce23642b8aa33e77fe26026f4f1c2ea135db823`; expires 2026-10-13).
+- Current `development` head: `0168093384961e4d2e9838c495fbaf5bfb2c279a`, promoted to master by PR #711 after PR #710 refreshed the handoff. FullWorth CI #1707 and Dependency Security #798 passed on this head. PR #707's recovery passfile fix and PR #709's host-confirmation gate are included; these do not establish remote R2 access or production recovery, and no deployment occurred.
 - Guarded deploy run #15 reported partial API/Web/edge services and failed before candidate startup. Follow-up read-only inventory found: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The recovery-wiring change does not grant provider access. The same-host object copy has not passed encrypted Restic integrity or clean-host restore verification.
 - Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance the marker. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
@@ -912,18 +912,16 @@ Before trusted external beta invitations:
 
 ## Immediate resume point
 
-1. Read current GitHub branch heads, open PRs, issue #291, issue #669, this context, `HUMAN-TODO.md`, and the roadmap snapshot before changing release state.
-2. Current master candidate: `f401a591a8abdade557827c09412dc3166fb9de2`. Its exact PR/master CI, dependency, governance, CodeQL, and attested-artifact checks passed; see the current release section above.
-3. Guarded production deploy run #15 failed closed before candidate containers started because API, Web, and edge were only partially running. The workflow did not record per-service state; public API readiness refuses connections.
-4. The host checkout and configured release ID advanced to the candidate, but running containers were unchanged and the verified live marker remains `7e8571a26447538db249c862ad009487cce119bc`. Auth smoke #7 was skipped.
-5. Next action: inspect the production host's read-only Compose service status and establish which public services are running/healthy. Do not restart services or retry deployment based on assumption.
-6. PR #705 adds a sanitized `api/web/edge` state summary to future partial-runtime refusals. It does not repair the current host; merge only after current-head CI and dependency checks pass.
-7. After the current host state is understood, safely restore a consistent healthy runtime or stop the public services according to the guarded runbook, then perform a fresh guarded deploy of the exact current master SHA only if all preflight gates pass.
-8. After a successful deploy, gather same-release production, provider, device, backup immutability, and clean-host recovery evidence. Do not combine evidence from unrelated releases.
-9. Issue #291 remains 61/65: immutable/off-host storage, compromised-host clean restore, independent-review policy, and direct same-release deployed evidence are open.
-10. Android physical-device acceptance, Plaid acceptance, iOS re-test, and admin-only branch-governance settings remain separate real-world/admin gates.
-11. Preserve all authentication, session, ownership, parser containment, secret scoping, database-role, backup, and recovery boundaries.
-
+1. Read current GitHub heads, open PRs, issue #291, issue #669, this context, `HUMAN-TODO.md`, and the roadmap before changing release state.
+2. Master candidate `c8858a38b38d7eb0888d273b9a1a409308e565b4` was promoted by PR #711 from development head `0168093384961e4d2e9838c495fbaf5bfb2c279a`. Exact PR checks passed (FullWorth CI #1707, Dependency Security #798, PR workflow #59); master FullWorth CI #1708, Repository Governance #20, and CodeQL #60 passed. Artifact `fullworth-production-image-artifacts-c8858a38b38d7eb0888d273b9a1a409308e565b4` (ID `11435103773`, digest `sha256:39d566b68cdbef5dfd52ef616ce23642b8aa33e77fe26026f4f1c2ea135db823`) expires 2026-10-13. None of this proves deployment.
+3. Development remains at `0168093384961e4d2e9838c495fbaf5bfb2c279a`; exact FullWorth CI #1707 and Dependency Security #798 passed. The release candidate is not deployed; verified live production remains `7e8571a26447538db249c862ad009487cce119bc`.
+4. Deploy run #15 failed closed, and its partial-runtime report conflicts with the later read-only OVH inventory showing no containers, volumes, or release marker. Do not restart services or start the public stack against the empty inspected host.
+5. R2 recovery returned AccessDenied for the configured backup credential. Obtain the separate least-privilege read-only credential through the approved secret path, then prove encrypted-repository integrity and a clean isolated restore.
+6. Reconcile the workflow's pinned SSH target with the inspected OVH host before any repair or deployment. Only after target identity and recovery pass should the exact-master guarded deployment be considered.
+7. After any deployment, gather same-release production, backup, recovery, provider, device, and acceptance evidence; do not combine evidence from other releases.
+8. Issue #291 remains 61/65: provider-enforced immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence are open.
+9. Android installed-PWA acceptance, Plaid acceptance, iOS re-test, and admin-only branch-governance settings remain separate real-world/admin gates.
+10. Preserve the authentication, session, ownership, parser containment, secret scoping, database-role, backup, and recovery boundaries.
 ---
 
 ## Backup migration operational instruction (2026-10-05)
