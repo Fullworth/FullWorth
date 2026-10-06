@@ -104,6 +104,30 @@ case "$repository" in
     *) fail "the recovery drill requires an explicitly off-host Restic repository; local repository paths are refused." ;;
 esac
 
+aws_credentials_file=$(read_required_env_value BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE "$env_file")
+case "$aws_credentials_file" in
+    /*) ;;
+    *) fail "BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE must be an absolute path to a separate recovery credential file." ;;
+esac
+[ -f "$aws_credentials_file" ] && [ ! -L "$aws_credentials_file" ] ||
+    fail "the recovery AWS credential must be a regular, non-symlink file."
+aws_credentials_mode=$(stat -c '%a' "$aws_credentials_file")
+[ "$aws_credentials_mode" = 600 ] ||
+    fail "the recovery AWS credential file must have mode 600."
+aws_credentials_owner=$(stat -c '%u' "$aws_credentials_file")
+[ "$aws_credentials_owner" = "$(id -u)" ] ||
+    fail "the recovery AWS credential file must be owned by the current deployment operator."
+case "$aws_credentials_file" in
+    "$root_dir"/*)
+        relative_aws_credentials=${aws_credentials_file#"$root_dir"/}
+        git -C "$root_dir" check-ignore -q -- "$relative_aws_credentials" ||
+            fail "a repository-local recovery AWS credential file must be Git-ignored."
+        if git -C "$root_dir" ls-files --error-unmatch -- "$relative_aws_credentials" >/dev/null 2>&1; then
+            fail "the recovery AWS credential file must never be tracked by Git."
+        fi
+        ;;
+esac
+
 restic_password=$(read_required_env_value RESTIC_PASSWORD "$env_file")
 database_password=$(read_required_env_value BILLWATCH_DATABASE_PASSWORD "$env_file")
 
@@ -111,13 +135,15 @@ secret_dir=$(mktemp -d "${TMPDIR:-/tmp}/fullworth-recovery-secret.XXXXXX") || fa
 chmod 700 "$secret_dir"
 restic_password_file="$secret_dir/restic_password"
 database_pgpass_file="$secret_dir/database_pgpass"
+aws_credentials_secret_file="$secret_dir/aws_credentials"
 compose_env_file="$secret_dir/compose.env"
 printf '%s' "$restic_password" > "$restic_password_file"
+cat "$aws_credentials_file" > "$aws_credentials_secret_file"
 pgpass_password=$(printf '%s' "$database_password" | sed 's/\\/\\\\/g; s/:/\\:/g')
 printf 'restore-database:5432:*:billwatch:%s\n' "$pgpass_password" > "$database_pgpass_file"
 unset restic_password database_password pgpass_password
-printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\nBILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=%s\n' "$restic_password_file" "$database_pgpass_file" > "$compose_env_file"
-chmod 644 "$restic_password_file" "$database_pgpass_file"
+printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\nBILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=%s\nBILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=%s\n' "$restic_password_file" "$database_pgpass_file" "$aws_credentials_secret_file" > "$compose_env_file"
+chmod 644 "$restic_password_file" "$database_pgpass_file" "$aws_credentials_secret_file"
 chmod 600 "$compose_env_file"
 
 command -v docker >/dev/null 2>&1 || fail "Docker is required on the clean recovery host."
