@@ -274,9 +274,12 @@ sh deploy/deploy-production.sh .env.production
 
 `.github/workflows/production-deploy.yml` provides the provenance-preserving GitHub-only entry point without moving FullWorth application secrets into GitHub. It requires the successful FullWorth CI artifact for the exact approved `master` SHA, verifies build-provenance and SPDX SBOM attestations, transfers a checksum-bound bundle over pinned SSH, loads those application images without rebuilding them, and verifies the running container image IDs before acceptance. It still runs the existing server-side preflight, guarded deployment, production verification, and beta-readiness checks against the protected production environment file on the host.
 
-Before first use, create a protected GitHub Environment named `production`. Store only SSH transport material for the dedicated non-root deployment account:
+Before first use, create a protected GitHub Environment named `production`.
 
-- `FULLWORTH_PRODUCTION_SSH_HOST`
+Set the non-secret environment variable `FULLWORTH_PRODUCTION_SSH_HOST` to the verified deployment host. This is intentionally a variable rather than a masked secret so the destination can be audited. Before deployment, confirm it is the intended OVH target (`40.160.137.55`) and that the pinned host-key entry below belongs to that exact machine.
+
+Store the remaining SSH transport material for the dedicated non-root deployment account as production environment secrets:
+
 - `FULLWORTH_PRODUCTION_SSH_USER`
 - `FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY`
 - `FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS`
@@ -286,7 +289,7 @@ The known-hosts value must come from a trusted administrative source. The workfl
 
 Do not move `.env.production`, Plaid credentials, Stripe secrets, database passwords, Restic credentials, identity-email credentials, or other FullWorth application secrets into GitHub.
 
-To deploy, open **Actions → FullWorth Production Deploy → Run workflow**, select `master`, enter the exact current 40-character `master` SHA, and explicitly approve the guarded deploy. The workflow refuses non-`master` refs, malformed or stale SHAs, missing exact-head CI artifacts, invalid attestations, altered transfers, dirty checkouts, unpinned SSH hosts, or production source that cannot fast-forward to the approved release.
+To deploy, open **Actions → FullWorth Production Deploy → Run workflow**, select `master`, enter the exact current 40-character `master` SHA, type the exact configured host into `confirm_production_host`, and explicitly approve the guarded deploy. The workflow compares this confirmation to `FULLWORTH_PRODUCTION_SSH_HOST` before downloading artifacts or connecting over SSH; a mismatch fails closed. The workflow refuses non-`master` refs, malformed or stale SHAs, missing exact-head CI artifacts, invalid attestations, altered transfers, dirty checkouts, unpinned SSH hosts, or production source that cannot fast-forward to the approved release.
 
 A successful workflow proves the guarded deployment/readiness checks for that release only. Installed-device acceptance, Plaid provider observation, provider-enforced backup immutability, and qualified legal review remain separate gates.
 
