@@ -1,6 +1,8 @@
 #!/bin/sh
 
 set -eu
+LC_ALL=C
+export LC_ALL
 
 fail()
 {
@@ -15,7 +17,7 @@ for value in "$configured_target" "$confirmed_target"
 do
     case "$value" in
         ''|*[!A-Za-z0-9.-]*)
-            fail "the configured and confirmed SSH host must be a non-empty DNS name or IPv4 address."
+            fail "the configured and confirmed SSH host must contain only letters, digits, dots, and hyphens."
             ;;
     esac
 
