@@ -87,7 +87,9 @@ done
 
 secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=//p' "$supplemental_env_file")"
 [ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ]
-[ "$(stat -c '%a' "$secret_file")" = 600 ]
+[ "$(stat -c '%a' "$secret_file")" = 644 ]
+[ "$(stat -c '%a' "${secret_file%/*}")" = 700 ]
+[ "$(stat -c '%a' "$supplemental_env_file")" = 600 ]
 [ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ]
 
 printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"

@@ -114,7 +114,8 @@ compose_env_file="$secret_dir/compose.env"
 printf '%s' "$restic_password" > "$restic_password_file"
 unset restic_password
 printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\n' "$restic_password_file" > "$compose_env_file"
-chmod 600 "$restic_password_file" "$compose_env_file"
+chmod 644 "$restic_password_file"
+chmod 600 "$compose_env_file"
 
 command -v docker >/dev/null 2>&1 || fail "Docker is required on the clean recovery host."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required on the clean recovery host."
