@@ -166,6 +166,20 @@ if run_runner >/dev/null 2>&1; then
 fi
 
 write_env true 's3:https://backup.example.invalid/billwatch' "$head_sha"
+printf '%s\n' '[recovery]' 'aws_access_key_id=ci-read-only-access-key' 'aws_secret_access_key=ci-read-only-secret-key' > "$aws_credentials_file"
+chmod 600 "$aws_credentials_file"
+if run_runner >/dev/null 2>&1; then
+    fail "recovery drill accepted AWS credentials without a [default] profile."
+fi
+
+printf '%s\n' '[default]' 'aws_access_key_id=ci-read-only-access-key' > "$aws_credentials_file"
+chmod 600 "$aws_credentials_file"
+if run_runner >/dev/null 2>&1; then
+    fail "recovery drill accepted a [default] profile missing its secret key."
+fi
+
+printf '%s' "$aws_credentials_expected" > "$aws_credentials_file"
+chmod 600 "$aws_credentials_file"
 chmod 644 "$aws_credentials_file"
 if run_runner >/dev/null 2>&1; then
     fail "recovery drill accepted a world-readable AWS credential file."
