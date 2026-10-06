@@ -19,6 +19,17 @@ do
     [ -f "$file" ] || fail "required handoff file is missing: $file"
 done
 
+inventory_marker='OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.'
+r2_marker='Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required.'
+
+for file in "$context" "$roadmap" "$todo"
+do
+    grep -Fq "$inventory_marker" "$file" ||
+        fail "handoff docs must record the conflicting read-only OVH inventory."
+    grep -Fq "$r2_marker" "$file" ||
+        fail "handoff docs must record the R2 authorization blocker without secret values."
+done
+
 master_sha="$(
     git -C "$root_dir" rev-parse --verify refs/remotes/origin/master^{commit} 2>/dev/null
 )" || fail "origin/master is unavailable; checkout must fetch full branch history."
