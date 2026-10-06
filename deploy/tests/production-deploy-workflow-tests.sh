@@ -27,6 +27,11 @@ grep -Fq 'PRODUCTION_SSH_HOST: ${{ vars.FULLWORTH_PRODUCTION_SSH_HOST }}' "$work
     fail "workflow does not use an inspectable production environment host variable."
 grep -Fq '[[ "$CONFIRMED_PRODUCTION_HOST" != "$PRODUCTION_SSH_HOST" ]]' "$workflow" ||
     fail "workflow does not fail closed when the confirmed host differs from the configured target."
+target_check_line=$(grep -n 'confirmed production SSH host does not match' "$workflow" | head -n 1 | cut -d: -f1)
+artifact_download_line=$(grep -n 'Download and verify exact release image artifacts' "$workflow" | head -n 1 | cut -d: -f1)
+[ -n "$target_check_line" ] && [ -n "$artifact_download_line" ] &&
+    [ "$target_check_line" -lt "$artifact_download_line" ] ||
+    fail "production target confirmation must run before release artifact download."
 if grep -Fq 'secrets.FULLWORTH_PRODUCTION_SSH_HOST' "$workflow"; then
     fail "production SSH host remains hidden in a secret instead of an inspectable variable."
 fi
