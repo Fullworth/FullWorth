@@ -100,7 +100,7 @@ database_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=//p' 
 [ -n "$database_secret_file" ] && [ -f "$database_secret_file" ] && [ ! -L "$database_secret_file" ]
 [ "$(stat -c '%a' "$database_secret_file")" = 644 ]
 [ "$(stat -c '%a' "${database_secret_file%/*}")" = 700 ]
-[ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\:isolated-restore-password' ]
+[ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\\path\:isolated-restore-password' ]
 
 printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
 printf '%s\n' "$secret_file" "$database_secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
@@ -120,7 +120,7 @@ BILLWATCH_RECOVERY_DRILL_ALLOW=$allow_value
 BILLWATCH_RELEASE_ID=$release_value
 RESTIC_REPOSITORY=$repository_value
 RESTIC_PASSWORD=ci-recovery-password-with-32-characters
-BILLWATCH_DATABASE_PASSWORD=ci:isolated-restore-password
+BILLWATCH_DATABASE_PASSWORD=ci\path:isolated-restore-password
 EOF
     chmod 600 "$env_file"
 }
