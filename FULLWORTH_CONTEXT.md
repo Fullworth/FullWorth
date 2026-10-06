@@ -24,7 +24,7 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 Current branch/release position:
 
 - current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
-- Current `development` head: `762ff73456a88cf39c37b6fedbdd2c59402e5833`. PR #708 merged the verifier passfile wiring; exact-head CI #1694 and Dependency Security #785 passed. PR #707 remains open with the earlier recovery-verifier change.
+- Current `development` head: `94ed452e721a871645b0b1beca34403e6ec75e08`. PR #709 added an explicit production-host confirmation gate; its exact-head FullWorth CI #1701 and Dependency Security #792 passed before merge. PR #707 remains open with the recovery-verifier passfile change; its exact-head checks passed, but the separate R2 read-only access gate remains unresolved. Neither PR deploys production.
 - Guarded deploy run #15 reported partial API/Web/edge services and failed before candidate startup. Follow-up read-only inventory found: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The recovery-wiring change does not grant provider access. The same-host object copy has not passed encrypted Restic integrity or clean-host restore verification.
 - Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance the marker. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
@@ -404,7 +404,7 @@ Together with PR #531, the authenticated Planning Web slice now covers schedule 
 
 # FullWorth Current Context
 
-Last updated: 2026-09-28
+Last updated: 2026-10-06
 
 ## Planning Web first-slice checkpoint — 2026-09-28
 
