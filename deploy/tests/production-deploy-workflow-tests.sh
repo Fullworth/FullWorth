@@ -19,6 +19,22 @@ grep -Fq 'workflow_dispatch:' "$workflow" ||
     fail "workflow is not manual-dispatch only."
 grep -Fq 'release_sha:' "$workflow" ||
     fail "workflow does not require an exact release SHA."
+grep -Fq 'confirm_production_host:' "$workflow" ||
+    fail "workflow does not require explicit production SSH target confirmation."
+grep -Fq 'CONFIRMED_PRODUCTION_HOST: ${{ inputs.confirm_production_host }}' "$workflow" ||
+    fail "workflow does not bind the manual host confirmation input."
+grep -Fq 'PRODUCTION_SSH_HOST: ${{ vars.FULLWORTH_PRODUCTION_SSH_HOST }}' "$workflow" ||
+    fail "workflow does not use an inspectable production environment host variable."
+grep -Fq 'sh deploy/confirm-production-target.sh "$PRODUCTION_SSH_HOST" "$CONFIRMED_PRODUCTION_HOST"' "$workflow" ||
+    fail "workflow does not run the fail-closed production target confirmation helper."
+target_check_line=$(grep -n 'sh deploy/confirm-production-target.sh' "$workflow" | head -n 1 | cut -d: -f1)
+artifact_download_line=$(grep -n 'Download and verify exact release image artifacts' "$workflow" | head -n 1 | cut -d: -f1)
+[ -n "$target_check_line" ] && [ -n "$artifact_download_line" ] &&
+    [ "$target_check_line" -lt "$artifact_download_line" ] ||
+    fail "production target confirmation must run before release artifact download."
+if grep -Fq 'secrets.FULLWORTH_PRODUCTION_SSH_HOST' "$workflow"; then
+    fail "production SSH host remains hidden in a secret instead of an inspectable variable."
+fi
 grep -Fq 'confirm_guarded_deploy:' "$workflow" ||
     fail "workflow does not require explicit deployment confirmation."
 grep -Fq 'environment: production' "$workflow" ||

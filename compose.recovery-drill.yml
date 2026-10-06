@@ -41,9 +41,9 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      PGPASSWORD: ${BILLWATCH_DATABASE_PASSWORD:?Set BILLWATCH_DATABASE_PASSWORD}
+      FULLWORTH_DATABASE_PGPASS_FILE: /run/secrets/database_pgpass
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?Set RESTIC_REPOSITORY}
-      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?Set RESTIC_PASSWORD}
+      RESTIC_PASSWORD_FILE: /run/secrets/restic_password
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
@@ -53,10 +53,19 @@ services:
       RESTORE_DATABASE_HOST: restore-database
     tmpfs:
       - /work:rw,noexec,nosuid,nodev,size=${BILLWATCH_BACKUP_WORK_SIZE:-8g},uid=1654,gid=1654,mode=0700
+    secrets:
+      - restic_password
+      - database_pgpass
     networks:
       - recovery_data
       - recovery_egress
     logging: *default-logging
+
+secrets:
+  restic_password:
+    file: ${BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE:?Set BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE}
+  database_pgpass:
+    file: ${BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE:?Set BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE}
 
 networks:
   recovery_data:

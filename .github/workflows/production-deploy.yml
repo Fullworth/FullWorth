@@ -7,6 +7,10 @@ on:
         description: "Exact 40-character master commit SHA to deploy"
         required: true
         type: string
+      confirm_production_host:
+        description: "Type the exact production SSH host configured in the production environment"
+        required: true
+        type: string
       confirm_guarded_deploy:
         description: "I approve deploying this exact master release through the guarded production script"
         required: true
@@ -40,11 +44,15 @@ jobs:
         shell: bash
         env:
           REQUESTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMED_PRODUCTION_HOST: ${{ inputs.confirm_production_host }}
+          PRODUCTION_SSH_HOST: ${{ vars.FULLWORTH_PRODUCTION_SSH_HOST }}
           DEPLOY_CONFIRMED: ${{ inputs.confirm_guarded_deploy }}
         run: |
           set -euo pipefail
 
           release="$REQUESTED_RELEASE_SHA"
+
+          sh deploy/confirm-production-target.sh "$PRODUCTION_SSH_HOST" "$CONFIRMED_PRODUCTION_HOST"
 
           if [[ "$DEPLOY_CONFIRMED" != "true" ]]; then
             echo "Guarded production deployment requires explicit confirmation." >&2
@@ -166,7 +174,7 @@ jobs:
       - name: Configure pinned production SSH transport
         shell: bash
         env:
-          SSH_HOST: ${{ secrets.FULLWORTH_PRODUCTION_SSH_HOST }}
+          SSH_HOST: ${{ vars.FULLWORTH_PRODUCTION_SSH_HOST }}
           SSH_USER: ${{ secrets.FULLWORTH_PRODUCTION_SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.FULLWORTH_PRODUCTION_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.FULLWORTH_PRODUCTION_SSH_KNOWN_HOSTS }}

@@ -52,6 +52,25 @@ expect_failure()
 
 write_valid_env "$valid_env"
 
+runtime_status_helper="$root_dir/deploy/format-public-runtime-state.sh"
+[ -f "$runtime_status_helper" ] ||
+    fail "public runtime status formatter is missing."
+
+all_running_status=$(printf 'api\nweb\nedge\n' | sh "$runtime_status_helper")
+[ "$all_running_status" = "api=running web=running edge=running" ] ||
+    fail "public runtime formatter did not report all services as running."
+
+partial_status=$(printf 'api\nedge\n' | sh "$runtime_status_helper")
+[ "$partial_status" = "api=running web=stopped edge=running" ] ||
+    fail "public runtime formatter did not identify the missing Web service."
+
+stopped_status=$(printf '%s\n' "" | sh "$runtime_status_helper")
+[ "$stopped_status" = "api=stopped web=stopped edge=stopped" ] ||
+    fail "public runtime formatter did not report a stopped runtime."
+
+grep -Fq '($runtime_summary)' "$root_dir/deploy/deploy-production.sh" ||
+    fail "partial-runtime deployment refusal does not include the sanitized service summary."
+
 sh -n "$root_dir/deploy/check-http-security-boundaries.sh" ||
     fail "HTTP security boundary verifier has invalid shell syntax."
 
@@ -89,6 +108,12 @@ sh "$root_dir/deploy/tests/data-protection-key-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/backup-asset-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
+sh "$root_dir/deploy/tests/release-handoff-consistency-tests.sh" ||
+    fail "release handoff consistency regression suite failed."
+sh "$root_dir/deploy/tests/production-deploy-workflow-tests.sh" ||
+    fail "production deployment target-confirmation regression suite failed."
+sh "$root_dir/deploy/tests/production-deployment-target-tests.sh" ||
+    fail "production deployment target helper regression suite failed."
 
 grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile" ||
     fail "API image does not apply the protected key-ring entrypoint."
@@ -395,6 +420,7 @@ mkdir -p "$deployment_root/deploy/database"
 cp "$root_dir/deploy/database/provision-runtime-role.sh" "$deployment_root/deploy/database/provision-runtime-role.sh"
 cp "$root_dir/deploy/run-backup.sh" "$deployment_root/deploy/run-backup.sh"
 cp "$root_dir/deploy/deploy-production.sh" "$deployment_root/deploy/deploy-production.sh"
+cp "$root_dir/deploy/format-public-runtime-state.sh" "$deployment_root/deploy/format-public-runtime-state.sh"
 : > "$deployment_root/Dockerfile"
 : > "$deployment_root/Dockerfile.web"
 chmod 755 "$deployment_root/deploy/"*.sh
@@ -526,6 +552,23 @@ grep -qx "$deployment_root|https://api.fullworth.test|https://app.fullworth.test
 
 printf '%s\n' "$old_release" > "$deployment_root/.billwatch-release"
 chmod 600 "$deployment_root/.billwatch-release"
+
+runtime_error="$temp_dir/partial-runtime-error"
+: > "$command_log"
+if run_deploy BILLWATCH_TEST_RUNNING_API=true >/dev/null 2>"$runtime_error"; then
+    fail "deployment did not refuse a partially running public runtime."
+fi
+grep -Fq 'api=running web=stopped edge=stopped' "$runtime_error" ||
+    fail "partial-runtime refusal did not report the sanitized public service state."
+[ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] ||
+    fail "partial-runtime refusal changed the last verified release marker."
+if grep -q 'up --detach' "$command_log"; then
+    fail "partial-runtime refusal reached candidate startup."
+fi
+if grep -q 'stop api parser-worker web web-session-cache edge' "$command_log"; then
+    fail "partial-runtime refusal modified the existing runtime."
+fi
+
 : > "$command_log"
 expect_failure run_deploy BILLWATCH_TEST_BAD_IMAGE_REVISION=true
 [ "$(cat "$deployment_root/.billwatch-release")" = "$old_release" ] || fail "bad image revision changed the last verified release marker."
