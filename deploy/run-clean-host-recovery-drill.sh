@@ -9,6 +9,8 @@ env_file=${1:-"$root_dir/.env.recovery"}
 compose_file="$root_dir/compose.recovery-drill.yml"
 project_name="billwatch-recovery-drill-$$"
 started=false
+secret_dir=
+compose_env_file=
 
 fail()
 {
@@ -46,8 +48,13 @@ cleanup()
         docker compose \
             --project-name "$project_name" \
             --env-file "$env_file" \
+            --env-file "$compose_env_file" \
             --file "$compose_file" \
             down --volumes --remove-orphans >/dev/null 2>&1 || true
+    fi
+
+    if [ -n "$secret_dir" ]; then
+        rm -rf "$secret_dir"
     fi
 
     exit "$exit_code"
@@ -97,8 +104,17 @@ case "$repository" in
     *) fail "the recovery drill requires an explicitly off-host Restic repository; local repository paths are refused." ;;
 esac
 
-read_required_env_value RESTIC_PASSWORD "$env_file" >/dev/null
+restic_password=$(read_required_env_value RESTIC_PASSWORD "$env_file")
 read_required_env_value BILLWATCH_DATABASE_PASSWORD "$env_file" >/dev/null
+
+secret_dir=$(mktemp -d "${TMPDIR:-/tmp}/fullworth-recovery-secret.XXXXXX") || fail "a private temporary recovery-secret directory could not be created."
+chmod 700 "$secret_dir"
+restic_password_file="$secret_dir/restic_password"
+compose_env_file="$secret_dir/compose.env"
+printf '%s' "$restic_password" > "$restic_password_file"
+unset restic_password
+printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\n' "$restic_password_file" > "$compose_env_file"
+chmod 600 "$restic_password_file" "$compose_env_file"
 
 command -v docker >/dev/null 2>&1 || fail "Docker is required on the clean recovery host."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required on the clean recovery host."
@@ -108,18 +124,21 @@ started=true
 docker compose \
     --project-name "$project_name" \
     --env-file "$env_file" \
+    --env-file "$compose_env_file" \
     --file "$compose_file" \
     build verifier
 
 docker compose \
     --project-name "$project_name" \
     --env-file "$env_file" \
+    --env-file "$compose_env_file" \
     --file "$compose_file" \
     up --detach --wait restore-database
 
 docker compose \
     --project-name "$project_name" \
     --env-file "$env_file" \
+    --env-file "$compose_env_file" \
     --file "$compose_file" \
     run --rm --no-deps verifier verify
 

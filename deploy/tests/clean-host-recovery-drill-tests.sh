@@ -43,16 +43,55 @@ fi
 
 grep -Fq 'internal: true' "$compose_file" || fail "recovery drill network must remain isolated from external ingress."
 grep -Fq 'BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: "false"' "$compose_file" || fail "recovery verifier must force local repositories off."
+grep -Fq 'RESTIC_PASSWORD_FILE: /run/secrets/restic_password' "$compose_file" || fail "recovery verifier must read Restic credentials from a mounted secret file."
+if grep -Eq '^[[:space:]]*RESTIC_PASSWORD:' "$compose_file"; then
+    fail "recovery verifier must not receive the Restic password through its environment."
+fi
+grep -Fq 'file: ${BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE:?Set BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE}' "$compose_file" || fail "recovery Restic secret must be mounted from the protected temporary file."
 grep -Fq 'run --rm --no-deps verifier verify' "$runner" || fail "runner must invoke the existing cryptographic/database/file verifier."
 grep -Fq 'down --volumes --remove-orphans' "$runner" || fail "runner must tear down isolated recovery state."
 
 fake_bin="$temp_dir/bin"
 mkdir -p "$fake_bin"
 docker_log="$temp_dir/docker.log"
+secret_file_log="$temp_dir/secret-files.log"
 cat > "$fake_bin/docker" <<'EOF'
 #!/bin/sh
-printf '%s\n' "$*" >> "${BILLWATCH_TEST_DOCKER_LOG:?}"
-exit 0
+set -eu
+
+: "${BILLWATCH_TEST_DOCKER_LOG:?}"
+: "${BILLWATCH_TEST_SECRET_FILE_LOG:?}"
+: "${BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD:?}"
+original_args=$*
+if [ "$original_args" = "compose version" ]; then
+    printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
+    exit 0
+fi
+env_file_count=0
+supplemental_env_file=
+
+while [ "$#" -gt 0 ]
+do
+    if [ "$1" = --env-file ]; then
+        shift
+        env_file_count=$((env_file_count + 1))
+        supplemental_env_file=$1
+    fi
+    shift
+done
+
+[ "$env_file_count" -eq 2 ] || {
+    echo "recovery Compose did not receive exactly one protected supplemental env file." >&2
+    exit 1
+}
+
+secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=//p' "$supplemental_env_file")"
+[ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ]
+[ "$(stat -c '%a' "$secret_file")" = 600 ]
+[ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ]
+
+printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
+printf '%s\n' "$secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
 EOF
 chmod 755 "$fake_bin/docker"
 
@@ -76,7 +115,7 @@ EOF
 
 run_runner()
 {
-    PATH="$fake_bin:$PATH" BILLWATCH_TEST_DOCKER_LOG="$docker_log" sh "$runner" "$env_file"
+    PATH="$fake_bin:$PATH" BILLWATCH_TEST_DOCKER_LOG="$docker_log" BILLWATCH_TEST_SECRET_FILE_LOG="$secret_file_log" BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD=ci-recovery-password-with-32-characters sh "$runner" "$env_file"
 }
 
 write_env false 's3:https://backup.example.invalid/billwatch' "$head_sha"
@@ -112,6 +151,9 @@ grep -Fq "$compose_file" "$docker_log" || fail "recovery drill did not use the i
 grep -Fq 'up --detach --wait restore-database' "$docker_log" || fail "recovery drill did not start the isolated PostgreSQL restore target."
 grep -Fq 'run --rm --no-deps verifier verify' "$docker_log" || fail "recovery drill did not run encrypted snapshot verification."
 grep -Fq 'down --volumes --remove-orphans' "$docker_log" || fail "recovery drill did not clean up isolated state."
+
+secret_file="$(tail -n 1 "$secret_file_log")"
+[ -z "$secret_file" ] || [ ! -e "$secret_file" ] || fail "temporary Restic secret file was not removed after the drill."
 
 sh "$root_dir/deploy/tests/private-beta-technical-evidence-tests.sh" || fail "private-beta technical evidence regression suite failed."
 
