@@ -1,47 +1,35 @@
 ## Current release state
 
-**Status:** Guarded deployment is blocked by a failed host preflight. The candidate has not been deployed.
+**Status:** Deployment and recovery are blocked. Do not start public services or deploy the candidate.
 
-Current release candidate on `master`:
+Current `master` release candidate:
 
 `f401a591a8abdade557827c09412dc3166fb9de2`
 
-- [x] PR #704 promoted development to master.
-- [x] Exact-head PR FullWorth CI #1679 and Dependency Security #771 passed.
-- [x] Master-push FullWorth CI #1680, Repository Governance #18, and CodeQL #58 passed.
-- [x] Exact production artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
-- [x] Cloudflare DNS points apex, `api`, and `www` to OVH `40.160.137.55` (DNS-only).
-- [x] Run #15 was manually dispatched for this exact SHA with explicit confirmation.
-- [ ] Run #15 failed closed before candidate startup because the host's public API/Web/edge set is only partially running. The failed run did not report which service(s) are running.
-- [ ] Public API readiness currently refuses connections; production auth smoke #7 was skipped.
-- [ ] Inspect the live Compose state read-only before any service repair or retry.
-- [ ] Reconcile the runtime safely, then re-run guarded deployment only after all host preflights pass.
+- [x] PR #704 promoted the candidate to `master`.
+- [x] Exact PR FullWorth CI #1679 and Dependency Security #771 passed; master-push CI #1680, Repository Governance #18, and CodeQL #58 passed.
+- [x] Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
+- [x] PR #708 merged the recovery-verifier passfile wiring into `development` at `762ff73456a88cf39c37b6fedbdd2c59402e5833`; exact-head FullWorth CI #1694 and Dependency Security #785 passed.
+- [ ] Run #15 failed closed before candidate startup. Its partial API/Web/edge report conflicts with subsequent host inspection: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
+- [ ] Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The development fix does not supply this credential; do not broaden the production backup key.
+- [ ] The copied object tree on the VPS has not passed encrypted Restic integrity or clean-host restore verification.
+- [ ] Reconcile the guarded workflow SSH destination with the inspected OVH host and verify the actual host/project read-only before any service repair.
+- [ ] Restore and verify the encrypted backup in isolation before any data-bearing production startup. The inspected OVH host has no Docker volumes; a normal first startup would be empty.
+- [ ] Only after all recovery and target-identity gates pass, run the guarded workflow for the current exact master SHA and verify auth smoke, public readiness, and the release marker all identify that SHA.
 
-The host checkout and configured `BILLWATCH_RELEASE_ID` advanced to the candidate, but existing containers were not changed and the verified release marker did not advance. Current verified live production release marker remains:
-
-`7e8571a26447538db249c862ad009487cce119bc`
-
-The explicit release approval was used for run #15. The current blocker is the partial-runtime preflight, not missing approval. Do not treat the source checkout, CI, or artifact as proof that the new release is live.
+The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. No release marker or successful deployment of the candidate has been observed. Keep credentials out of chat, source control, command history, and logs.
 
 ## Guarded production deployment and same-release acceptance — issue #669
 
-**Status:** Blocked until the production host's actual service state is inspected and safely reconciled.
+**Next concrete sequence:**
 
-**Action:**
+1. Use the approved secret-handling path to install the separate least-privilege R2 Object Read credential on the verified recovery host. Do not paste its value into chat or write it into source control or shell history.
+2. Re-run the isolated recovery drill against the remote repository and require encrypted-repository integrity plus successful database, statement, and Data Protection key restoration.
+3. Reconcile the production workflow's SSH destination with the host inspected at `40.160.137.55`; preserve the current live release and do not guess at service restarts.
+4. Only after recovery and target identity are verified, check the exact master artifact and all guarded deployment preflights, then dispatch the guarded workflow for that exact SHA.
+5. Confirm automatic auth smoke, public API/Web readiness, running release, and verified marker all agree on the deployed SHA.
 
-1. Use the production host's read-only Docker Compose status command to record whether API, Web, and edge are running and healthy. Do not restart or stop anything yet.
-2. Identify the exact partial state and investigate why public API readiness refuses connections. Keep credentials, environment values, and service logs out of chat.
-3. Restore a consistent healthy API/Web/edge runtime using the documented recovery procedure; do not guess which service to restart.
-4. Confirm the current master still equals `f401a591a8abdade557827c09412dc3166fb9de2` and that the exact attested artifact is still available.
-5. Only after the service state and workflow preflights are healthy, dispatch **Actions → FullWorth Production Deploy** from `master` with:
-   - `release_sha=f401a591a8abdade557827c09412dc3166fb9de2`
-   - `confirm_guarded_deploy=true`
-6. If deployment fails, stop same-release acceptance and resolve the exact new failure before retrying.
-7. If it succeeds, confirm the automatic production auth smoke, public API/Web readiness, exact release marker, and running release all identify the same SHA.
-
-PR #705 improves future diagnostics by reporting only fixed `api/web/edge=running|stopped` labels when the partial-runtime guard refuses deployment. It does not fix or inspect the current production host.
-
-A successful merge, CI run, or updated host checkout alone is not production acceptance.
+A workflow checkout, CI result, artifact, or copied object tree is not proof of production deployment or a successful restore.
 
 ## Deployed-host security and ownership proof — issue #669 / #291
 
