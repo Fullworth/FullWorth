@@ -109,10 +109,10 @@ database_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=//p' 
 [ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\\path\:isolated-restore-password' ]
 
 aws_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=//p' "$supplemental_env_file")"
-[ -n "$aws_secret_file" ] && [ -f "$aws_secret_file" ] && [ ! -L "$aws_secret_file" ]
-[ "$(stat -c '%a' "$aws_secret_file")" = 644 ]
-[ "$(stat -c '%a' "${aws_secret_file%/*}")" = 700 ]
-[ "$(cat "$aws_secret_file")" = "$BILLWATCH_TEST_EXPECTED_AWS_CREDENTIALS" ]
+[ -n "$aws_secret_file" ] && [ -f "$aws_secret_file" ] && [ ! -L "$aws_secret_file" ] || { echo "temporary AWS credentials file is missing or unsafe." >&2; exit 1; }
+[ "$(stat -c '%a' "$aws_secret_file")" = 644 ] || { echo "temporary AWS credentials file mode is not 644." >&2; exit 1; }
+[ "$(stat -c '%a' "${aws_secret_file%/*}")" = 700 ] || { echo "temporary AWS credentials directory mode is not 700." >&2; exit 1; }
+[ "$(cat "$aws_secret_file")" = "$BILLWATCH_TEST_EXPECTED_AWS_CREDENTIALS" ] || { echo "temporary AWS credentials content mismatch." >&2; exit 1; }
 printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
 printf '%s\n' "$secret_file" "$database_secret_file" "$aws_secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
 EOF
