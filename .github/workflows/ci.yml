@@ -138,9 +138,6 @@ jobs:
       - name: Verify transaction stream regression
         if: steps.backend_changes.outputs.required == 'true'
         run: node --test FullWorth.Tests/transaction-stream.test.mjs
-      - name: Validate clean-host recovery drill
-        if: steps.backend_changes.outputs.required == 'true'
-        run: sh deploy/tests/clean-host-recovery-drill-tests.sh
 
   maui:
     name: MAUI Android build
@@ -400,6 +397,10 @@ jobs:
           sh deploy/tests/legacy-brand-compatibility-tests.sh
           sh deploy/tests/android-internal-apk-workflow-tests.sh
           sh deploy/tests/branch-cleanup-workflow-tests.sh
+
+      - name: Validate clean-host recovery drill
+        if: steps.container_changes.outputs.required == 'true'
+        run: sh deploy/tests/clean-host-recovery-drill-tests.sh
           sh deploy/tests/ci-maui-change-detection-tests.sh
           sh deploy/tests/ci-production-container-change-detection-tests.sh
           sh deploy/tests/repository-governance-workflow-tests.sh
