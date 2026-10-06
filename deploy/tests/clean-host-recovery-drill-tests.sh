@@ -97,16 +97,16 @@ done
 }
 
 secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=//p' "$supplemental_env_file")"
-[ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ]
-[ "$(stat -c '%a' "$secret_file")" = 644 ]
-[ "$(stat -c '%a' "${secret_file%/*}")" = 700 ]
-[ "$(stat -c '%a' "$supplemental_env_file")" = 600 ]
-[ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ]
+[ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ] || { echo "temporary Restic secret file is missing or unsafe." >&2; exit 1; }
+[ "$(stat -c '%a' "$secret_file")" = 644 ] || { echo "temporary Restic secret mode mismatch." >&2; exit 1; }
+[ "$(stat -c '%a' "${secret_file%/*}")" = 700 ] || { echo "temporary Restic secret directory mode mismatch." >&2; exit 1; }
+[ "$(stat -c '%a' "$supplemental_env_file")" = 600 ] || { echo "supplemental Compose environment mode mismatch." >&2; exit 1; }
+[ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ] || { echo "temporary Restic secret content mismatch." >&2; exit 1; }
 database_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=//p' "$supplemental_env_file")"
-[ -n "$database_secret_file" ] && [ -f "$database_secret_file" ] && [ ! -L "$database_secret_file" ]
-[ "$(stat -c '%a' "$database_secret_file")" = 644 ]
-[ "$(stat -c '%a' "${database_secret_file%/*}")" = 700 ]
-[ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\\path\:isolated-restore-password' ]
+[ -n "$database_secret_file" ] && [ -f "$database_secret_file" ] && [ ! -L "$database_secret_file" ] || { echo "temporary database passfile is missing or unsafe." >&2; exit 1; }
+[ "$(stat -c '%a' "$database_secret_file")" = 644 ] || { echo "temporary database passfile mode mismatch." >&2; exit 1; }
+[ "$(stat -c '%a' "${database_secret_file%/*}")" = 700 ] || { echo "temporary database passfile directory mode mismatch." >&2; exit 1; }
+[ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\\path\:isolated-restore-password' ] || { echo "temporary database passfile content mismatch." >&2; exit 1; }
 
 aws_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=//p' "$supplemental_env_file")"
 [ -n "$aws_secret_file" ] && [ -f "$aws_secret_file" ] && [ ! -L "$aws_secret_file" ] || { echo "temporary AWS credentials file is missing or unsafe." >&2; exit 1; }
