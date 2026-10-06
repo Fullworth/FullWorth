@@ -113,7 +113,7 @@ restic_password_file="$secret_dir/restic_password"
 database_pgpass_file="$secret_dir/database_pgpass"
 compose_env_file="$secret_dir/compose.env"
 printf '%s' "$restic_password" > "$restic_password_file"
-pgpass_password=$(printf '%s' "$database_password" | sed 's/:/\\:/g')
+pgpass_password=$(printf '%s' "$database_password" | sed 's/\\/\\\\/g; s/:/\\:/g')
 printf 'restore-database:5432:*:billwatch:%s\n' "$pgpass_password" > "$database_pgpass_file"
 unset restic_password database_password pgpass_password
 printf 'BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=%s\nBILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=%s\n' "$restic_password_file" "$database_pgpass_file" > "$compose_env_file"
