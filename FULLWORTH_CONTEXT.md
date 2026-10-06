@@ -23,11 +23,11 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- Current `master` release candidate: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
+- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
 - Current `development` head: `762ff73456a88cf39c37b6fedbdd2c59402e5833`. PR #708 merged the verifier passfile wiring; exact-head CI #1694 and Dependency Security #785 passed. PR #707 remains open with the earlier recovery-verifier change.
 - Guarded deploy run #15 reported partial API/Web/edge services and failed before candidate startup. Follow-up read-only inventory found: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The recovery-wiring change does not grant provider access. The same-host object copy has not passed encrypted Restic integrity or clean-host restore verification.
-- The verified live production marker remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance it. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance the marker. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
 - Reconcile the guarded workflow's SSH target with the inspected OVH host, install the separate least-privilege recovery credential through the approved secret-handling path, and complete isolated restore verification before deployment. Do not change services or broaden backup credentials to bypass these blockers.
 - Issue #291 remains 61/65: provider-enforced immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence are still open.
 - Do not infer production security from CI, combine evidence across releases, or deploy until the target mismatch and recovery gates are resolved.
