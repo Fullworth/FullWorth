@@ -252,18 +252,17 @@ This section is the current release-readiness snapshot. It must be refreshed whe
 
 ## 4.1 Branch and release position
 
-As of 2026-10-05:
+As of 2026-10-06:
 
-- The `master` release branch at candidate `f401a591a8abdade557827c09412dc3166fb9de2` was promoted from development by PR #704.
-- Exact release checks passed: PR FullWorth CI #1679, Dependency Security #771, master FullWorth CI #1680, Repository Governance #18, and CodeQL #58.
-- Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
-- PR #704 merged the release into master. The current development base is `ed48c32c7d078e94084af2c60bf214e4a3bb165c`; PR #705 is open to improve the guarded deploy's sanitized partial-runtime diagnostic.
-- Guarded deployment run #15 failed closed before candidate containers started because API, Web, and edge were only partially running. The run advanced the production checkout and configured release ID to the candidate, but did not change running containers or advance the verified-live marker. Auth smoke #7 was skipped; public API readiness refuses connections.
-- The run did not record the per-service state. Inspect the host read-only before service repair or any deployment retry; no service restart is implied.
-- The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. Candidate `f401a591a8abdade557827c09412dc3166fb9de2` is not deployed or production-accepted.
-- Issue #669 tracks same-release acceptance. The explicit approval was used for run #15; the current blocker is safe reconciliation of the partial runtime.
-- Issue #291 remains 61/65, with four real-evidence/governance gates: immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence.
-
+- The `master` release branch at candidate `f401a591a8abdade557827c09412dc3166fb9de2` was promoted by PR #704; it is not a deployed release.
+- The candidate's exact PR FullWorth CI #1679, Dependency Security #771, master FullWorth CI #1680, Repository Governance #18, CodeQL #58, and attested artifact checks passed. Artifact `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`) expires 2026-10-12.
+- Current `development` is `762ff73456a88cf39c37b6fedbdd2c59402e5833`. PR #708 merged the recovery-verifier database passfile wiring at this head; exact-head FullWorth CI #1694 and Dependency Security #785 passed. PR #707 remains open with the earlier recovery-verifier change; it is not additional release evidence.
+- Guarded production deploy run #15 for the candidate failed closed before candidate startup. Its partial API/Web/edge report conflicts with follow-up read-only inventory of the OVH target: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
+- Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. PR #708 fixes the verifier secret wiring but does not grant R2 access. Do not broaden the production backup credential or put secret values in chat, source control, command history, or logs.
+- The copied backup tree on the OVH host has object-level parity only. It is not an off-host copy, verified encrypted Restic repository, or successful clean-host recovery.
+- The candidate is not deployed. The currently verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. Do not start the public stack against an empty database: the OVH inspection found no Docker volumes and no release marker.
+- Before deployment, reconcile which SSH target the guarded workflow addresses, install the separate read-only recovery credential through the approved secret-handling path, and complete isolated encrypted-repository integrity and restore checks. Keep the conflicting host observations unresolved until verified against the actual workflow target.
+- Issue #291 remains 61/65, with four real-evidence/governance gates: provider-enforced immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence.
 ### Release-readiness estimate
 
 The candidate has repository/CI release evidence and an attested artifact, but guarded deployment failed before candidate startup. Production deployment and same-release acceptance are incomplete. Public-release readiness remains blocked by the live host state and the remaining provider, recovery, device, legal, and governance evidence—not by the candidate's CI status.
@@ -2329,14 +2328,23 @@ Do not manufacture CI substitutes for provider-enforced immutability, clean-host
 
 ## Step 6 — Guarded-deploy the exact `master` release
 
-**Current state:** master candidate `f401a591a8abdade557827c09412dc3166fb9de2` passed its exact PR/master CI, dependency, governance, CodeQL, and artifact checks. The separately approved guarded deployment was dispatched as run #15.
+**Current state:** Candidate `f401a591a8abdade557827c09412dc3166fb9de2` is not deployed. Run #15 failed closed before candidate startup. Its report of a partially running public runtime conflicts with a later read-only inventory of the OVH host:
 
-Run #15 failed closed before candidate startup because the production host's public API/Web/edge set was only partially running. It advanced the checkout and configured release ID to the candidate, but left running containers untouched and did not advance the verified release marker. The automatic auth smoke was skipped, and public API readiness currently refuses connections. The workflow did not report the per-service running state.
+OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 
-**Next action:** inspect the host's service state read-only, determine why the public runtime is partial, and reconcile it safely before another deployment attempt. PR #705 adds a sanitized per-service state summary for future refusals but does not repair the current host.
+Do not assume the workflow and interactive SSH inspection reached the same machine or Compose project. Do not start the application against an empty database. The copied backup objects on this host have not passed encrypted Restic integrity or clean-host recovery verification.
 
-The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc` until a successful guarded deployment proves otherwise. Keep existing production configuration/secrets, database and statement state, Data Protection keys, backup/recovery capability, image provenance, and rollback paths intact. Same-release acceptance remains incomplete.
+**Recovery blocker:** Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. PR #708 merged the verifier's passfile/secret wiring into development and exact-head CI and dependency checks pass, but it does not supply this credential or complete the R2 restore. Never expose the credential or broaden the production backup key to work around access denial.
 
+**Next actions, in order:**
+
+1. Through the approved secret-handling path, install the dedicated least-privilege R2 Object Read credential on the verified recovery host. Keep values out of chat, source control, shell history, and logs.
+2. Re-run the isolated recovery drill against the remote encrypted repository. Require Restic integrity verification and restoration of the database, statements, and both Data Protection key rings; record sanitized evidence only.
+3. In GitHub Environment `production`, make `FULLWORTH_PRODUCTION_SSH_HOST` an inspectable non-secret variable set to `40.160.137.55` only after verifying the pinned host-key entry belongs to that OVH server. The workflow now requires typing the same target into `confirm_production_host` and refuses a mismatch before artifact download or SSH. Verify Compose project, containers, volumes, and release marker read-only; do not restart or stop services based on the conflicting run report.
+4. Preserve the existing live release and data. Do not deploy until the actual target is identified, recovery succeeds, the exact-master artifact remains valid, and every guarded preflight passes.
+5. Only then use the guarded production workflow for the current exact `master` SHA. Require its automatic auth smoke, public API/Web readiness, and release marker to confirm the same deployed SHA.
+
+The current verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. CI, an attested image, a source checkout, or the same-host object copy does not prove deployment or recovery.
 ## Step 7 — Build one same-release private-beta evidence bundle
 
 Against the exact deployed candidate, complete and correlate:

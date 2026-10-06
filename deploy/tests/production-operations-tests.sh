@@ -108,6 +108,12 @@ sh "$root_dir/deploy/tests/data-protection-key-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/backup-asset-permission-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/container-security-boundary-tests.sh" >/dev/null
 sh "$root_dir/deploy/tests/production-exposure-boundary-tests.sh" >/dev/null
+sh "$root_dir/deploy/tests/release-handoff-consistency-tests.sh" ||
+    fail "release handoff consistency regression suite failed."
+sh "$root_dir/deploy/tests/production-deploy-workflow-tests.sh" ||
+    fail "production deployment target-confirmation regression suite failed."
+sh "$root_dir/deploy/tests/production-deployment-target-tests.sh" ||
+    fail "production deployment target helper regression suite failed."
 
 grep -Fq 'fullworth-application-entrypoint' "$root_dir/Dockerfile" ||
     fail "API image does not apply the protected key-ring entrypoint."
