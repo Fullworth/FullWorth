@@ -2,7 +2,7 @@
 
 **Status:** Deployment and recovery are blocked. Do not start public services or deploy the candidate.
 
-Current `master` release candidate:
+Current release candidate on `master`:
 
 `f401a591a8abdade557827c09412dc3166fb9de2`
 
@@ -17,7 +17,9 @@ Current `master` release candidate:
 - [ ] Restore and verify the encrypted backup in isolation before any data-bearing production startup. The inspected OVH host has no Docker volumes; a normal first startup would be empty.
 - [ ] Only after all recovery and target-identity gates pass, run the guarded workflow for the current exact master SHA and verify auth smoke, public readiness, and the release marker all identify that SHA.
 
-The verified live production release remains `7e8571a26447538db249c862ad009487cce119bc`. No release marker or successful deployment of the candidate has been observed. Keep credentials out of chat, source control, command history, and logs.
+Current verified live production release marker remains:
+
+`7e8571a26447538db249c862ad009487cce119bc`. No release marker or successful deployment of the candidate has been observed. Keep credentials out of chat, source control, command history, and logs.
 
 ## Guarded production deployment and same-release acceptance — issue #669
 
