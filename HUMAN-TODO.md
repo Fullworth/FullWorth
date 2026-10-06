@@ -9,7 +9,7 @@ Current release candidate on `master`:
 - [x] PR #704 promoted the candidate to `master`.
 - [x] Exact PR FullWorth CI #1679 and Dependency Security #771 passed; master-push CI #1680, Repository Governance #18, and CodeQL #58 passed.
 - [x] Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
-- [x] PR #708 merged the recovery-verifier passfile wiring; PR #709 merged as development head `94ed452e721a871645b0b1beca34403e6ec75e08` after exact-head FullWorth CI #1701 and Dependency Security #792 passed. PR #709 adds a host-confirmation gate, not a deployment or recovery credential.
+- [x] PR #708 merged the recovery-verifier passfile wiring; PR #709 added a host-confirmation gate; PR #707 fixed PostgreSQL passfile escaping and merged as development head `ae84e5f0b91fadfd8e0d41b3786c9af94c793fe1` after exact-head FullWorth CI #1703 and Dependency Security #794 passed. None supplies remote R2 read access or proves a recovery.
 - [ ] Run #15 failed closed before candidate startup. Its partial API/Web/edge report conflicts with subsequent host inspection: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - [ ] Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The development fix does not supply this credential; do not broaden the production backup key.
 - [ ] The copied object tree on the VPS has not passed encrypted Restic integrity or clean-host restore verification.
