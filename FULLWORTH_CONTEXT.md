@@ -23,17 +23,16 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`. PR #704 promoted development to master on 2026-10-05.
-- Exact release checks passed: PR #704 FullWorth CI #1679 and Dependency Security #771; master FullWorth CI #1680, Repository Governance #18, and CodeQL #58. Exact artifact `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` is artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b` (expires 2026-10-12).
-- PR #704 merged master to development; the current development base is `ed48c32c7d078e94084af2c60bf214e4a3bb165c`. PR #705 is open against development to add sanitized service-state diagnostics to the guarded deployment's partial-runtime refusal.
-- Guarded deployment run #15 for the exact master candidate failed closed before candidate containers started. The host checkout and configured release ID advanced to `f401a591a8abdade557827c09412dc3166fb9de2`; running containers were not changed, and the verified release marker did not advance. Production auth smoke #7 was skipped.
-- The failure indicates that the existing public API/Web/edge services are only partially running; the failed run did not provide the per-service state. The public API readiness endpoint refuses connections. Inspect the real host service state before any repair or retry; do not guess which service to restart.
-- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`. The current master candidate is not deployed or production-accepted.
-- Issue #669 tracks same-release acceptance for `f401a591a8abdade557827c09412dc3166fb9de2`. Its explicit deployment approval was used for run #15; the current blocker is the failed host preflight.
-- Repository-side issue #291 remains 61/65, with four real-evidence/governance gates: immutable/off-host storage, compromised-host clean restore, the independent-review policy decision, and direct exact-deployed-release evidence.
-- Do not infer production security from CI, combine evidence across releases, or retry deployment until the live host's partial-service state has been inspected and safely reconciled.
+- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
+- Current `development` head: `762ff73456a88cf39c37b6fedbdd2c59402e5833`. PR #708 merged the verifier passfile wiring; exact-head CI #1694 and Dependency Security #785 passed. PR #707 remains open with the earlier recovery-verifier change.
+- Guarded deploy run #15 reported partial API/Web/edge services and failed before candidate startup. Follow-up read-only inventory found: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
+- Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The recovery-wiring change does not grant provider access. The same-host object copy has not passed encrypted Restic integrity or clean-host restore verification.
+- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance the marker. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
+- Reconcile the guarded workflow's SSH target with the inspected OVH host, install the separate least-privilege recovery credential through the approved secret-handling path, and complete isolated restore verification before deployment. Do not change services or broaden backup credentials to bypass these blockers.
+- Issue #291 remains 61/65: provider-enforced immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence are still open.
+- Do not infer production security from CI, combine evidence across releases, or deploy until the target mismatch and recovery gates are resolved.
 
-The current candidate passed repository checks and has an attested artifact, but its guarded deployment failed before candidate startup; it is **not deployed or production-accepted**. Do not combine evidence from other releases or infer deployed security from CI.
+The candidate passed repository checks, but production acceptance and backup recovery remain incomplete.
 ## Secret non-disclosure release gate — 2026-10-03
 
 FullWorth now fails a release candidate when any configured protected value appears in public health, validation-error, not-found, or retained production service-log output. The verifier covers required database, parser, Web-session Redis, Plaid, and Restic credentials plus optional Stripe, Google, Apple, Resend, and AWS secrets when configured. It scans exact values and common percent/form/Base64 representations without printing the value; failures identify configuration names only.
