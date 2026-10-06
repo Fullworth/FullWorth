@@ -1,6 +1,6 @@
 # FullWorth Product & Engineering Roadmap
 
-Last updated: 2026-10-04
+Last updated: 2026-10-06
 
 Status: Active planning document
 
@@ -256,7 +256,7 @@ As of 2026-10-06:
 
 - The `master` release branch at candidate `f401a591a8abdade557827c09412dc3166fb9de2` was promoted by PR #704; it is not a deployed release.
 - The candidate's exact PR FullWorth CI #1679, Dependency Security #771, master FullWorth CI #1680, Repository Governance #18, CodeQL #58, and attested artifact checks passed. Artifact `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`) expires 2026-10-12.
-- Current `development` is `762ff73456a88cf39c37b6fedbdd2c59402e5833`. PR #708 merged the recovery-verifier database passfile wiring at this head; exact-head FullWorth CI #1694 and Dependency Security #785 passed. PR #707 remains open with the earlier recovery-verifier change; it is not additional release evidence.
+- Current `development` head is `ae84e5f0b91fadfd8e0d41b3786c9af94c793fe1`, the squash merge for PR #707. PR #707 corrected PostgreSQL passfile escaping for recovery; exact-head FullWorth CI #1703 and Dependency Security #794 passed before merge. PR #709's host-confirmation guard is also merged. These changes do not establish remote R2 access or production recovery. No deployment occurred.
 - Guarded production deploy run #15 for the candidate failed closed before candidate startup. Its partial API/Web/edge report conflicts with follow-up read-only inventory of the OVH target: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. PR #708 fixes the verifier secret wiring but does not grant R2 access. Do not broaden the production backup credential or put secret values in chat, source control, command history, or logs.
 - The copied backup tree on the OVH host has object-level parity only. It is not an off-host copy, verified encrypted Restic repository, or successful clean-host recovery.
@@ -2334,7 +2334,7 @@ OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker 
 
 Do not assume the workflow and interactive SSH inspection reached the same machine or Compose project. Do not start the application against an empty database. The copied backup objects on this host have not passed encrypted Restic integrity or clean-host recovery verification.
 
-**Recovery blocker:** Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. PR #708 merged the verifier's passfile/secret wiring into development and exact-head CI and dependency checks pass, but it does not supply this credential or complete the R2 restore. Never expose the credential or broaden the production backup key to work around access denial.
+**Recovery blocker:** Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. PR #708 merged the verifier's passfile/secret wiring, and PR #709 added a production-host confirmation gate; neither supplies the R2 read credential or completes the R2 restore. Never expose the credential or broaden the production backup key to work around access denial.
 
 **Next actions, in order:**
 
