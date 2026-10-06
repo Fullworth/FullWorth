@@ -98,7 +98,8 @@ done
 
 secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE=//p' "$supplemental_env_file")"
 [ -n "$secret_file" ] && [ -f "$secret_file" ] && [ ! -L "$secret_file" ] || { echo "temporary Restic secret file is missing or unsafe." >&2; exit 1; }
-[ "$(stat -c '%a' "$secret_file")" = 644 ] || { echo "temporary Restic secret mode mismatch." >&2; exit 1; }
+secret_file_mode=$(stat -c '%a' "$secret_file")
+[ "$secret_file_mode" = 644 ] || { echo "temporary Restic secret mode mismatch (observed $secret_file_mode)." >&2; exit 1; }
 [ "$(stat -c '%a' "${secret_file%/*}")" = 700 ] || { echo "temporary Restic secret directory mode mismatch." >&2; exit 1; }
 [ "$(stat -c '%a' "$supplemental_env_file")" = 600 ] || { echo "supplemental Compose environment mode mismatch." >&2; exit 1; }
 [ "$(cat "$secret_file")" = "$BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD" ] || { echo "temporary Restic secret content mismatch." >&2; exit 1; }
