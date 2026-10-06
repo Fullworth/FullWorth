@@ -43,6 +43,11 @@ fi
 
 grep -Fq 'internal: true' "$compose_file" || fail "recovery drill network must remain isolated from external ingress."
 grep -Fq 'BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: "false"' "$compose_file" || fail "recovery verifier must force local repositories off."
+grep -Fq 'AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials' "$compose_file" || fail "recovery verifier must use a mounted AWS shared-credentials file."
+if grep -Eq '^[[:space:]]+AWS_(ACCESS_KEY_ID|SECRET_ACCESS_KEY):' "$compose_file"; then
+    fail "recovery AWS keys must not be passed to the verifier as environment variables."
+fi
+grep -Fq 'file: ${BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE:?Set BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE}' "$compose_file" || fail "recovery AWS credentials must be mounted from the protected temporary file."
 grep -Fq 'RESTIC_PASSWORD_FILE: /run/secrets/restic_password' "$compose_file" || fail "recovery verifier must read Restic credentials from a mounted secret file."
 grep -Fq 'FULLWORTH_DATABASE_PGPASS_FILE: /run/secrets/database_pgpass' "$compose_file" || fail "recovery verifier must read database credentials from a mounted passfile secret."
 if grep -Eq '^[[:space:]]*PGPASSWORD:' "$compose_file"; then
@@ -67,6 +72,7 @@ set -eu
 : "${BILLWATCH_TEST_DOCKER_LOG:?}"
 : "${BILLWATCH_TEST_SECRET_FILE_LOG:?}"
 : "${BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD:?}"
+: "${BILLWATCH_TEST_EXPECTED_AWS_CREDENTIALS:?}"
 original_args=$*
 if [ "$original_args" = "compose version" ]; then
     printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
@@ -102,11 +108,22 @@ database_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE=//p' 
 [ "$(stat -c '%a' "${database_secret_file%/*}")" = 700 ]
 [ "$(cat "$database_secret_file")" = 'restore-database:5432:*:billwatch:ci\\path\:isolated-restore-password' ]
 
+aws_secret_file="$(sed -n 's/^BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=//p' "$supplemental_env_file")"
+[ -n "$aws_secret_file" ] && [ -f "$aws_secret_file" ] && [ ! -L "$aws_secret_file" ]
+[ "$(stat -c '%a' "$aws_secret_file")" = 644 ]
+[ "$(stat -c '%a' "${aws_secret_file%/*}")" = 700 ]
+[ "$(cat "$aws_secret_file")" = "$BILLWATCH_TEST_EXPECTED_AWS_CREDENTIALS" ]
 printf '%s\n' "$original_args" >> "$BILLWATCH_TEST_DOCKER_LOG"
-printf '%s\n' "$secret_file" "$database_secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
+printf '%s\n' "$secret_file" "$database_secret_file" "$aws_secret_file" >> "$BILLWATCH_TEST_SECRET_FILE_LOG"
 EOF
 chmod 755 "$fake_bin/docker"
 
+aws_credentials_file="$temp_dir/recovery-aws-credentials"
+aws_credentials_expected='[default]
+aws_access_key_id=ci-read-only-access-key
+aws_secret_access_key=ci-read-only-secret-key'
+printf '%s' "$aws_credentials_expected" > "$aws_credentials_file"
+chmod 600 "$aws_credentials_file"
 head_sha=$(git -C "$root_dir" rev-parse HEAD)
 
 write_env()
@@ -114,11 +131,13 @@ write_env()
     allow_value=$1
     repository_value=$2
     release_value=$3
+    credentials_value=${4:-$aws_credentials_file}
 
     cat > "$env_file" <<EOF
 BILLWATCH_RECOVERY_DRILL_ALLOW=$allow_value
 BILLWATCH_RELEASE_ID=$release_value
 RESTIC_REPOSITORY=$repository_value
+BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=$credentials_value
 RESTIC_PASSWORD=ci-recovery-password-with-32-characters
 BILLWATCH_DATABASE_PASSWORD=ci\path:isolated-restore-password
 EOF
@@ -127,7 +146,7 @@ EOF
 
 run_runner()
 {
-    PATH="$fake_bin:$PATH" BILLWATCH_TEST_DOCKER_LOG="$docker_log" BILLWATCH_TEST_SECRET_FILE_LOG="$secret_file_log" BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD=ci-recovery-password-with-32-characters sh "$runner" "$env_file"
+    PATH="$fake_bin:$PATH" BILLWATCH_TEST_DOCKER_LOG="$docker_log" BILLWATCH_TEST_SECRET_FILE_LOG="$secret_file_log" BILLWATCH_TEST_EXPECTED_RESTIC_PASSWORD=ci-recovery-password-with-32-characters BILLWATCH_TEST_EXPECTED_AWS_CREDENTIALS="$aws_credentials_expected" sh "$runner" "$env_file"
 }
 
 write_env false 's3:https://backup.example.invalid/billwatch' "$head_sha"
@@ -146,6 +165,17 @@ if run_runner >/dev/null 2>&1; then
 fi
 
 write_env true 's3:https://backup.example.invalid/billwatch' "$head_sha"
+chmod 644 "$aws_credentials_file"
+if run_runner >/dev/null 2>&1; then
+    fail "recovery drill accepted a world-readable AWS credential file."
+fi
+chmod 600 "$aws_credentials_file"
+
+write_env true 's3:https://backup.example.invalid/billwatch' "$head_sha" "$temp_dir/missing-credentials"
+if run_runner >/dev/null 2>&1; then
+    fail "recovery drill accepted a missing AWS credential file."
+fi
+
 chmod 644 "$env_file"
 if run_runner >/dev/null 2>&1; then
     fail "recovery drill accepted a world-readable recovery environment file."
