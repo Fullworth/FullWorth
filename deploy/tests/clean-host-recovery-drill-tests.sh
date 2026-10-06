@@ -184,7 +184,11 @@ fi
 write_env true 's3:https://backup.example.invalid/billwatch' "$head_sha"
 : > "$docker_log"
 : > "$secret_file_log"
-run_runner >/dev/null || fail "valid isolated recovery drill configuration was rejected."
+runner_output_file="$temp_dir/valid-runner-output.log"
+if ! run_runner >"$runner_output_file" 2>&1; then
+    cat "$runner_output_file" >&2
+    fail "valid isolated recovery drill configuration was rejected."
+fi
 
 if grep -Fq 'compose.production.yml' "$docker_log"; then
     fail "recovery drill invoked the production compose topology."
