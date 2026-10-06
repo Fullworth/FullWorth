@@ -409,14 +409,14 @@ jobs:
           sh deploy/tests/release-integrity-tests.sh
           sh deploy/tests/runtime-release-tests.sh
           sh deploy/tests/http-security-boundary-tests.sh
-
-      - name: Validate clean-host recovery drill
-        if: steps.container_changes.outputs.required == 'true'
-        run: sh deploy/tests/clean-host-recovery-drill-tests.sh
           sh deploy/tests/secret-non-disclosure-tests.sh
           sh deploy/tests/file-backed-secret-tests.sh
           sh deploy/tests/runtime-watchdog-tests.sh
           sh deploy/tests/production-auth-smoke-workflow-tests.sh
+
+      - name: Validate clean-host recovery drill
+        if: steps.container_changes.outputs.required == 'true'
+        run: sh deploy/tests/clean-host-recovery-drill-tests.sh
 
       - name: Validate beta readiness scripts
         if: steps.container_changes.outputs.required == 'true'
