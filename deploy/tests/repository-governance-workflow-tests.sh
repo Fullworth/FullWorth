@@ -23,10 +23,11 @@ grep -Fq 'schedule:' "$workflow" ||
     fail "workflow has no recurring governance check."
 grep -Fq 'workflow_dispatch:' "$workflow" ||
     fail "workflow cannot be run manually."
-grep -Fq 'administration: read' "$workflow" ||
-    fail "workflow cannot read the repository ruleset."
 grep -Fq 'contents: read' "$workflow" ||
-    fail "workflow must retain only the contents read permission besides ruleset inspection."
+    fail "workflow must retain read-only repository contents permission."
+if grep -Fq 'administration:' "$workflow"; then
+    fail "ruleset inspection must not broaden the workflow token permissions."
+fi
 grep -Fq 'bash deploy/verify-github-branch-governance.sh' "$workflow" ||
     fail "workflow does not execute the guarded verifier."
 
@@ -36,6 +37,8 @@ grep -Fq '/branches/${branch}' "$verifier" ||
     fail "verifier does not read the GitHub branch resource."
 grep -Fq '/rulesets?includes_parents=true' "$verifier" ||
     fail "verifier does not inspect applicable repository rulesets."
+grep -Fq 'request_public_json' "$verifier" ||
+    fail "ruleset inspection must use the public read-only API."
 grep -Fq 'FullWorth protected branches' "$verifier" ||
     fail "verifier does not require the named active ruleset."
 grep -Fq 'required_approving_review_count' "$verifier" ||
