@@ -27,14 +27,14 @@ assert_sha_pinned_action_references()
   )
 
   if [ "${#references[@]}" -ne "$expected_count" ]; then
-    printf 'Expected %s SHA-pinned uses of %s, found %s.\\n' \
+    printf 'Expected %s SHA-pinned uses of %s, found %s.\n' \
       "$expected_count" "$action" "${#references[@]}" >&2
     return 1
   fi
 
   for reference in "${references[@]}"; do
     if ! is_sha_pinned_action_reference "$action" "$reference"; then
-      printf 'Action reference for %s must use a 40-character immutable commit SHA.\\n' \
+      printf 'Action reference for %s must use a 40-character immutable commit SHA.\n' \
         "$action" >&2
       return 1
     fi
