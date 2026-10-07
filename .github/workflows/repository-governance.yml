@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  administration: read
   contents: read
 
 jobs:
