@@ -4,12 +4,12 @@
 
 Current release candidate on `master`:
 
-`f401a591a8abdade557827c09412dc3166fb9de2`
+`c8858a38b38d7eb0888d273b9a1a409308e565b4`
 
-- [x] PR #704 promoted the candidate to `master`.
-- [x] Exact PR FullWorth CI #1679 and Dependency Security #771 passed; master-push CI #1680, Repository Governance #18, and CodeQL #58 passed.
-- [x] Exact attested artifact: `fullworth-production-image-artifacts-f401a591a8abdade557827c09412dc3166fb9de2` (artifact ID `11374998766`, digest `sha256:0f24594dc289350487574f757956c7cd325c68b3a07e2d58bd4ce5f411a7052b`; expires 2026-10-12).
-- [x] PR #708 merged the recovery-verifier passfile wiring; PR #709 added a host-confirmation gate; PR #707 fixed PostgreSQL passfile escaping and merged as development head `ae84e5f0b91fadfd8e0d41b3786c9af94c793fe1` after exact-head FullWorth CI #1703 and Dependency Security #794 passed. None supplies remote R2 read access or proves a recovery.
+- [x] PR #711 promoted the candidate to `master`.
+- [x] Exact PR checks passed on development head `0168093384961e4d2e9838c495fbaf5bfb2c279a`: FullWorth CI #1707, Dependency Security #798, and PR workflow #59. After promotion, master FullWorth CI #1708, Repository Governance #20, and CodeQL via Push on master #60 passed.
+- [x] Exact attested artifact: `fullworth-production-image-artifacts-c8858a38b38d7eb0888d273b9a1a409308e565b4` (artifact ID `11435103773`, digest `sha256:39d566b68cdbef5dfd52ef616ce23642b8aa33e77fe26026f4f1c2ea135db823`; expires 2026-10-13).
+- [x] Current development head `0168093384961e4d2e9838c495fbaf5bfb2c279a` includes PR #710's release-handoff refresh, PR #707's recovery passfile fix, and PR #709's host-confirmation gate. Exact current-head FullWorth CI #1707 and Dependency Security #798 passed. These changes do not grant remote R2 access or prove recovery.
 - [ ] Run #15 failed closed before candidate startup. Its partial API/Web/edge report conflicts with subsequent host inspection: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - [ ] Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The development fix does not supply this credential; do not broaden the production backup key.
 - [ ] The copied object tree on the VPS has not passed encrypted Restic integrity or clean-host restore verification.
