@@ -20,6 +20,19 @@ request_json() {
         "$url"
 }
 
+request_public_json() {
+    local url="$1"
+
+    curl \
+        --fail-with-body \
+        --silent \
+        --show-error \
+        --location \
+        --header "Accept: application/vnd.github+json" \
+        --header "X-GitHub-Api-Version: 2022-11-28" \
+        "$url"
+}
+
 verify_branch() {
     local branch="$1"
     local response
@@ -46,8 +59,8 @@ verify_branch() {
         return 1
     fi
 
-    if ! rulesets_response="$(request_json "${api_url}/repos/${repository}/rulesets?includes_parents=true")"; then
-        echo "::error title=Branch governance unavailable::Could not read applicable GitHub rulesets for ${branch}."
+    if ! rulesets_response="$(request_public_json "${api_url}/repos/${repository}/rulesets?includes_parents=true")"; then
+        echo "::error title=Branch governance unavailable::Could not read applicable public GitHub rulesets for ${branch}."
         return 1
     fi
 
@@ -70,8 +83,8 @@ verify_branch() {
         return 1
     fi
 
-    if ! ruleset_response="$(request_json "${api_url}/repos/${repository}/rulesets/${ruleset_id}")"; then
-        echo "::error title=Branch governance unavailable::Could not read the active ruleset for ${branch}."
+    if ! ruleset_response="$(request_public_json "${api_url}/repos/${repository}/rulesets/${ruleset_id}")"; then
+        echo "::error title=Branch governance unavailable::Could not read the active public ruleset for ${branch}."
         return 1
     fi
 
