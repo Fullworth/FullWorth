@@ -414,6 +414,10 @@ jobs:
           sh deploy/tests/runtime-watchdog-tests.sh
           sh deploy/tests/production-auth-smoke-workflow-tests.sh
 
+      - name: Validate clean-host recovery drill
+        if: steps.container_changes.outputs.required == 'true'
+        run: sh deploy/tests/clean-host-recovery-drill-tests.sh
+
       - name: Validate beta readiness scripts
         if: steps.container_changes.outputs.required == 'true'
         run: |
