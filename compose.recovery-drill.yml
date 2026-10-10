@@ -44,8 +44,7 @@ services:
       FULLWORTH_DATABASE_PGPASS_FILE: /run/secrets/database_pgpass
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?Set RESTIC_REPOSITORY}
       RESTIC_PASSWORD_FILE: /run/secrets/restic_password
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
       BILLWATCH_ALLOW_LOCAL_BACKUP_REPOSITORY: "false"
       BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
@@ -56,6 +55,7 @@ services:
     secrets:
       - restic_password
       - database_pgpass
+      - aws_credentials
     networks:
       - recovery_data
       - recovery_egress
@@ -66,6 +66,8 @@ secrets:
     file: ${BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE:?Set BILLWATCH_RECOVERY_RESTIC_PASSWORD_FILE}
   database_pgpass:
     file: ${BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE:?Set BILLWATCH_RECOVERY_DATABASE_PGPASS_FILE}
+  aws_credentials:
+    file: ${BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE:?Set BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE}
 
 networks:
   recovery_data:

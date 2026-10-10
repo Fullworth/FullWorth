@@ -39,6 +39,18 @@ The runner refuses a symlink, anything other than mode 600/current-user ownershi
 
 Never place the delete-capable maintenance environment or credentials on the production VPS. Normal production backup/recovery credentials and maintenance credentials should be different provider principals when the backend supports separate permissions.
 
+## Clean-host recovery credentials
+
+The protected recovery environment file must point to a separate provider-issued read-only credential file:
+
+```text
+BILLWATCH_RECOVERY_AWS_CREDENTIALS_FILE=/secure/path/r2-recovery-readonly-credentials
+```
+
+Use the AWS shared-credentials file format with a `[default]` profile, mode `600`, and ownership by the recovery operator. Do not put access-key values in the environment file. The recovery runner validates and copies this file into a private temporary directory, mounts it into the isolated verifier at `/run/secrets/aws_credentials`, and removes only its temporary copy at teardown. Keep this credential separate from production backup and maintenance roles, and scope it to the required backup objects.
+
+The file-based mount keeps credentials out of the verifier process environment; it does not grant provider access, prove the provider enforced read-only permissions, or establish backup immutability. A successful clean-host recovery still requires provider policy and encrypted-repository/restore evidence.
+
 ## Provider immutability
 
 This trust split fixes FullWorth's own unsafe coupling between routine backup capture and delete-capable retention. It does **not** by itself close the provider-immutability launch gate.
