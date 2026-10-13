@@ -23,11 +23,11 @@ Branch-governance evidence currently shows active repository ruleset `FullWorth 
 
 Current branch/release position:
 
-- current release candidate on `master`: `f401a591a8abdade557827c09412dc3166fb9de2`; it is not deployed. Candidate checks remain those listed in the release evidence below.
+- current release candidate on `master`: `c8858a38b38d7eb0888d273b9a1a409308e565b4`; it is not deployed. Its attested artifact is listed in the handoff snapshot.
 - Current `development` head: `ae84e5f0b91fadfd8e0d41b3786c9af94c793fe1`. PR #707 fixed PostgreSQL passfile escaping for recovery and merged with exact-head FullWorth CI #1703 and Dependency Security #794 passing. This does not establish remote R2 access or production recovery. PR #709's production-host confirmation gate is also merged; neither change deploys production.
 - Guarded deploy run #15 reported partial API/Web/edge services and failed before candidate startup. Follow-up read-only inventory found: OVH 40.160.137.55 read-only inventory found zero Docker containers, zero Docker volumes, and a missing release marker; this conflicts with run #15's partial-runtime report.
 - Remote R2 recovery returned AccessDenied with the host's configured backup credential; a separate read-only recovery credential is required. The recovery-wiring change does not grant provider access. The same-host object copy has not passed encrypted Restic integrity or clean-host restore verification.
-- Verified live production remains `7e8571a26447538db249c862ad009487cce119bc`; the candidate did not advance the marker. The inspected OVH host has no Docker volumes or release marker, so do not start the public stack against an empty database.
+- Verified live production release: `none`. The operator confirmed no production server is currently running; the inspected OVH host has no Docker volumes or release marker. Do not start the public stack against an empty database.
 - Reconcile the guarded workflow's SSH target with the inspected OVH host, install the separate least-privilege recovery credential through the approved secret-handling path, and complete isolated restore verification before deployment. Do not change services or broaden backup credentials to bypass these blockers.
 - Issue #291 remains 61/65: provider-enforced immutable/off-host storage, compromised-host clean restore, independent-review policy, and exact deployed-release evidence are still open.
 - Do not infer production security from CI, combine evidence across releases, or deploy until the target mismatch and recovery gates are resolved.
@@ -506,7 +506,7 @@ Next: on an authorized evaluation host, start the pinned local runtime and compl
 
 ## Guarded production deployment checkpoint — 2026-09-25
 
-GitHub Actions production deploy run #7 (`36221860082`) completed successfully for exact `master` release `7e8571a26447538db249c862ad009487cce119bc`. This is the current verified live production release.
+GitHub Actions production deploy run #7 (`36221860082`) completed successfully for exact `master` release `7e8571a26447538db249c862ad009487cce119bc`. This is historical deployment evidence; the operator has since confirmed no production server is currently running.
 
 The guarded workflow verified the requested SHA against current `master`, used pinned SSH host verification, passed production configuration preflight, built release-tagged API/Web/backup images, created a verified encrypted pre-replacement recovery snapshot beginning `15a529e1844b...`, and completed the guarded deployment without bypassing the repository deployment script.
 
@@ -897,7 +897,7 @@ In particular:
 
 Before trusted external beta invitations:
 
-1. Run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against deployed release `7e8571a26447538db249c862ad009487cce119bc`.
+1. After a production release is deployed and verified, run objective cross-user Web/BFF ownership proof with a second controlled identity and controlled foreign-owned resource/statement fixture against that exact release.
 2. Run disposable account-deletion proof and feed same-release evidence into Internal Beta 0.
 3. Exercise the controlled Plaid connect/update lifecycle with a suitable account and complete the Hosted Link human-interaction observation.
 4. With explicit approval, upload controlled representative PDF/scanned-PDF/JPG/PNG fixtures and review extraction/OCR fields plus bill-change explanations against operator-known facts.
@@ -913,9 +913,9 @@ Before trusted external beta invitations:
 ## Immediate resume point
 
 1. Read current GitHub branch heads, open PRs, issue #291, issue #669, this context, `HUMAN-TODO.md`, and the roadmap snapshot before changing release state.
-2. Current master candidate: `f401a591a8abdade557827c09412dc3166fb9de2`. Its exact PR/master CI, dependency, governance, CodeQL, and attested-artifact checks passed; see the current release section above.
+2. Current master candidate: `c8858a38b38d7eb0888d273b9a1a409308e565b4`; its attested artifact is recorded in the current release section above.
 3. Guarded production deploy run #15 failed closed before candidate containers started because API, Web, and edge were only partially running. The workflow did not record per-service state; public API readiness refuses connections.
-4. The host checkout and configured release ID advanced to the candidate, but running containers were unchanged and the verified live marker remains `7e8571a26447538db249c862ad009487cce119bc`. Auth smoke #7 was skipped.
+4. The host checkout and configured release ID advanced to the candidate, but the read-only inventory found no running containers or release marker. Auth smoke #7 was skipped.
 5. Next action: inspect the production host's read-only Compose service status and establish which public services are running/healthy. Do not restart services or retry deployment based on assumption.
 6. PR #705 adds a sanitized `api/web/edge` state summary to future partial-runtime refusals. It does not repair the current host; merge only after current-head CI and dependency checks pass.
 7. After the current host state is understood, safely restore a consistent healthy runtime or stop the public services according to the guarded runbook, then perform a fresh guarded deploy of the exact current master SHA only if all preflight gates pass.
