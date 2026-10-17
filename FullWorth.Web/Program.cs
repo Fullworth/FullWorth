@@ -350,6 +350,8 @@ builder.Services.AddHttpClient(
 builder.Services.AddScoped<
     WebAuthenticationService>();
 
+builder.Services.AddSingleton<PendingPasswordLoginCookie>();
+
 builder.Services.AddScoped<
     FullWorthBffProxyService>();
 

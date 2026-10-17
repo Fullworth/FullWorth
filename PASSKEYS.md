@@ -15,8 +15,12 @@ headers. Changing the origin/RP ID invalidates access to existing keys on the ol
 domain. No other hosts or embedded cross-origin frames are accepted.
 
 Settings → Passkeys & security keys enrolls/removes keys after current password
-and, when enabled, an authenticator code. Sign-in uses the platform WebAuthn picker,
-and preserves the existing authenticator MFA requirement. Password and recovery
+and, when enabled, an authenticator code. Standalone API passkey sign-in still preserves the existing authenticator MFA
+requirement. The website now verifies the password once, then offers authenticator,
+recovery code, or (only when enabled and already enrolled) a user-verified passkey
+for that same account. The passkey must match a fresh challenge bound to the
+single-use pending password proof. This does not disable the account's 2FA flag
+or weaken sensitive account-change reauthentication requirements. Password and recovery
 remain available. Removing a key prevents new assertions but does not revoke
 already issued sessions; use Revoke all sessions separately when needed.
 External-only accounts need a supported recent-authentication mechanism before
@@ -48,3 +52,18 @@ acceptance before production enablement. CI cannot establish those physical resu
 Sources:
 - https://learn.microsoft.com/aspnet/core/security/authentication/passkeys?view=aspnetcore-10.0
 - https://developer.apple.com/passkeys/
+
+## Password-first Web continuation
+
+The browser receives only a purpose-separated Data Protection encrypted HttpOnly,
+Secure, SameSite=Strict, host-only pending cookie. No password or session bearer/
+refresh token is retained in it. The API keeps password proof for at most three
+minutes, with three verification attempts, atomic per-attempt consumption and
+non-renewing expiry. Failed attempts rotate proof IDs; expired, replayed, locked,
+inactive, stamp-changed or MFA-changed accounts fail closed. No normal session is
+issued until verification succeeds and refresh-family enrollment completes.
+
+A passkey remains a device-/security-key-mediated proof; Face ID is not collected
+by FullWorth and does not replace WebAuthn signature/origin/user-verification checks.
+Production feature enablement and actual iPhone/security-key acceptance remain
+separate gates. Existing production settings are not changed by this implementation.

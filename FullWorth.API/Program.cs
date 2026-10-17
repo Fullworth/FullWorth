@@ -246,6 +246,7 @@ builder.Services
     .AddEntityFrameworkStores<FullWorthDbContext>();
 
 builder.Services.AddSingleton<PasskeyCeremonyStore>();
+builder.Services.AddSingleton<PendingPasswordLoginStore>();
 builder.Services.AddOptions<FullWorthPasskeyOptions>()
     .Bind(builder.Configuration.GetSection("Passkeys"))
     .Validate(o => FullWorthPasskeyOptions.IsValidOrigin(o.Origin),

@@ -10,6 +10,8 @@ public sealed class WebAuthenticationRateLimitTests
 
     [Theory]
     [InlineData("/auth/login")]
+    [InlineData("/auth/login/passkey-options")]
+    [InlineData("/auth/login/passkey-complete")]
     [InlineData("/auth/register")]
     [InlineData("/auth/forgot-password")]
     [InlineData("/auth/reset-password")]

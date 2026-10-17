@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace FullWorth.Web.Services;
 
-public sealed class WebAuthenticationService
+public sealed partial class WebAuthenticationService
 {
     private readonly IHttpClientFactory
         _httpClientFactory;

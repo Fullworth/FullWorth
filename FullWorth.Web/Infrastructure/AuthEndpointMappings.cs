@@ -21,109 +21,84 @@ public static class AuthEndpointMappings
 
         endpoints.MapPost(
             "/auth/login",
-            async (
-                HttpContext context,
-                IAntiforgery antiforgery,
-                WebAuthenticationService authenticationService,
+            async (HttpContext context, IAntiforgery antiforgery,
+                WebAuthenticationService authenticationService, PendingPasswordLoginCookie pendingCookie,
                 IStringLocalizer<App> localizer) =>
             {
-                await antiforgery
-                    .ValidateRequestAsync(
-                        context);
-
-                var form =
-                    await context.Request
-                        .ReadFormAsync(
-                            context.RequestAborted);
-
-                var email =
-                    form["email"]
-                        .ToString()
-                        .Trim();
-
-                var password =
-                    form["password"]
-                        .ToString();
-
-                var twoFactorCode =
-                    form["twoFactorCode"]
-                        .ToString()
-                        .Trim();
-
-                var recoveryCode =
-                    form["recoveryCode"]
-                        .ToString()
-                        .Trim();
-
-                var isTwoFactorStep =
-                    string.Equals(
-                        form["twoFactor"],
-                        "true",
-                        StringComparison.OrdinalIgnoreCase);
-
-                var rememberMe =
-                    string.Equals(
-                        form["rememberMe"],
-                        "on",
-                        StringComparison.OrdinalIgnoreCase);
-
-                if (string.IsNullOrWhiteSpace(
-                        email) ||
-                    string.IsNullOrWhiteSpace(
-                        password))
+                await antiforgery.ValidateRequestAsync(context);
+                context.Response.Headers.CacheControl = "no-store";
+                var form = await context.Request.ReadFormAsync(context.RequestAborted);
+                var completing = string.Equals(form["twoFactor"], "true", StringComparison.OrdinalIgnoreCase);
+                PasswordStepResult step;
+                if (completing)
                 {
-                    return Results.Redirect(
-                        BuildLoginRedirect(
-                            localizer[
-                                "Enter your email and password."],
-                            isTwoFactorStep));
+                    var pending = pendingCookie.Read(context);
+                    pendingCookie.Clear(context);
+                    if (pending is null)
+                        return Results.Redirect("/login?error=" + Uri.EscapeDataString(
+                            localizer["Your sign-in expired. Enter your email and password again."]));
+                    step = await authenticationService.CompletePasswordSignInAsync(context, pending,
+                        form["twoFactorCode"].ToString(), form["recoveryCode"].ToString(),
+                        null, null, context.RequestAborted);
                 }
-
-                if (isTwoFactorStep &&
-                    string.IsNullOrWhiteSpace(
-                        twoFactorCode) &&
-                    string.IsNullOrWhiteSpace(
-                        recoveryCode))
+                else
                 {
-                    return Results.Redirect(
-                        BuildLoginRedirect(
-                            localizer[
-                                "Enter an authenticator code or a recovery code."],
-                            twoFactor: true));
+                    pendingCookie.Clear(context);
+                    var email = form["email"].ToString().Trim();
+                    var password = form["password"].ToString();
+                    if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                        return Results.Redirect(BuildLoginRedirect(localizer["Enter your email and password."], false));
+                    step = await authenticationService.BeginPasswordSignInAsync(context, email, password,
+                        string.Equals(form["rememberMe"], "on", StringComparison.OrdinalIgnoreCase),
+                        context.RequestAborted);
                 }
-
-                var result =
-                    await authenticationService
-                        .LoginAsync(
-                            context,
-                            email,
-                            password,
-                            rememberMe,
-                            twoFactorCode,
-                            recoveryCode,
-                            context.RequestAborted);
-
-                if (result.RequiresTwoFactor)
+                if (step.Pending is not null)
                 {
-                    return Results.Redirect(
-                        "/login?twoFactor=true");
+                    pendingCookie.Write(context, step.Pending);
+                    var target = "/login?twoFactor=true" + (step.Pending.CanUsePasskey ? "&passkey=true" : "");
+                    if (!string.IsNullOrWhiteSpace(step.Result.ErrorMessage))
+                        target += "&error=" + Uri.EscapeDataString(localizer[step.Result.ErrorMessage]);
+                    return Results.Redirect(target);
                 }
+                return step.Result.Succeeded ? Results.Redirect("/app")
+                    : Results.Redirect(BuildLoginRedirect(
+                        LocalizeResultMessage(localizer, step.Result.ErrorMessage, "Unable to sign in."), false));
+            }).RequireRateLimiting(AuthenticationRateLimitPolicy);
 
-                if (!result.Succeeded)
-                {
-                    return Results.Redirect(
-                        BuildLoginRedirect(
-                            LocalizeResultMessage(
-                                localizer,
-                                result.ErrorMessage,
-                                "Unable to sign in."),
-                            isTwoFactorStep));
-                }
+        endpoints.MapPost("/auth/login/passkey-options",
+            async (HttpContext context, IAntiforgery antiforgery, PendingPasswordLoginCookie pendingCookie,
+                IHttpClientFactory clients, IConfiguration configuration) =>
+            {
+                await antiforgery.ValidateRequestAsync(context);
+                context.Response.Headers.CacheControl = "no-store";
+                var pending = pendingCookie.Read(context);
+                if (context.User.Identity?.IsAuthenticated == true || pending?.CanUsePasskey != true ||
+                    !configuration.GetValue<bool>("Passkeys:Enabled")) return Results.Unauthorized();
+                using var response = await clients.CreateClient("FullWorthApi").PostAsJsonAsync(
+                    "/api/auth/password/passkey-options", new { pending.LoginId }, context.RequestAborted);
+                return response.IsSuccessStatusCode
+                    ? Results.Content(await response.Content.ReadAsStringAsync(context.RequestAborted), "application/json")
+                    : Results.StatusCode((int)response.StatusCode);
+            }).RequireRateLimiting(AuthenticationRateLimitPolicy);
 
-                return Results.Redirect(
-                    "/app");
-            }).RequireRateLimiting(
-                AuthenticationRateLimitPolicy);
+        endpoints.MapPost("/auth/login/passkey-complete",
+            async (HttpContext context, IAntiforgery antiforgery, PendingPasswordLoginCookie pendingCookie,
+                WebAuthenticationService authenticationService, IConfiguration configuration,
+                PasswordPasskeyRequest request) =>
+            {
+                await antiforgery.ValidateRequestAsync(context);
+                context.Response.Headers.CacheControl = "no-store";
+                var pending = pendingCookie.Read(context);
+                if (context.User.Identity?.IsAuthenticated == true || pending?.CanUsePasskey != true ||
+                    !configuration.GetValue<bool>("Passkeys:Enabled")) return Results.Unauthorized();
+                pendingCookie.Clear(context);
+                if (request.CeremonyId?.Length != 43 || string.IsNullOrWhiteSpace(request.CredentialJson) ||
+                    request.CredentialJson.Length > 32768) return Results.BadRequest();
+                var step = await authenticationService.CompletePasswordSignInAsync(context, pending,
+                    null, null, request.CeremonyId, request.CredentialJson, context.RequestAborted);
+                if (step.Pending is not null) pendingCookie.Write(context, step.Pending);
+                return step.Result.Succeeded ? Results.NoContent() : Results.Unauthorized();
+            }).RequireRateLimiting(AuthenticationRateLimitPolicy);
 
         endpoints.MapPost(
             "/auth/register",
@@ -527,3 +502,5 @@ public static class AuthEndpointMappings
             $"?email={Uri.EscapeDataString(email)}&code={Uri.EscapeDataString(code)}";
     }
 }
+
+public sealed record PasswordPasskeyRequest(string CeremonyId, string CredentialJson);

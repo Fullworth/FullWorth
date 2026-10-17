@@ -10,9 +10,9 @@ class that the application actually exposes.
 
 | Host | Method-route exposures | Authenticated | Explicit anonymous | Implicit anonymous | Named rate limit |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| API | 89 | 73 | 8 | 8 | 39 |
-| Web | 123 | 92 | 5 | 26 | 13 |
-| **Total** | **212** | **165** | **13** | **34** | **52** |
+| API | 94 | 75 | 11 | 8 | 44 |
+| Web | 127 | 94 | 5 | 28 | 17 |
+| **Total** | **221** | **169** | **16** | **36** | **61** |
 
 The complete, reviewable list is embedded in
 `FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs`. A route addition,
@@ -79,3 +79,16 @@ When adding or changing an endpoint:
 Static assets and framework infrastructure endpoints are excluded. The inventory
 contains route templates only; it never records customer identifiers, request
 values, credentials, or secrets.
+
+## Password-first verification continuation
+
+The three anonymous API password-continuation POSTs are under the authentication
+rate limiter. Password proof is a bounded, three-minute, single-use-per-attempt
+server-side record, not an authenticated session. Verification permits an
+authenticator code, one recovery code, or a registered user-verified passkey
+bound to the same pending account and password proof. API replicas must share
+an atomic proof store before horizontal scaling; restart fails closed.
+
+The two Web passkey-continuation POSTs also require antiforgery, the existing
+same-origin boundary, web-authentication rate limiting, and the protected pending
+password cookie. They never accept a client-supplied account or password-proof ID.

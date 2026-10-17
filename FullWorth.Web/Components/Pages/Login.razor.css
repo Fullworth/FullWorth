@@ -1,0 +1,19 @@
+.auth-verification-option p {
+    color: var(--bw-text-secondary);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.auth-recovery-choice { margin-top: 20px; }
+.auth-recovery-choice summary {
+    display: list-item;
+    min-height: 44px;
+    padding: 12px 4px;
+    box-sizing: border-box;
+    color: var(--bw-text-secondary);
+    cursor: pointer;
+}
+.auth-recovery-choice summary:focus-visible {
+    outline: 3px solid #8b9aff;
+    outline-offset: 4px;
+    border-radius: 8px;
+}

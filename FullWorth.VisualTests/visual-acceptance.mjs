@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { createHmac } from "node:crypto";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -637,6 +638,73 @@ try {
       "Authenticated app shell remained visible after the BFF session was invalidated."
     );
   }
+
+  // Account is created above in this disposable CI stack. Never run this
+  // enrollment probe against a production host or a real user's account.
+  const fixtureHost = new URL(baseUrl);
+  if (!fixtureHost.hostname.endsWith(".localhost")) {
+    throw new Error("MFA browser acceptance requires the isolated .localhost fixture.");
+  }
+  const apiOrigin = new URL(fixtureHost.origin);
+  apiOrigin.hostname = "localhost";
+  const apiPost = async (route, body, accessToken) => {
+    const response = await context.request.post(apiOrigin.origin + route, {
+      data: body,
+      headers: accessToken ? { Authorization: "Bearer " + accessToken } : {}
+    });
+    if (!response.ok()) throw new Error("Disposable MFA fixture setup failed at " + route);
+    return response;
+  };
+  const bootstrap = await (await apiPost("/api/auth/login", { email, password })).json();
+  const setup = await (await apiPost("/api/account/security/two-factor/setup",
+    { currentPassword: password }, bootstrap.accessToken)).json();
+  function authenticatorCode(secret) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    const bytes = [];
+    let buffer = 0, bits = 0;
+    for (const character of secret.replace(/ /g, "")) {
+      buffer = (buffer << 5) | alphabet.indexOf(character);
+      bits += 5;
+      if (bits >= 8) { bits -= 8; bytes.push((buffer >> bits) & 255); }
+    }
+    const counter = Buffer.alloc(8);
+    counter.writeBigInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+    const hash = createHmac("sha1", Buffer.from(bytes)).update(counter).digest();
+    const offset = hash[hash.length - 1] & 15;
+    return String((hash.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(6, "0");
+  }
+  await apiPost("/api/account/security/two-factor/enable",
+    { currentPassword: password, authenticatorCode: authenticatorCode(setup.sharedKey) },
+    bootstrap.accessToken);
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await settle(".auth-form");
+  await page.locator('input[name="email"]').fill(email);
+  await page.locator('input[name="password"]').fill(password);
+  await page.locator('input[name="rememberMe"]').check();
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/login" && url.searchParams.get("twoFactor") === "true"),
+    page.locator('button[type="submit"]').click()
+  ]);
+  await settle('input[name="twoFactorCode"]');
+  if (await page.locator('input[name="password"], input[name="email"]').count() !== 0)
+    throw new Error("MFA continuation must not ask for the password or email again.");
+  await page.screenshot({ path: path.join(outputDir, "password-once-verification-mobile.png"), fullPage: true });
+  // An invalid code must preserve a bounded pending sign-in, not repeat the
+  // password form. Never capture a real or fixture authenticator secret.
+  await page.locator('input[name="twoFactorCode"]').fill("1234567");
+  await Promise.all([
+    page.waitForURL(url => url.searchParams.get("twoFactor") === "true" && url.searchParams.has("error")),
+    page.locator('form[action="/auth/login"]').first().getByRole("button", { name: "Verify and sign in" }).click()
+  ]);
+  await settle('input[name="twoFactorCode"]');
+  if (await page.locator('input[name="password"], input[name="email"]').count() !== 0)
+    throw new Error("Invalid-code retry unexpectedly repeated the password step.");
+  await page.locator('input[name="twoFactorCode"]').fill(authenticatorCode(setup.sharedKey));
+  await Promise.all([
+    page.waitForURL(url => url.pathname === "/app"),
+    page.locator('form[action="/auth/login"]').first().getByRole("button", { name: "Verify and sign in" }).click()
+  ]);
+  await settle(".app-shell");
 
   await context.close();
 } finally {

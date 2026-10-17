@@ -42,7 +42,7 @@
                     @(ExternalTwoFactor
                         ? L["Your external identity was verified. Finish signing in with a code from your FullWorth authenticator app or one recovery code."]
                         : TwoFactor
-                            ? L["Your password was accepted. Sign in again with your password plus a code from your authenticator app or one recovery code."]
+                            ? L["Your password was accepted. Choose how to finish verifying your sign-in."]
                             : L["Keep watching the recurring costs that matter."])
                 </p>
             </div>
@@ -184,119 +184,68 @@
                     </button>
                 </form>
             }
-            else
+            else if (TwoFactor)
             {
-                <form method="post"
-                      action="/auth/login"
-                      class="auth-form">
+                @if (PendingPasskeyAvailable && Configuration.GetValue<bool>("Passkeys:Enabled"))
+                {
+                    <section class="auth-verification-option" data-password-passkey>
+                        <button type="button" class="auth-submit" data-password-passkey-button>
+                            @L["Use Face ID or a passkey"]
+                        </button>
+                        <p>@L["Use a registered passkey or security key. Your device may ask for Face ID, Touch ID, or its PIN."]</p>
+                        <p data-password-passkey-status role="status" aria-live="polite"></p>
+                    </section>
+                    <div class="auth-choice-separator"><span>@L["or use an authenticator code"]</span></div>
+                }
 
+                <form method="post" action="/auth/login" class="auth-form">
                     <AntiforgeryToken />
-
-                    @if (TwoFactor)
-                    {
-                        <input type="hidden"
-                               name="twoFactor"
-                               value="true" />
-                    }
-
+                    <input type="hidden" name="twoFactor" value="true" />
                     <label class="field">
-                        <span>@L["Email address"]</span>
-
-                        <input type="email"
-                               name="email"
-                               autocomplete="email"
-                               inputmode="email"
-                               placeholder="you@example.com"
-                               required />
+                        <span>@L["Authenticator code"]</span>
+                        <input type="text" name="twoFactorCode" autocomplete="one-time-code"
+                               inputmode="numeric" pattern="[0-9 ]*" maxlength="12"
+                               placeholder="123456" required autofocus />
                     </label>
-
-                    <label class="field">
-                        <span>@L["Password"]</span>
-
-                        <input type="password"
-                               name="password"
-                               autocomplete="current-password"
-                               placeholder="@L["Enter your password"]"
-                               required />
-                    </label>
-
-                    @if (TwoFactor)
-                    {
-                        <label class="field">
-                            <span>@L["Authenticator code"]</span>
-
-                            <input type="text"
-                                   name="twoFactorCode"
-                                   autocomplete="one-time-code"
-                                   inputmode="numeric"
-                                   pattern="[0-9 ]*"
-                                   maxlength="12"
-                                   placeholder="123456" />
-                        </label>
-
-                        <div class="auth-choice-separator">
-                            <span>@L["or"]</span>
-                        </div>
-
+                    <button class="auth-submit" type="submit">@L["Verify and sign in"] <span aria-hidden="true">→</span></button>
+                </form>
+                <details class="auth-recovery-choice">
+                    <summary>@L["Use a recovery code instead"]</summary>
+                    <form method="post" action="/auth/login" class="auth-form">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="twoFactor" value="true" />
                         <label class="field">
                             <span>@L["Recovery code"]</span>
-
-                            <input type="text"
-                                   name="recoveryCode"
-                                   autocomplete="one-time-code"
-                                   maxlength="64"
-                                   placeholder="@L["Enter a recovery code"]" />
+                            <input type="text" name="recoveryCode" autocomplete="one-time-code"
+                                   maxlength="64" placeholder="@L["Enter a recovery code"]" required />
                         </label>
-
-                        <p class="auth-switch">
-                            @L["Enter either an authenticator code or one unused recovery code."]
-                        </p>
-                    }
-
+                        <button class="auth-submit" type="submit">@L["Verify and sign in"]</button>
+                    </form>
+                </details>
+            }
+            else
+            {
+                <form method="post" action="/auth/login" class="auth-form">
+                    <AntiforgeryToken />
+                    <label class="field">
+                        <span>@L["Email address"]</span>
+                        <input type="email" name="email" autocomplete="email" inputmode="email"
+                               placeholder="you@example.com" required />
+                    </label>
+                    <label class="field">
+                        <span>@L["Password"]</span>
+                        <input type="password" name="password" autocomplete="current-password"
+                               placeholder="@L["Enter your password"]" required />
+                    </label>
                     <div class="form-options">
                         <label class="remember-option">
-                            <input type="checkbox"
-                                   name="rememberMe" />
-
-                            <span>
-                                @L["Keep me signed in"]
-                            </span>
+                            <input type="checkbox" name="rememberMe" />
+                            <span>@L["Keep me signed in"]</span>
                         </label>
-
-                        @if (!TwoFactor)
-                        {
-                            <a href="/forgot-password">
-                                @L["Forgot password?"]
-                            </a>
-                        }
+                        <a href="/forgot-password">@L["Forgot password?"]</a>
                     </div>
-
-                    <button class="auth-submit"
-                            type="submit">
-                        @(TwoFactor
-                            ? L["Verify and sign in"]
-                            : L["Sign in"])
-
-                        <span aria-hidden="true">
-                            →
-                        </span>
-                    </button>
+                    <button class="auth-submit" type="submit">@L["Sign in"] <span aria-hidden="true">→</span></button>
                 </form>
-            }
-
-            @if (!IsTwoFactorStep && Configuration.GetValue<bool>("Passkeys:Enabled"))
-            {
-                <section data-passkeys="login">
-                    <label class="field">
-                        <span>Authenticator code (only if you enabled 2FA)</span>
-                        <input name="passkeyTwoFactorCode" autocomplete="one-time-code" inputmode="numeric" maxlength="12" />
-                    </label>
-                    <button type="button" class="auth-submit" data-passkey-action="login">
-                        Sign in with a passkey or security key
-                    </button>
-                    <p data-passkey-status role="status" aria-live="polite"></p>
-                    <p>Use Face ID, your device PIN, or a compatible FIDO2 security key.</p>
-                </section>
             }
 
             <div class="auth-divider">
@@ -358,6 +307,9 @@
     [SupplyParameterFromQuery(
         Name = "twoFactor")]
     public bool TwoFactor { get; set; }
+
+    [SupplyParameterFromQuery(Name = "passkey")]
+    public bool PendingPasskeyAvailable { get; set; }
 
     private bool IsTwoFactorStep =>
         TwoFactor || ExternalTwoFactor;

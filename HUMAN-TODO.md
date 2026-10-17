@@ -1,3 +1,17 @@
+## Verified production checkpoint — 2026-10-17 UTC
+
+Current release candidate on `master`:
+
+`422718fad7d05a3729b08d461929d0d60c6761a6`
+
+Current verified live production release marker:
+
+`422718fad7d05a3729b08d461929d0d60c6761a6`
+
+[Guarded deploy #25](https://github.com/Fullworth/FullWorth/actions/runs/39053793950) and [same-release non-destructive authenticated smoke](https://github.com/Fullworth/FullWorth/actions/runs/39054021470) passed. Host checkout and verified release marker matched this SHA; API/Web/database were healthy, and subscription enforcement/local AI/shadow AI remained off. The additive passkey migration is applied; passkey login remains disabled. Detailed release/backup/attestation evidence is recorded on PR #772 and issue #669. The password-first verification follow-up is development work, not deployed or enabled. Device/provider/two-user/clean-host/immutability/legal acceptance remain separate.
+
+## Earlier checkpoints (historical)
+
 ## Verified release checkpoint — 2026-10-16 UTC
 
 Current release candidate on `master`:

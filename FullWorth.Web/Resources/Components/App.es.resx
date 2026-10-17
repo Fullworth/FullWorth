@@ -201,4 +201,11 @@
   <data name="Detect the change. Understand the reason. See what it actually costs." xml:space="preserve"><value>Detecta el cambio. Entiende la razón. Mira cuánto cuesta realmente.</value></data>
   <data name="Explore how it works" xml:space="preserve"><value>Explorar cómo funciona</value></data>
   <data name="Registration request received. Sign in to continue." xml:space="preserve"><value>Solicitud de registro recibida. Inicia sesión para continuar.</value></data>
+  <data name="Your password was accepted. Choose how to finish verifying your sign-in." xml:space="preserve"><value>Tu contraseña fue aceptada. Elige cómo terminar de verificar tu inicio de sesión.</value></data>
+  <data name="Use Face ID or a passkey" xml:space="preserve"><value>Usar Face ID o una clave de acceso</value></data>
+  <data name="Use a registered passkey or security key. Your device may ask for Face ID, Touch ID, or its PIN." xml:space="preserve"><value>Usa una clave de acceso o de seguridad registrada. Tu dispositivo puede pedirte Face ID, Touch ID o su PIN.</value></data>
+  <data name="or use an authenticator code" xml:space="preserve"><value>o usa un código de autenticación</value></data>
+  <data name="Use a recovery code instead" xml:space="preserve"><value>Usar un código de recuperación</value></data>
+  <data name="Your sign-in expired. Enter your email and password again." xml:space="preserve"><value>Tu inicio de sesión caducó. Vuelve a introducir tu correo y contraseña.</value></data>
+  <data name="Verification failed. Try another method or code." xml:space="preserve"><value>La verificación falló. Prueba otro método o código.</value></data>
 </root>
