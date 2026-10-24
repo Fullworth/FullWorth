@@ -84,33 +84,34 @@ public sealed class PlaidHostedLinkCompletionService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        /*
-         * Ownership is enforced in the same database query that resolves
-         * the session. Cross-user IDs therefore behave exactly like
-         * nonexistent IDs.
-         */
-        var session =
-            await _dbContext.PlaidLinkSessions
-                .SingleOrDefaultAsync(
-                    existing =>
-                        existing.Id ==
-                            sessionId &&
-                        existing.UserId ==
-                            userId,
-                    cancellationToken);
+        // Read durable state before consulting EF's identity map. A tracked
+        // Pending row can outlive a completion committed by another request
+        // (or a commit whose acknowledgement was lost).
+        var durableSession = await GetDurableSessionAsync(
+            userId, sessionId, cancellationToken);
 
-        if (session is null)
+        if (durableSession.Status != PlaidLinkSessionStatus.Pending)
         {
-            throw new KeyNotFoundException(
-                "Plaid Link session was not found.");
+            return await CreateTerminalResultAsync(durableSession, cancellationToken);
         }
 
-        if (session.Status !=
-            PlaidLinkSessionStatus.Pending)
+        var trackedEntry = _dbContext.ChangeTracker.Entries<PlaidLinkSessionEntity>()
+            .SingleOrDefault(entry => entry.Entity.Id == sessionId);
+        var session = durableSession;
+        if (trackedEntry is not null)
         {
-            // A completed session is an idempotent owner-scoped read, not
-            // permission to repeat a consumed provider public-token exchange.
-            return await CreateTerminalResultAsync(session, cancellationToken);
+            if (trackedEntry.State is EntityState.Added or EntityState.Deleted)
+            {
+                throw new InvalidOperationException(
+                    "Plaid Link session changed. Reload before checking its status.");
+            }
+
+            EnsureSamePendingSession(trackedEntry.Entity, durableSession);
+            session = trackedEntry.Entity;
+        }
+        else
+        {
+            _dbContext.PlaidLinkSessions.Attach(session);
         }
 
         var snapshot = new CompletionEntrySnapshot(_dbContext.Entry(session));
@@ -124,6 +125,41 @@ public sealed class PlaidHostedLinkCompletionService
             // the next call or let another operation persist cleared credentials.
             snapshot.Restore();
             throw;
+        }
+    }
+
+    private async Task<PlaidLinkSessionEntity> GetDurableSessionAsync(
+        Guid userId,
+        Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        // Owner and identifier remain in the database predicate, even when
+        // a row with the same identifier is already tracked.
+        return await _dbContext.PlaidLinkSessions.AsNoTracking()
+            .SingleOrDefaultAsync(session =>
+                session.Id == sessionId && session.UserId == userId,
+                cancellationToken)
+            ?? throw new KeyNotFoundException("Plaid Link session was not found.");
+    }
+
+    private static void EnsureSamePendingSession(
+        PlaidLinkSessionEntity tracked,
+        PlaidLinkSessionEntity durable)
+    {
+        // Never overwrite caller changes to reconcile a stale identity map.
+        // Harmless timestamp edits remain part of the caller's unit of work.
+        if (tracked.Id != durable.Id ||
+            tracked.UserId != durable.UserId ||
+            tracked.Status != PlaidLinkSessionStatus.Pending ||
+            durable.Status != PlaidLinkSessionStatus.Pending ||
+            tracked.BankConnectionId != durable.BankConnectionId ||
+            // PostgreSQL timestamps retain microseconds, not .NET's 100ns ticks.
+            tracked.ExpiresAtUtc.UtcTicks / 10 != durable.ExpiresAtUtc.UtcTicks / 10 ||
+            !string.Equals(tracked.ProtectedLinkToken, durable.ProtectedLinkToken,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Plaid Link session changed. Reload before checking its status.");
         }
     }
 
@@ -202,6 +238,19 @@ public sealed class PlaidHostedLinkCompletionService
                         linkToken
                 },
                 cancellationToken);
+
+        // Polling Plaid awaited external work. Another request may have
+        // completed this session meanwhile; use its durable result instead of
+        // exchanging an already-consumed public token or overwriting a terminal
+        // state with this response.
+        var durableSession = await GetDurableSessionAsync(
+            userId, session.Id, cancellationToken);
+        if (durableSession.Status != PlaidLinkSessionStatus.Pending)
+        {
+            return await CreateTerminalResultAsync(durableSession, cancellationToken);
+        }
+
+        EnsureSamePendingSession(session, durableSession);
 
         var plaidState =
             ReadPlaidSessionState(
