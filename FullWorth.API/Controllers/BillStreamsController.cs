@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullWorth.API.Controllers;
@@ -272,17 +273,20 @@ public sealed class BillStreamsController : ControllerBase
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
         if (billStreamId == Guid.Empty) return NotFound();
-        var stream = await _dbContext.BillStreams.SingleOrDefaultAsync(
+        var durable = await _dbContext.BillStreams.AsNoTracking().SingleOrDefaultAsync(
             candidate => candidate.Id == billStreamId && candidate.UserId == userId,
             cancellationToken);
-        if (stream is null) return NotFound();
+        if (durable is null) return NotFound();
+        if (!TryTrackForConfirmation(durable, out var stream))
+            return ConfirmationConflict();
+        var snapshot = new ConfirmationSnapshot(_dbContext.Entry(stream));
         if (!stream.IsActive || stream.Source != BillStreamSource.Manual)
         {
             stream.IsActive = true;
             stream.Source = BillStreamSource.Manual;
             stream.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            if (!await TrySaveConfirmationAsync(cancellationToken))
-                return Conflict(new { message = "This bill changed while saving. Try again." });
+            if (!await TrySaveConfirmationAsync(snapshot, cancellationToken))
+                return ConfirmationConflict();
         }
         return NoContent();
     }
@@ -339,17 +343,28 @@ public sealed class BillStreamsController : ControllerBase
         var normalizedProviderName =
             providerName.ToLower();
 
-        var existingStream =
-            await _dbContext.BillStreams
-                .FirstOrDefaultAsync(
+        var matchingStreams =
+            await _dbContext.BillStreams.AsNoTracking()
+                .Where(
                     stream =>
                         stream.UserId == userId &&
                         stream.ProviderName.ToLower() ==
-                        normalizedProviderName,
-                    cancellationToken);
+                        normalizedProviderName)
+                .OrderBy(stream => stream.Id)
+                .Take(2)
+                .ToListAsync(cancellationToken);
+
+        if (matchingStreams.Count > 1)
+            return Conflict(new { message = "More than one bill matches this provider. Confirm the intended bill by its ID." });
+
+        var existingStream = matchingStreams.SingleOrDefault();
 
         if (existingStream is not null)
         {
+            if (!TryTrackForConfirmation(existingStream, out var trackedStream))
+                return ConfirmationConflict();
+            existingStream = trackedStream;
+            var snapshot = new ConfirmationSnapshot(_dbContext.Entry(existingStream));
             var changed =
                 false;
 
@@ -391,8 +406,8 @@ public sealed class BillStreamsController : ControllerBase
                 existingStream.UpdatedAtUtc =
                     DateTimeOffset.UtcNow;
 
-                if (!await TrySaveConfirmationAsync(cancellationToken))
-                    return Conflict(new { message = "This bill changed while saving. Try again." });
+                if (!await TrySaveConfirmationAsync(snapshot, cancellationToken))
+                    return ConfirmationConflict();
             }
 
             return Ok(
@@ -447,8 +462,16 @@ public sealed class BillStreamsController : ControllerBase
         _dbContext.BillStreams.Add(
             stream);
 
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Do not let a later scoped save persist this failed candidate.
+            _dbContext.Entry(stream).State = EntityState.Detached;
+            throw;
+        }
 
         return Ok(
             new BillStreamResult(
@@ -471,7 +494,35 @@ public sealed class BillStreamsController : ControllerBase
                     0m) { Source = stream.Source.ToString() });
     }
 
-    private async Task<bool> TrySaveConfirmationAsync(CancellationToken cancellationToken)
+    private ConflictObjectResult ConfirmationConflict() =>
+        Conflict(new { message = "This bill changed while saving. Reload and try again." });
+
+    private bool TryTrackForConfirmation(BillStreamEntity durable, out BillStreamEntity stream)
+    {
+        var entry = _dbContext.ChangeTracker.Entries<BillStreamEntity>()
+            .SingleOrDefault(candidate => candidate.Entity.Id == durable.Id);
+        if (entry is null)
+        {
+            stream = durable;
+            _dbContext.BillStreams.Attach(stream);
+            return true;
+        }
+
+        stream = entry.Entity;
+        // Never turn stale tracked state into an apparently successful manual
+        // confirmation, or overwrite the caller's pending lifecycle/category.
+        return entry.State is EntityState.Unchanged or EntityState.Modified &&
+            stream.UserId == durable.UserId &&
+            stream.Source == durable.Source && stream.IsActive == durable.IsActive &&
+            stream.Category == durable.Category && stream.ProviderName == durable.ProviderName &&
+            entry.OriginalValues.GetValue<BillStreamSource>(nameof(stream.Source)) == durable.Source &&
+            entry.OriginalValues.GetValue<bool>(nameof(stream.IsActive)) == durable.IsActive &&
+            entry.OriginalValues.GetValue<BillCategory>(nameof(stream.Category)) == durable.Category &&
+            entry.OriginalValues.GetValue<string>(nameof(stream.ProviderName)) == durable.ProviderName;
+    }
+
+    private async Task<bool> TrySaveConfirmationAsync(
+        ConfirmationSnapshot snapshot, CancellationToken cancellationToken)
     {
         try
         {
@@ -480,8 +531,31 @@ public sealed class BillStreamsController : ControllerBase
         }
         catch (DbUpdateConcurrencyException)
         {
-            _dbContext.ChangeTracker.Clear();
+            snapshot.Restore();
             return false;
+        }
+        catch
+        {
+            snapshot.Restore();
+            throw;
+        }
+    }
+
+    private sealed class ConfirmationSnapshot(EntityEntry<BillStreamEntity> entry)
+    {
+        private readonly PropertyValues _current = entry.CurrentValues.Clone();
+        private readonly PropertyValues _original = entry.OriginalValues.Clone();
+        private readonly EntityState _state = entry.State;
+        private readonly HashSet<string> _modified = entry.Properties
+            .Where(property => property.IsModified).Select(property => property.Metadata.Name).ToHashSet();
+
+        public void Restore()
+        {
+            entry.CurrentValues.SetValues(_current);
+            entry.OriginalValues.SetValues(_original);
+            entry.State = _state;
+            foreach (var property in entry.Properties)
+                property.IsModified = _modified.Contains(property.Metadata.Name);
         }
     }
 
