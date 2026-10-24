@@ -57,7 +57,7 @@ public sealed class BankConnectionHealthAlertService
                     userId,
                     cancellationToken);
 
-        var existingAlerts =
+        var persistedAlerts =
             await _dbContext.BillAlerts
                 .Where(
                     alert =>
@@ -80,6 +80,23 @@ public sealed class BankConnectionHealthAlertService
                 .ToListAsync(
                     cancellationToken);
 
+        // Reconciliation must observe this unit of work as well as persisted
+        // rows. Deleted alerts no longer occupy a live slot; an Added alert
+        // already does. Never create a second candidate for the same slot.
+        var trackedAlerts = _dbContext.ChangeTracker.Entries<BillAlertEntity>()
+            .Where(entry => entry.Entity.UserId == userId &&
+                entry.Entity.BillStreamId is null && entry.Entity.BillChangeId is null &&
+                entry.Entity.AlertType == BillAlertType.ConnectionIssue &&
+                entry.Entity.Title == AlertTitle)
+            .Select(entry => entry.Entity);
+        var existingAlerts = persistedAlerts.Concat(trackedAlerts)
+            .DistinctBy(alert => alert.Id)
+            .Where(alert => _dbContext.Entry(alert).State != EntityState.Deleted &&
+                alert.UserId == userId && alert.BillStreamId is null && alert.BillChangeId is null &&
+                alert.AlertType == BillAlertType.ConnectionIssue && alert.Title == AlertTitle)
+            .OrderBy(alert => alert.CreatedAtUtc).ThenBy(alert => alert.Id)
+            .ToList();
+
         _dbContext.ChangeTracker.DetectChanges();
         var snapshots = existingAlerts.Select(alert => new AlertSnapshot(_dbContext.Entry(alert))).ToArray();
         BillAlertEntity? candidate = null;
@@ -90,8 +107,11 @@ public sealed class BankConnectionHealthAlertService
             {
                 if (existingAlerts.Count > 0)
                 {
+                    var needsSave = existingAlerts.Any(alert =>
+                        _dbContext.Entry(alert).State != EntityState.Added);
                     _dbContext.BillAlerts.RemoveRange(existingAlerts);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    if (needsSave)
+                        await _dbContext.SaveChangesAsync(cancellationToken);
                 }
                 return;
             }

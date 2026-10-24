@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Globalization;
 using FullWorth.API.Services.Contracts;
 
@@ -25,6 +26,8 @@ public sealed class PlanningPaydayAlertRefreshService(
                 nameof(userId));
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         var today =
             DateOnly.FromDateTime(
                 timeProvider.GetUtcNow()
@@ -46,6 +49,9 @@ public sealed class PlanningPaydayAlertRefreshService(
 
         var skipped =
             0;
+
+        ExceptionDispatchInfo? firstFailure = null;
+        var payScheduleRequired = false;
 
         foreach (var payroll in
                  payrollFacts
@@ -70,51 +76,72 @@ public sealed class PlanningPaydayAlertRefreshService(
 
             scanned++;
 
-            var plan =
-                await paydayPlanService.GenerateAsync(
-                    userId,
-                    payroll.TransactionId,
-                    payroll.PostedDate,
-                    cancellationToken);
-
-            switch (plan.Status)
+            try
             {
-                case PlanningPaydayPlanStatus.Ready:
-                    await alertGateway.EnsureAsync(
+                var plan =
+                    await paydayPlanService.GenerateAsync(
                         userId,
-                        CreateAlert(
-                            plan),
-                        timeProvider.GetUtcNow(),
+                        payroll.TransactionId,
+                        payroll.PostedDate,
                         cancellationToken);
 
-                    ready++;
+                switch (plan.Status)
+                {
+                    case PlanningPaydayPlanStatus.Ready:
+                        await alertGateway.EnsureAsync(
+                            userId,
+                            CreateAlert(
+                                plan),
+                            timeProvider.GetUtcNow(),
+                            cancellationToken);
 
-                    break;
+                        ready++;
 
-                case PlanningPaydayPlanStatus.PayScheduleRequired:
-                    /*
-                     * Pay schedule is user-level configuration. Once one
-                     * candidate reports it missing, every remaining candidate
-                     * would report the same state and create no useful work.
-                     */
-                    return new PlanningPaydayAlertRefreshResult(
-                        scanned,
-                        ready,
-                        skipped,
-                        PayScheduleRequired:
-                            true);
+                        break;
 
-                case PlanningPaydayPlanStatus.PayrollNotFound:
-                case PlanningPaydayPlanStatus.PayrollFactUnsupported:
-                    skipped++;
+                    case PlanningPaydayPlanStatus.PayScheduleRequired:
+                        /*
+                         * Pay schedule is user-level configuration. Once one
+                         * candidate reports it missing, every remaining candidate
+                         * would report the same state and create no useful work.
+                         */
+                        payScheduleRequired = true;
+                        break;
 
-                    break;
 
-                default:
-                    throw new InvalidOperationException(
-                        "Planning payday plan status is invalid.");
+                    case PlanningPaydayPlanStatus.PayrollNotFound:
+                    case PlanningPaydayPlanStatus.PayrollFactUnsupported:
+                        skipped++;
+
+                        break;
+
+                    default:
+                        throw new InvalidOperationException(
+                            "Planning payday plan status is invalid.");
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                // Attempt each independent paycheck once. Keep partial work
+                // observable as a failure and preserve the first error's stack.
+                firstFailure ??= ExceptionDispatchInfo.Capture(exception);
+            }
+
+            if (payScheduleRequired)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                firstFailure?.Throw();
+                return new PlanningPaydayAlertRefreshResult(scanned, ready, skipped,
+                    PayScheduleRequired: true);
             }
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        firstFailure?.Throw();
 
         return new PlanningPaydayAlertRefreshResult(
             scanned,
