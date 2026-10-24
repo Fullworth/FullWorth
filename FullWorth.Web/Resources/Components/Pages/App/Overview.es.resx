@@ -33,9 +33,9 @@
   <data name="FullWorth keeps monitoring automatically" xml:space="preserve"><value>FullWorth sigue monitoreando automáticamente</value></data>
   <data name="Bank connected" xml:space="preserve"><value>Banco conectado</value></data>
   <data name="FullWorth is preparing your first scan." xml:space="preserve"><value>FullWorth está preparando tu primer análisis.</value></data>
-  <data name="Your connection is active and immediately eligible for the automatic monitoring pipeline. FullWorth will synchronize accounts and transactions, then run deterministic recurring-bill discovery." xml:space="preserve"><value>Tu conexión está activa y ya puede entrar en el flujo de monitoreo automático. FullWorth sincronizará cuentas y transacciones y luego ejecutará la detección determinista de facturas recurrentes.</value></data>
-  <data name="Automatic monitoring is active" xml:space="preserve"><value>El monitoreo automático está activo</value></data>
-  <data name="You do not need to manually trigger a transaction refresh." xml:space="preserve"><value>No necesitas iniciar manualmente una actualización de transacciones.</value></data>
+  <data name="The bank connection reports an active state, but no successful transaction sync has been reported yet. FullWorth needs imported eligible transactions to identify recurring bills." xml:space="preserve"><value>La conexión bancaria figura como activa, pero aún no se ha informado ninguna sincronización correcta de transacciones. FullWorth necesita transacciones elegibles importadas para identificar facturas recurrentes.</value></data>
+  <data name="First successful bank sync not yet reported" xml:space="preserve"><value>Todavía no se ha informado la primera sincronización bancaria correcta</value></data>
+  <data name="Check progress here or review the bank connection if the scan remains pending." xml:space="preserve"><value>Comprueba el progreso aquí o revisa la conexión bancaria si el análisis sigue pendiente.</value></data>
   <data name="Checking status…" xml:space="preserve"><value>Comprobando estado…</value></data>
   <data name="Check for progress" xml:space="preserve"><value>Comprobar progreso</value></data>
   <data name="Connected" xml:space="preserve"><value>Conectado</value></data>

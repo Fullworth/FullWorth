@@ -105,4 +105,6 @@
   <data name="Connection archived. Your transaction and bill history is unchanged." xml:space="preserve"><value>Conexión archivada. Tu historial de transacciones y facturas no ha cambiado.</value></data>
   <data name="Connection restored to the list. It remains disconnected." xml:space="preserve"><value>Conexión restaurada en la lista. Sigue desconectada.</value></data>
   <data name="The connection could not be updated. Disconnect it successfully first, then try again." xml:space="preserve"><value>No se pudo actualizar la conexión. Desconéctala correctamente primero y vuelve a intentarlo.</value></data>
+  <data name="Some banks have not synced" xml:space="preserve"><value>Algunos bancos aún no se han sincronizado</value></data>
+  <data name="{0} of {1} active banks report a successful sync. Other active banks have not reported one." xml:space="preserve"><value>{0} de {1} bancos activos informan al menos una sincronización correcta. Los demás bancos activos aún no han informado ninguna.</value></data>
 </root>

@@ -35,6 +35,32 @@ public sealed class BankConnectionSummaryTests
         Assert.Equal(State.Unknown, BankConnectionSummary.Evaluate([new(0, DateTimeOffset.UtcNow), new(99, null)]));
     }
 
+    [Fact]
+    public void MixedActiveSyncIsNotTheFirstSyncOrFullCoverage()
+    {
+        var synced = new BankConnectionSummary.Connection(0, DateTimeOffset.UnixEpoch);
+        var awaiting = new BankConnectionSummary.Connection(0, null);
+        var disconnectedWithHistory = new BankConnectionSummary.Connection(2, DateTimeOffset.UnixEpoch);
+        Assert.Equal(State.PartialSync, BankConnectionSummary.Evaluate([synced, awaiting]));
+        Assert.Equal(State.PartialSync, BankConnectionSummary.Evaluate([awaiting, disconnectedWithHistory, synced]));
+        Assert.Equal(State.AwaitingSync, BankConnectionSummary.Evaluate([awaiting, disconnectedWithHistory]));
+        Assert.Equal(State.Connected, BankConnectionSummary.Evaluate([synced, disconnectedWithHistory]));
+        Assert.Equal(State.Reconnect, BankConnectionSummary.Evaluate([synced, awaiting, new(1, null)]));
+    }
+
+    [Theory]
+    [InlineData("en", "Some banks have not synced", "1 of 2 active banks report a successful sync")]
+    [InlineData("es", "Algunos bancos aún no se han sincronizado", "1 de 2 bancos activos informan")]
+    public async Task MixedActiveSyncRendersHonestLocalizedCoverage(string culture, string heading, string coverage)
+    {
+        var html = WebUtility.HtmlDecode(await Render(culture,
+            [new(0, DateTimeOffset.UnixEpoch), new(0, null), new(2, DateTimeOffset.UnixEpoch)]));
+        Assert.Contains(heading, html);
+        Assert.Contains(coverage, html);
+        Assert.DoesNotContain("Awaiting first sync", html);
+        Assert.DoesNotContain("Reported connected", html);
+    }
+
     [Theory]
     [InlineData("en", "Connections ended")]
     [InlineData("es", "Conexiones finalizadas")]

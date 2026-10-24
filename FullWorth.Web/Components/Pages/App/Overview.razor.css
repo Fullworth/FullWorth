@@ -48,3 +48,29 @@
     line-height: 1.5;
     overflow-wrap: anywhere;
 }
+
+/* Pending bank setup must provide both a real status read and a route to repair,
+   without implying a first transaction import has succeeded. */
+.onboarding-progress-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+    min-width: 0;
+}
+.onboarding-progress-actions > :is(button, a) {
+    display: inline-flex;
+    min-height: 48px;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+    .onboarding-progress-actions { flex-direction: column; }
+    .onboarding-progress-actions > :is(button, a) { width: 100%; }
+}
