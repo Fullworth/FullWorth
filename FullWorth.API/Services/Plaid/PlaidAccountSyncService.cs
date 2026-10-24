@@ -196,6 +196,9 @@ public sealed class PlaidAccountSyncService
         var bankConnectionId =
             connection.Id;
 
+        await PlaidSyncConnectionGuard.EnsureCurrentAsync(
+            _dbContext, userId, connection, cancellationToken);
+
         if (string.IsNullOrWhiteSpace(
                 connection.ProtectedPlaidAccessToken))
         {

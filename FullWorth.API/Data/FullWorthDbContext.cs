@@ -246,9 +246,15 @@ public sealed class FullWorthDbContext
                     .HasMaxLength(200);
 
                 entity.Property(connection => connection.Status)
+                    .IsConcurrencyToken()
                     .HasConversion<string>()
                     .HasMaxLength(50)
                     .IsRequired();
+
+                // A sync/attention write loaded before disconnection or credential
+                // replacement must fail atomically instead of reviving stale state.
+                entity.Property(connection => connection.ProtectedPlaidAccessToken)
+                    .IsConcurrencyToken();
 
                 entity.Property(connection => connection.CreatedAtUtc)
                     .IsRequired();
