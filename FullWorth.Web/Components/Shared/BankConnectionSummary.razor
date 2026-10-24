@@ -14,13 +14,17 @@
     <div class="@(Health == HealthState.Reconnect ? "has-attention" : string.Empty)">
         <span>@L["Connection state"]</span>
         <strong>@L[Heading]</strong>
+        @if (Health == HealthState.PartialSync)
+        {
+            <small>@L["{0} of {1} active banks report a successful sync. Other active banks have not reported one.", SyncedCount, ActiveCount]</small>
+        }
         <small>@L["Connection status alone does not prove complete or current monitoring."]</small>
     </div>
 </div>
 
 @code {
     public sealed record Connection(int Status, DateTimeOffset? LastSuccessfulSyncAtUtc);
-    public enum HealthState { Loading, Unavailable, Stale, Empty, Reconnect, Unknown, Ended, AwaitingSync, Connected }
+    public enum HealthState { Loading, Unavailable, Stale, Empty, Reconnect, Unknown, Ended, AwaitingSync, PartialSync, Connected }
 
     [Parameter] public IReadOnlyList<Connection> Connections { get; set; } = [];
     [Parameter] public int AccountCount { get; set; }
@@ -40,8 +44,13 @@
         HealthState.Unknown => "Unknown connection state",
         HealthState.Ended => "Connections ended",
         HealthState.AwaitingSync => "Awaiting first sync",
+        HealthState.PartialSync => "Some banks have not synced",
         _ => "Reported connected"
     };
+
+    private int ActiveCount => Connections.Count(connection => connection.Status == 0);
+    private int SyncedCount => Connections.Count(connection =>
+        connection.Status == 0 && connection.LastSuccessfulSyncAtUtc.HasValue);
 
     public static HealthState Evaluate(IReadOnlyList<Connection> connections, bool loading = false, bool error = false, bool stale = false)
     {
@@ -52,7 +61,10 @@
         if (connections.Any(connection => connection.Status == 1)) return HealthState.Reconnect;
         if (connections.Any(connection => connection.Status is not (0 or 1 or 2))) return HealthState.Unknown;
         if (connections.All(connection => connection.Status == 2)) return HealthState.Ended;
-        if (connections.Any(connection => connection.Status == 0 && connection.LastSuccessfulSyncAtUtc is null)) return HealthState.AwaitingSync;
+        var active = connections.Where(connection => connection.Status == 0).ToArray();
+        var synced = active.Count(connection => connection.LastSuccessfulSyncAtUtc.HasValue);
+        if (active.Length > 0 && synced == 0) return HealthState.AwaitingSync;
+        if (synced > 0 && synced < active.Length) return HealthState.PartialSync;
         return HealthState.Connected;
     }
 }

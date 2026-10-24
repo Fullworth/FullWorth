@@ -1004,11 +1004,18 @@ try {
   let syntheticDisconnected = false;
   let disconnectStatus = 503;
   let syntheticDeletes = 0;
-  const connectionsSnapshot = () => syntheticConnections.map((item, index) => ({
-    ...item, isArchived: index === 1 && syntheticArchived, status: snapshotMode === "ended" || syntheticDisconnected ? 2 :
-      snapshotMode === "unknown" && index === 0 ? 99 : item.status,
-    institutionName: snapshotMode === "partial" && index === 0 ? "Must not replace the old snapshot" : item.institutionName
-  }));
+  const connectionsSnapshot = () => [
+    ...syntheticConnections.map((item, index) => ({
+      ...item, isArchived: index === 1 && syntheticArchived, status: snapshotMode === "ended" || syntheticDisconnected ? 2 :
+        snapshotMode === "unknown" && index === 0 ? 99 : item.status,
+      institutionName: snapshotMode === "partial" && index === 0 ? "Must not replace the old snapshot" : item.institutionName
+    })),
+    ...(snapshotMode === "mixed" ? [{
+      id: "44444444-bbbb-bbbb-bbbb-444444444444", institutionName: "Synthetic previously synced bank",
+      status: 0, createdAtUtc: "2026-10-16T10:00:00Z",
+      lastSuccessfulSyncAtUtc: "2026-10-18T10:00:00Z"
+    }] : [])
+  ];
   await page.route("**/bff/bank-connections", route => {
     if (snapshotMode === "failed") return route.fulfill({ status: 503, json: {} });
     return route.fulfill({ json: snapshotMode === "empty" ? [] : connectionsSnapshot() });
@@ -1045,6 +1052,18 @@ try {
     await settle(".connection-row");
     assert.ok((await page.locator(".fw-account-stats").innerText()).includes("Awaiting first sync"));
     assert.equal(await page.locator(".financial-account-row").count(), 1);
+    snapshotMode = "mixed";
+    await refreshAccount();
+    const mixedCoverage = await page.locator(".fw-account-stats").innerText();
+    assert.ok(mixedCoverage.includes("Some banks have not synced"));
+    assert.ok(mixedCoverage.includes("1 of 2 active banks report a successful sync"));
+    assert.ok(!mixedCoverage.includes("Awaiting first sync") && !mixedCoverage.includes("Reported connected"),
+      "A previously synchronized bank must not send Account back to initial-scan messaging.");
+    assert.equal(await page.locator(".connection-row").count(), 3);
+    assert.equal(await page.locator(".financial-account-row").count(), 1,
+      "A bank status snapshot must not fabricate accounts or change financial ownership.");
+    snapshotMode = "good";
+    await refreshAccount();
     snapshotMode = "partial";
     await refreshAccount();
     await page.getByRole("alert").filter({ hasText: "Previously loaded data is still shown" }).waitFor();
