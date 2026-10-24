@@ -8,6 +8,9 @@ public static class ActivityFeedPresentation
         string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(severity, "Critical", StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsConnectionIssue(string? alertType) =>
+        string.Equals(alertType, "ConnectionIssue", StringComparison.OrdinalIgnoreCase);
+
     public static string SeverityClass(string? severity) =>
         severity?.ToLowerInvariant() switch
         {
@@ -19,7 +22,7 @@ public static class ActivityFeedPresentation
     // Destinations are built from typed IDs, never from alert titles, messages or provider URLs.
     public static string? GetReviewDestination(Guid? billId, string? alertType) =>
         billId is { } id && id != Guid.Empty ? $"/app/bills/{id:D}" :
-        string.Equals(alertType, "ConnectionIssue", StringComparison.OrdinalIgnoreCase) ? "/app/account" : null;
+        IsConnectionIssue(alertType) ? "/app/account" : null;
 
     public static IReadOnlyList<Activity.BillAlertViewModel> Filter(
         IEnumerable<Activity.BillAlertViewModel> alerts, Activity.ActivityFilter filter, string? search)
@@ -30,6 +33,7 @@ public static class ActivityFeedPresentation
             {
                 Activity.ActivityFilter.Unread => !alert.IsRead,
                 Activity.ActivityFilter.Attention => IsAttentionSeverity(alert.Severity),
+                Activity.ActivityFilter.ConnectionIssues => IsConnectionIssue(alert.AlertType),
                 _ => true
             })
             .Where(alert => query.Length == 0 ||

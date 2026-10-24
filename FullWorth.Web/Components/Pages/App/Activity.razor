@@ -107,6 +107,10 @@
                     IsAttentionSeverity(
                         alert.Severity));
 
+        var connectionIssuesCount =
+            _alerts.Count(
+                alert => ActivityFeedPresentation.IsConnectionIssue(alert.AlertType));
+
         var filteredAlerts =
             FilteredAlerts;
 
@@ -166,6 +170,17 @@
             </div>
         </section>
 
+        @if (connectionIssuesCount > 0)
+        {
+            <aside class="activity-connection-guidance" aria-label="@L["Connection alerts"]">
+                <div>
+                    <strong>@L["Check your bank connections"]</strong>
+                    <p>@L["{0} loaded alerts describe connection problems. Reading or dismissing an alert does not repair a bank or prove that transactions are current.", connectionIssuesCount]</p>
+                </div>
+                <a href="/app/account">@L["Review bank connections"] <span aria-hidden="true">→</span></a>
+            </aside>
+        }
+
         <section class="fw-activity-feed">
             <div class="fw-activity-feed-head">
                 <div>
@@ -196,6 +211,14 @@
                             @onclick="() => SetFilter(ActivityFilter.Attention)">
                         @L["Attention"]
                         <span>@needsAttentionCount</span>
+                    </button>
+
+                    <button type="button"
+                            class="@GetFilterClass(ActivityFilter.ConnectionIssues)"
+                            aria-pressed="@(_filter == ActivityFilter.ConnectionIssues)"
+                            @onclick="() => SetFilter(ActivityFilter.ConnectionIssues)">
+                        @L["Connection issues"]
+                        <span>@connectionIssuesCount</span>
                     </button>
                 </div>
             </div>
@@ -628,7 +651,8 @@
     {
         All,
         Unread,
-        Attention
+        Attention,
+        ConnectionIssues
     }
 
     public sealed class BillAlertViewModel

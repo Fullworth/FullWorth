@@ -915,6 +915,16 @@ try {
     });
     assert.ok(actionStyle.height >= 44 && actionStyle.radius >= 8, JSON.stringify(actionStyle));
     assert.ok((await page.locator(".activity-scope-note").first().innerText()).includes("not your entire history"));
+    const guidance = page.locator(".activity-connection-guidance");
+    assert.ok((await guidance.innerText()).includes("1 loaded alerts describe connection problems"));
+    assert.equal(await guidance.getByRole("link", { name: /Review bank connections/ }).getAttribute("href"),
+      "/app/account", "Connection guidance must navigate to the real owner-scoped Account route.");
+    await page.locator(".activity-filters").getByRole("button", { name: /^Connection issues/ }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 1);
+    assert.ok((await page.locator(".alert-card").innerText()).includes("Synthetic connection repair"));
+    assert.equal(alertMutationRequests, 0, "Viewing the connection alert filter must never mutate a bank or alert.");
+    await page.locator(".activity-filters").getByRole("button", { name: /^All/ }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 3);
     const search = page.getByRole("searchbox", { name: "Search activity", exact: true });
     await search.fill("CAFÉ");
     await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 1);

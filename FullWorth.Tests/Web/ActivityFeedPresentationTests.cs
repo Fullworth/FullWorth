@@ -39,6 +39,29 @@ public sealed class ActivityFeedPresentationTests
     }
 
     [Fact]
+    public void ConnectionIssuesFilterIsTypedAndRetainsChronologicalOrderWithoutWrites()
+    {
+        var first = new Activity.BillAlertViewModel {
+            Title = "Reconnect utility bank", AlertType = "ConnectionIssue", Severity = "Warning", IsRead = true };
+        var second = new Activity.BillAlertViewModel {
+            Title = "Provider update", AlertType = "BillIncrease", Severity = "Critical", IsRead = false };
+        var third = new Activity.BillAlertViewModel {
+            Title = "Restore bank feed", AlertType = "connectionissue", Severity = "Info", IsRead = false };
+        var dismissed = new Activity.BillAlertViewModel {
+            Title = "Old bank", AlertType = "ConnectionIssue", Severity = "Critical", IsDismissed = true };
+        var results = ActivityFeedPresentation.Filter([first, second, third, dismissed],
+            Activity.ActivityFilter.ConnectionIssues, null);
+        Assert.Equal(new[] { first, third }, results);
+        Assert.Equal(new[] { third }, ActivityFeedPresentation.Filter(results,
+            Activity.ActivityFilter.ConnectionIssues, "restore"));
+        Assert.True(first.IsRead);
+        Assert.False(third.IsRead);
+        Assert.True(dismissed.IsDismissed);
+        Assert.False(ActivityFeedPresentation.IsConnectionIssue("https://external.invalid"));
+        Assert.True(ActivityFeedPresentation.IsConnectionIssue("CONNECTIONISSUE"));
+    }
+
+    [Fact]
     public void MissingSearchFieldsAreSafe()
     {
         var alert = new Activity.BillAlertViewModel { Title = null!, Message = null! };
