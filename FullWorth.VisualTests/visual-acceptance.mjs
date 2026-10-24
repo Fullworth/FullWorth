@@ -499,6 +499,36 @@ try {
       }
     }
 
+    // A reported active connection without its first successful transaction
+    // sync is NOT proof that automatic monitoring has started.
+    overviewBills = [];
+    overviewConnections = [{
+      id: "88888888-8888-8888-8888-888888888888",
+      institutionName: "Synthetic unverified bank", status: 0,
+      lastSuccessfulSyncAtUtc: null
+    }];
+    for (const width of [320, 390]) {
+      await page.setViewportSize({width, height: 900});
+      await page.goto("/app", {waitUntil: "domcontentloaded"});
+      await settle(".sync-state");
+      const state = await page.locator(".sync-state").innerText();
+      assert.ok(state.includes("First successful bank sync not yet reported"));
+      assert.ok(!state.includes("Automatic monitoring is active"));
+      assert.ok(state.includes("no successful transaction sync has been reported yet"));
+      const actions = page.locator(".onboarding-progress-actions");
+      assert.equal(await actions.getByRole("link", { name: "Review connection" }).getAttribute("href"),
+        "/app/account", "An unverified first scan needs a real bank-status route.");
+      assert.ok(await actions.getByRole("button", { name: "Check for progress" }).isEnabled());
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+        false, "First-sync pending actions must fit the phone width.");
+      await page.screenshot({ path: path.join(outputDir,
+        "overview-first-sync-unverified-" + width + ".png"), fullPage: true });
+    }
+    overviewConnections = [{
+      id: "88888888-8888-8888-8888-888888888888",
+      institutionName: "Synthetic synced bank", status: 0,
+      lastSuccessfulSyncAtUtc: "2026-02-01T00:00:00Z"
+    }];
     overviewBills = overviewCases[0][1];
     await page.setViewportSize({width: 390, height: 844});
     await page.goto("/app", {waitUntil: "domcontentloaded"});
