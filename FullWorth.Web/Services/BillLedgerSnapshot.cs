@@ -4,7 +4,7 @@ using FullWorth.Core.Formatting;
 namespace FullWorth.Web.Services;
 
 public enum BillLedgerFilter { All, Increased, Decreased, NoHistory, Unchanged, Unavailable }
-public enum BillLedgerSort { Name, LatestCharge, Increase }
+public enum BillLedgerSort { Attention, Name, LatestCharge, Increase }
 
 public sealed record BillLedgerEntry(Guid Id, string ProviderName, string Category, bool IsActive,
     string Source, bool HasTransactionEvidence, bool HasMonthlyCadenceEvidence,
@@ -83,6 +83,12 @@ public sealed class BillLedgerSnapshot
             });
         IOrderedEnumerable<BillLedgerEntry> ordered = sort switch
         {
+            // Review buckets are evidence-status categories, not a ranking of
+            // financial magnitudes across currencies. Currency groups stay
+            // separate before any within-currency difference ordering.
+            BillLedgerSort.Attention => rows.OrderBy(AttentionRank)
+                .ThenBy(CurrencyKey, StringComparer.Ordinal)
+                .ThenByDescending(Difference),
             BillLedgerSort.LatestCharge => rows.OrderBy(bill => !HasAmount(bill))
                 .ThenBy(CurrencyKey, StringComparer.Ordinal).ThenByDescending(bill => bill.CurrentAmount),
             BillLedgerSort.Increase => rows.OrderBy(bill => !CanCompare(bill))
@@ -91,6 +97,15 @@ public sealed class BillLedgerSnapshot
         };
         return ordered.ThenBy(bill => bill.ProviderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(bill => bill.Id).ToArray();
+    }
+
+    private static int AttentionRank(BillLedgerEntry bill)
+    {
+        if (!CanCompare(bill))
+            return 1; // Unknown amount or missing comparison evidence needs review.
+
+        var difference = Difference(bill);
+        return difference > 0m ? 0 : difference < 0m ? 2 : 3;
     }
 
     public static string CurrencyKey(BillLedgerEntry bill) =>

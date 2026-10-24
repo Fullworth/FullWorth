@@ -2,6 +2,14 @@ namespace FullWorth.API.Services.Contracts;
 
 public interface IBankConnectionReadGateway
 {
+    // Continue after a stable user identity, not a position in the changing due set.
+    Task<IReadOnlyList<Guid>> GetDueUserIdsAfterAsync(
+        DateTimeOffset now,
+        TimeSpan refreshCadence,
+        int maxUsers,
+        Guid? afterUserId,
+        CancellationToken cancellationToken = default);
+
     // Providers should push paging into their data store. The default keeps
     // existing providers compatible with the background sweep contract.
     async Task<IReadOnlyList<Guid>> GetDueUserIdsPageAsync(

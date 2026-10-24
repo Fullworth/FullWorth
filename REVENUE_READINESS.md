@@ -10,7 +10,7 @@ FullWorth has a hosted Stripe Checkout and Customer Portal integration for month
 
 ## 2. Configure the commercial offer
 
-- Choose the monthly and yearly prices, billing currency, renewal terms, and refund/support policy. Record the intended Stripe Product and Price IDs. Do not infer a discount from the billing interval alone.
+- Owner-selected intended pricing (2026-10-24): USD 7.99/month or USD 59.99/year. Verify the actual billing currency, live/test environment, Product/Price IDs, interval and customer-facing amount before activation; this planning choice is not proof of live Stripe configuration. Confirm renewal, refund and support terms. Annual pricing is USD 35.89 below twelve monthly payments; do not infer savings from billing interval alone.
 - Complete the applicable tax registration and Stripe Tax setup before collecting tax. Merely enabling automatic tax without a registration does not establish tax collection.
 - Set up Stripe Customer Portal cancellation and payment-method management. Use a least-privilege restricted API key where its permissions cover this integration, and protect that key and the webhook signing secret outside source control.
 - Configure a signed Stripe webhook for `POST /api/subscription/webhooks/stripe` and verify delivery for checkout, subscription update, cancellation, and payment-state changes.
@@ -29,3 +29,7 @@ FullWorth has a hosted Stripe Checkout and Customer Portal integration for month
 - Enable enforcement for `InternalTester` only after those proofs pass. Check paid, complimentary, unpaid, canceled, and expired accounts, including the permanent data-export, bank-disconnect, and deletion exemptions. Broaden the cohort only after a separate reviewed result.
 
 Do not use a successful Checkout redirect, passing unit tests, or a healthy public endpoint as proof that money was collected or that the product is ready for external paid users.
+
+## Optional creator acquisition gate
+
+The [creator referral program](CREATOR_REFERRAL_PROGRAM.md) is planned, not implemented or enabled. It is not a prerequisite for a non-affiliate release. Before enabling commission-bearing referrals, additionally prove server-bound attribution, first-12-month eligible service allocation, durable collected-payment/commission uniqueness, refund/dispute reversals, ledger reconciliation, creator isolation and reviewed payout previews. Accept actual creator terms and verify costs before a limited pilot. Keep subscription access keys and entitlements separate from creator codes. Program activation, creator outreach and money movement require their relevant authorization; neither this checklist nor its proposed 20% rate authorizes them.

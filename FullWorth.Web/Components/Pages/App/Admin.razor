@@ -23,7 +23,7 @@
         {
             <button type="button"
                     class="admin-refresh-button"
-                    disabled="@_isMutating"
+                    disabled="@(_isMutating || _isPaging)"
                     @onclick="ReloadAsync">
                 <span aria-hidden="true">↻</span>
                 @L["Refresh"]
@@ -98,6 +98,10 @@
             </article>
         </section>
 
+        @if (!string.IsNullOrWhiteSpace(_pagingError))
+        {
+            <p role="alert">@_pagingError</p>
+        }
         @if (!string.IsNullOrWhiteSpace(_mutationError))
         {
             <div class="admin-mutation-message error" role="alert">@_mutationError</div>
@@ -110,7 +114,8 @@
                     <h2>@L["Users"]</h2>
                 </div>
 
-                <span class="admin-panel-note">@L["Showing up to 50 accounts"]</span>
+                <AdminPageControls Offset="@_usersSkip" Count="@_users.Count" CanNext="@(_users.Count == 50)"
+                    Busy="@(_isPaging || _isMutating)" Previous="@(() => ChangePageAsync("users", -1))" Next="@(() => ChangePageAsync("users", 1))" />
             </div>
 
             @if (_users.Count == 0)
@@ -185,6 +190,9 @@
                 </div>
 
                 <span class="admin-panel-note">@L["Plaintext is returned exactly once at creation"]</span>
+                <AdminPageControls Offset="@_keysSkip" Count="@(_accessKeys?.Items.Count ?? 0)"
+                    CanNext="@(_accessKeys is not null && _keysSkip + _accessKeys.Items.Count < _accessKeys.TotalCount)"
+                    Busy="@(_isPaging || _isMutating)" Previous="@(() => ChangePageAsync("keys", -1))" Next="@(() => ChangePageAsync("keys", 1))" />
             </div>
 
             <div class="admin-key-builder">
@@ -429,6 +437,9 @@
                 </div>
 
                 <span class="admin-panel-note">@L["Administrative metadata only"]</span>
+                <AdminPageControls Offset="@_auditSkip" Count="@(_auditLog?.Items.Count ?? 0)"
+                    CanNext="@(_auditLog is not null && _auditSkip + _auditLog.Items.Count < _auditLog.TotalCount)"
+                    Busy="@(_isPaging || _isMutating)" Previous="@(() => ChangePageAsync("audit", -1))" Next="@(() => ChangePageAsync("audit", 1))" />
             </div>
 
             @if (_auditLog is null || _auditLog.Items.Count == 0)
@@ -473,6 +484,11 @@
     private AdminPage<AdminAuditLogViewModel>? _auditLog;
     private bool _isLoading = true;
     private bool _isMutating;
+    private bool _isPaging;
+    private int _usersSkip;
+    private int _keysSkip;
+    private int _auditSkip;
+    private string? _pagingError;
     private bool _accessDenied;
     private string? _errorMessage;
     private string? _mutationError;
@@ -525,6 +541,9 @@
 
     private async Task LoadAsync(bool clearTransientKey)
     {
+        if (_isPaging) return;
+        _usersSkip = _keysSkip = _auditSkip = 0;
+        _pagingError = null;
         _isLoading = true;
         _accessDenied = false;
         _errorMessage = null;
@@ -594,9 +613,58 @@
         }
     }
 
+    private async Task ChangePageAsync(string dataset, int direction)
+    {
+        if (_isPaging || _isMutating || _isLoading || _accessDenied || direction is not (-1 or 1)) return;
+        var skip = dataset switch { "users" => _usersSkip, "keys" => _keysSkip, "audit" => _auditSkip, _ => -1 };
+        if (skip < 0 || direction < 0 && skip == 0) return;
+        var target = checked(skip + direction * 50);
+        _isPaging = true;
+        _pagingError = null;
+        try
+        {
+            var module = await GetAdminModuleAsync();
+            if (dataset == "users")
+            {
+                var result = await module.InvokeAsync<AdminFetchResult<AdminUserViewModel[]>>("getAdminUsers", target, 50);
+                if (result.AccessDenied) { _accessDenied = true; return; }
+                if (result.Value is null || result.Value.Length > 50 || result.Value.Any(user => user is null))
+                    throw new InvalidOperationException("Invalid admin users page.");
+                _users = result.Value.ToList();
+                _usersSkip = target;
+            }
+            else if (dataset == "keys")
+            {
+                var result = await module.InvokeAsync<AdminFetchResult<AdminPage<AdminAccessKeyViewModel>>>("getAdminAccessKeys", target, 50);
+                if (result.AccessDenied) { _accessDenied = true; return; }
+                if (!ValidPage(result.Value, target)) throw new InvalidOperationException("Invalid key page.");
+                _accessKeys = result.Value;
+                _keysSkip = target;
+            }
+            else
+            {
+                var result = await module.InvokeAsync<AdminFetchResult<AdminPage<AdminAuditLogViewModel>>>("getAdminAuditLog", target, 50);
+                if (result.AccessDenied) { _accessDenied = true; return; }
+                if (!ValidPage(result.Value, target)) throw new InvalidOperationException("Invalid audit page.");
+                _auditLog = result.Value;
+                _auditSkip = target;
+            }
+            _pendingRevokeKeyId = null;
+        }
+        catch (Exception)
+        {
+            _pagingError = L["That page could not be loaded. The previous page is still shown; try the page control again."];
+        }
+        finally { _isPaging = false; }
+    }
+
+    private static bool ValidPage<T>(AdminPage<T>? page, int skip) =>
+        page is not null && page.Skip == skip && page.Take == 50 && page.TotalCount >= 0 &&
+        page.Items is not null && page.Items.Count <= 50 && page.Items.All(item => item is not null);
+
     private async Task CreateAccessKeyAsync()
     {
-        if (_isMutating)
+        if (_isMutating || _isPaging)
         {
             return;
         }

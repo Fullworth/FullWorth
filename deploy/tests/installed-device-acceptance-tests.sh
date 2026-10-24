@@ -114,4 +114,28 @@ if run_record android "$symlink" \
     fail "symlinked evidence destination was accepted."
 fi
 
+# Paths must be checked after resolving parent aliases, including dot segments.
+ln -s "$deployment" "$temp/checkout-alias"
+for destination in \
+    "$evidence_dir/../deployment/dot.state" \
+    "$temp/checkout-alias/link.state"; do
+    if run_record android "$destination" \
+        BILLWATCH_INSTALLED_DEVICE_ACCEPTANCE_ALLOW_RECORD=true \
+        BILLWATCH_INSTALLED_DEVICE_ACCEPTANCE_CONFIRMATION="$android_phrase" >/dev/null 2>&1; then
+        fail "checkout evidence destination was accepted through a parent alias."
+    fi
+done
+[ ! -e "$deployment/dot.state" ] && [ ! -e "$deployment/link.state" ] ||
+    fail "refused checkout destination was written."
+[ -z "$(find "$deployment" -name '*.tmp.*' -print)" ] ||
+    fail "refused checkout destination left temporary evidence."
+
+# Legitimate outside aliases remain usable, including names with spaces.
+ln -s "$evidence_dir" "$temp/outside-alias"
+run_record android "$temp/outside-alias/../evidence/outside alias.state" \
+    BILLWATCH_INSTALLED_DEVICE_ACCEPTANCE_ALLOW_RECORD=true \
+    BILLWATCH_INSTALLED_DEVICE_ACCEPTANCE_CONFIRMATION="$android_phrase" >/dev/null ||
+    fail "valid outside evidence alias was rejected."
+[ -f "$evidence_dir/outside alias.state" ] || fail "outside alias evidence was not published."
+
 printf '%s\n' 'Installed-device acceptance evidence regression tests passed.'

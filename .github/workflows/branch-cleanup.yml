@@ -43,6 +43,50 @@ jobs:
           delete_branch_if_present()
           {
             local branch="$1"
+            local expected_sha="$2"
+            local open_heads open_bases current_sha
+
+            # A branch can become a PR head/base after the initial listing.
+            # Recheck both references and the exact enumerated head directly
+            # before DELETE. The GitHub REST delete is not a transactional
+            # compare-and-swap, so fail closed on any unverifiable state.
+            if ! open_heads="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=open \
+                -f head="$REPOSITORY_OWNER:$branch" \
+                -f per_page=100 --jq 'length'
+            )"; then
+              echo "Failed to recheck open PR heads for $branch" >&2
+              return 1
+            fi
+
+            if ! open_bases="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=open \
+                -f base="$branch" \
+                -f per_page=100 --jq 'length'
+            )"; then
+              echo "Failed to recheck open PR bases for $branch" >&2
+              return 1
+            fi
+
+            if [[ "$open_heads" != "0" || "$open_bases" != "0" ]]; then
+              echo "Keeping branch used by an open PR: $branch"
+              return 2
+            fi
+
+            if ! current_sha="$(
+              gh api -X GET "repos/$REPOSITORY/git/ref/heads/$branch" \
+                --jq '.object.sha' 2>/dev/null
+            )"; then
+              echo "Keeping missing or unverifiable branch ref: $branch"
+              return 2
+            fi
+
+            if [[ "$current_sha" != "$expected_sha" ]]; then
+              echo "Keeping branch whose head changed: $branch"
+              return 2
+            fi
 
             if gh api -X DELETE \
               "repos/$REPOSITORY/git/refs/heads/$branch"
@@ -90,8 +134,16 @@ jobs:
                 --jq 'length'
             )"
 
-            if [[ "$open_count" != "0" ]]; then
-              echo "Skipping branch with open PR: $branch"
+            open_base_count="$(
+              gh api -X GET "repos/$REPOSITORY/pulls" \
+                -f state=open \
+                -f base="$branch" \
+                -f per_page=100 \
+                --jq 'length'
+            )"
+
+            if [[ "$open_count" != "0" || "$open_base_count" != "0" ]]; then
+              echo "Skipping branch used by an open PR: $branch"
               skipped=$((skipped + 1))
               continue
             fi
@@ -108,10 +160,14 @@ jobs:
               { [[ "$containment_status" == "ahead" ]] ||
                 [[ "$containment_status" == "identical" ]]; }
             then
-              delete_branch_if_present "$branch"
-
-              echo "Deleted branch fully contained in development: $branch"
-              contained_deleted=$((contained_deleted + 1))
+              if delete_branch_if_present "$branch" "$sha"; then
+                echo "Deleted branch fully contained in development: $branch"
+                contained_deleted=$((contained_deleted + 1))
+              else
+                status=$?
+                if [[ "$status" != "2" ]]; then exit "$status"; fi
+                skipped=$((skipped + 1))
+              fi
               continue
             fi
 
@@ -129,10 +185,14 @@ jobs:
               continue
             fi
 
-            delete_branch_if_present "$branch"
-
-            echo "Deleted merged-PR source branch: $branch"
-            deleted=$((deleted + 1))
+            if delete_branch_if_present "$branch" "$sha"; then
+              echo "Deleted merged-PR source branch: $branch"
+              deleted=$((deleted + 1))
+            else
+              status=$?
+              if [[ "$status" != "2" ]]; then exit "$status"; fi
+              skipped=$((skipped + 1))
+            fi
           done < <(
             gh api --paginate \
               "repos/$REPOSITORY/branches?per_page=100" \
@@ -145,5 +205,5 @@ jobs:
             echo "- Deleted branches fully contained in development: $contained_deleted"
             echo "- Deleted merged-PR source branches: $deleted"
             echo "- Preserved branches without a matching merged PR: $skipped"
-            echo "- Always preserved: master, development, protected branches, branches with open pull requests, and any branch with commits not contained in development"
+            echo "- Always preserved: master, development, protected branches, active PR heads/bases, changing refs, and branches without verified merge/containment evidence"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -18,6 +18,7 @@ public sealed class PlaidController : ControllerBase
     private readonly PlaidConnectionExchangeService _exchangeService;
     private readonly PlaidHostedLinkCompletionService _completionService;
     private readonly PlaidConnectionSyncCoordinator _syncCoordinator;
+    private readonly PlaidBankDataSyncGateway _bulkSyncGateway;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public PlaidController(
@@ -30,8 +31,10 @@ public sealed class PlaidController : ControllerBase
         UserManager<ApplicationUser> userManager,
         ILoggerFactory loggerFactory,
         SecuritySensitiveActionAlertAggregator
-            securityAlertAggregator)
+            securityAlertAggregator,
+        PlaidBankDataSyncGateway bulkSyncGateway)
     {
+        _bulkSyncGateway = bulkSyncGateway;
         _plaidLinkService = plaidLinkService;
         _exchangeService = exchangeService;
         _completionService = completionService;
@@ -137,6 +140,13 @@ public sealed class PlaidController : ControllerBase
                 message = "Plaid Link session was not found."
             });
         }
+        catch (PlaidDisconnectedConnectionException)
+        {
+            return Conflict(new
+            {
+                message = "A previously disconnected bank cannot be reactivated. Start a new bank connection."
+            });
+        }
     }
 
     [HttpPost("accounts/sync")]
@@ -150,7 +160,7 @@ public sealed class PlaidController : ControllerBase
         }
 
         var result =
-            await _syncCoordinator.SyncAllAccountsAsync(
+            await _bulkSyncGateway.SyncAllAccountsAsync(
                 userId,
                 cancellationToken);
 
@@ -168,7 +178,7 @@ public sealed class PlaidController : ControllerBase
         }
 
         var result =
-            await _syncCoordinator.SyncAllTransactionsAsync(
+            await _bulkSyncGateway.SyncAllTransactionsAsync(
                 userId,
                 cancellationToken);
 
@@ -258,13 +268,23 @@ public sealed class PlaidController : ControllerBase
             });
         }
 
-        var connection =
-            await _exchangeService.ExchangeAndSaveAsync(
-                userId,
-                request.PublicToken,
-                cancellationToken);
+        try
+        {
+            var connection =
+                await _exchangeService.ExchangeAndSaveAsync(
+                    userId,
+                    request.PublicToken,
+                    cancellationToken);
 
-        return Ok(connection);
+            return Ok(connection);
+        }
+        catch (PlaidDisconnectedConnectionException)
+        {
+            return Conflict(new
+            {
+                message = "A previously disconnected bank cannot be reactivated. Start a new bank connection."
+            });
+        }
     }
 
     private bool TryGetUserId(

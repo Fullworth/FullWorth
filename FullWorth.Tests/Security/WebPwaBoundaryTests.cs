@@ -308,19 +308,19 @@ public sealed class WebPwaBoundaryTests
             bff,
             StringComparison.Ordinal);
 
-        Assert.Contains(
-            "\"/login\"",
-            bff,
-            StringComparison.Ordinal);
+        Assert.Contains("loginRedirectUrl(window.location)", bff, StringComparison.Ordinal);
+        var loginRedirect = File.ReadAllText(Path.Combine(repositoryRoot, "FullWorth.Web", "wwwroot", "js", "login-redirect.js"));
+        Assert.Contains("\"/login\"", loginRedirect, StringComparison.Ordinal);
 
+        var polling = File.ReadAllText(Path.Combine(repositoryRoot, "FullWorth.Web", "wwwroot", "js", "plaid-completion.js"));
         Assert.Contains(
             "popupClosedPendingChecks",
-            bff,
+            polling,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "popupClosedPendingChecks >=",
-            bff,
+            polling,
             StringComparison.Ordinal);
 
         Assert.Contains(

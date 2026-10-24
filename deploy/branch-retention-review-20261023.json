@@ -1,0 +1,3170 @@
+{
+  "schemaVersion": 1,
+  "reviewedAtUtc": "2026-10-23T17:00:09Z",
+  "developmentSha": "305ac30601323cc259d2b8824acd1076bd2ffabc",
+  "masterSha": "dd31836703bd110a30f303ed3ce9fd13c0f61d82",
+  "snapshotBranchCount": 59,
+  "scope": "Non-destructive patch and blob review; not a deletion allowlist or production acceptance",
+  "allNamedRefsPreservedByThisPass": true,
+  "records": [
+    {
+      "issue": 875,
+      "branch": "codex/account-connection-truth-pass",
+      "pr": 776,
+      "head": "81ee66081fe795f8a2bdd8ca06f321de5e0147b9",
+      "refExists": true,
+      "prHead": "81ee66081fe795f8a2bdd8ca06f321de5e0147b9",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "ENDPOINT_SECURITY_INVENTORY.md",
+          "sourceBlob": "1a05e583cf9f0ec04cdb595319221e03f224c48c",
+          "currentBlob": "d5f867c795130c96e0ab5d87ca839c77131f3c55",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "95d06f32137c1a636125a1c777ddb1b1d7ae46cc",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "8f6b40c4f50c120945f86a156220c151788b2e89",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Controllers/BankConnectionsController.cs",
+          "sourceBlob": "d6e069398d24b853628a4ca13976083f381bd514",
+          "currentBlob": "d6e069398d24b853628a4ca13976083f381bd514",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Entities/BankConnectionEntity.cs",
+          "sourceBlob": "8f9d3a2a0d029f856adf8cd543059f3c878d8773",
+          "currentBlob": "8f9d3a2a0d029f856adf8cd543059f3c878d8773",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/20261018083000_AddBankConnectionArchive.cs",
+          "sourceBlob": "cf6105ff153d2ff6ce61f0a5164f6e7dd833a4d9",
+          "currentBlob": "cf6105ff153d2ff6ce61f0a5164f6e7dd833a4d9",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/FullWorthDbContextModelSnapshot.cs",
+          "sourceBlob": "be1acee5bf854a8aa3a69ee78a1592b085ed503c",
+          "currentBlob": "45360ebfe3d9eaabe91eb6047a785e38407c2b79",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/BankConnectionArchiveTests.cs",
+          "sourceBlob": "0d9e70363743ffee8b03a5fca959dffa9d48e380",
+          "currentBlob": "0d9e70363743ffee8b03a5fca959dffa9d48e380",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Security/CrossUserIdentifierCoverageTests.cs",
+          "sourceBlob": "a70985126927764ffc17244823e1b4f4ebf061fd",
+          "currentBlob": "54022d0c463920f218a3c2b84a0eaeffcd672423",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs",
+          "sourceBlob": "951bc8d972a6a83f761d8aca0f20e705d6d4a1fb",
+          "currentBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/WebAntiforgeryBoundaryTests.cs",
+          "sourceBlob": "8978dc0957940ed9291cf2b9d7cb210b574fc2ca",
+          "currentBlob": "8978dc0957940ed9291cf2b9d7cb210b574fc2ca",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/BankConnectionSummaryTests.cs",
+          "sourceBlob": "921ec76ba9cadd2952cb3b924269dd75dc386e45",
+          "currentBlob": "921ec76ba9cadd2952cb3b924269dd75dc386e45",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "4786759c888156bf7959af6414e1b523e05ad38d",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Account.razor",
+          "sourceBlob": "81f310a0d77a71f18c4d1817d58fe330bde5822a",
+          "currentBlob": "6405da2f7b65beb54fc4961aa2ba3001a680c0a0",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Account.razor.css",
+          "sourceBlob": "43489024b867f6befef38014dec7ccf679614ee9",
+          "currentBlob": "43489024b867f6befef38014dec7ccf679614ee9",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/BankConnectionSummary.razor",
+          "sourceBlob": "f6c987156bded9e6b4742ecf923c3fc1b6e24c19",
+          "currentBlob": "f6c987156bded9e6b4742ecf923c3fc1b6e24c19",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/BankConnectionSummary.razor.css",
+          "sourceBlob": "2c1ed4688d913c01236563fcd0bc98dd56e8cfe4",
+          "currentBlob": "2c1ed4688d913c01236563fcd0bc98dd56e8cfe4",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Infrastructure/BffEndpointMappings.cs",
+          "sourceBlob": "0e8cef9ed254cca825832fcbb202035fb0e23046",
+          "currentBlob": "32b7a7732aa1e2e5764e7ab9095201a29901350b",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/Account.es.resx",
+          "sourceBlob": "c58caa2cd4c09d79ca15d9b0b1a87531b50a66d4",
+          "currentBlob": "c58caa2cd4c09d79ca15d9b0b1a87531b50a66d4",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/bff.js",
+          "sourceBlob": "8c76ba46535ac3b3e99fae700079fe4fe8ca277b",
+          "currentBlob": "e3bbab99ed9ce505331c135f51261207bfeffa7a",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "c25eca2d623d924992c9999dc96c2d72a3c86a2c",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 790,
+          "mergeCommit": "9d53d8b705570a406c35437294fad0c2a1b3d79f"
+        },
+        {
+          "pr": 792,
+          "mergeCommit": "1b00f452f80f1500286632b5588a1e6901b6bd85"
+        }
+      ],
+      "reason": "Archive API/storage migration and owner/CSRF tests are exact; Account/BFF additions are retained. Endpoint totals and browser overlay timing evolved. Retain historical source; do not restore old release docs."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/activity-feed-reliability-pass",
+      "pr": 775,
+      "head": "4cdac10665ffd38173d3752b32b2f1b4a1aabcf7",
+      "refExists": true,
+      "prHead": "4cdac10665ffd38173d3752b32b2f1b4a1aabcf7",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "95d06f32137c1a636125a1c777ddb1b1d7ae46cc",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "8f6b40c4f50c120945f86a156220c151788b2e89",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/ActivityFeedPresentationTests.cs",
+          "sourceBlob": "224c1ae261190742d1cad5abda0fc535ece07f2a",
+          "currentBlob": "224c1ae261190742d1cad5abda0fc535ece07f2a",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/AlertCardReviewLinkTests.cs",
+          "sourceBlob": "ff390c33290b3b8deca130704853c61a5feeed2d",
+          "currentBlob": "ff390c33290b3b8deca130704853c61a5feeed2d",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "e9ee05e0e69b2759d102fa4220c8aa5f197944af",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Activity.razor",
+          "sourceBlob": "2bffe671f1d4e837acf73b325fd96e380a8f1e37",
+          "currentBlob": "6cc3be4efd0d435fd24c3a6f6ae9e99fc817ea71",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Activity.razor.css",
+          "sourceBlob": "f5e47b7b5370748a27a84fc28e6100a5e2e9fcc7",
+          "currentBlob": "f5e47b7b5370748a27a84fc28e6100a5e2e9fcc7",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/AlertCard.razor",
+          "sourceBlob": "589e7feae3c2b9862fb4c982853b7020c222c92c",
+          "currentBlob": "589e7feae3c2b9862fb4c982853b7020c222c92c",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/AlertCard.razor.css",
+          "sourceBlob": "570c8245a797c9109ffaf7fe1bb732f739b33316",
+          "currentBlob": "570c8245a797c9109ffaf7fe1bb732f739b33316",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Presentation/ActivityFeedPresentation.cs",
+          "sourceBlob": "2cc766e1a284680efcb2a0955f7065c41507ed5c",
+          "currentBlob": "2cc766e1a284680efcb2a0955f7065c41507ed5c",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/Activity.es.resx",
+          "sourceBlob": "8bf24771f233c315aeaf3121a696850b2bafde78",
+          "currentBlob": "8bf24771f233c315aeaf3121a696850b2bafde78",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "c25eca2d623d924992c9999dc96c2d72a3c86a2c",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 791,
+          "mergeCommit": "feda7690dd968322795bc1948c36b85dba88eb64"
+        }
+      ],
+      "reason": "Presentation helper, card, styles, localization and HTML tests are exact. Activity now validates the snapshot more strictly; browser scenarios remain."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/bills-workspace-evidence-pass",
+      "pr": 780,
+      "head": "01c59c904091dda288fca5b08869a766e31b1313",
+      "refExists": true,
+      "prHead": "01c59c904091dda288fca5b08869a766e31b1313",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/BillLedgerSnapshotTests.cs",
+          "sourceBlob": "b42acbe98d39fbc9e8d7ba968207f9d5571612ec",
+          "currentBlob": "b42acbe98d39fbc9e8d7ba968207f9d5571612ec",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/BillWorkspaceLifecycleTests.cs",
+          "sourceBlob": "15e4ac6acd403bd6f1138d483406958f6351ad88",
+          "currentBlob": "e463c2749f528922b042782cf378f4d802270320",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/bills-workspace.test.mjs",
+          "sourceBlob": "d5219ea44e2d58644f63564e98a3bf953163afef",
+          "currentBlob": "997b2f713e7f208ee6b6d399323430e1f69b7142",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "c13b2aadfc572c5fd1e0627e012dc549e3320c9f",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor",
+          "sourceBlob": "be1a61572741c50a88420c3a8c057bba142aa664",
+          "currentBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor.css",
+          "sourceBlob": "168c462ff9b9d3bf928a744bbc37c3b7fd20828a",
+          "currentBlob": "168c462ff9b9d3bf928a744bbc37c3b7fd20828a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Bills.razor",
+          "sourceBlob": "0f39ed72a8853478a279ae5efb0790534160a6f0",
+          "currentBlob": "0f39ed72a8853478a279ae5efb0790534160a6f0",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Bills.razor.css",
+          "sourceBlob": "88a3f31bd690f641ecf98cd59fef311b5c6dd45d",
+          "currentBlob": "88a3f31bd690f641ecf98cd59fef311b5c6dd45d",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/BillDetail.es.resx",
+          "sourceBlob": "ad7576dddb4d12bce1eb054f6fe20832a0a7adae",
+          "currentBlob": "ad7576dddb4d12bce1eb054f6fe20832a0a7adae",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/Bills.es.resx",
+          "sourceBlob": "c7a4b4cae7ca237faf9cd08fc7d5ba20f48deb93",
+          "currentBlob": "c7a4b4cae7ca237faf9cd08fc7d5ba20f48deb93",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Services/BillLedgerSnapshot.cs",
+          "sourceBlob": "196bee49945b3d096067598e9f403adf1dfe272f",
+          "currentBlob": "196bee49945b3d096067598e9f403adf1dfe272f",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 790,
+          "mergeCommit": "9d53d8b705570a406c35437294fad0c2a1b3d79f"
+        }
+      ],
+      "reason": "Bill ledger, styles/resources and browser scenarios remain. The old detection-time latest-change expression is intentionally superseded by billing-period chronology."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/everyday-ui-polish",
+      "pr": 786,
+      "head": "c0d439d229198c3b7949d2678a771aa3d09e001a",
+      "refExists": true,
+      "prHead": "c0d439d229198c3b7949d2678a771aa3d09e001a",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/NavigationViewportObserverTests.cs",
+          "sourceBlob": "5aeb41097aae4d70f84f897aa63b36662f985db0",
+          "currentBlob": "5aeb41097aae4d70f84f897aa63b36662f985db0",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/ProviderLogoLifecycleTests.cs",
+          "sourceBlob": "76cf2457cdb5063ed275671b8ebda6544442b7e0",
+          "currentBlob": "5a24adf65098c01bbf5e90389c21f3a8aa15635a",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/navigation-viewport.test.mjs",
+          "sourceBlob": "449b7b9cbbdc8c438a4110a90b197e6172df5438",
+          "currentBlob": "449b7b9cbbdc8c438a4110a90b197e6172df5438",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/ui-polish.test.mjs",
+          "sourceBlob": "de27446993c6f2fbf650d7a8bbdca1d5cac9a217",
+          "currentBlob": "6013883766581fbd46086a175a55ddd0d2b9ee13",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "03187a49350b4e6fb15e7f148b777b5a290457c8",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Layout/AppLayout.razor",
+          "sourceBlob": "5def74958fa27a864a90a23a420bebc00323357b",
+          "currentBlob": "cf0c957912ff6023e29775e7b352a7feaca9cffc",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/NavigationViewportObserver.razor",
+          "sourceBlob": "cc3a9380ebdb8a959915bc4151f1b47537f8b028",
+          "currentBlob": "cc3a9380ebdb8a959915bc4151f1b47537f8b028",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/ProviderLogo.razor",
+          "sourceBlob": "48b9f36acb8c3f91076ab2c688bd51ba6146ede4",
+          "currentBlob": "48b9f36acb8c3f91076ab2c688bd51ba6146ede4",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/ProviderLogo.razor.css",
+          "sourceBlob": "5ba95a816e71c2e1091d82b8955ef86671a400bc",
+          "currentBlob": "5ba95a816e71c2e1091d82b8955ef86671a400bc",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/app-polish.css",
+          "sourceBlob": "358e4440ec8d7d9f75e8d18ac7e338bba4aa151d",
+          "currentBlob": "358e4440ec8d7d9f75e8d18ac7e338bba4aa151d",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/navigation-viewport.js",
+          "sourceBlob": "1361c78f7d3344a0cf8236763b2aecda04ddf392",
+          "currentBlob": "1361c78f7d3344a0cf8236763b2aecda04ddf392",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 791,
+          "mergeCommit": "feda7690dd968322795bc1948c36b85dba88eb64"
+        }
+      ],
+      "reason": "Shared styles/navigation/logo implementation remains. Parameter tests use revised setup; filter geometry assertions changed with the integrated filter layout. Retain old UI screenshot/test lineage."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/market-validated-roadmap",
+      "pr": 778,
+      "head": "eaa59f66939e58c2aca2fba1e94972c29aa1e395",
+      "refExists": true,
+      "prHead": "eaa59f66939e58c2aca2fba1e94972c29aa1e395",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_PRODUCT_STRATEGY.md",
+          "sourceBlob": "8c96d940bdc63e543b446cb2921fe5319591517a",
+          "currentBlob": "8c96d940bdc63e543b446cb2921fe5319591517a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "d2cfe894559fbe1489afdb2b4b79d16fb1371227",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 797,
+          "mergeCommit": "a17e1ce65fa8666e828c7674d1ac2c64726c6f8a"
+        }
+      ],
+      "reason": "Product strategy file is exact. Roadmap was intentionally updated by the merged market-validation priorities; do not replace it with stale planning text."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/overview-coverage-trust",
+      "pr": 779,
+      "head": "a0cdc98c6cb8aa5b3316d2e7a8ffacb7479af4d4",
+      "refExists": true,
+      "prHead": "a0cdc98c6cb8aa5b3316d2e7a8ffacb7479af4d4",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/OverviewBillCoverageTests.cs",
+          "sourceBlob": "ca3fa996180581e4fa3ef6c1a16b4f30439feed8",
+          "currentBlob": "ca3fa996180581e4fa3ef6c1a16b4f30439feed8",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/OverviewBillSummaryTests.cs",
+          "sourceBlob": "b3d3cb8c14e1a6d6369d26efa58a675aadca45a5",
+          "currentBlob": "b3d3cb8c14e1a6d6369d26efa58a675aadca45a5",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/OverviewRefreshTests.cs",
+          "sourceBlob": "0f999b1a4fa9e5fd9216800e10f2b86b277e7d90",
+          "currentBlob": "6af39f224efc770bdab1145533254f2e781ce667",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "a7b9a2486aaf789db9185152aefcc771420af0d0",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor",
+          "sourceBlob": "f99361f517d3b73c1775df992fb714c6714d1cd6",
+          "currentBlob": "ae89dbdfecf34d22508595611c0d91dd02d18379",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor.css",
+          "sourceBlob": "fd1d38c8a0060c6f84262518a08864a0ca656cd3",
+          "currentBlob": "5ed6d08be817eccb1cd7798a577e28bd6d65dc89",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/OverviewBillSummary.razor",
+          "sourceBlob": "968aa4802a361d823ca3c61922432ed90b85a1e8",
+          "currentBlob": "968aa4802a361d823ca3c61922432ed90b85a1e8",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/OverviewBillSummary.razor.css",
+          "sourceBlob": "28578a6d3f24e25d0f5334d47567cef506aa9269",
+          "currentBlob": "28578a6d3f24e25d0f5334d47567cef506aa9269",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/Overview.es.resx",
+          "sourceBlob": "863319d60c2a1a66b0de6f715148cb367408213a",
+          "currentBlob": "863319d60c2a1a66b0de6f715148cb367408213a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Shared/OverviewBillSummary.es.resx",
+          "sourceBlob": "f7737413faa87d9f812dc2590f2742cde32ff589",
+          "currentBlob": "f7737413faa87d9f812dc2590f2742cde32ff589",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Services/OverviewBillCoverage.cs",
+          "sourceBlob": "1a3246700f69a57e48d2c4999eb8ed4d903e1f22",
+          "currentBlob": "1a3246700f69a57e48d2c4999eb8ed4d903e1f22",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 790,
+          "mergeCommit": "9d53d8b705570a406c35437294fad0c2a1b3d79f"
+        }
+      ],
+      "reason": "Presentation helpers and browser/component assertions remain. Later mixed-bank and currency-neutral watchlist fixes extend the implementation."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/password-once-verification-choice",
+      "pr": 773,
+      "head": "e789dad15b5d05a091b0580197ecb7fbec179614",
+      "refExists": true,
+      "prHead": "e789dad15b5d05a091b0580197ecb7fbec179614",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "sourceBlob": "b4d8ab3cce9af10f84b55c1bbfe9c839b74511e7",
+          "currentBlob": "b4d8ab3cce9af10f84b55c1bbfe9c839b74511e7",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "ENDPOINT_SECURITY_INVENTORY.md",
+          "sourceBlob": "c8209ff593045cbde73a58a0d4f490ae61dd60fd",
+          "currentBlob": "d5f867c795130c96e0ab5d87ca839c77131f3c55",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "4d9e784146a674ff35067d04ffd531ecb481ed44",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "3786262452ad0f2d15564706fa5e8279510deafe",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Controllers/PasswordSignInController.cs",
+          "sourceBlob": "367ebc68c0ef600c8bec736fff67550dac5cd90a",
+          "currentBlob": "367ebc68c0ef600c8bec736fff67550dac5cd90a",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Program.cs",
+          "sourceBlob": "8ec76f3aec42d78f4e2f76ccb5efa6ef9d285e0b",
+          "currentBlob": "f54e7d0a0e6b2ea4714d23e1aed22a412c0ef1b7",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Identity/PendingPasswordLoginStore.cs",
+          "sourceBlob": "c03cb756f56bc4e003699c4ef1ddd3efbc860b9f",
+          "currentBlob": "c03cb756f56bc4e003699c4ef1ddd3efbc860b9f",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs",
+          "sourceBlob": "d21039eed38309d9b5cf4b9fab302c2c378d8f47",
+          "currentBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/PasswordSignInTests.cs",
+          "sourceBlob": "d1d5f5407966ed95b468b4ec43da6fe245741d22",
+          "currentBlob": "47175f4cbe13b12a726f3434c12a35cfd55279c3",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Security/PasswordSignInWebTests.cs",
+          "sourceBlob": "dcf26d868504f1c4683e3c513a2bc9ec19d18e13",
+          "currentBlob": "dcf26d868504f1c4683e3c513a2bc9ec19d18e13",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Security/PendingPasswordLoginTests.cs",
+          "sourceBlob": "703962bc5bcee4c74c0c29c9111368f97b7d2d76",
+          "currentBlob": "703962bc5bcee4c74c0c29c9111368f97b7d2d76",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Security/WebAuthenticationRateLimitTests.cs",
+          "sourceBlob": "b212dc8e45deeee44624b40a6446b53764f609f8",
+          "currentBlob": "b212dc8e45deeee44624b40a6446b53764f609f8",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.VisualTests/compose.passkeys-ci.yml",
+          "sourceBlob": "bd306766b2be73fb941f2c47e7c85b1946d7f2c2",
+          "currentBlob": "bd306766b2be73fb941f2c47e7c85b1946d7f2c2",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/passkey-acceptance.mjs",
+          "sourceBlob": "fa1bcfb0dc08e8e3c25db443c8e7101541e2a9b0",
+          "currentBlob": "28db3911401f40ae07ad462c9529362947a188a4",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "1a94e16d39e3b8793fa00ac6ba327506d60c2f6e",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/App.razor",
+          "sourceBlob": "cbcd42687409f74e3acd5cac51289de54992862e",
+          "currentBlob": "cbcd42687409f74e3acd5cac51289de54992862e",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Layout/MainLayout.razor.css",
+          "sourceBlob": "2581d973f7ad92552c742b33ac77f2b7a9127b59",
+          "currentBlob": "2581d973f7ad92552c742b33ac77f2b7a9127b59",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/Login.razor",
+          "sourceBlob": "1f0b115a9f3c93b6d7a8f83f0d02924edbd43ca0",
+          "currentBlob": "42e947239a2e8944d3bac466fe5888bc884cf559",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/Login.razor.css",
+          "sourceBlob": "44d4a9902165012a3f235b421c0c2b1dbc981838",
+          "currentBlob": "44d4a9902165012a3f235b421c0c2b1dbc981838",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Infrastructure/AuthEndpointMappings.cs",
+          "sourceBlob": "e5c2df9f7c913449eb0fae069d02000c8c44f093",
+          "currentBlob": "4febdf156bdc45eef341f448ef7c670857322758",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Program.cs",
+          "sourceBlob": "78c675334317df9db8d1c13cf0b9b05aa484ef23",
+          "currentBlob": "8b71937a0f7a1794ffd39e5b2600af891d227187",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/App.es.resx",
+          "sourceBlob": "f0cccf7d322651fba0a3e49671728e39e85758fb",
+          "currentBlob": "f0cccf7d322651fba0a3e49671728e39e85758fb",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Services/PendingPasswordLoginCookie.cs",
+          "sourceBlob": "874b81aea5bdf7282bec2b5e37b8195a1ea63bfb",
+          "currentBlob": "e38937bfede16e7e346f4090f7a71caea662854e",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Services/WebAuthenticationService.PasswordSteps.cs",
+          "sourceBlob": "e9620df5eabeae0c77d20d0165542631ad5cc97b",
+          "currentBlob": "be398f74986aa27957533bf3de8bf8454ba7f20a",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Services/WebAuthenticationService.cs",
+          "sourceBlob": "e1b49f634062900c941e5ab46aedc3c6b064641c",
+          "currentBlob": "4126b0a19639c806886626992ed2880e6002707c",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/auth.css",
+          "sourceBlob": "5c82e30ddfaf303477bc42b103caee92fa4eaea5",
+          "currentBlob": "5c82e30ddfaf303477bc42b103caee92fa4eaea5",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/passkeys.js",
+          "sourceBlob": "3e724fb42e9066f66471abf154763db94afa6c6e",
+          "currentBlob": "d82d26624e7ebaf3868db41372d947b9977ec891",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/password-step.js",
+          "sourceBlob": "d125414747d4e1551123f2811b168ba7455a2d90",
+          "currentBlob": "03d0600d01af54731f90156a4d3f24c65389140f",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "5bb2af168227899005693f2d220a893c12d55e5b",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "PASSKEYS.md",
+          "sourceBlob": "cf4781928c6e901abbbd6e599b872dca34d0ea7f",
+          "currentBlob": "27fafe0062a75b8cdedf580ec2a21057cb1840d2",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 794,
+          "mergeCommit": "d079bd771621111afe27ae5bc072920345a6cfff"
+        },
+        {
+          "pr": 809,
+          "mergeCommit": "40fa83f5e4a996bea02fd245b4a02068317de965"
+        },
+        {
+          "pr": 874,
+          "mergeCommit": "8d605dc58e144cdbdcec7e4fc3fb3e9b5bc0e025"
+        }
+      ],
+      "reason": "Password-once proof APIs/store, endpoints and negative tests remain. Newer destination protection, synced-platform passkeys and read-only key recovery supersede older redirects/authenticator fixtures and list code."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/planning-workspace-reliability",
+      "pr": 788,
+      "head": "7d636579c51650f78cb535c9fd2dcd77cc41ba41",
+      "refExists": true,
+      "prHead": "7d636579c51650f78cb535c9fd2dcd77cc41ba41",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/PlanningWorkspaceTests.cs",
+          "sourceBlob": "832377442d3c24fd73e4a90af61bc3305017d92a",
+          "currentBlob": "17c5c1135fc2420f059cd58584bfce256046c2a8",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/planning-workspace.test.mjs",
+          "sourceBlob": "e631985674f96b4b9234b8817efa3a00374b1383",
+          "currentBlob": "3eee5b68d8e4a83f6e724053ac0226281637679f",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "62c54f83d0ecc168f63ce83e8549f1174bb5ef09",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor",
+          "sourceBlob": "be784c3579509469bd5baa7be7a2059f5e0d6083",
+          "currentBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor.css",
+          "sourceBlob": "a4677d620a317288d6a481d5e8d3a874d87e5ae5",
+          "currentBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/Planning.es.resx",
+          "sourceBlob": "9fd1e2137ed5bb10167079492bfd1cf103f46042",
+          "currentBlob": "9fd1e2137ed5bb10167079492bfd1cf103f46042",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 790,
+          "mergeCommit": "9d53d8b705570a406c35437294fad0c2a1b3d79f"
+        },
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Planning lifecycle and browser recovery cases remain. Anchor links, evidence flags and immutable coverage are newer safeguards; do not restore raw-amount/fragment-only markup."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/privacy-controls-reliability",
+      "pr": 781,
+      "head": "950d8ebf026ba88f88fe55235c567787819b5b48",
+      "refExists": true,
+      "prHead": "950d8ebf026ba88f88fe55235c567787819b5b48",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Security/WebPwaBoundaryTests.cs",
+          "sourceBlob": "7c1981c981dfff490febcf556550c0be0e9e6949",
+          "currentBlob": "118d1461cd55fc4edcd349d753d4cd932c808681",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/AccountPrivacyLifecycleTests.cs",
+          "sourceBlob": "c7b97d552a50ce85c4ee80d747e85f2de35f849c",
+          "currentBlob": "c7b97d552a50ce85c4ee80d747e85f2de35f849c",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/privacy-controls.test.mjs",
+          "sourceBlob": "58dcf1f7754d6116b2c07740d8867512a4df05d0",
+          "currentBlob": "136ae077e950ec7a6877f6915f68da23f3d85ef5",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/privacy-requests.test.mjs",
+          "sourceBlob": "28b4a36d153b90e33d2ec5f3b633c91334b26c8a",
+          "currentBlob": "28b4a36d153b90e33d2ec5f3b633c91334b26c8a",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "55e6559c39d6e9272b298a041e5cdc2ec4924231",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountPrivacy.razor",
+          "sourceBlob": "88c85bdc78a6c7f3241227cd318f2a9ad2a8320d",
+          "currentBlob": "88c85bdc78a6c7f3241227cd318f2a9ad2a8320d",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountPrivacy.razor.css",
+          "sourceBlob": "606ac270ece4e045a05ae931e3b02381d4247460",
+          "currentBlob": "606ac270ece4e045a05ae931e3b02381d4247460",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/AccountPrivacy.es.resx",
+          "sourceBlob": "a5afbec991c444fb1e908f64943ee0c0653aa15c",
+          "currentBlob": "a5afbec991c444fb1e908f64943ee0c0653aa15c",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/account-delete.js",
+          "sourceBlob": "2edbde4c4774b76d4ddf3e807a777260a4c6665a",
+          "currentBlob": "2edbde4c4774b76d4ddf3e807a777260a4c6665a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/account-export.js",
+          "sourceBlob": "36ba1c6d8dbfe0b79be10f2e703dcd658f8e6831",
+          "currentBlob": "36ba1c6d8dbfe0b79be10f2e703dcd658f8e6831",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/account-privacy-requests.js",
+          "sourceBlob": "9110bdb2258d2dd5af2200a5cc426b5aee36abb3",
+          "currentBlob": "9110bdb2258d2dd5af2200a5cc426b5aee36abb3",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/bff.js",
+          "sourceBlob": "30303845a8ef6eea1cb7113af31ee2b4441688b7",
+          "currentBlob": "e3bbab99ed9ce505331c135f51261207bfeffa7a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 790,
+          "mergeCommit": "9d53d8b705570a406c35437294fad0c2a1b3d79f"
+        }
+      ],
+      "reason": "Privacy/export/delete UI and server boundaries remain; recovery browser scenarios and BFF cache clearing remain."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/setup-preferences-reliability",
+      "pr": 785,
+      "head": "af535756fc328f2be4b252202cc15693fb798d21",
+      "refExists": true,
+      "prHead": "af535756fc328f2be4b252202cc15693fb798d21",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/ExperienceSetupLifecycleTests.cs",
+          "sourceBlob": "ba1d2fdadfcd3dd2bae3af1551a9bb7bedd40987",
+          "currentBlob": "ba1d2fdadfcd3dd2bae3af1551a9bb7bedd40987",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/experience-preferences.test.mjs",
+          "sourceBlob": "229399c2eeeaeacb41f885f522ea3875fa8b5932",
+          "currentBlob": "229399c2eeeaeacb41f885f522ea3875fa8b5932",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/experience-setup.test.mjs",
+          "sourceBlob": "12e23567ab3e5b9a077afd712bf4514af50a48fd",
+          "currentBlob": "65e9284ebd8c446702504b98fb28e81c7a491b81",
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "3f7a20416d32b33b67cc5c337767f65d907fab9e",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/ExperienceSetup.razor",
+          "sourceBlob": "89033280e6495551e8be18779f30275f2333d7b9",
+          "currentBlob": "89033280e6495551e8be18779f30275f2333d7b9",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/ExperienceSetup.razor.css",
+          "sourceBlob": "675c9c8b18bfc0ed11cd537638efaa9e71da4a74",
+          "currentBlob": "675c9c8b18bfc0ed11cd537638efaa9e71da4a74",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/ExperienceSetup.es.resx",
+          "sourceBlob": "50089fe77f31acc8b61bbf527b5eb0852dda74f4",
+          "currentBlob": "50089fe77f31acc8b61bbf527b5eb0852dda74f4",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Services/ExperienceSetupValues.cs",
+          "sourceBlob": "48ac8fa19c9dc18c89b46e5bc8ad6502d0d5325e",
+          "currentBlob": "48ac8fa19c9dc18c89b46e5bc8ad6502d0d5325e",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/local-time.js",
+          "sourceBlob": "10256f6bb562aad9913e9954756df5ee799fdf1c",
+          "currentBlob": "10256f6bb562aad9913e9954756df5ee799fdf1c",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 791,
+          "mergeCommit": "feda7690dd968322795bc1948c36b85dba88eb64"
+        }
+      ],
+      "reason": "Setup component/resource/value/lifecycle files are exact; browser preference/setup scenarios remain with newer appended coverage."
+    },
+    {
+      "issue": 875,
+      "branch": "codex/transaction-ledger-trust-pass",
+      "pr": 774,
+      "head": "c77dabf02711019713bae60e520dfdbed1933dcd",
+      "refExists": true,
+      "prHead": "c77dabf02711019713bae60e520dfdbed1933dcd",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "95d06f32137c1a636125a1c777ddb1b1d7ae46cc",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "8f6b40c4f50c120945f86a156220c151788b2e89",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/TransactionLedgerPresentationTests.cs",
+          "sourceBlob": "27539cd2fefc32ff4cd4f26e4c9f151f58f333d3",
+          "currentBlob": "27539cd2fefc32ff4cd4f26e4c9f151f58f333d3",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/transaction-stream.test.mjs",
+          "sourceBlob": "eb1f993c9cc01131796c71ba1ff333dc10ce2824",
+          "currentBlob": "7610169c200980f857ad3d468c9274b421d14897",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "4dbba903d38322533e9a2727f2ae539e9c01cb0f",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountTransactions.razor",
+          "sourceBlob": "7e79d7c0df24875046c1403b09acee77ae888d23",
+          "currentBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Presentation/TransactionLedgerPresentation.cs",
+          "sourceBlob": "68891c6fd9f95cd88a79e693867ce7ba846b07c4",
+          "currentBlob": "68891c6fd9f95cd88a79e693867ce7ba846b07c4",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Resources/Components/Pages/App/AccountTransactions.es.resx",
+          "sourceBlob": "0b29319b94d154b45ecadbc2f608d8c16815adc7",
+          "currentBlob": "0b29319b94d154b45ecadbc2f608d8c16815adc7",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/account-transactions.css",
+          "sourceBlob": "8f58e7b31d12881f1f16b5cc149c7c2b0817bc52",
+          "currentBlob": "8f58e7b31d12881f1f16b5cc149c7c2b0817bc52",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/transaction-stream.js",
+          "sourceBlob": "d29f08d6c44ec75368e3006f1a5b80fa26b1945d",
+          "currentBlob": "850a47e5e602bcfce7f897945440fcaec4dbdb7c",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "c25eca2d623d924992c9999dc96c2d72a3c86a2c",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 791,
+          "mergeCommit": "feda7690dd968322795bc1948c36b85dba88eb64"
+        },
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Ledger presentation/tests and stream regressions remain; current code adds bounded snapshot validation and expired-session destinations."
+    },
+    {
+      "issue": 876,
+      "branch": "codex/enforce-reviewed-branch-governance",
+      "pr": 715,
+      "head": "b73dde2d5f86fce4d988611f46fd34f27c34e613",
+      "refExists": true,
+      "prHead": "b73dde2d5f86fce4d988611f46fd34f27c34e613",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "bfff1b00ddbf59879c980cea09e5f20542c968c8",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "2ededb77bf0932cfb057c6a77e8e44c6c6f213ce",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "9928ff950bae3a058eb173e815ae563a90276b55",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/repository-governance-workflow-tests.sh",
+          "sourceBlob": "92b0d04b0b9f97496be6488f629f622c9de74bbe",
+          "currentBlob": "19515c5ee3bdcdebdac876f15a074119187e263b",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/verify-github-branch-governance.sh",
+          "sourceBlob": "52fb5fbb2a0f30da5c46b04d24c882e601484e5d",
+          "currentBlob": "04898c20970f5d26067b7637181dd90f2e8f5e4d",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 741,
+          "mergeCommit": "a48183d44582e79985c332f6f59125127b9001e3"
+        },
+        {
+          "pr": 743,
+          "mergeCommit": "6742bb51d286bf05f9e30140d3f2e44d8cfed341"
+        }
+      ],
+      "reason": "Old one-approval and workflow-name rules are superseded by explicit owner-approved solo policy and emitted job-name checks; do not reintroduce obsolete governance requirements."
+    },
+    {
+      "issue": 876,
+      "branch": "codex/keep-provenance-action-pins-flexible",
+      "pr": 714,
+      "head": "79e4afac161d3bef1097dfa95d2e8291c1edc795",
+      "refExists": true,
+      "prHead": "79e4afac161d3bef1097dfa95d2e8291c1edc795",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "bfff1b00ddbf59879c980cea09e5f20542c968c8",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "2ededb77bf0932cfb057c6a77e8e44c6c6f213ce",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "9928ff950bae3a058eb173e815ae563a90276b55",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/signed-build-provenance-tests.sh",
+          "sourceBlob": "5b9936b24f8fca63d566448d87fee4300e9de671",
+          "currentBlob": "4a86915de93574410322845f927557b3a11fde9a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 743,
+          "mergeCommit": "6742bb51d286bf05f9e30140d3f2e44d8cfed341"
+        }
+      ],
+      "reason": "All substantive immutable action-pin test additions remain in current provenance tests; old release snapshots are historical only."
+    },
+    {
+      "issue": 876,
+      "branch": "codex/mount-recovery-aws-credentials",
+      "pr": 713,
+      "head": "3c8dc7baf8984099499c1043632da673e3f9104f",
+      "refExists": true,
+      "prHead": "3c8dc7baf8984099499c1043632da673e3f9104f",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "sourceBlob": "93fedbebd94feaa7fa4d06870f9765d835d2d3b3",
+          "currentBlob": "b4d8ab3cce9af10f84b55c1bbfe9c839b74511e7",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "bfff1b00ddbf59879c980cea09e5f20542c968c8",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "2ededb77bf0932cfb057c6a77e8e44c6c6f213ce",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "9928ff950bae3a058eb173e815ae563a90276b55",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "compose.recovery-drill.yml",
+          "sourceBlob": "d570bb57e6a58bd394cb122ef7e63d3e1652b252",
+          "currentBlob": "d570bb57e6a58bd394cb122ef7e63d3e1652b252",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/README-BACKUP-TRUST.md",
+          "sourceBlob": "7547b057a41daece330576a5f8c0230b03fb861b",
+          "currentBlob": "7547b057a41daece330576a5f8c0230b03fb861b",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/run-clean-host-recovery-drill.sh",
+          "sourceBlob": "320036807b1be7bcdf9814c4d9238f23e0a27dd8",
+          "currentBlob": "320036807b1be7bcdf9814c4d9238f23e0a27dd8",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/clean-host-recovery-drill-tests.sh",
+          "sourceBlob": "ca876307e26615d6f137d0f1bfddb4056b96accb",
+          "currentBlob": "ca876307e26615d6f137d0f1bfddb4056b96accb",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 743,
+          "mergeCommit": "6742bb51d286bf05f9e30140d3f2e44d8cfed341"
+        }
+      ],
+      "reason": "Recovery compose, file-secret mount, drill and permission tests are exact; CI contains the drill-validation step. This does not prove provider permission or real restore acceptance."
+    },
+    {
+      "issue": 876,
+      "branch": "codex/provenance-pin-test-rebased-2026-10-10",
+      "pr": 718,
+      "head": "5abbb9797508f87fe1b66d2c81a157d9bece9033",
+      "refExists": true,
+      "prHead": "5abbb9797508f87fe1b66d2c81a157d9bece9033",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "deploy/tests/signed-build-provenance-tests.sh",
+          "sourceBlob": "5b9936b24f8fca63d566448d87fee4300e9de671",
+          "currentBlob": "4a86915de93574410322845f927557b3a11fde9a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 743,
+          "mergeCommit": "6742bb51d286bf05f9e30140d3f2e44d8cfed341"
+        }
+      ],
+      "reason": "All substantive immutable action-pin test additions remain in current provenance tests."
+    },
+    {
+      "issue": 876,
+      "branch": "codex/use-saved-host-in-guarded-deploy",
+      "pr": 724,
+      "head": "9e9e09aa617d3e9b73fa7cb749b331a1a7d31e30",
+      "refExists": true,
+      "prHead": "9e9e09aa617d3e9b73fa7cb749b331a1a7d31e30",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": ".github/workflows/production-deploy.yml",
+          "sourceBlob": "7923fe281d51115c2db242bebf4cca95a5467bd4",
+          "currentBlob": "a04714aa43041777f33db57caa3e5c576dd9c460",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "73be78789230353142542ff36b1587c2fe7ae4ed",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "174fe8dd236b1cfbdc5cba1ecac52a2b899f4ed6",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "3b89a58258a95d31b538cc6f3c39fb252051a684",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/production-deploy-workflow-tests.sh",
+          "sourceBlob": "e33198277f30d3d59c30bcede59b8e392c3db348",
+          "currentBlob": "5eb1915c07e92baacf97f96a1021d4c4109efb08",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/release-handoff-consistency-tests.sh",
+          "sourceBlob": "8d835fb068dbca7868b82537819fe9f9b179c49a",
+          "currentBlob": "8d835fb068dbca7868b82537819fe9f9b179c49a",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "Deliberately retain: stale proposal removes typed production-target confirmation; current guarded deploy explicitly requires it. No authorization to weaken this control or edit shared workflows."
+    },
+    {
+      "issue": 876,
+      "branch": "docs/record-master-reconciliation-2026-10-03",
+      "pr": 665,
+      "head": "f2eeff6b56694dbf17f5ae046bde1a29410406a2",
+      "refExists": true,
+      "prHead": "f2eeff6b56694dbf17f5ae046bde1a29410406a2",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FULLWORTH_CONTEXT.md",
+          "sourceBlob": "21dc731cb1f7e7534dc2fac17f48def713629d33",
+          "currentBlob": "86cefd10d5732ec8cbba522d8458ffa91d70b225",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FULLWORTH_ROADMAP.md",
+          "sourceBlob": "17a0267ac717333c082fddd4836bb0eca425d3b0",
+          "currentBlob": "2cb954018190fbe3b16f3726b174b72fa75ae846",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "Retain historical lineage: the documentation records 2026-10-03 branch reconciliation, not a missing runtime feature. Current release references must not be replaced."
+    },
+    {
+      "issue": 876,
+      "branch": "docs/refresh-recovery-readiness-2026-10-13",
+      "pr": 723,
+      "head": "af491f21ca3a8783bc3a65d8a7f04db64cea9dfa",
+      "refExists": true,
+      "prHead": "af491f21ca3a8783bc3a65d8a7f04db64cea9dfa",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "HUMAN-TODO.md",
+          "sourceBlob": "4cccda8d25bcbcc3fa461a351d36cb4bce71b9ec",
+          "currentBlob": "3334a29ae2b3cd10e4301268235185bcba3526b5",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "Retain historical recovery evidence: old IP/artifact/expiry/operator records are not a new proof for the current deployed release."
+    },
+    {
+      "issue": 876,
+      "branch": "security/host-operator-hardening",
+      "pr": 656,
+      "head": "96d13da421e44d86af77e94807a89cc4c9cc8898",
+      "refExists": true,
+      "prHead": "96d13da421e44d86af77e94807a89cc4c9cc8898",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "deploy/README-HOST-HARDENING.md",
+          "sourceBlob": "96906c72a3453530605fee207bcc8787c5702c6e",
+          "currentBlob": "96906c72a3453530605fee207bcc8787c5702c6e",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "deploy/README-OPERATIONS.md",
+          "sourceBlob": "efbf532330357726b520581bda1c840f0fe213c6",
+          "currentBlob": "0cc9b3005254d88d85b20045b7dbfca8c1ae3424",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/tests/production-operations-tests.sh",
+          "sourceBlob": "afbeb1caea01b2b3c948193619bf84558eb83151",
+          "currentBlob": "bea59e43b1f1d384b587c2fb1518dd141fcc11e1",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "deploy/verify-host-hardening.sh",
+          "sourceBlob": "cd64e4234ce9581e95eb8f455b8e081a9d722d32",
+          "currentBlob": "cd64e4234ce9581e95eb8f455b8e081a9d722d32",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 658,
+          "mergeCommit": "cf94b9542bb8cd928023ecc0e6d96b04ba1a0abd"
+        }
+      ],
+      "reason": "Host-hardening runbook/verifier are exact; operations regression additions remain. Real provider/host acceptance is separate."
+    },
+    {
+      "issue": 876,
+      "branch": "security/parser-ocr-readiness-probe",
+      "pr": null,
+      "head": "4db0fd11f4f0e67d2079212506cbcdb879a30610",
+      "refExists": true,
+      "headMatchesPr": false,
+      "files": [],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "OCR probe image/startup readiness is integrated and strengthened by #695; current probe requires recognized characters and bounded worker execution. Retain security lineage."
+    },
+    {
+      "issue": 876,
+      "branch": "fix/833-immutable-payday-coverage",
+      "pr": null,
+      "head": "19b4ed86177b687d3a55f139cbc0ca4191532a75",
+      "refExists": true,
+      "headMatchesPr": false,
+      "files": [],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "Incomplete alternate scalar coverage experiment is superseded by the bounded six-count immutable model, migration, owner/replay tests and UI in #871. Do not add duplicate columns or restore an un-migrated experiment."
+    },
+    {
+      "issue": 876,
+      "branch": "fix/bank-monitoring-connection-isolation-20261020",
+      "pr": null,
+      "head": null,
+      "refExists": false,
+      "headMatchesPr": true,
+      "files": [],
+      "decision": "ref-absent-at-snapshot",
+      "deletionAuthorized": false,
+      "replacementEvidence": [],
+      "reason": "Named ref is absent from the fresh branch inventory; no deletion performed by this pass."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/integrate-ledger-safety-on-866",
+      "pr": 867,
+      "head": "7e7591f38a53e5449d919dd889e634cff15fa507",
+      "refExists": true,
+      "prHead": "7e7591f38a53e5449d919dd889e634cff15fa507",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/AccountTransactionAccountFilterRecoveryTests.cs",
+          "sourceBlob": "5daf36e4493c21c48ebb583a3a232cda1555a67a",
+          "currentBlob": "5daf36e4493c21c48ebb583a3a232cda1555a67a",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/AccountTransactionPerformanceFallbackTests.cs",
+          "sourceBlob": "6df3ad3e64b633cdd66b2912e764126af0349ab7",
+          "currentBlob": "6df3ad3e64b633cdd66b2912e764126af0349ab7",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/TransactionLedgerSnapshotIntegrityTests.cs",
+          "sourceBlob": "a8bab14cecf7363dbca202458b052e8a5a5a893b",
+          "currentBlob": "a8bab14cecf7363dbca202458b052e8a5a5a893b",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountTransactions.razor",
+          "sourceBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "currentBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/transaction-stream.js",
+          "sourceBlob": "850a47e5e602bcfce7f897945440fcaec4dbdb7c",
+          "currentBlob": "850a47e5e602bcfce7f897945440fcaec4dbdb7c",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/integrate-overview-financial-accuracy-on-867",
+      "pr": 868,
+      "head": "45aab19cb704d0900bbc30da64a69149f4a1c475",
+      "refExists": true,
+      "prHead": "45aab19cb704d0900bbc30da64a69149f4a1c475",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/OverviewRefreshTests.cs",
+          "sourceBlob": "6af39f224efc770bdab1145533254f2e781ce667",
+          "currentBlob": "6af39f224efc770bdab1145533254f2e781ce667",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor",
+          "sourceBlob": "ae89dbdfecf34d22508595611c0d91dd02d18379",
+          "currentBlob": "ae89dbdfecf34d22508595611c0d91dd02d18379",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor.css",
+          "sourceBlob": "5ed6d08be817eccb1cd7798a577e28bd6d65dc89",
+          "currentBlob": "5ed6d08be817eccb1cd7798a577e28bd6d65dc89",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/integrate-payday-coverage-on-868",
+      "pr": 869,
+      "head": "1495f022aa09527ceeea21677990c51aaac6557c",
+      "refExists": true,
+      "prHead": "1495f022aa09527ceeea21677990c51aaac6557c",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/PlanningController.cs",
+          "sourceBlob": "b477c3a12980776348e3ee24b8e31d8e22465bd2",
+          "currentBlob": "b477c3a12980776348e3ee24b8e31d8e22465bd2",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Configurations/PlanningModelConfigurations.cs",
+          "sourceBlob": "cbc6ebe74c02bebfffeba19a1a03b482f2e4525a",
+          "currentBlob": "cbc6ebe74c02bebfffeba19a1a03b482f2e4525a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Entities/PlanningPaycheckPlanRunEntity.cs",
+          "sourceBlob": "f3f17f560243bc602d0d4aa5a62507df241e1c2a",
+          "currentBlob": "f3f17f560243bc602d0d4aa5a62507df241e1c2a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/20261023041500_AddPlanningPaycheckCoverage.cs",
+          "sourceBlob": "c36e4c66488fc52211d7be7b53bd0466b79f7b42",
+          "currentBlob": "c36e4c66488fc52211d7be7b53bd0466b79f7b42",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/FullWorthDbContextModelSnapshot.cs",
+          "sourceBlob": "45360ebfe3d9eaabe91eb6047a785e38407c2b79",
+          "currentBlob": "45360ebfe3d9eaabe91eb6047a785e38407c2b79",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaycheckAllocationStore.cs",
+          "sourceBlob": "bcee54c604e1cf4fe52bfcdbd6bfd6324b7f8ed4",
+          "currentBlob": "bcee54c604e1cf4fe52bfcdbd6bfd6324b7f8ed4",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaycheckPlanCoverage.cs",
+          "sourceBlob": "a5c732f7600e802f840dcbe41d5ffef3fde426fb",
+          "currentBlob": "a5c732f7600e802f840dcbe41d5ffef3fde426fb",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaydayPlanService.cs",
+          "sourceBlob": "e0c79a7a90e6dac9f8696e0aac7566fd374c8682",
+          "currentBlob": "58cbf26e637a219941a8439097823675f16d9bbc",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/PaydayCoverageAuthorizationTests.cs",
+          "sourceBlob": "dd4dcd3df64bbad796c65c5fd049e8961f848d1b",
+          "currentBlob": "dd4dcd3df64bbad796c65c5fd049e8961f848d1b",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Services/PaydayCoverageSnapshotTests.cs",
+          "sourceBlob": "91d7ea32ffada37f11d69360e9c5dbefdbeb56d2",
+          "currentBlob": "91d7ea32ffada37f11d69360e9c5dbefdbeb56d2",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Web/PlanningWorkspaceTests.cs",
+          "sourceBlob": "17c5c1135fc2420f059cd58584bfce256046c2a8",
+          "currentBlob": "17c5c1135fc2420f059cd58584bfce256046c2a8",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor",
+          "sourceBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "currentBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor.css",
+          "sourceBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "currentBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/integrate-statement-lifecycle-on-869",
+      "pr": 870,
+      "head": "4fe4dad25df30cebba0848790cabd62e37f857a5",
+      "refExists": true,
+      "prHead": "4fe4dad25df30cebba0848790cabd62e37f857a5",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/BillStatementUploadsController.cs",
+          "sourceBlob": "cb253bc4f79bc057f0444729a86c96b9015f8a17",
+          "currentBlob": "cb253bc4f79bc057f0444729a86c96b9015f8a17",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Controllers/BillStreamsController.cs",
+          "sourceBlob": "b3ecccdcadeed6b848844c2f9a5e520bb2558a62",
+          "currentBlob": "b3ecccdcadeed6b848844c2f9a5e520bb2558a62",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillStatementHistoryReadGateway.cs",
+          "sourceBlob": "afaf7e40f4c133a7bc7d0a7c4ca40447d11cdd1f",
+          "currentBlob": "afaf7e40f4c133a7bc7d0a7c4ca40447d11cdd1f",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementHistoryReadGateway.cs",
+          "sourceBlob": "5b5c3497a5bab8b166ff998221877d883bfd7421",
+          "currentBlob": "5b5c3497a5bab8b166ff998221877d883bfd7421",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/BillStatementUploadStatusAuthorizationTests.cs",
+          "sourceBlob": "026b1e18e4870e43e35f4c870ca301ba9544db0c",
+          "currentBlob": "026b1e18e4870e43e35f4c870ca301ba9544db0c",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/CrossUserIdentifierCoverageTests.cs",
+          "sourceBlob": "54022d0c463920f218a3c2b84a0eaeffcd672423",
+          "currentBlob": "54022d0c463920f218a3c2b84a0eaeffcd672423",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs",
+          "sourceBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "currentBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementHistoryReadGatewayTests.cs",
+          "sourceBlob": "b252fc54a767e952412a1baa53b834a84c81f183",
+          "currentBlob": "b252fc54a767e952412a1baa53b834a84c81f183",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/StatementUploadStatusResumeTests.cs",
+          "sourceBlob": "68338cd1ec4dea3b2199054125b6f43991de9481",
+          "currentBlob": "68338cd1ec4dea3b2199054125b6f43991de9481",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/bills-workspace.test.mjs",
+          "sourceBlob": "997b2f713e7f208ee6b6d399323430e1f69b7142",
+          "currentBlob": "997b2f713e7f208ee6b6d399323430e1f69b7142",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor",
+          "sourceBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "currentBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/StatementUploadPanel.razor",
+          "sourceBlob": "ec2787f6f816c3728b28e596c4ab470deca36065",
+          "currentBlob": "ec2787f6f816c3728b28e596c4ab470deca36065",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Infrastructure/BffEndpointMappings.cs",
+          "sourceBlob": "32b7a7732aa1e2e5764e7ab9095201a29901350b",
+          "currentBlob": "32b7a7732aa1e2e5764e7ab9095201a29901350b",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/bff.js",
+          "sourceBlob": "e57fc87815bbb20b0c6076ca89295538e4fda8ce",
+          "currentBlob": "e3bbab99ed9ce505331c135f51261207bfeffa7a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/ledger-stream-snapshot-integrity",
+      "pr": 864,
+      "head": "7fad2cd580353afe0c276aaf1a5b6786da54684b",
+      "refExists": true,
+      "prHead": "7fad2cd580353afe0c276aaf1a5b6786da54684b",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/TransactionLedgerSnapshotIntegrityTests.cs",
+          "sourceBlob": "a8bab14cecf7363dbca202458b052e8a5a5a893b",
+          "currentBlob": "a8bab14cecf7363dbca202458b052e8a5a5a893b",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountTransactions.razor",
+          "sourceBlob": "b3a5a189dae284fbb3d54cbb41c6c77769e2c86a",
+          "currentBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/payday-coverage-snapshot-20261022",
+      "pr": 862,
+      "head": "7340263569ba8fb7cce312b37a769d700afe81f8",
+      "refExists": true,
+      "prHead": "7340263569ba8fb7cce312b37a769d700afe81f8",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/PlanningController.cs",
+          "sourceBlob": "b477c3a12980776348e3ee24b8e31d8e22465bd2",
+          "currentBlob": "b477c3a12980776348e3ee24b8e31d8e22465bd2",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Configurations/PlanningModelConfigurations.cs",
+          "sourceBlob": "cbc6ebe74c02bebfffeba19a1a03b482f2e4525a",
+          "currentBlob": "cbc6ebe74c02bebfffeba19a1a03b482f2e4525a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Entities/PlanningPaycheckPlanRunEntity.cs",
+          "sourceBlob": "f3f17f560243bc602d0d4aa5a62507df241e1c2a",
+          "currentBlob": "f3f17f560243bc602d0d4aa5a62507df241e1c2a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/20261023041500_AddPlanningPaycheckCoverage.cs",
+          "sourceBlob": "c36e4c66488fc52211d7be7b53bd0466b79f7b42",
+          "currentBlob": "c36e4c66488fc52211d7be7b53bd0466b79f7b42",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Data/Migrations/FullWorthDbContextModelSnapshot.cs",
+          "sourceBlob": "45360ebfe3d9eaabe91eb6047a785e38407c2b79",
+          "currentBlob": "45360ebfe3d9eaabe91eb6047a785e38407c2b79",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaycheckAllocationStore.cs",
+          "sourceBlob": "bcee54c604e1cf4fe52bfcdbd6bfd6324b7f8ed4",
+          "currentBlob": "bcee54c604e1cf4fe52bfcdbd6bfd6324b7f8ed4",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaycheckPlanCoverage.cs",
+          "sourceBlob": "a5c732f7600e802f840dcbe41d5ffef3fde426fb",
+          "currentBlob": "a5c732f7600e802f840dcbe41d5ffef3fde426fb",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Planning/PlanningPaydayPlanService.cs",
+          "sourceBlob": "e0c79a7a90e6dac9f8696e0aac7566fd374c8682",
+          "currentBlob": "58cbf26e637a219941a8439097823675f16d9bbc",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/PaydayCoverageAuthorizationTests.cs",
+          "sourceBlob": "dd4dcd3df64bbad796c65c5fd049e8961f848d1b",
+          "currentBlob": "dd4dcd3df64bbad796c65c5fd049e8961f848d1b",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Services/PaydayCoverageSnapshotTests.cs",
+          "sourceBlob": "91d7ea32ffada37f11d69360e9c5dbefdbeb56d2",
+          "currentBlob": "91d7ea32ffada37f11d69360e9c5dbefdbeb56d2",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/762-discovery-existing-bill-ambiguity-diagnostics",
+      "pr": 863,
+      "head": "a66e742d5048068518f4cf7ce0d65613a405a453",
+      "refExists": true,
+      "prHead": "a66e742d5048068518f4cf7ce0d65613a405a453",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Services/Bills/RecurringBillDiscoveryPersistenceService.cs",
+          "sourceBlob": "12ffb1268c4f5c6fada17779781f56c6f1dcdf28",
+          "currentBlob": "37c901f0385f3ca0d731d13a8a98767716c4c662",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/RecurringBillDiscoveryPersistenceServiceTests.cs",
+          "sourceBlob": "6d7d42bbf720386f96d2517dca6dbaaac3cd75c3",
+          "currentBlob": "368974de88469b6bde07122d2e560319ba3ec152",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/BillDiscoverySummary.razor",
+          "sourceBlob": "b33368ac52b50274b12e3e390c73199038694dae",
+          "currentBlob": "b33368ac52b50274b12e3e390c73199038694dae",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        },
+        {
+          "pr": 874,
+          "mergeCommit": "8d605dc58e144cdbdcec7e4fc3fb3e9b5bc0e025"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/813-admin-program-deactivation",
+      "pr": 860,
+      "head": "954a3d9bbedd9360d0cab10b03d2994cbf601dbd",
+      "refExists": true,
+      "prHead": "954a3d9bbedd9360d0cab10b03d2994cbf601dbd",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/AdminUsersController.cs",
+          "sourceBlob": "19dd22d506595499b258b8828adc08dbc084b3a7",
+          "currentBlob": "289c8f4f71639d55f5d40a3db76b9b102503c1c0",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/AdminAuthorizationIntegrationTests.cs",
+          "sourceBlob": "c726873d10c00d98df61cb23a27464004b392794",
+          "currentBlob": "c726873d10c00d98df61cb23a27464004b392794",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/814-admin-bounded-pagination",
+      "pr": 861,
+      "head": "95d860fad5620ea625043298840930cdfc08aac0",
+      "refExists": true,
+      "prHead": "95d860fad5620ea625043298840930cdfc08aac0",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/AdminPagingTests.cs",
+          "sourceBlob": "816e6590dd31075ee734e34667c2d44aec2d036e",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Admin.razor",
+          "sourceBlob": "41db4cf6410539fe52e7c461e3a459c74258eb21",
+          "currentBlob": "3737c5fd71c345a58cd346d000700336785e0eb0",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Admin.razor.css",
+          "sourceBlob": "08bdf8c705d703a0c1076a6106d70897932528a7",
+          "currentBlob": "de13ee53c58fee7804123531fae69d1a7e6a3954",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 824,
+          "mergeCommit": "e76a274d98481935f75801e8b8e1534a1baa4c9c"
+        }
+      ],
+      "reason": "Alternative pager implementation superseded by merged AdminPageControls and BacklogPageRecovery/browser tests. Keep branch-only AdminPagingTests until owner review; its private GetTargetSkip method is not the deployed implementation."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/815-ledger-performance-helper-fallback",
+      "pr": 858,
+      "head": "932e7c0a87b8c9314bbfc6d5af5d1df4e73ce621",
+      "refExists": true,
+      "prHead": "932e7c0a87b8c9314bbfc6d5af5d1df4e73ce621",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/AccountTransactionPerformanceFallbackTests.cs",
+          "sourceBlob": "6df3ad3e64b633cdd66b2912e764126af0349ab7",
+          "currentBlob": "6df3ad3e64b633cdd66b2912e764126af0349ab7",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountTransactions.razor",
+          "sourceBlob": "c570b324cb2355f862fc4e92de29bfe4ba30e81c",
+          "currentBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/transaction-stream.js",
+          "sourceBlob": "850a47e5e602bcfce7f897945440fcaec4dbdb7c",
+          "currentBlob": "850a47e5e602bcfce7f897945440fcaec4dbdb7c",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/816-remove-stale-transaction-account-filter",
+      "pr": 857,
+      "head": "54444b67d3472e84f88cc4eb25c9c846f86d7d13",
+      "refExists": true,
+      "prHead": "54444b67d3472e84f88cc4eb25c9c846f86d7d13",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/AccountTransactionAccountFilterRecoveryTests.cs",
+          "sourceBlob": "5daf36e4493c21c48ebb583a3a232cda1555a67a",
+          "currentBlob": "5daf36e4493c21c48ebb583a3a232cda1555a67a",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/AccountTransactions.razor",
+          "sourceBlob": "4d9e5b408947d47406327ce121b1b2c3a1fb7869",
+          "currentBlob": "fc672cb48cede023f4ac14240d0eb6326d5544ab",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/817-passkey-list-retry",
+      "pr": 859,
+      "head": "7a97f09ecc70a075298b8a2ff3377a479f1d2f3c",
+      "refExists": true,
+      "prHead": "7a97f09ecc70a075298b8a2ff3377a479f1d2f3c",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.VisualTests/passkey-acceptance.mjs",
+          "sourceBlob": "28db3911401f40ae07ad462c9529362947a188a4",
+          "currentBlob": "28db3911401f40ae07ad462c9529362947a188a4",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/SecurityKeys.razor",
+          "sourceBlob": "8f1cc520ea2e330dc6ab94a1016290b174d17775",
+          "currentBlob": "8f1cc520ea2e330dc6ab94a1016290b174d17775",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/SecurityKeys.razor.css",
+          "sourceBlob": "245c213dc9d157b0cc40c0b73e8177066390a663",
+          "currentBlob": "245c213dc9d157b0cc40c0b73e8177066390a663",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/passkeys.js",
+          "sourceBlob": "bba25db531b1dad99629863b9b05bd04cc4228e5",
+          "currentBlob": "d82d26624e7ebaf3868db41372d947b9977ec891",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/825-planning-bill-amount-evidence",
+      "pr": 850,
+      "head": "52cfe96ccf927dc66cc27fe603ddb51ba3deee43",
+      "refExists": true,
+      "prHead": "52cfe96ccf927dc66cc27fe603ddb51ba3deee43",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/PlanningWorkspaceTests.cs",
+          "sourceBlob": "3dd6c4b650f752ce24a9ede973560d7963e57147",
+          "currentBlob": "17c5c1135fc2420f059cd58584bfce256046c2a8",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor",
+          "sourceBlob": "a027290f7380903112f8a0aa0473f963c566ee7f",
+          "currentBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/826-overview-watchlist-currency-neutral",
+      "pr": 849,
+      "head": "24d5e95535ab4dbad0970bf4a49a64fd6009e79e",
+      "refExists": true,
+      "prHead": "24d5e95535ab4dbad0970bf4a49a64fd6009e79e",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/OverviewRefreshTests.cs",
+          "sourceBlob": "16454c4b00f4d41f30be68c5881b4ec5bd2cde42",
+          "currentBlob": "6af39f224efc770bdab1145533254f2e781ce667",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor",
+          "sourceBlob": "887bd696032e5da1f4bc236498f750d25482b579",
+          "currentBlob": "ae89dbdfecf34d22508595611c0d91dd02d18379",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor.css",
+          "sourceBlob": "5ed6d08be817eccb1cd7798a577e28bd6d65dc89",
+          "currentBlob": "5ed6d08be817eccb1cd7798a577e28bd6d65dc89",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/827-mixed-bank-status-no-bills",
+      "pr": 848,
+      "head": "2d903148f69d05546bf31f4e6076f0fbcf974be7",
+      "refExists": true,
+      "prHead": "2d903148f69d05546bf31f4e6076f0fbcf974be7",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/OverviewRefreshTests.cs",
+          "sourceBlob": "ce4862824f99dd608e6d82d2a32bf22f3bc05d99",
+          "currentBlob": "6af39f224efc770bdab1145533254f2e781ce667",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Overview.razor",
+          "sourceBlob": "1569072e62c553a9bb6971b27530aca2d9e441e3",
+          "currentBlob": "ae89dbdfecf34d22508595611c0d91dd02d18379",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/828-activity-snapshot-validation",
+      "pr": 851,
+      "head": "ba6c672654db2465119bc562251eb0e0edc2127f",
+      "refExists": true,
+      "prHead": "ba6c672654db2465119bc562251eb0e0edc2127f",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/ActivitySnapshotValidationTests.cs",
+          "sourceBlob": "d5f98e16d3c0d33c502a0787681179aadc1a73de",
+          "currentBlob": "d5f98e16d3c0d33c502a0787681179aadc1a73de",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Activity.razor",
+          "sourceBlob": "6cc3be4efd0d435fd24c3a6f6ae9e99fc817ea71",
+          "currentBlob": "6cc3be4efd0d435fd24c3a6f6ae9e99fc817ea71",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/830-due-reminder-date-reconciliation",
+      "pr": 852,
+      "head": "76ddeb8634382650b315e90fdf2f06bec1c5ea04",
+      "refExists": true,
+      "prHead": "76ddeb8634382650b315e90fdf2f06bec1c5ea04",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Program.cs",
+          "sourceBlob": "f54e7d0a0e6b2ea4714d23e1aed22a412c0ef1b7",
+          "currentBlob": "f54e7d0a0e6b2ea4714d23e1aed22a412c0ef1b7",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Bills/BillDueReminderMaintenanceReadGateway.cs",
+          "sourceBlob": "5f70743c79383d097fab95f24e072e7e1325a0b8",
+          "currentBlob": "5f70743c79383d097fab95f24e072e7e1325a0b8",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillDueReminderMaintenanceReadGateway.cs",
+          "sourceBlob": "f869d8e3b72e1908a22849a6bab599e8c61e005b",
+          "currentBlob": "f869d8e3b72e1908a22849a6bab599e8c61e005b",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementDueAlertMaintenance.cs",
+          "sourceBlob": "04a3cf4528c1e95ca2828a8b888c0bd307018a1e",
+          "currentBlob": "04a3cf4528c1e95ca2828a8b888c0bd307018a1e",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementDueAlertMaintenanceTests.cs",
+          "sourceBlob": "c22deb7cad41eba740a4414b4487109da296a9c0",
+          "currentBlob": "c22deb7cad41eba740a4414b4487109da296a9c0",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/830-refresh-statement-due-alerts",
+      "pr": 844,
+      "head": "7ef88d0b5559edeeb1946672dffda0212349acf5",
+      "refExists": true,
+      "prHead": "7ef88d0b5559edeeb1946672dffda0212349acf5",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Program.cs",
+          "sourceBlob": "e412eb0a874d9b10da2b4b658023f24cc6fa590d",
+          "currentBlob": "f54e7d0a0e6b2ea4714d23e1aed22a412c0ef1b7",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Bills/BillPaymentDueRefreshCandidatesGateway.cs",
+          "sourceBlob": "1ab49077302b3a13843104f5f33c686ff3fbdbb6",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillPaymentDueRefreshCandidatesGateway.cs",
+          "sourceBlob": "f41f7bf63583fbb3564d041bd7170e6a6999a822",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementDueReminderRefreshService.cs",
+          "sourceBlob": "b4578de2ef2e6da9ce16cee839cee997fb608014",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementProcessingService.cs",
+          "sourceBlob": "4bd4b7ea7ea36ae3f09475174246537fcb01f94d",
+          "currentBlob": "93a1b8a1d504e1175b537d66fab8c21dca24979a",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementDueReminderRefreshTests.cs",
+          "sourceBlob": "2969c72090fed90ff4b98887f6a33bffcccef223",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Alternative daily reminder service is superseded by scoped hourly maintenance; current tests cover urgency/due-today/expiry, inactive/foreign and idempotent owner isolation. Retain alternate service/test lineage."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/831-isolate-statement-worker-faults",
+      "pr": 845,
+      "head": "e2b5d0551c9d0e7780f7aee945dbee3eb4c3fb6b",
+      "refExists": true,
+      "prHead": "e2b5d0551c9d0e7780f7aee945dbee3eb4c3fb6b",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Program.cs",
+          "sourceBlob": "e412eb0a874d9b10da2b4b658023f24cc6fa590d",
+          "currentBlob": "f54e7d0a0e6b2ea4714d23e1aed22a412c0ef1b7",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Bills/BillPaymentDueRefreshCandidatesGateway.cs",
+          "sourceBlob": "1ab49077302b3a13843104f5f33c686ff3fbdbb6",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillPaymentDueRefreshCandidatesGateway.cs",
+          "sourceBlob": "f41f7bf63583fbb3564d041bd7170e6a6999a822",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementDueReminderRefreshService.cs",
+          "sourceBlob": "b4578de2ef2e6da9ce16cee839cee997fb608014",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementProcessingService.cs",
+          "sourceBlob": "88bccee5344876db6750c3dc562cde0aab508c34",
+          "currentBlob": "93a1b8a1d504e1175b537d66fab8c21dca24979a",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementDueReminderRefreshTests.cs",
+          "sourceBlob": "2969c72090fed90ff4b98887f6a33bffcccef223",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementProcessingBatchRunnerTests.cs",
+          "sourceBlob": "d1d5f6d235d6ce1c480e5e8e5846f718139b2ce9",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Alternative runner/daily maintenance architecture is superseded by current per-upload scoped worker. New RetainedStatementWorkerIsolationTests recover actual fault progression, cancellation and abandoned-tracking acceptance without restoring the old runner."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/831-isolate-statement-worker-poison-uploads",
+      "pr": 853,
+      "head": "45dcb9e0c9f592a157d1a48bf367c0e25d9e617d",
+      "refExists": true,
+      "prHead": "45dcb9e0c9f592a157d1a48bf367c0e25d9e617d",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementProcessingService.cs",
+          "sourceBlob": "93a1b8a1d504e1175b537d66fab8c21dca24979a",
+          "currentBlob": "93a1b8a1d504e1175b537d66fab8c21dca24979a",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/StatementProcessingFailureBackoffTests.cs",
+          "sourceBlob": "5da82853ebb5a335509a3a9fecf24b38cd44b2ac",
+          "currentBlob": "5da82853ebb5a335509a3a9fecf24b38cd44b2ac",
+          "exact": true,
+          "status": "added"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/832-bill-detail-change-chronology",
+      "pr": 840,
+      "head": "c5c566bd890914b0dd28903dd490153f9b281f3e",
+      "refExists": true,
+      "prHead": "c5c566bd890914b0dd28903dd490153f9b281f3e",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/BillDetailChangeChronologyTests.cs",
+          "sourceBlob": "8f28c7f97b553397121fbebdc26a5f9eb3892686",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor",
+          "sourceBlob": "a61433a14eaa82dc0451cd8dbcea4e47ce823fc3",
+          "currentBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Alternate component private-property test is superseded by merged billing-period chronology and its tests. Retain source test lineage; do not restore the old component API."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/833-payday-history-honest-coverage",
+      "pr": 856,
+      "head": "7d8db36956e5a3a60b7fc28ecab72088fc6bc638",
+      "refExists": true,
+      "prHead": "7d8db36956e5a3a60b7fc28ecab72088fc6bc638",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor",
+          "sourceBlob": "7c06da8f8243678409b47f55d277e1e3c0a3ca2c",
+          "currentBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor.css",
+          "sourceBlob": "eb978157fe8a7d9a356341911ce870b6acfa9a2f",
+          "currentBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Wording-only unknown-coverage presentation is superseded by immutable known/unknown coverage counters and UI, not missing functionality."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/833-show-saved-payday-coverage",
+      "pr": 865,
+      "head": "7b7cd520ea564960ff04a24eb9f460d00cbc523c",
+      "refExists": true,
+      "prHead": "7b7cd520ea564960ff04a24eb9f460d00cbc523c",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.Tests/Web/PlanningWorkspaceTests.cs",
+          "sourceBlob": "143955d8b88ca6943b018f6af377162e8812530a",
+          "currentBlob": "17c5c1135fc2420f059cd58584bfce256046c2a8",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor",
+          "sourceBlob": "dca0338f0dbb51fd8891f746f329ff08a76f974b",
+          "currentBlob": "e73eac9e48af24ba37fbda4d5f4d270591f6f01c",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/Planning.razor.css",
+          "sourceBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "currentBlob": "c11d18e3bf9cc2c163cbe966e22f6a18324291ed",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/834-resume-statement-status",
+      "pr": 855,
+      "head": "cd92d18e95c53009d0305bb35fa0c5ccb2e9abef",
+      "refExists": true,
+      "prHead": "cd92d18e95c53009d0305bb35fa0c5ccb2e9abef",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/BillStatementUploadsController.cs",
+          "sourceBlob": "cb253bc4f79bc057f0444729a86c96b9015f8a17",
+          "currentBlob": "cb253bc4f79bc057f0444729a86c96b9015f8a17",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/BillStatementUploadStatusAuthorizationTests.cs",
+          "sourceBlob": "026b1e18e4870e43e35f4c870ca301ba9544db0c",
+          "currentBlob": "026b1e18e4870e43e35f4c870ca301ba9544db0c",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/CrossUserIdentifierCoverageTests.cs",
+          "sourceBlob": "54022d0c463920f218a3c2b84a0eaeffcd672423",
+          "currentBlob": "54022d0c463920f218a3c2b84a0eaeffcd672423",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Security/EndpointSecurityInventoryTests.cs",
+          "sourceBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "currentBlob": "94174212c7bb7cd14c2628ad4c8f77db9b2efa09",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Web/StatementUploadStatusResumeTests.cs",
+          "sourceBlob": "68338cd1ec4dea3b2199054125b6f43991de9481",
+          "currentBlob": "68338cd1ec4dea3b2199054125b6f43991de9481",
+          "exact": true,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/bills-workspace.test.mjs",
+          "sourceBlob": "997b2f713e7f208ee6b6d399323430e1f69b7142",
+          "currentBlob": "997b2f713e7f208ee6b6d399323430e1f69b7142",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/StatementUploadPanel.razor",
+          "sourceBlob": "ec2787f6f816c3728b28e596c4ab470deca36065",
+          "currentBlob": "ec2787f6f816c3728b28e596c4ab470deca36065",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Infrastructure/BffEndpointMappings.cs",
+          "sourceBlob": "32b7a7732aa1e2e5764e7ab9095201a29901350b",
+          "currentBlob": "32b7a7732aa1e2e5764e7ab9095201a29901350b",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/bff.js",
+          "sourceBlob": "e57fc87815bbb20b0c6076ca89295538e4fda8ce",
+          "currentBlob": "e3bbab99ed9ce505331c135f51261207bfeffa7a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/834-statement-upload-status-resume",
+      "pr": 842,
+      "head": "ece897683ef8d6b72fc246187eb97c6516263b11",
+      "refExists": true,
+      "prHead": "ece897683ef8d6b72fc246187eb97c6516263b11",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.VisualTests/statement-upload-resume.test.mjs",
+          "sourceBlob": "b9147e57c909ed498cb0bfaefe9056aff3fe516b",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "e88e003e7fe1d7b547c28aa0a52a605d86e7ea04",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/StatementUploadPanel.razor",
+          "sourceBlob": "2e444a6d6fa9a050665ac536b39e73570c2aecf8",
+          "currentBlob": "ec2787f6f816c3728b28e596c4ab470deca36065",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/wwwroot/js/bff.js",
+          "sourceBlob": "75a865996f4187d6b7d6608bcdeda522fe03e05d",
+          "currentBlob": "e3bbab99ed9ce505331c135f51261207bfeffa7a",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "SessionStorage-only upload recovery is intentionally superseded by owner-scoped server latest-upload metadata and read-only resume. Do not restore browser-only state authority."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/836-open-original-statement-evidence",
+      "pr": 854,
+      "head": "5017b2e25974908dff2880d1cb476029f69587cc",
+      "refExists": true,
+      "prHead": "5017b2e25974908dff2880d1cb476029f69587cc",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/BillStreamsController.cs",
+          "sourceBlob": "39160fd1359d47a3e58bddc17a6f377e3093e820",
+          "currentBlob": "b3ecccdcadeed6b848844c2f9a5e520bb2558a62",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillStatementHistoryReadGateway.cs",
+          "sourceBlob": "92e9885a2474d8f5aed183a2478b2c6afdba5f61",
+          "currentBlob": "afaf7e40f4c133a7bc7d0a7c4ca40447d11cdd1f",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementHistoryReadGateway.cs",
+          "sourceBlob": "561fc3b9acb29663bc0440912ca4b43934dfcb27",
+          "currentBlob": "5b5c3497a5bab8b166ff998221877d883bfd7421",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementHistoryReadGatewayTests.cs",
+          "sourceBlob": "0d817d7ef5ef538553edfd9a65498caa51dc17c7",
+          "currentBlob": "b252fc54a767e952412a1baa53b834a84c81f183",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor",
+          "sourceBlob": "f6084ef3cb1eeabfdf2986475bcb617b5e0be5f2",
+          "currentBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Alternate UploadId name is superseded by SourceUploadId with owner/bill/processed-upload filtering and selection tests."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/836-original-statement-evidence",
+      "pr": 843,
+      "head": "f2155542cc5ead24799d97b7fbdd38bd6ef1d618",
+      "refExists": true,
+      "prHead": "f2155542cc5ead24799d97b7fbdd38bd6ef1d618",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Controllers/BillStreamsController.cs",
+          "sourceBlob": "b3ecccdcadeed6b848844c2f9a5e520bb2558a62",
+          "currentBlob": "b3ecccdcadeed6b848844c2f9a5e520bb2558a62",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Contracts/IBillStatementHistoryReadGateway.cs",
+          "sourceBlob": "afaf7e40f4c133a7bc7d0a7c4ca40447d11cdd1f",
+          "currentBlob": "afaf7e40f4c133a7bc7d0a7c4ca40447d11cdd1f",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementHistoryReadGateway.cs",
+          "sourceBlob": "5b5c3497a5bab8b166ff998221877d883bfd7421",
+          "currentBlob": "5b5c3497a5bab8b166ff998221877d883bfd7421",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementHistoryReadGatewayTests.cs",
+          "sourceBlob": "b252fc54a767e952412a1baa53b834a84c81f183",
+          "currentBlob": "b252fc54a767e952412a1baa53b834a84c81f183",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Pages/App/BillDetail.razor",
+          "sourceBlob": "4e36aa35e6c2d30b9333ea1729ace224ba07ebd2",
+          "currentBlob": "5822ecb3525b958088f2843711aa19fb9016e852",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/837-statement-status-overflow",
+      "pr": 847,
+      "head": "967cc854baac6233f3068f5c60187f4e754fca69",
+      "refExists": true,
+      "prHead": "967cc854baac6233f3068f5c60187f4e754fca69",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.VisualTests/statement-upload-layout.test.mjs",
+          "sourceBlob": "336678136ee96d784e1b00ca97235c064c29779e",
+          "currentBlob": null,
+          "exact": false,
+          "status": "added"
+        },
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "7305c6bb965d9b48458a725d6bec5afb84d749a1",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/StatementUploadPanel.razor.css",
+          "sourceBlob": "294f514a362b6b1767b9338cb78793aca505f326",
+          "currentBlob": "7ea242f2da99f93a95815f9b56eea8abbf1fb4a3",
+          "exact": false,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Alternative long-filename CSS/browser module is superseded by merged shrink/wrap styles and 320/390/430px plus enlarged-text checks."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/837-statement-upload-mobile-reflow",
+      "pr": 841,
+      "head": "b6d1cfd1d5da5c98d53a5cb07015ccbda79999ab",
+      "refExists": true,
+      "prHead": "b6d1cfd1d5da5c98d53a5cb07015ccbda79999ab",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.VisualTests/visual-acceptance.mjs",
+          "sourceBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "currentBlob": "67b9e311ad39338ed87942f3b50b389e41b11fa2",
+          "exact": true,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Web/Components/Shared/StatementUploadPanel.razor.css",
+          "sourceBlob": "7ea242f2da99f93a95815f9b56eea8abbf1fb4a3",
+          "currentBlob": "7ea242f2da99f93a95815f9b56eea8abbf1fb4a3",
+          "exact": true,
+          "status": "modified"
+        }
+      ],
+      "decision": "retain",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 866,
+          "mergeCommit": "370ab475519df7185604b145f9525c5882bb1c3d"
+        }
+      ],
+      "reason": "Exact files or retained patch additions match current integrated code; newer safety fixes extend it. Retain original source and test lineage pending an owner-authorized cleanup."
+    },
+    {
+      "issue": 877,
+      "branch": "fix/latest-statement-due-reminders",
+      "pr": 736,
+      "head": null,
+      "refExists": false,
+      "prHead": "05ada7422341600a3580389723e6187ea05288f7",
+      "headMatchesPr": true,
+      "files": [
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementPaymentDueAlertService.cs",
+          "sourceBlob": "8c8670dd69054e44803a8ec9396990629266e338",
+          "currentBlob": "e9bd887a643d1e14560b2c97539d7c62b1e58640",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/BillStatementPersistenceService.cs",
+          "sourceBlob": "f0f0c5819e8c0d836c97f4075a2eb220d12eb0d2",
+          "currentBlob": "b636e255c1e03613af2d077c2573d065dbe180e1",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.API/Services/Statements/StatementBillPlanningFactsGateway.cs",
+          "sourceBlob": "7d7af2e6101a27e49d46db60dbf1f241cf99083a",
+          "currentBlob": "e1da1f44af8e551bd55a631b2c259f08b6abb4c0",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/BillStatementPaymentDueAlertServiceTests.cs",
+          "sourceBlob": "54b1d91570518addda9fcd32b1310b0abd7bcc60",
+          "currentBlob": "d3ac284d781a2c7eba0f374db77f7d29d9a0c0bf",
+          "exact": false,
+          "status": "modified"
+        },
+        {
+          "path": "FullWorth.Tests/Services/StatementDueReminderPersistenceTests.cs",
+          "sourceBlob": "ab7c31b30e5c6d0c3f63582cb64180c0279365c1",
+          "currentBlob": "4723bb931282a6b46629e249b2e8410575f6474f",
+          "exact": false,
+          "status": "added"
+        }
+      ],
+      "decision": "ref-absent-at-snapshot",
+      "deletionAuthorized": false,
+      "replacementEvidence": [
+        {
+          "pr": 871,
+          "mergeCommit": "2925f75b0fbbf6fc4fec1069ed57bac57e68e702"
+        }
+      ],
+      "reason": "Original due-reminder fix is absorbed by current owner-scoped latest-statement maintenance. Named ref is absent at this snapshot; preserve PR/commit evidence rather than recreate it."
+    }
+  ],
+  "openPullRequests": [
+    {
+      "number": 881,
+      "head": "integration/mobile-reflow-maui-compat-20261023",
+      "headSha": "4ccae80061e4999d87f870b37f7041c7a532b534",
+      "base": "development"
+    },
+    {
+      "number": 879,
+      "head": "fix/remove-maui-resizetizer-legacy-pin-800",
+      "headSha": "baeaf3cde8851a4bfb98183bd25a0f75d7e9d74d",
+      "base": "development"
+    },
+    {
+      "number": 878,
+      "head": "development",
+      "headSha": "305ac30601323cc259d2b8824acd1076bd2ffabc",
+      "base": "master"
+    },
+    {
+      "number": 802,
+      "head": "fix/whats-new-mobile-horizontal-overflow",
+      "headSha": "538be4ee02146cd4a402c98bba87d816d7ca19c5",
+      "base": "development"
+    }
+  ],
+  "retentionPolicy": "No named ref is approved for deletion by this document. Exact SHA/patch evidence records reviewed alternatives and source/test lineage; ref absence does not identify the deleting actor."
+}

@@ -197,6 +197,7 @@
                      @onkeydown="HandleMobileMenuKeyDown">
                     <button type="button"
                             class="mobile-bottom-link mobile-menu-trigger"
+                            @ref="_mobileMenuTrigger"
                             @onclick="ToggleMobileMenu"
                             aria-expanded="@_mobileMenuOpen.ToString().ToLowerInvariant()"
                             aria-controls="billwatch-mobile-menu"
@@ -435,6 +436,7 @@
     private IJSObjectReference? _timeModule;
     private DotNetObjectReference<AppLayout>? _pwaCallback;
     private bool _mobileMenuOpen;
+    private ElementReference _mobileMenuTrigger;
     private bool _showInstallAction;
     private bool _pwaUpdateAvailable;
     private bool _pwaUpdateApplying;
@@ -574,7 +576,7 @@
         _mobileMenuOpen = false;
     }
 
-    private void HandleMobileMenuKeyDown(
+    private async Task HandleMobileMenuKeyDown(
         KeyboardEventArgs args)
     {
         if (string.Equals(
@@ -583,6 +585,14 @@
                 StringComparison.Ordinal))
         {
             CloseMobileMenu();
+            try
+            {
+                await _mobileMenuTrigger.FocusAsync(preventScroll: true);
+            }
+            catch (JSException)
+            {
+                // Closing navigation must remain usable if focus interop is unavailable.
+            }
         }
     }
 
@@ -628,7 +638,8 @@
         path =
             path.TrimEnd('/');
 
-        return IsRouteOrChild(
+        return IsRouteOrChild(path, "app/planning")
+            || IsRouteOrChild(
                 path,
                 "app/subscription")
             || IsRouteOrChild(

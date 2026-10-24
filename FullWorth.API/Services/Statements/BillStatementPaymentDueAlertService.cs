@@ -35,6 +35,23 @@ public sealed class BillStatementPaymentDueAlertService
             billAlertGateway;
     }
 
+    // Clearing an unsupported obligation needs ownership, not fabricated
+    // amount/currency/provider-name facts solely to pass creation validation.
+    public async Task ClearAsync(
+        Guid userId, Guid billStreamId, DateTimeOffset now,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty || billStreamId == Guid.Empty)
+            throw new ArgumentException("A valid owner and bill identity are required.");
+        if (await _billStreamGateway.GetOwnedAsync(userId, billStreamId, cancellationToken) is null)
+            throw new InvalidOperationException("The owned bill stream could not be found.");
+        await _billAlertGateway.StageReconciliationAsync(
+            userId, billStreamId,
+            [new BillAlertReconciliationScope(null, [BillAlertContractType.PaymentDue], [],
+                BillAlertReconciliationMode.SingleManagedSlot)],
+            [], now, cancellationToken);
+    }
+
     public async Task ReconcileAsync(
         Guid userId,
         Guid billStreamId,

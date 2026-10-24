@@ -136,6 +136,92 @@ public sealed class OverviewRefreshTests
         Assert.NotNull(harness.Get<string?>("_refreshError"));
     }
 
+    [Fact]
+    public async Task Watchlist_PrioritizesComparableIncreasesWithoutCrossCurrencyAmountRanking()
+    {
+        using var harness = new Harness();
+        var names = new[] { "Zeta", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Eta", "Theta" };
+        var bills = names.Select((name, index) => new Overview.BillStreamViewModel
+        {
+            Id = Guid.NewGuid(), ProviderName = name, IsActive = true,
+            CurrencyCode = index % 2 == 0 ? "JPY" : "USD",
+            HasTransactionEvidence = index != 0,
+            HasMonthlyCadenceEvidence = true,
+            CurrentAmount = index % 2 == 0 ? 20000m : 40m,
+            PreviousAverage = index == 1 ? 20m : (index % 2 == 0 ? 20000m : 40m)
+        }).ToArray();
+        harness.Module.Values["getBillStreams"] = bills;
+        await harness.Call("LoadAsync");
+        var selected = harness.Get<IReadOnlyList<Overview.BillStreamViewModel>>("WatchlistBills");
+        Assert.Equal(6, selected.Count);
+        Assert.Equal("Alpha", selected[0].ProviderName);
+        Assert.Equal(new[] { "Alpha", "Beta", "Delta", "Epsilon", "Eta", "Gamma" },
+            selected.Select(item => item.ProviderName).ToArray());
+        Assert.DoesNotContain(selected, item => item.ProviderName == "Zeta");
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public async Task MixedConnectionNoBills_StillSurfacesRepairWarning(
+        bool waitingForFirstSync, bool brokenSecondConnection)
+    {
+        using var harness = new Harness();
+        harness.Module.Values["getBillStreams"] = Array.Empty<Overview.BillStreamViewModel>();
+        harness.Module.Values["getBankConnections"] = new[]
+        {
+            new Overview.BankConnectionViewModel
+            {
+                Id = Guid.NewGuid(), Status = 0,
+                LastSuccessfulSyncAtUtc = waitingForFirstSync ? null : DateTimeOffset.UtcNow
+            },
+            new Overview.BankConnectionViewModel
+            {
+                Id = Guid.NewGuid(), Status = brokenSecondConnection ? 1 : 0,
+                LastSuccessfulSyncAtUtc = DateTimeOffset.UtcNow
+            }
+        };
+        await harness.Call("LoadAsync");
+
+        Assert.True(harness.Get<bool>("HasActiveConnection"));
+        // A first sync is pending only when NO active bank has succeeded.
+        // An attention-only second bank does not count as successfully synced.
+        Assert.Equal(waitingForFirstSync && brokenSecondConnection,
+            harness.Get<bool>("IsWaitingForFirstSync"));
+        Assert.Equal(brokenSecondConnection, harness.Get<bool>("HasConnectionNeedingAttention"));
+        Assert.Equal(brokenSecondConnection,
+            harness.Get<bool>("ShouldShowMixedConnectionWarning"));
+    }
+
+    [Fact]
+    public async Task AttentionOnlyNoBills_UsesExistingReconnectStateInsteadOfDuplicateWarning()
+    {
+        using var harness = new Harness();
+        harness.Module.Values["getBillStreams"] = Array.Empty<Overview.BillStreamViewModel>();
+        harness.Module.Values["getBankConnections"] =
+            new[] { new Overview.BankConnectionViewModel { Id = Guid.NewGuid(), Status = 1 } };
+        await harness.Call("LoadAsync");
+        Assert.True(harness.Get<bool>("HasConnectionNeedingAttention"));
+        Assert.False(harness.Get<bool>("HasActiveConnection"));
+        Assert.False(harness.Get<bool>("ShouldShowMixedConnectionWarning"));
+    }
+
+    [Fact]
+    public async Task MixedConnectionsWithBills_UsesExistingBillStateWarning()
+    {
+        using var harness = new Harness();
+        harness.Module.Values["getBankConnections"] = new[]
+        {
+            new Overview.BankConnectionViewModel { Id = Guid.NewGuid(), Status = 0 },
+            new Overview.BankConnectionViewModel { Id = Guid.NewGuid(), Status = 1 }
+        };
+        await harness.Call("LoadAsync");
+        Assert.True(harness.Get<bool>("HasConnectionNeedingAttention"));
+        Assert.False(harness.Get<bool>("ShouldShowMixedConnectionWarning"));
+    }
+
     private sealed class Harness : IDisposable
     {
         private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

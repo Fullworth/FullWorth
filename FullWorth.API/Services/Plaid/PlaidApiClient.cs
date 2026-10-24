@@ -15,6 +15,13 @@ public sealed class PlaidApiClient
     private const long MaxResponseBytes =
         5L * 1024 * 1024;
 
+    // ResponseHeadersRead stops HttpClient's timeout at the headers. Keep a
+    // finite deadline over the complete response, even with an infinite client
+    // timeout. A shorter configured timeout remains authoritative.
+    private static readonly TimeSpan MaxRequestDuration = TimeSpan.FromSeconds(100);
+
+    private readonly TimeProvider _timeProvider;
+
     private readonly HttpClient _httpClient;
 
     private readonly PlaidOptions _options;
@@ -22,7 +29,17 @@ public sealed class PlaidApiClient
     public PlaidApiClient(
         HttpClient httpClient,
         IOptions<PlaidOptions> options)
+        : this(httpClient, options, TimeProvider.System)
     {
+    }
+
+    internal PlaidApiClient(
+        HttpClient httpClient,
+        IOptions<PlaidOptions> options,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _timeProvider = timeProvider;
         ArgumentNullException.ThrowIfNull(
             httpClient);
 
@@ -84,20 +101,30 @@ public sealed class PlaidApiClient
             JsonContent.Create(
                 payload);
 
+        var configuredTimeout = _httpClient.Timeout;
+        var requestTimeout = configuredTimeout > TimeSpan.Zero &&
+                             configuredTimeout < MaxRequestDuration
+            ? configuredTimeout
+            : MaxRequestDuration;
+        using var deadline = new CancellationTokenSource(requestTimeout, _timeProvider);
+        using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, deadline.Token);
+        var requestToken = requestCancellation.Token;
+
         using var response =
             await _httpClient.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+                requestToken);
 
         await EnsureResponseSizeIsAllowedAsync(
             response,
-            cancellationToken);
+            requestToken);
 
         var responseText =
             await ReadBoundedResponseAsync(
                 response,
-                cancellationToken);
+                requestToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -384,7 +411,10 @@ public sealed class PlaidApiClient
         JsonElement element,
         string propertyName)
     {
-        if (!element.TryGetProperty(
+        // An upstream error can contain any JSON shape. Never turn a valid
+        // non-object error body into an unhandled InvalidOperationException.
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(
                 propertyName,
                 out var property) ||
             property.ValueKind !=

@@ -237,6 +237,16 @@ public sealed class PlaidLinkService
             _tokenProtector.ProtectLinkToken(
                 linkToken);
 
+        // Data Protection ciphertext is longer than the opaque provider
+        // input. Validate the *encrypted* length against the actual
+        // database column before tracking or storing any credential.
+        if (protectedLinkToken.Length >
+            PlaidLinkSessionEntity.MaxProtectedLinkTokenLength)
+        {
+            throw new InvalidOperationException(
+                "Plaid returned a Link token too large for secure storage.");
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         var linkSession =
@@ -267,8 +277,19 @@ public sealed class PlaidLinkService
         _dbContext.PlaidLinkSessions.Add(
             linkSession);
 
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
+        }
+        catch
+        {
+            // A failed session insert must not be committed by a later,
+            // unrelated save on this scoped DbContext. A new Hosted Link
+            // attempt requires a fresh provider-generated token.
+            _dbContext.Entry(linkSession).State = EntityState.Detached;
+            throw;
+        }
 
         /*
          * Deliberately do not return the plaintext Link token.
@@ -420,7 +441,13 @@ public sealed class PlaidLinkService
                 "Plaid returned an expired Link token.");
         }
 
-        return expiration;
+        // A provider response cannot extend local retention of an
+        // owner-scoped, protected Hosted Link credential indefinitely.
+        // Use the earlier of the provider expiration and our own limit.
+        var maximumExpiration = now.Add(DefaultLinkSessionLifetime);
+        return expiration < maximumExpiration
+            ? expiration
+            : maximumExpiration;
     }
 }
 

@@ -29,3 +29,108 @@
 .fw-pulse .fw-pulse-label {
     margin-top: 0;
 }
+
+
+/* A real transaction comparison deserves the first follow-up on Overview.
+   This is deliberately a comparison spotlight, never a confirmed rate claim. */
+.fw-pulse-spotlight {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    margin: 20px 0 16px;
+    padding: clamp(16px, 3vw, 22px);
+    border: 1px solid rgba(255, 194, 113, 0.3);
+    border-radius: 19px;
+    background:
+        radial-gradient(circle at 95% 0%, rgba(255, 189, 87, 0.12), transparent 58%),
+        rgba(15, 24, 44, 0.64);
+}
+
+.fw-pulse-spotlight-copy {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.fw-pulse-spotlight-eyebrow {
+    color: #ffd29e;
+    font-size: 0.73rem;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+}
+
+.fw-pulse-spotlight-change {
+    color: #fff6eb;
+    font-size: clamp(1.55rem, 4vw, 2.3rem);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.045em;
+    overflow-wrap: anywhere;
+}
+
+.fw-pulse-spotlight-provider {
+    color: #f7f8ff;
+    font-size: 0.86rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.fw-pulse-spotlight-copy p {
+    margin: 2px 0 0;
+    max-width: 40ch;
+    color: #c9d3e8;
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.fw-pulse-spotlight-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 48px;
+    max-width: 100%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    background: #fff0df;
+    color: #3f280e;
+    text-align: center;
+    font-weight: 750;
+    font-size: 0.78rem;
+    text-decoration: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.fw-pulse-spotlight-action:hover {
+    background: #fff8f0;
+    color: #3f280e;
+}
+
+.fw-pulse-spotlight-action:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+}
+
+@media (max-width: 680px) {
+    .fw-pulse-spotlight {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .fw-pulse-spotlight-action {
+        justify-self: start;
+    }
+}
+
+@media (forced-colors: active) {
+    .fw-pulse-spotlight {
+        border: 2px solid CanvasText;
+    }
+
+    .fw-pulse-spotlight-action {
+        border: 1px solid LinkText;
+    }
+}

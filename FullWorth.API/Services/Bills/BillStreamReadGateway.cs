@@ -41,6 +41,31 @@ public sealed class BillStreamReadGateway(
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyList<BillStreamReadRecord>> ListOwnedByIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> billStreamIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID is required.", nameof(userId));
+        ArgumentNullException.ThrowIfNull(billStreamIds);
+
+        var ids = billStreamIds.Distinct().ToArray();
+        if (ids.Any(id => id == Guid.Empty))
+            throw new ArgumentException("Bill stream IDs must not be empty.", nameof(billStreamIds));
+        if (ids.Length == 0)
+            return [];
+
+        return await dbContext.BillStreams
+            .AsNoTracking()
+            .Where(stream => stream.UserId == userId && ids.Contains(stream.Id))
+            .OrderBy(stream => stream.ProviderName)
+            .ThenBy(stream => stream.Id)
+            .Select(stream => new BillStreamReadRecord(
+                stream.Id, stream.ProviderName, stream.Category))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<BillStreamReadRecord?> GetOwnedAsync(
         Guid userId,
         Guid billStreamId,

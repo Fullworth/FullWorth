@@ -42,6 +42,8 @@ services:
       ParserWorker__ServerCertificatePath: /var/run/fullworth-parser-tls/parser-worker.cer.pem
       AllowedHosts: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       Database__MigrateOnStartup: "false"
+      Passkeys__Enabled: ${BILLWATCH_PASSKEYS_ENABLED:-false}
+      Passkeys__Origin: https://${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
       Subscription__EnforcementEnabled: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED:-false}
       Subscription__EnforcementCohort: ${BILLWATCH_SUBSCRIPTION_ENFORCEMENT_COHORT:-All}
       StripeBilling__Enabled: ${BILLWATCH_STRIPE_ENABLED:-false}
@@ -183,6 +185,7 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       AllowedHosts: ${BILLWATCH_WEB_HOST:?Set BILLWATCH_WEB_HOST}
       BILLWATCH_RELEASE_ID: ${BILLWATCH_RELEASE_ID:?Set BILLWATCH_RELEASE_ID}
+      Passkeys__Enabled: ${BILLWATCH_PASSKEYS_ENABLED:-false}
       FullWorthApi__BaseUrl: http://api:8080
       FullWorthApi__HostHeader: ${BILLWATCH_HOST:?Set BILLWATCH_HOST}
       ExternalIdentity__Google__ClientId: ${FULLWORTH_GOOGLE_CLIENT_ID:-}

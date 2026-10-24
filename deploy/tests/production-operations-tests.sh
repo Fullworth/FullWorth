@@ -51,6 +51,7 @@ expect_failure()
 }
 
 write_valid_env "$valid_env"
+sh "$root_dir/deploy/tests/passkey-production-configuration-tests.sh" "$valid_env"
 
 runtime_status_helper="$root_dir/deploy/format-public-runtime-state.sh"
 [ -f "$runtime_status_helper" ] ||

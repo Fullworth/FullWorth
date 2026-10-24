@@ -1,3 +1,4 @@
+import { loginRedirectUrl } from "./login-redirect.js";
 let antiforgeryToken = null;
 
 async function readSafeError(response) {
@@ -62,7 +63,7 @@ async function handleAdminResponse(response) {
                 await readSafeError(response));
         }
 
-        window.location.assign("/login");
+        window.location.assign(loginRedirectUrl(window.location));
         throw new Error("FullWorth session expired.");
     }
 
@@ -128,7 +129,7 @@ async function getAntiforgeryToken() {
         });
 
     if (response.status === 401) {
-        window.location.assign("/login");
+        window.location.assign(loginRedirectUrl(window.location));
         throw new Error("FullWorth session expired.");
     }
 

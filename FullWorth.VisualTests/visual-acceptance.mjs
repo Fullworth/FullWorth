@@ -44,6 +44,36 @@ try {
   async function capture(name, route, selector) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await settle(selector);
+
+    if (route.startsWith("/app") && await page.evaluate(() => window.innerWidth <= 900)) {
+      const geometry = await page.evaluate(() => {
+        const viewport = document.documentElement.clientWidth;
+        const documentWidth = document.documentElement.scrollWidth;
+        const bodyWidth = document.body.scrollWidth;
+
+        // Report only element types/classes, never financial text or bank IDs.
+        const candidates = [...document.querySelectorAll(".app-shell *")]
+          .filter(element => {
+            const rect = element.getBoundingClientRect();
+            const styles = getComputedStyle(element);
+            return styles.display !== "none" && styles.position !== "fixed" &&
+              rect.width > 0 && (rect.right > viewport + 2 || rect.left < -2);
+          })
+          .slice(0, 8)
+          .map(element => ({
+            element: element.tagName.toLowerCase(),
+            classes: [...element.classList].slice(0, 3)
+          }));
+
+        return { viewport, documentWidth, bodyWidth, candidates };
+      });
+
+      assert.ok(geometry.documentWidth <= geometry.viewport + 1 &&
+        geometry.bodyWidth <= geometry.viewport + 1,
+        "Authenticated " + route + " has unwanted sideways scrolling at " +
+        geometry.viewport + "px: " + JSON.stringify(geometry));
+    }
+
     await page.screenshot({
       path: path.join(outputDir, `${name}.png`),
       fullPage: true
@@ -108,6 +138,48 @@ try {
     path: path.join(outputDir, "whats-new-desktop.png"),
     fullPage: true
   });
+
+  // The decorative glow must not make release notes pan sideways on iPhone.
+  // Keep the real dialog open while exercising narrow viewport layouts.
+  for (const viewport of [
+    { width: 320, height: 640 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 }
+  ]) {
+    await page.setViewportSize(viewport);
+    const layout = await whatsNewDialog.evaluate(dialog => {
+      const rect = dialog.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        viewportWidth: window.innerWidth,
+        scrollWidth: dialog.scrollWidth,
+        clientWidth: dialog.clientWidth,
+        canScrollVertically: dialog.scrollHeight > dialog.clientHeight,
+        overflowX: getComputedStyle(dialog).overflowX,
+        overflowY: getComputedStyle(dialog).overflowY
+      };
+    });
+
+    assert.ok(layout.left >= -1 && layout.right <= layout.viewportWidth + 1,
+      `What's New must fit inside the ${viewport.width}px viewport: ${JSON.stringify(layout)}`);
+    assert.ok(layout.scrollWidth <= layout.clientWidth + 1,
+      `What's New must have no horizontal overflow at ${viewport.width}px: ${JSON.stringify(layout)}`);
+    assert.equal(layout.overflowX, "hidden",
+      "What's New must disable sideways scrolling.");
+    assert.equal(layout.overflowY, "auto",
+      "What's New must preserve vertical scrolling.");
+    assert.equal(layout.canScrollVertically, true,
+      `What's New must remain vertically scrollable at ${viewport.width}px.`);
+
+    if (viewport.width === 390) {
+      await page.screenshot({
+        path: path.join(outputDir, "whats-new-mobile.png"),
+        fullPage: true
+      });
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1100 });
 
   await page.locator(".whats-new-primary").click();
 
@@ -183,6 +255,7 @@ try {
     ["overview-mobile-dark", "/app"],
     ["bills-mobile-dark", "/app/bills"],
     ["activity-mobile-dark", "/app/activity"],
+    ["planning-mobile-dark", "/app/planning"],
     ["account-mobile-dark", "/app/account"],
     ["transactions-mobile-dark", "/app/account/transactions"],
     ["settings-mobile-dark", "/app/account/settings"],
@@ -191,9 +264,14 @@ try {
     ["profile-mobile-dark", "/app/profile"]
   ];
 
-  for (const [name, route] of mobileRoutes) {
-    const selector = route === "/" ? ".landing-page" : ".app-shell";
-    await capture(name, route, selector);
+  // The 390px baseline remains unchanged; 320px and 430px guard against
+  // narrow phone overflow on every authenticated route, not just Bills.
+  for (const width of [390, 320, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const [name, route] of mobileRoutes) {
+      const selector = route === "/" ? ".landing-page" : ".app-shell";
+      await capture(width === 390 ? name : name + "-" + width, route, selector);
+    }
   }
 
   // Render the real components with synthetic BFF evidence. The API contract
@@ -267,12 +345,76 @@ try {
 
       await page.goto("/app/bills/" + currencyBillId, { waitUntil: "domcontentloaded" });
       await settle(".fw-detail-current");
+      const detailOrder = await page.evaluate(() => {
+        const story = document.querySelector(".fw-detail-change-story");
+        const upload = document.querySelector(".statement-upload-panel");
+        const choice = document.querySelector(".bill-monitoring-choice");
+        const history = document.querySelector(".fw-detail-history-grid");
+        if (!story || !upload || !choice || !history) return null;
+        const prior = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+        return prior(story, choice) && prior(story, upload) &&
+          prior(choice, history) && prior(upload, history);
+      });
+      assert.equal(detailOrder, true,
+        "Bill evidence story must appear before upload and monitoring actions, then historical records.");
       const detailText = await page.locator(".app-page").innerText();
       assert.ok(detailText.includes("EUR 20.00"));
       assert.ok(detailText.includes("EUR 25.00"));
       assert.ok(detailText.includes("+EUR 60.00"));
       assert.ok(!detailText.includes("$20.00") && !detailText.includes("$25.00"));
       await page.screenshot({ path: path.join(outputDir, "bill-detail-currencies-" + width + ".png"), fullPage: true });
+
+      if (width === 320) {
+        // Reproduce the real upload-status markup and its Blazor CSS scope without
+        // sending any financial document or issuing a POST.
+        await page.locator(".statement-upload-panel").evaluate(panel => {
+          const scope = [...panel.attributes].find(attribute => /^b-[a-z0-9]+$/.test(attribute.name))?.name;
+          assertScope(scope);
+          function assertScope(value) {
+            if (!value) throw new Error("Statement panel CSS isolation attribute not found.");
+          }
+          const make = (tag, className, text) => {
+            const element = document.createElement(tag);
+            element.setAttribute(scope, "");
+            if (className) element.className = className;
+            if (text) element.textContent = text;
+            return element;
+          };
+          const status = make("div", "statement-upload-status working");
+          const dot = make("span", "statement-status-dot");
+          const body = make("div");
+          body.append(
+            make("strong", "", "Uploading securely"),
+            make("span", "", "Sending the " + "A".repeat(240) + ".pdf statement to FullWorth.")
+          );
+          status.append(dot, body);
+          panel.append(status);
+        });
+
+        for (const [mobileWidth, largeText] of [[320, false], [390, false], [430, false], [390, true]]) {
+          await page.setViewportSize({ width: mobileWidth, height: 950 });
+          await page.evaluate(large => {
+            document.documentElement.style.fontSize = large ? "200%" : "";
+          }, largeText);
+          const layout = await page.locator(".statement-upload-status").evaluate(status => {
+            const rect = status.getBoundingClientRect();
+            const panel = document.querySelector(".statement-upload-panel").getBoundingClientRect();
+            return {
+              left: rect.left, right: rect.right, width: window.innerWidth,
+              panelLeft: panel.left, panelRight: panel.right,
+              fits: status.scrollWidth <= status.clientWidth + 1,
+              wraps: getComputedStyle(status.querySelector("span:last-child")).overflowWrap
+            };
+          });
+          assert.ok(layout.left >= layout.panelLeft - 1 && layout.right <= layout.panelRight + 1 &&
+            layout.right <= layout.width + 1 && layout.fits && layout.wraps === "anywhere",
+            "Long statement filename must fit within mobile upload status: " + JSON.stringify(layout));
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+            "Long filename must not cause sideways page scrolling.");
+        }
+        await page.evaluate(() => document.documentElement.style.fontSize = "");
+        await page.setViewportSize({ width: 320, height: 1100 });
+      }
     }
   } catch (error) {
     await page.screenshot({ path: path.join(outputDir, "currency-acceptance-failure.png"), fullPage: true });

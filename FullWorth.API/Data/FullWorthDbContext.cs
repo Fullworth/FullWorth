@@ -953,7 +953,7 @@ public sealed class FullWorthDbContext
                 entity.HasKey(session => session.Id);
 
                 entity.Property(session => session.ProtectedLinkToken)
-                    .HasMaxLength(4000)
+                    .HasMaxLength(PlaidLinkSessionEntity.MaxProtectedLinkTokenLength)
                     .IsRequired();
 
                 entity.Property(session => session.Status)

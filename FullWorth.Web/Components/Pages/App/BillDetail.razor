@@ -145,36 +145,13 @@
             </div>
         </section>
 
-        <section class="app-panel bill-monitoring-choice" aria-labelledby="monitoring-choice-heading">
-            <h2 id="monitoring-choice-heading">@L["Monitoring choice"]</h2>
-            @if (!_detail.IsActive || _detail.Source != "Manual")
-            {
-                <p>@L["Choose to keep this bill monitored even when automatic discovery has insufficient evidence. This does not verify your bank connection, payment timing, or bill amount."]</p>
-                <button type="button" class="secondary-action" disabled="@(_isKeeping || _isRefreshing || _confirmationUncertain)" @onclick="KeepMonitoringAsync">
-                    @(_isKeeping ? L["Saving…"] : L["Keep monitoring this bill"])
-                </button>
-            }
-            else
-            {
-                <p>@L["You chose to keep this bill monitored. Automatic discovery will preserve that choice."]</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(_keepMessage))
-            {
-                <p role="status">@_keepMessage</p>
-            }
-        </section>
-
-        <StatementUploadPanel @key="BillStreamId" BillStreamId="@BillStreamId"
-                              ProviderName="@_detail.ProviderName"
-                              OnProcessed="@HandleStatementProcessedAsync" />
-
         @if (latestChange is not null)
         {
             <section class="fw-detail-change-story">
                 <div class="@GetDetectedChangeClass(latestChange.AmountDifference)">
                 <div class="detected-change-main">
                     <div class="change-eyebrow">
-                        @L["Detected statement change"]
+                        @L["Most recent verified statement change"]
                     </div>
 
                     <div class="detected-change-values">
@@ -261,6 +238,29 @@
             </section>
         }
 
+        <section class="app-panel bill-monitoring-choice" aria-labelledby="monitoring-choice-heading">
+            <h2 id="monitoring-choice-heading">@L["Monitoring choice"]</h2>
+            @if (!_detail.IsActive || _detail.Source != "Manual")
+            {
+                <p>@L["Choose to keep this bill monitored even when automatic discovery has insufficient evidence. This does not verify your bank connection, payment timing, or bill amount."]</p>
+                <button type="button" class="secondary-action" disabled="@(_isKeeping || _isRefreshing || _confirmationUncertain)" @onclick="KeepMonitoringAsync">
+                    @(_isKeeping ? L["Saving…"] : L["Keep monitoring this bill"])
+                </button>
+            }
+            else
+            {
+                <p>@L["You chose to keep this bill monitored. Automatic discovery will preserve that choice."]</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(_keepMessage))
+            {
+                <p role="status">@_keepMessage</p>
+            }
+        </section>
+
+        <StatementUploadPanel @key="BillStreamId" BillStreamId="@BillStreamId"
+                              ProviderName="@_detail.ProviderName"
+                              OnProcessed="@HandleStatementProcessedAsync" />
+
         <div class="detail-grid fw-detail-history-grid">
             <section class="detail-panel">
                 <div class="panel-heading">
@@ -293,6 +293,15 @@
                                 <div class="statement-info">
                                     <strong>@FormatPeriod(statement.PeriodStart, statement.PeriodEnd)</strong>
                                     <span>@FormatStatementMeta(statement)</span>
+                                    @if (statement.SourceUploadId is { } sourceUploadId &&
+                                         sourceUploadId != Guid.Empty)
+                                    {
+                                        <a class="secondary-action"
+                                           href="@($"/bff/bill-streams/{BillStreamId:D}/statement-uploads/{sourceUploadId:D}/file")"
+                                           target="_blank" rel="noopener noreferrer">
+                                            @L["Download original statement"]
+                                        </a>
+                                    }
                                 </div>
 
                                 <div class="statement-amount">
@@ -325,7 +334,7 @@
                 else
                 {
                     <div class="change-history-list">
-                        @foreach (var change in _detail.Changes)
+                        @foreach (var change in StatementChangesByPeriod)
                         {
                             <article class="change-history-row">
                                 <div class="@GetHistoryIndicatorClass(change.AmountDifference)"></div>
@@ -386,8 +395,33 @@
             ? L["Bill — FullWorth"]
             : $"{_detail.ProviderName} — FullWorth";
 
-    private BillChangeViewModel? LatestChange =>
-        _detail?.Changes.OrderByDescending(change => change.DetectedAtUtc).ThenBy(change => change.Id).FirstOrDefault();
+    // Detection time is an audit timestamp, not the chronology of the provider's billing periods.
+    // A historical statement uploaded today must not displace a newer verified billing change.
+    private IReadOnlyList<BillChangeViewModel> StatementChangesByPeriod
+    {
+        get
+        {
+            if (_detail is null)
+            {
+                return [];
+            }
+
+            var periods = _detail.Statements
+                .Where(statement => statement.Id != Guid.Empty && statement.PeriodStart <= statement.PeriodEnd)
+                .GroupBy(statement => statement.Id)
+                .ToDictionary(group => group.Key, group => group.First());
+
+            return _detail.Changes
+                .Where(change => periods.ContainsKey(change.CurrentStatementId))
+                .OrderByDescending(change => periods[change.CurrentStatementId].PeriodEnd)
+                .ThenByDescending(change => periods[change.CurrentStatementId].PeriodStart)
+                .ThenByDescending(change => change.DetectedAtUtc)
+                .ThenBy(change => change.Id)
+                .ToList();
+        }
+    }
+
+    private BillChangeViewModel? LatestChange => StatementChangesByPeriod.FirstOrDefault();
 
     protected override void OnParametersSet()
     {
@@ -742,6 +776,7 @@
         public DateOnly? DueDate { get; set; }
         public decimal TotalAmount { get; set; }
         public string? CurrencyCode { get; set; }
+        public Guid? SourceUploadId { get; set; }
     }
 
     public sealed class BillChangeViewModel

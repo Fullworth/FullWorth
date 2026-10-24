@@ -590,6 +590,9 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
             null,
             null);
 
+        foreach (var transaction in dbContext.ChangeTracker.Entries<BankTransactionEntity>())
+            transaction.Entity.BankAccountId = staleTransaction.BankAccountId;
+
         await dbContext.SaveChangesAsync();
 
         var service =
@@ -808,6 +811,88 @@ public sealed class RecurringBillDiscoveryPersistenceServiceTests
         var persisted = await service.DiscoverAndSaveAsync(userId);
         Assert.Equal(diagnostics, persisted.Diagnostics);
         Assert.Equal(1, persisted.BillsDiscovered);
+    }
+
+    [Fact]
+    public async Task Diagnostics_ReportDuplicateOwnedProviderBlockingInsteadOfClaimingPersistence()
+    {
+        await using var db = CreateDbContext();
+        var owner = Guid.NewGuid();
+        var otherOwner = Guid.NewGuid();
+        AddMonthlyTransactions(db, owner, "Black Hills Energy", 85m, null, null);
+        AddMonthlyTransactions(db, otherOwner, "Black Hills Energy", 90m, null, null);
+        db.BillStreams.AddRange(
+            new BillStreamEntity
+            {
+                UserId = owner, ProviderName = "Black Hills Energy",
+                IsActive = true, Source = BillStreamSource.Manual
+            },
+            new BillStreamEntity
+            {
+                UserId = owner, ProviderName = "  black hills energy  ",
+                IsActive = true, Source = BillStreamSource.Manual
+            });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var service = new RecurringBillDiscoveryPersistenceService(db,
+            new PlaidBankTransactionDiscoveryGateway(db),
+            new BillTransactionAssociationGateway(db));
+
+        var before = await service.GetDiagnosticsAsync(owner);
+        Assert.Equal(1, before.AcceptedCandidates);
+        Assert.Equal(1, before.BlockedByExistingBillAmbiguity);
+        Assert.Equal(0, (await service.GetDiagnosticsAsync(otherOwner))
+            .BlockedByExistingBillAmbiguity);
+        Assert.False(db.ChangeTracker.HasChanges());
+
+        var result = await service.DiscoverAndSaveAsync(owner);
+        Assert.Equal(0, result.BillsDiscovered);
+        Assert.Equal(1, result.RecurringCandidatesRejected);
+        Assert.Equal(before, result.Diagnostics);
+        Assert.Equal(2, await db.BillStreams.CountAsync());
+        Assert.Empty(db.BillTransactionAssociations);
+    }
+
+    [Fact]
+    public async Task Diagnostics_ReportPreexistingAssociationConflictWithoutChangingOwnership()
+    {
+        await using var db = CreateDbContext();
+        var owner = Guid.NewGuid();
+        var stream = new BillStreamEntity
+        {
+            UserId = owner, ProviderName = "Another provider",
+            IsActive = true, Source = BillStreamSource.Manual
+        };
+        db.BillStreams.Add(stream);
+        AddMonthlyTransactions(db, owner, "Black Hills Energy", 85m, null, null);
+        await db.SaveChangesAsync();
+        var transactionId = await db.BankTransactions
+            .Where(item => item.UserId == owner)
+            .Select(item => item.Id)
+            .FirstAsync();
+        db.BillTransactionAssociations.Add(new BillTransactionAssociationEntity
+        {
+            UserId = owner, BankTransactionId = transactionId,
+            BillStreamId = stream.Id
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var service = new RecurringBillDiscoveryPersistenceService(db,
+            new PlaidBankTransactionDiscoveryGateway(db),
+            new BillTransactionAssociationGateway(db));
+        var before = await service.GetDiagnosticsAsync(owner);
+        Assert.Equal(1, before.AcceptedCandidates);
+        Assert.Equal(1, before.BlockedByExistingBillAmbiguity);
+        Assert.False(db.ChangeTracker.HasChanges());
+
+        var result = await service.DiscoverAndSaveAsync(owner);
+        Assert.Equal(0, result.BillsDiscovered);
+        Assert.Equal(before, result.Diagnostics);
+        Assert.Equal(stream.Id,
+            (await db.BillTransactionAssociations.SingleAsync()).BillStreamId);
+        Assert.Single(db.BillStreams);
     }
 
     [Fact]

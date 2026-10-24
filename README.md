@@ -1,198 +1,152 @@
 # FullWorth
 
-FullWorth is a transaction-first bill-intelligence product built with .NET 10, .NET MAUI, ASP.NET Core, PostgreSQL, and Plaid.
+**Know when your bills change — and why.**
 
-Its core promise is: **Know when your bills change — and why.**
+FullWorth is a **transaction-first bill-intelligence product** for recognizing recurring charges, spotting supported changes, and helping people understand what the available evidence says about those changes. It is **not** a bill-payment service or a general budgeting dashboard.
 
-## Development status
+**Live website:** [fullworth.org](https://fullworth.org)  
+**API origin:** [api.fullworth.org](https://api.fullworth.org)
 
-Active development integrates through the `development` branch and is promoted to `master` only after the release candidate passes the complete CI gate. Pull request #81 established the current hardened development baseline and passed FullWorth CI #513 on exact head `014ac49064eaa17da68262d39d7d5d4023a6d1bc` before merge.
+> **Release status:** FullWorth is in pre-release/private-beta readiness work, not a broadly approved public launch. Working code, passing CI, and a healthy deployment are not substitutes for real-provider, financial-accuracy, recovery, device, and legal acceptance. See [Current state](#current-state) and [Release gates](#release-gates).
 
-The CI gate now contains three independent jobs:
+## How FullWorth works
 
-- Backend Release build, EF pending-model verification, and automated tests.
-- .NET MAUI Android Release build.
-- Linux production-container, HTTPS/security-boundary, encrypted-backup, and isolated recovery verification.
+1. **Transactions discover bills.** Owner-scoped bank transaction history is the starting point for recurring-bill recognition; a transaction is not automatically a bill just because money was spent.
+2. **Statements add context.** Securely uploaded provider documents may explain plan changes, expired promotions, taxes, and fees after extraction, validation, and bill matching.
+3. **Deterministic comparisons detect changes.** Amounts, currency, billing period, comparable history, and evidence quality must support a claim before it is shown as a change.
+4. **Evidence supports explanations and alerts.** The product aims to answer **what changed**, **why it changed**, and **how much it may cost** without inventing a cause.
 
-## Start the API locally
+For a supported monthly increase, the intended presentation is a monthly difference and annualized impact, with the reason attributed only when supported by evidence. Unknown amounts, incomplete history, different currencies, and unavailable comparisons must remain visibly unknown—not an invented zero or an “all clear.”
 
-The local API requires PostgreSQL plus Plaid sandbox credentials stored in .NET user secrets. Never commit credentials to this repository.
+See [Product strategy](FULLWORTH_PRODUCT_STRATEGY.md) and the [engineering roadmap](FULLWORTH_ROADMAP.md).
 
-From the repository root in PowerShell:
+## Current state
 
-```powershell
-dotnet run --launch-profile https --project .\FullWorth.API\FullWorth.API.csproj
-```
+**Reference date: October 23, 2026 (America/Denver).** This section is a dated evidence snapshot, not an automatic live status monitor.
 
-Local endpoints:
+| Area | Verified position / boundary |
+| --- | --- |
+| **Primary client** | **ASP.NET Core / Blazor Web + BFF**, with a mobile-focused browser/PWA experience. The website is the primary product surface. |
+| **Native clients** | A .NET MAUI project and hosted-Web shells remain for compatibility and device testing. MAUI is **not** the primary product direction. |
+| **Bank connections** | Plaid connection, transaction sync, recurring discovery, and connection-recovery logic exist. Sandbox and human/provider acceptance are still separate gates. |
+| **Bill intelligence** | Deterministic discovery, bill comparison, statement upload/storage, text/OCR extraction, matching, and alert paths exist. Missing known bills and representative statement accuracy still require private evidence-based acceptance. |
+| **Identity and security** | ASP.NET Core Identity, owner-scoped data access, server-side financial/provider credentials, Web/BFF sessions, and protected document workflows. Passing automated tests does not prove every real-world security scenario. |
+| **Passkeys / Face ID** | Opt-in code exists, but production enablement remains **off by default** pending platform and physical-device verification. |
+| **Payments and AI** | Subscription enforcement, paid rollout, and AI-derived persistence are **not enabled for general production use**. AI evaluation work is distinct from deterministic production persistence. |
 
-- API: `https://localhost:7243`
-- Liveness: `https://localhost:7243/health/live`
-- Readiness: `https://localhost:7243/health/ready`
+### Branches and deployments are different
 
-## Validate the backend
+- **`master`** is the production/release branch. The most recently **documented guarded deployment and same-release authenticated smoke** verified commit [`dd318367`](https://github.com/Fullworth/FullWorth/commit/dd31836703bd110a30f303ed3ce9fd13c0f61d82) on **October 21, 2026** ([deploy evidence](https://github.com/Fullworth/FullWorth/actions/runs/39665707749), [authentication smoke](https://github.com/Fullworth/FullWorth/actions/runs/39666163983)). This is the last **recorded** production verification, not a fresh inspection of the host.
+- **`development`** is the integration branch for features, fixes, and release hardening. Development-only work **is not deployed** merely because it merged. See the [current development branch](https://github.com/Fullworth/FullWorth/tree/development), [open pull requests](https://github.com/Fullworth/FullWorth/pulls), and [handoff context](FULLWORTH_CONTEXT.md).
+- **Promotion** requires its own reviewed release PR, exact-commit checks, the guarded deployment workflow, and a separately verified runtime. Do not infer production state from GitHub branch heads.
+
+## Technology and repository layout
+
+| Location | Responsibility |
+| --- | --- |
+| [`FullWorth.Web/`](FullWorth.Web/) | Blazor interactive Web UI, browser-facing BFF, cookie authentication, PWA assets |
+| [`FullWorth.API/`](FullWorth.API/) | ASP.NET Core API, Identity, EF Core/PostgreSQL, Plaid, bills, statements, background services |
+| [`FullWorth.Core/`](FullWorth.Core/) | Shared models, contracts, deterministic domain logic |
+| [`FullWorth.ParserWorker/`](FullWorth.ParserWorker/) | Isolated document-parsing/OCR worker |
+| [`FullWorth.Tests/`](FullWorth.Tests/) | .NET integration/unit/regression tests and Node browser-logic suites |
+| [`FullWorth.VisualTests/`](FullWorth.VisualTests/) | Visual/browser acceptance tooling |
+| [`FullWorth.AiEvaluation/`](FullWorth.AiEvaluation/) | Offline/shadow AI evaluation tooling, not an enabled production bill-authority path |
+| [`FullWorth.csproj`](FullWorth.csproj) | Transitional .NET MAUI client |
+| [`compose.production.yml`](compose.production.yml), [`deploy/`](deploy/) | Hardened production topology, release guards, backup/recovery and operations scripts |
+
+Stack: **.NET 10**, ASP.NET Core, Blazor, PostgreSQL/Entity Framework Core, ASP.NET Core Identity, Plaid, Docker Compose/Caddy, Redis-backed production Web sessions, encrypted Restic backups, xUnit, and native text/OCR extraction.
+
+See [Architecture](ARCHITECTURE.md), [parser isolation](PARSER_WORKER_BOUNDARY.md), and [HTTP request security](HTTP_REQUEST_SECURITY.md). The modular-monolith design enforces data ownership rather than letting every module read every finance table.
+
+## Run locally
+
+**Prerequisites:** .NET 10 SDK, PostgreSQL, and appropriate **Plaid Sandbox** access for provider-backed flows. Use local .NET user secrets or another approved secret store; never check credentials, connection strings with passwords, bank data, or statement files into Git.
+
+1. From a repository checkout, configure the API's local PostgreSQL connection and relevant provider settings through **user secrets for `FullWorth.API`**. The connection-string key is `ConnectionStrings:BillWatchDatabase`; Plaid configuration uses the `Plaid` section. Apply the committed EF migrations to your **local** database using the normal development tooling.
+2. Trust the local ASP.NET Core HTTPS development certificate if your machine has not done so:
+   ```powershell
+   dotnet dev-certs https --trust
+   ```
+3. In one terminal, start the **API**:
+   ```powershell
+   dotnet run --launch-profile https --project .\FullWorth.API\FullWorth.API.csproj
+   ```
+4. In another terminal, start the **Web/BFF**:
+   ```powershell
+   dotnet run --launch-profile https --project .\FullWorth.Web\FullWorth.Web.csproj
+   ```
+
+| Local endpoint | URL |
+| --- | --- |
+| Web application | `https://localhost:7094` |
+| API | `https://localhost:7243` |
+| API liveness | `https://localhost:7243/health/live` |
+| API readiness | `https://localhost:7243/health/ready` |
+
+In Development, the Web/BFF defaults to `https://localhost:7243` as its API origin; an explicit `FullWorthApi:BaseUrl` overrides it. The Web session store uses an in-memory development fallback when Redis session settings are absent; **production requires its configured protected Redis/session boundary**.
+
+The API needs a reachable database and valid configuration. Successful process startup, liveness, readiness, and usable provider-backed data are **different checks**. Real bank connections should only be exercised with authorized test accounts in the intended Plaid environment.
+
+## Build and test
+
+From the repository root:
 
 ```powershell
 dotnet build .\FullWorth.Tests\FullWorth.Tests.csproj --configuration Release
 dotnet test .\FullWorth.Tests\FullWorth.Tests.csproj --configuration Release --no-build
+node --test (Get-ChildItem .\FullWorth.Tests\*.test.mjs | ForEach-Object { $_.FullName })
 ```
 
-GitHub Actions runs the complete CI gate for pull requests and for pushes to `master`. In addition to the backend build and tests, CI builds the MAUI Android Release target and the Linux production container, including the native Tesseract/Leptonica OCR dependencies.
+The last command uses PowerShell to expand every standalone JavaScript regression suite before passing its path to Node.js. In Bash, use `node --test FullWorth.Tests/*.test.mjs`. Use a recent Node.js installation. The required GitHub checks include:
 
-## Production deployment candidate
+- **Backend build and tests**: Release build, EF migration/model consistency, .NET tests, and **all** Node regression suites when applicable.
+- **MAUI Android build**: retained while native compatibility remains in the solution.
+- **Linux production container**: release images, runtime boundaries, native OCR/worker containment, and disposable encrypted backup/recovery checks.
+- **Dependency review**: supply-chain change checks.
 
-The included production stack runs four security boundaries on one Linux Docker host:
+Additional browser, WebKit, iOS/Android device, governance and security workflows run where applicable. Docs-only changes may take the CI's documented lightweight path. A green disposable CI recovery test is **not** a real-host recovery certificate.
 
-- Caddy terminates HTTPS and automatically manages TLS certificates.
-- The ASP.NET Core API is reachable only through Caddy.
-- PostgreSQL is reachable only on the private container network.
-- Data Protection keys, statement files, database data, and TLS state use separate persistent volumes.
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) and [GitHub Actions](https://github.com/Fullworth/FullWorth/actions).
 
-Requirements:
+## Security principles
 
-- A Linux server with Docker Engine and the Docker Compose plugin.
-- Ports 80 and 443 open to the internet.
-- DNS records for the Web and API hostnames pointing to the server.
-- Plaid credentials. Use `sandbox` until production access has been approved and verified.
-- A private off-host Restic repository and backup-only credentials.
+FullWorth handles sensitive financial information. Important implementation requirements include:
 
-Deploy:
+- Scope user-owned records, connections, transactions, statements, and alerts by the authenticated owner. Cross-owner IDs must not reveal someone else's data.
+- Keep Plaid access tokens, Web bearer/refresh material, external-provider secrets, and protected statement storage **server-side**. Browser JavaScript must not receive raw financial credentials.
+- Preserve no-store financial/auth responses, Web antiforgery/session boundaries, protected upload/download paths, rate limiting, and private logs.
+- Treat statement text and extracted data as **untrusted evidence**, not instructions; validate before persistence or explanation.
+- Never publish customer financial evidence, credentials, raw statement text, recovery secrets, or database dumps.
 
-1. Copy `.env.production.example` to `.env.production` on the server.
-2. Replace every placeholder, set `BILLWATCH_RELEASE_ID` to the exact deployed commit, and run `chmod 600 .env.production`. The backup wrapper refuses an environment file owned by another account or readable by group/other users.
-3. Run the production preflight before Docker receives any configuration:
+For sensitive findings, use [private security reporting](SECURITY.md), **not** a public issue.
 
-```sh
-sh deploy/validate-production-env.sh .env.production
-```
+## Release gates
 
-The preflight rejects linked or over-permissioned environment files, placeholders, weak or reused database/Web-session/parser-worker credentials, local backup destinations, invalid Plaid environments, non-public hostnames, unsafe retention settings, non-HTTPS operations alert endpoints, and release identifiers that are not exact lowercase 40-character Git commits. It never prints secret values.
-4. Configure `RESTIC_REPOSITORY` as a private off-host destination and use a separate, randomly generated `RESTIC_PASSWORD`. Losing that password makes every backup unrecoverable.
-5. Keep all AI flags disabled. No OpenAI key is required for the current runtime.
-6. Initialize the encrypted repository once:
+FullWorth uses a **guarded, manually approved** production-release path. A passing PR does not authorize deployment. The [production deployment workflow](.github/workflows/production-deploy.yml) requires an exact approved `master` SHA and confirmation of the intended production target. Production database migrations are performed by a **separate, controlled migration process**—normal production API startup does **not** perform automatic migrations.
 
-```bash
-docker compose --env-file .env.production --file compose.production.yml --profile operations build backup
-docker compose --env-file .env.production --file compose.production.yml --profile operations run --rm backup init
-```
+The following remain separate evidence requirements before a broader beta/launch:
 
-7. Deploy from a clean checkout whose `HEAD` exactly matches `BILLWATCH_RELEASE_ID`:
+- Controlled two-user ownership, Plaid connect/update/reconnect, one-time-token failure recovery, and representative known-truth transaction/statement checks.
+- Physical installed-device checks, including relevant iPhone/Safari and Android paths.
+- Real off-host, clean-host recovery (database, statements, **both** Data Protection key rings), provider-enforced immutable backup protection, alert-delivery observations, and controlled deletion/reboot proof.
+- Qualified review of the deployed Terms/Privacy and separate commercial/payment lifecycle approval.
 
-```bash
-sh deploy/deploy-production.sh .env.production
-```
+**Do not treat synthetic fixtures, passing CI, a green health endpoint, or an old smoke run as closure for those real-world gates.** Keep payment enforcement and AI-derived financial persistence disabled until their own release requirements are satisfied.
 
-The deployment command re-runs the fail-closed configuration preflight, rejects a dirty or mismatched checkout, prevents overlapping deploys, validates Compose, builds immutable release-tagged API and recovery images, and creates a verified encrypted recovery point before replacing an already-running API. It waits for every production service and requires the exact external HTTPS readiness response before atomically recording the deployed release. It never performs an automatic database rollback.
+### Operational documentation
 
-8. Confirm both health endpoints over the public HTTPS hostname. If deployment fails after service replacement begins, inspect the bounded sanitized logs printed by the command before retrying; the last verified release marker remains unchanged.
-9. Build the MAUI release with the exact deployed origin:
+The root README is an orientation document, **not a shortcut for deploying a new production release**. Start with the maintained runbooks:
 
-```powershell
-dotnet build .\FullWorth.csproj --configuration Release -p:FullWorthApiBaseUrl=https://api.fullworth.org/
-```
+- [Production operations and verified release checks](deploy/README-OPERATIONS.md)
+- [Backup and recovery trust](deploy/README-BACKUP-TRUST.md)
+- [Private-beta acceptance checklist](deploy/README-BETA-CHECKLIST.md)
+- [Current human/operator tasks](HUMAN-TODO.md)
+- [Passkeys and device verification](PASSKEYS.md)
+- [Revenue readiness](REVENUE_READINESS.md)
+- [Current development handoff](FULLWORTH_CONTEXT.md) and [roadmap](FULLWORTH_ROADMAP.md)
 
-The API applies EF Core migrations during startup in this single-instance deployment. Do not scale the API above one instance while startup migration is enabled; a multi-instance platform should run migrations as a separate one-time release job.
+Never run `docker compose down --volumes` on production, deploy a feature branch, bypass release checks, or move production secrets into a local or public issue/command transcript.
 
-The API and recovery images are tagged with `BILLWATCH_RELEASE_ID`, and every encrypted backup records that same release. Keep that image and source revision available until the next backup and recovery verification pass so rollback does not depend on rebuilding a floating tag.
+---
 
-## External sign-in provider setup
-
-Google and Apple provider credentials are optional and remain server-side. See
-`EXTERNAL_AUTH_SETUP.md` for the exact FullWorth callback URLs, protected
-environment variables, Apple client-secret rotation requirement, and controlled
-verification sequence.
-
-## Required production configuration
-
-The application fails closed outside Development unless these settings are present:
-
-- `ConnectionStrings__BillWatchDatabase`
-- `DataProtection__KeysPath`
-- `BillStatementStorage__RootPath`
-- `WebSession__RedisHost` / `BILLWATCH_WEB_SESSION_REDIS_PASSWORD`
-- `ParserWorker__AuthenticationToken` / `BILLWATCH_PARSER_AUTH_TOKEN`
-- `Plaid__ClientId`
-- `Plaid__Secret`
-- `Plaid__Environment`
-- `AllowedHosts`
-
-When TLS terminates at a reverse proxy, configure only its trusted address under `ReverseProxy__KnownProxies`. The included Compose topology gives Caddy a dedicated API-edge address (`172.28.0.10`) and Web-edge address (`172.29.0.10`); API and Web trust only their respective edge address.
-
-Subscription enforcement is controlled by `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_ENABLED` and defaults to `false`. `BILLWATCH_SUBSCRIPTION_ENFORCEMENT_COHORT` accepts `InternalTester`, `BetaTester`, or `All`; unknown values fail closed as `All`. Enable it only after validating the entitlement and access-key flow. When enabled, targeted users need an active entitlement for financial routes, while subscription recovery, staff administration, data export, bank disconnection, and account deletion remain available through explicit endpoint metadata.
-
-## Operations and recovery
-
-- `/health/live` proves the process is running.
-- `/health/ready` proves the database is reachable, migrations are current, and both sensitive persistent directories are writable. It never returns connection strings or physical paths.
-- Monitor both endpoints externally and alert on repeated readiness failure.
-- Docker logs are size- and count-limited so a runaway process cannot consume the host disk indefinitely.
-- Caddy cannot reach PostgreSQL: edge traffic and database traffic use separate container networks.
-- Never run `docker compose down --volumes` against production. It deletes the database, statements, Data Protection keys, local backup-test repository, and TLS state.
-
-### Encrypted backups
-
-`deploy/run-backup.sh` briefly stops the public edge plus the API and Web key-ring writers, creates a PostgreSQL custom-format dump, and sends that dump, matching statement files, and both separated Data Protection key rings to Restic in one encrypted snapshot. A restart trap restores the previously running services even when backup fails. The backup container receives the sensitive volumes read-only and drops every Linux capability. See `DATA_PROTECTION_KEY_LIFECYCLE.md` for permission, rotation, compromise, and clean-host recovery rules.
-
-Create a manual backup:
-
-```bash
-sh deploy/run-backup.sh /opt/billwatch
-```
-
-Prove the latest encrypted snapshot can be read and restored:
-
-```bash
-docker compose --env-file .env.production --file compose.production.yml --profile operations up --detach --wait restore-database
-docker compose --env-file .env.production --file compose.production.yml --profile operations run --rm backup verify
-docker compose --env-file .env.production --file compose.production.yml --profile operations stop restore-database
-```
-
-Verification selects only a snapshot that completed repository integrity checking, validates SHA-256 manifests, restores into disposable storage, loads the dump into a separate temporary PostgreSQL server, checks EF migration history, and reconciles every database statement record with its restored file and size. It never connects to the live database server for restore work and never overwrites live files. It also fails closed unless restored Data Protection rings, statement directories/files, and isolated PostgreSQL data retain their private owners and exact `0700`/`0600` modes; see `RECOVERY_PERMISSION_POLICY.md`.
-
-For a standard `/opt/billwatch` installation, install and enable the supplied daily backup timer and failure-alert service together:
-
-```bash
-sudo cp \
-  deploy/systemd/billwatch-backup.service \
-  deploy/systemd/billwatch-backup.timer \
-  deploy/systemd/billwatch-operations-alert@.service \
-  /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now billwatch-backup.timer
-sudo systemctl start billwatch-backup.service
-sudo systemctl status billwatch-backup.service --no-pager
-```
-
-The first real-host recovery drill must still be performed before beta invitations. Restore to a separate clean host, keep public traffic disabled, use the matching application release, verify protected Plaid data can be decrypted and statement files can be downloaded, and only then treat the backup gate as closed. Never restore directly over a running production stack.
-
-Repository retention is explicit and opt-in. Before beta, configure at least 14 daily, 8 weekly, 12 monthly, and 3 yearly completed snapshots, then verify the policy with `sh deploy/check-backup-policy.sh /opt/billwatch`. FullWorth refuses lower enabled retention floors before invoking Restic pruning.
-
-Repository retention is not the same as immutable recovery. Keep the Restic password and backend recovery credentials in a separate password vault or recovery escrow, not only in `.env.production` on the server. Configure immutable/Object-Lock/WORM or append-only retention at the off-host storage provider and test recovery from that protected storage. Use separate backup-write and retention-delete credentials where the provider supports them, so compromise of the application host cannot erase every recovery point. If the provider's immutable retention rejects Restic pruning, keep FullWorth's automatic pruning disabled and use a tested provider-side lifecycle/retention policy instead; do not weaken immutability merely to make prune succeed.
-
-Backup failure alerting is also explicit and fail-closed for beta readiness. Configure `BILLWATCH_OPERATIONS_ALERTING_ENABLED=true` with a private HTTPS `BILLWATCH_OPERATIONS_ALERT_WEBHOOK_URL`, verify local systemd wiring with `sh deploy/check-operations-alerting.sh /opt/billwatch`, and send one manual `readiness-test` event before invitations. The alert sender exposes only fixed operational metadata and keeps the private webhook URL out of process arguments.
-
-A restored snapshot represents the state at its recovery timestamp. Before reopening traffic, reconcile account and statement deletions that occurred after that timestamp against an external deletion/audit record so recovery does not unintentionally resurrect data a user asked FullWorth to remove.
-
-Production credentials, `.env.production`, raw statements, extracted statement text, database dumps, and AI evaluation corpora must never be committed.
-
-## External readiness monitoring
-
-The `FullWorth Production Readiness` GitHub Actions workflow is manual-only while FullWorth is pre-revenue. Its target matrix probes both canonical origins: `https://api.fullworth.org` and `https://fullworth.org`. The workflow supplies `BILLWATCH_PRODUCTION_URL` separately for each target; it does not read a repository Actions variable of that name. Select a verified workflow ref containing these canonical targets when dispatching it.
-
-The probe rejects credentials, ports, paths, redirects, local/internal hostnames, and DNS results in private, loopback, or link-local address ranges. It performs three bounded HTTPS attempts and accepts only FullWorth's exact readiness response. No application credential or API key is sent.
-
-For a deliberate readiness and alert-delivery check:
-
-1. Configure the protected repository secret `BILLWATCH_READINESS_ALERT_WEBHOOK_URL` for the intended alert destination.
-2. Run `FullWorth Production Readiness` manually with `force_failure=false` and confirm both API and Web probes pass.
-3. For an approved alert-delivery drill, run it with `force_failure=true`. After successful probes, the API job intentionally fails and invokes the independent alert sender without stopping production services. Confirm the intended destination actually receives the alert; a failed job alone is not delivery evidence.
-4. Run it again with `force_failure=false` and confirm both probes pass.
-
-The same probe can be run from any separate monitoring host, once per origin:
-
-```sh
-BILLWATCH_PRODUCTION_URL=https://api.fullworth.org sh deploy/monitor-readiness.sh
-BILLWATCH_PRODUCTION_URL=https://fullworth.org sh deploy/monitor-readiness.sh
-```
-
-These canonical URL examples follow the committed FullWorth defaults; they do not establish which release is deployed. Preserve legacy environment-variable names, `/opt/billwatch`, systemd units, protected storage identifiers, and legacy domain aliases until their separate compatibility migrations are verified.
+FullWorth is being built incrementally. **A smaller product that reliably reports what its evidence supports is preferable to a larger product that guesses.**

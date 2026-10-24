@@ -41,7 +41,7 @@ public sealed class AdminBffClientSecurityTests
 
         var loginRedirectIndex =
             script.IndexOf(
-                "window.location.assign(\"/login\")",
+                "window.location.assign(loginRedirectUrl(window.location))",
                 StringComparison.Ordinal);
 
         Assert.True(

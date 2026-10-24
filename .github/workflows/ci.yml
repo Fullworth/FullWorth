@@ -135,9 +135,10 @@ jobs:
         if: steps.backend_changes.outputs.required == 'true'
         run: dotnet test FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --no-build --no-restore
 
-      - name: Verify transaction stream regression
+      - name: Verify all Node regression suites
         if: steps.backend_changes.outputs.required == 'true'
-        run: node --test FullWorth.Tests/transaction-stream.test.mjs
+        shell: bash
+        run: node --test FullWorth.Tests/*.test.mjs
 
   maui:
     name: MAUI Android build

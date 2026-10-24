@@ -545,7 +545,7 @@ public static class PaycheckBillPlanCalculator
         if (schedule.Frequency ==
             PayScheduleFrequency.SemiMonthly)
         {
-            if (schedule.SecondaryDayOfMonth is < 1 or > 31)
+            if (schedule.SecondaryDayOfMonth is null or < 1 or > 31)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(schedule),

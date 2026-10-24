@@ -188,7 +188,8 @@ public sealed class AdminUsersController(
             tier,
             request.DurationDays,
             request.GrantsLifetimeAccess,
-            cancellationToken);
+            cancellationToken,
+            operationId: request.OperationId);
 
         if (!result.Succeeded)
         {
@@ -241,15 +242,22 @@ public sealed class AdminUsersController(
             return Unauthorized();
         }
 
-        var credentialError =
-            await ValidateSensitiveCredentialsAsync(
-                actor,
-                request.CurrentPassword,
-                request.TwoFactorCode);
-
-        if (credentialError is not null)
+        // Program activation grants access and requires current credentials.
+        // Defensive deactivation is deliberately friction-light, as with
+        // staff-role removal. The authenticated role policy and the service's
+        // actor/target hierarchy checks remain mandatory for both directions.
+        if (request.IsActive)
         {
-            return credentialError;
+            var credentialError =
+                await ValidateSensitiveCredentialsAsync(
+                    actor,
+                    request.CurrentPassword,
+                    request.TwoFactorCode);
+
+            if (credentialError is not null)
+            {
+                return credentialError;
+            }
         }
 
         if (!Enum.TryParse<UserProgramType>(
@@ -363,7 +371,8 @@ public sealed record GrantEntitlementRequest(
     int? DurationDays,
     bool GrantsLifetimeAccess,
     string CurrentPassword,
-    string? TwoFactorCode);
+    string? TwoFactorCode,
+    Guid? OperationId = null);
 
 public sealed record SetProgramMembershipRequest(
     bool IsActive,

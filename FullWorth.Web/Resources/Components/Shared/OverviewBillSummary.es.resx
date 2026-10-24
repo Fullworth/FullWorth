@@ -38,4 +38,5 @@
   <data name="Monthly timing not established" xml:space="preserve"><value>Periodicidad mensual no confirmada</value></data>
   <data name="Bill amounts need review" xml:space="preserve"><value>Hay importes de facturas que necesitan revisión</value></data>
   <data name="Amount or currency unavailable" xml:space="preserve"><value>Importe o moneda no disponible</value></data>
+  <data name="{0} of {1} active bank connections have reported a successful sync." xml:space="preserve"><value>{0} de {1} conexiones bancarias activas han informado una sincronización correcta.</value></data>
 </root>

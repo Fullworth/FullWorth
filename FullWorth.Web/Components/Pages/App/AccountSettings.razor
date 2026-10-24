@@ -58,7 +58,7 @@
         <a class="settings-tab" href="/app/account/privacy">@L["Data & privacy"]</a>
     </nav>
 
-    @if (_security is null)
+    @if (_security is null && !_securityLoadFailed)
     {
         <section class="settings-card settings-loading-card" aria-busy="true">
             <div class="settings-loading-pulse"></div>
@@ -68,7 +68,14 @@
             </div>
         </section>
     }
-    else
+    else if (_securityLoadFailed)
+    {
+        <section class="settings-card" data-account-read="security" role="alert">
+            <p>@L["FullWorth could not load account security settings."]</p>
+            <button type="button" class="secondary-action" disabled="@(_securityLoading || _isBusy)" @onclick="LoadSecurityAsync">@L["Retry security settings"]</button>
+        </section>
+    }
+    else if (_security is not null)
     {
         <section class="security-overview">
             <div class="security-overview-mark" aria-hidden="true">
@@ -93,7 +100,11 @@
             </div>
         </section>
 
-        <div class="settings-card-grid fw-settings-center">
+    }
+
+    <div class="settings-card-grid fw-settings-center">
+        @if (_security is not null)
+        {
             <section class="settings-card settings-card-wide">
                 <div class="settings-card-heading">
                     <div class="settings-card-icon is-purple" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#shield"></use></svg></div>
@@ -256,6 +267,8 @@
                 </section>
             }
 
+        }
+
             <section class="settings-card settings-card-compact fw-device-preference">
                 <div class="settings-card-heading">
                     <div class="settings-card-icon is-muted" aria-hidden="true"><svg class="bw-sprite"><use href="/assets/billwatch-sprites.svg#activity"></use></svg></div>
@@ -264,9 +277,16 @@
                         <p>@L["Choose how FullWorth displays dates and times."]</p>
                     </div>
                 </div>
-                @if (_isLoadingPreference)
+                @if (_timestampLoadFailed)
                 {
-                    <div class="settings-loading">@L["Loading preference…"]</div>
+                    <div role="alert" data-account-read="timestamp">
+                        <p>@L["FullWorth could not load your timestamp preference."]</p>
+                        <button type="button" class="secondary-action" disabled="@(_timestampLoading || _isBusy)" @onclick="LoadTimestampAsync">@L["Retry timestamp preference"]</button>
+                    </div>
+                }
+                else if (!_timestampReady)
+                {
+                    <div class="settings-loading" role="status" aria-busy="true">@L["Loading preference…"]</div>
                 }
                 else
                 {
@@ -290,9 +310,16 @@
                     </div>
                 </div>
 
-                @if (_isLoadingPreference)
+                @if (_performanceLoadFailed)
                 {
-                    <div class="settings-loading">@L["Loading preference…"]</div>
+                    <div role="alert" data-account-read="performance">
+                        <p>@L["FullWorth could not load this device's performance preference."]</p>
+                        <button type="button" class="secondary-action" disabled="@(_performanceLoading || _isBusy)" @onclick="LoadPerformanceAsync">@L["Retry performance preference"]</button>
+                    </div>
+                }
+                else if (!_performanceReady)
+                {
+                    <div class="settings-loading" role="status" aria-busy="true">@L["Loading preference…"]</div>
                 }
                 else
                 {
@@ -334,8 +361,7 @@
                 </div>
                 <a href="/app/account/privacy" class="secondary-link">@L["Open data & privacy"] <span aria-hidden="true">→</span></a>
             </section>
-        </div>
-    }
+    </div>
 </div>
 
 @if (_activeDialog != SecurityDialog.None)
@@ -500,7 +526,9 @@
     private IJSObjectReference? _timeModule;
     private IJSObjectReference? _securityModule;
     private bool _isBusy;
-    private bool _isLoadingPreference = true;
+    private bool _securityLoading, _timestampLoading, _performanceLoading;
+    private bool _securityLoadFailed, _timestampLoadFailed, _performanceLoadFailed;
+    private bool _timestampReady, _performanceReady, _disposed;
     private bool _dialogOpenRequested;
     private string _selectedMode = "Local12Hour";
     private string _selectedPerformanceProfile = "auto";
@@ -547,57 +575,7 @@
     {
         if (firstRender)
         {
-            try
-            {
-                _timeModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/local-time.js");
-                _securityModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/account-security.js");
-
-                var preferenceTask =
-                    _timeModule
-                        .InvokeAsync<AccountPreferenceViewModel>(
-                            "getTimestampPreference")
-                        .AsTask();
-
-                var securityTask =
-                    _securityModule
-                        .InvokeAsync<AccountSecurityViewModel>(
-                            "getAccountSecurity")
-                        .AsTask();
-
-                var performanceTask =
-                    JS.InvokeAsync<PerformanceProfileViewModel>(
-                            "FullWorthPerformance.getPreference")
-                        .AsTask();
-
-                await Task.WhenAll(
-                    preferenceTask,
-                    securityTask,
-                    performanceTask);
-
-                _selectedMode =
-                    NormalizeMode(
-                        preferenceTask.Result.TimestampDisplayMode);
-
-                _security =
-                    securityTask.Result;
-
-                _selectedPerformanceProfile =
-                    NormalizePerformanceProfile(
-                        performanceTask.Result.Selected);
-
-                _effectivePerformanceProfile =
-                    NormalizeEffectivePerformanceProfile(
-                        performanceTask.Result.Effective);
-            }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException)
-            {
-                _pageError = L["FullWorth could not load account security settings."].Value;
-            }
-            finally
-            {
-                _isLoadingPreference = false;
-                StateHasChanged();
-            }
+            await Task.WhenAll(LoadSecurityAsync(), LoadTimestampAsync(), LoadPerformanceAsync());
         }
 
         if (_dialogOpenRequested && _securityModule is not null && _activeDialog != SecurityDialog.None)
@@ -605,6 +583,66 @@
             _dialogOpenRequested = false;
             await _securityModule.InvokeVoidAsync("openSettingsDialog", DialogId);
         }
+    }
+
+    private async Task LoadSecurityAsync()
+    {
+        if (_securityLoading || _isBusy || _disposed) return;
+        _securityLoading = true;
+        _securityLoadFailed = false;
+        try
+        {
+            _securityModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/account-security.js");
+            var security = await _securityModule.InvokeAsync<AccountSecurityViewModel>("getAccountSecurity");
+            if (security is null || string.IsNullOrWhiteSpace(security.Email))
+                throw new JSException("Invalid account security response.");
+            if (!_disposed) _security = security;
+        }
+        catch (JSException) { if (!_disposed) _securityLoadFailed = true; }
+        finally { _securityLoading = false; if (!_disposed) StateHasChanged(); }
+    }
+
+    private async Task LoadTimestampAsync()
+    {
+        if (_timestampLoading || _isBusy || _disposed) return;
+        _timestampLoading = true;
+        _timestampLoadFailed = false;
+        try
+        {
+            _timeModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/local-time.js");
+            var preference = await _timeModule.InvokeAsync<AccountPreferenceViewModel>("getTimestampPreference");
+            if (preference is null ||
+                !(string.Equals(preference.TimestampDisplayMode, "Utc", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(preference.TimestampDisplayMode, "Local12Hour", StringComparison.OrdinalIgnoreCase)))
+                throw new JSException("Invalid timestamp preference response.");
+            if (!_disposed)
+            {
+                _selectedMode = NormalizeMode(preference.TimestampDisplayMode);
+                _timestampReady = true;
+            }
+        }
+        catch (JSException) { if (!_disposed) _timestampLoadFailed = true; }
+        finally { _timestampLoading = false; if (!_disposed) StateHasChanged(); }
+    }
+
+    private async Task LoadPerformanceAsync()
+    {
+        if (_performanceLoading || _isBusy || _disposed) return;
+        _performanceLoading = true;
+        _performanceLoadFailed = false;
+        try
+        {
+            var preference = await JS.InvokeAsync<PerformanceProfileViewModel>("FullWorthPerformance.getPreference");
+            if (preference is null) throw new JSException("Invalid device preference response.");
+            if (!_disposed)
+            {
+                _selectedPerformanceProfile = NormalizePerformanceProfile(preference.Selected);
+                _effectivePerformanceProfile = NormalizeEffectivePerformanceProfile(preference.Effective);
+                _performanceReady = true;
+            }
+        }
+        catch (JSException) { if (!_disposed) _performanceLoadFailed = true; }
+        finally { _performanceLoading = false; if (!_disposed) StateHasChanged(); }
     }
 
     private Task OpenDialogAsync(SecurityDialog dialog)
@@ -848,7 +886,7 @@
 
     private async Task SaveTimestampAsync()
     {
-        if (_isBusy || _timeModule is null) return;
+        if (_isBusy || _timeModule is null || !_timestampReady || _timestampLoadFailed) return;
         await RunActionAsync(async () =>
         {
             var preference = await _timeModule.InvokeAsync<AccountPreferenceViewModel>("saveTimestampPreference", _selectedMode);
@@ -859,7 +897,7 @@
 
     private async Task SavePerformanceProfileAsync()
     {
-        if (_isBusy)
+        if (_isBusy || !_performanceReady || _performanceLoadFailed)
         {
             return;
         }
@@ -1065,6 +1103,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         ResetSensitiveDialogState();
         _externalLinkCurrentPassword = string.Empty;
         _externalLinkTwoFactorCode = string.Empty;
@@ -1074,18 +1113,22 @@
     }
 
     private enum SecurityDialog { None, ChangePassword, RevokeAllSessions, ChangeEmail, RecoveryCodes, ReplaceAuthenticator, DisableTwoFactor, SetupTwoFactor }
-    private sealed class AccountPreferenceViewModel { public string TimestampDisplayMode { get; set; } = "Local12Hour"; }
+    private sealed class AccountPreferenceViewModel { [System.Text.Json.Serialization.JsonRequired] public string TimestampDisplayMode { get; set; } = "Local12Hour"; }
     private sealed class PerformanceProfileViewModel
     {
-        public string Selected { get; set; } = "auto";
-        public string Effective { get; set; } = "balanced";
+        [System.Text.Json.Serialization.JsonRequired] public string Selected { get; set; } = "auto";
+        [System.Text.Json.Serialization.JsonRequired] public string Effective { get; set; } = "balanced";
     }
     private sealed class AccountSecurityViewModel
     {
         public string Email { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonRequired]
         public bool EmailConfirmed { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public bool TwoFactorEnabled { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public bool HasAuthenticatorKey { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public int RecoveryCodesLeft { get; set; }
     }
     private sealed class TwoFactorSetupViewModel { public string SharedKey { get; set; } = string.Empty; public string OtpAuthUri { get; set; } = string.Empty; }

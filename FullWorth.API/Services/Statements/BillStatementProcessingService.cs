@@ -97,136 +97,138 @@ public sealed class BillStatementProcessingService
         return candidates.Count;
     }
 
-    private async Task ProcessUploadAsync(
-        BillStatementUploadEntity upload,
-        CancellationToken cancellationToken)
+    // Give the worker a single-item entrypoint for fresh per-upload EF scopes.
+    public async Task ProcessPendingUploadAsync(
+        Guid uploadId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(
-            upload);
+        if (uploadId == Guid.Empty)
+            throw new ArgumentException("Upload identity is required.", nameof(uploadId));
 
-        if (upload.Status is not
-            BillStatementUploadStatus.Uploaded and not
-            BillStatementUploadStatus.Processing)
-        {
+        var upload = await _dbContext.BillStatementUploads
+            .SingleOrDefaultAsync(item =>
+                item.Id == uploadId &&
+                (item.Status == BillStatementUploadStatus.Uploaded ||
+                 item.Status == BillStatementUploadStatus.Processing),
+                cancellationToken);
+
+        if (upload is not null)
+            await ProcessUploadAsync(upload, cancellationToken);
+    }
+
+    private async Task ProcessUploadAsync(
+        BillStatementUploadEntity upload, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(upload);
+        if (upload.Status is not BillStatementUploadStatus.Uploaded and not BillStatementUploadStatus.Processing)
             return;
-        }
 
         if (upload.Status == BillStatementUploadStatus.Uploaded)
-        {
-            upload.Status = BillStatementUploadStatus.Processing;
-            upload.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await SaveUploadStateAsync(upload, BillStatementUploadStatus.Processing, cancellationToken);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
+        BillStatementExtractionResult? structuredExtraction = null;
+        BillStatementUploadStatus? nextStatus = null;
+        Exception? documentError = null;
         try
         {
-            /*
-             * Read/extract the document only once. The transient text is
-             * passed into the structured extraction boundary and is not
-             * persisted as raw text.
-             */
-            var extractionResult = _documentTextReader.Read(
-                upload.UserId,
-                upload.StorageKey,
-                upload.MediaType,
-                upload.FileExtension);
-
-            if (extractionResult.RequiresOcr)
+            var extraction = _documentTextReader.Read(upload.UserId, upload.StorageKey,
+                upload.MediaType, upload.FileExtension);
+            if (extraction.RequiresOcr)
+                nextStatus = BillStatementUploadStatus.NeedsOcr;
+            else
             {
-                upload.Status = BillStatementUploadStatus.NeedsOcr;
-                upload.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                var bill = await _billStreamGateway.GetOwnedAsync(
+                    upload.UserId, upload.BillStreamId, cancellationToken);
+                if (bill is null)
+                    throw new InvalidOperationException(
+                        "The statement upload is not associated with an owned Bill Stream.");
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            /*
-             * Resolve Bill Stream context through the Bills-owned read
-             * boundary. The context is a hint, not proof of statement facts.
-             */
-            var billStreamContext =
-                await _billStreamGateway.GetOwnedAsync(
-                    upload.UserId,
-                    upload.BillStreamId,
+                structuredExtraction = await _extractionService.ExtractAsync(
+                    new BillStatementExtractionRequest(extraction.Text,
+                        new BillStatementExtractionHints(bill.ProviderName, bill.Category.ToString())),
                     cancellationToken);
-
-            if (billStreamContext is null)
-            {
-                throw new InvalidOperationException(
-                    "The statement upload is not associated with an owned Bill Stream.");
+                if (!structuredExtraction.IsReadyForValidation)
+                    nextStatus = BillStatementUploadStatus.ReadyForParsing;
+                else
+                {
+                    var parsed = structuredExtraction.Statement;
+                    var validation = _validationService.Validate(new BillStatementValidationInput(
+                        parsed.TotalAmount, parsed.BillingPeriodStart, parsed.BillingPeriodEnd,
+                        parsed.StatementDate, parsed.DueDate, parsed.CurrencyCode),
+                        DateOnly.FromDateTime(DateTime.UtcNow));
+                    if (!validation.IsValid || validation.RequiresReview)
+                        nextStatus = BillStatementUploadStatus.ReadyForParsing;
+                }
             }
-
-            var structuredExtraction = await _extractionService.ExtractAsync(
-                new BillStatementExtractionRequest(
-                    DocumentText: extractionResult.Text,
-                    Hints: new BillStatementExtractionHints(
-                        ExpectedProviderName: billStreamContext.ProviderName,
-                        ExpectedCategory: billStreamContext.Category.ToString())),
-                cancellationToken);
-
-            var parsedStatement = structuredExtraction.Statement;
-
-            if (!structuredExtraction.IsReadyForValidation)
-            {
-                upload.Status = BillStatementUploadStatus.ReadyForParsing;
-                upload.UpdatedAtUtc = DateTimeOffset.UtcNow;
-
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            var validationResult = _validationService.Validate(
-                new BillStatementValidationInput(
-                    TotalAmount: parsedStatement.TotalAmount,
-                    PeriodStart: parsedStatement.BillingPeriodStart,
-                    PeriodEnd: parsedStatement.BillingPeriodEnd,
-                    StatementDate: parsedStatement.StatementDate,
-                    DueDate: parsedStatement.DueDate,
-                    CurrencyCode: parsedStatement.CurrencyCode),
-                DateOnly.FromDateTime(DateTime.UtcNow));
-
-            if (!validationResult.IsValid ||
-                validationResult.RequiresReview)
-            {
-                upload.Status = BillStatementUploadStatus.ReadyForParsing;
-                upload.UpdatedAtUtc = DateTimeOffset.UtcNow;
-
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
-            await _persistenceService.PersistAsync(
-                upload,
-                parsedStatement,
-                structuredExtraction.LineItems,
-                cancellationToken);
         }
-        catch (OperationCanceledException)
-            when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception ex)
-            when (ex is
-                BillStatementTextExtractionException or
-                IOException or
-                UnauthorizedAccessException or
-                InvalidOperationException or
-                ArgumentException)
+        catch (Exception ex) when (ex is BillStatementTextExtractionException or IOException or
+            UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            upload.Status = BillStatementUploadStatus.Failed;
+            nextStatus = BillStatementUploadStatus.Failed;
+            documentError = ex;
+        }
+
+        // Keep persistence failures outside the document-validation catch.
+        // An unsuccessful database write does not prove the document invalid.
+        if (nextStatus.HasValue)
+        {
+            await SaveUploadStateAsync(upload, nextStatus.Value, cancellationToken);
+            if (documentError is not null)
+                _logger.LogWarning(
+                    "Bill statement upload {UploadId} failed during document evidence processing with {ExceptionType}.",
+                    upload.Id, documentError.GetType().Name);
+            return;
+        }
+
+        await _persistenceService.PersistAsync(upload, structuredExtraction!.Statement,
+            structuredExtraction.LineItems, cancellationToken);
+    }
+
+    private async Task SaveUploadStateAsync(BillStatementUploadEntity upload,
+        BillStatementUploadStatus status, CancellationToken cancellationToken)
+    {
+        var attempt = new StatementUnitOfWorkAttempt(_dbContext, upload);
+        try
+        {
+            upload.Status = status;
             upload.UpdatedAtUtc = DateTimeOffset.UtcNow;
-
             await _dbContext.SaveChangesAsync(cancellationToken);
-
-            _logger.LogWarning(
-                "Bill statement upload {UploadId} failed during document evidence processing with {ExceptionType}.",
-                upload.Id,
-                ex.GetType().Name);
+        }
+        catch
+        {
+            attempt.Restore();
+            throw;
         }
     }
 
+}
+
+/// <summary>
+/// Process-local exception backoff. An unexpected infrastructure failure does
+/// not mark an uploaded financial document as permanently invalid.
+/// </summary>
+public sealed class StatementProcessingFailureBackoff
+{
+    private static readonly TimeSpan Delay = TimeSpan.FromHours(1);
+    private readonly Dictionary<Guid, DateTimeOffset> _deferredUntil = [];
+
+    public Guid[] DeferredIds(DateTimeOffset now)
+    {
+        foreach (var id in _deferredUntil.Where(item => item.Value <= now)
+            .Select(item => item.Key).ToArray())
+            _deferredUntil.Remove(id);
+        return _deferredUntil.Keys.ToArray();
+    }
+
+    public void Defer(Guid id, DateTimeOffset now)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Upload identity is required.", nameof(id));
+        _deferredUntil[id] = now.Add(Delay);
+    }
 }
 
 public sealed class BillStatementProcessingBackgroundService
@@ -239,6 +241,8 @@ public sealed class BillStatementProcessingBackgroundService
 
     private static readonly TimeSpan MaintenanceInterval =
         TimeSpan.FromMinutes(5);
+
+    private readonly StatementProcessingFailureBackoff _failureBackoff = new();
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly BillStatementProcessingSignal _signal;
@@ -304,14 +308,52 @@ public sealed class BillStatementProcessingBackgroundService
     private async Task<int> ProcessBatchAsync(
         CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
+        var deferred = _failureBackoff.DeferredIds(DateTimeOffset.UtcNow);
+        Guid[] ids;
 
-        var processingService =
-            scope.ServiceProvider.GetRequiredService<BillStatementProcessingService>();
+        // Select the next nondeferred records without tracking their payloads.
+        using (var lookupScope = _scopeFactory.CreateScope())
+        {
+            var db = lookupScope.ServiceProvider.GetRequiredService<FullWorthDbContext>();
+            ids = await db.BillStatementUploads.AsNoTracking()
+                .Where(upload =>
+                    (upload.Status == BillStatementUploadStatus.Uploaded ||
+                     upload.Status == BillStatementUploadStatus.Processing) &&
+                    !deferred.Contains(upload.Id))
+                .OrderBy(upload => upload.CreatedAtUtc)
+                .ThenBy(upload => upload.Id)
+                .Take(ProcessingBatchSize)
+                .Select(upload => upload.Id)
+                .ToArrayAsync(cancellationToken);
+        }
 
-        return await processingService.ProcessPendingBatchAsync(
-            ProcessingBatchSize,
-            cancellationToken);
+        // Isolate every attempt in its own context. Unexpected failures must
+        // neither poison EF tracking nor starve valid documents behind them.
+        foreach (var id in ids)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var scope = _scopeFactory.CreateScope();
+            try
+            {
+                var processor = scope.ServiceProvider
+                    .GetRequiredService<BillStatementProcessingService>();
+                await processor.ProcessPendingUploadAsync(id, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _failureBackoff.Defer(id, DateTimeOffset.UtcNow);
+                // Never log user IDs, file paths, provider data, or statement content.
+                _logger.LogWarning(
+                    "A statement processing item was deferred after {ExceptionType}.",
+                    ex.GetType().Name);
+            }
+        }
+
+        return ids.Length;
     }
 
     private async Task ReconcileAccountDeletionQuarantineAsync(

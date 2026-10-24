@@ -2,6 +2,7 @@
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Contracts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace FullWorth.API.Services.Bills;
 
@@ -79,121 +80,106 @@ public sealed class BankConnectionHealthAlertService
                 .ToListAsync(
                     cancellationToken);
 
-        if (attentionInstitutionNames.Count ==
-            0)
-        {
-            if (existingAlerts.Count >
-                0)
-            {
-                _dbContext.BillAlerts.RemoveRange(
-                    existingAlerts);
+        _dbContext.ChangeTracker.DetectChanges();
+        var snapshots = existingAlerts.Select(alert => new AlertSnapshot(_dbContext.Entry(alert))).ToArray();
+        BillAlertEntity? candidate = null;
 
-                await _dbContext.SaveChangesAsync(
-                    cancellationToken);
+        try
+        {
+            if (attentionInstitutionNames.Count == 0)
+            {
+                if (existingAlerts.Count > 0)
+                {
+                    _dbContext.BillAlerts.RemoveRange(existingAlerts);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+                return;
             }
 
-            return;
-        }
+            var message = BuildMessage(attentionInstitutionNames);
+            var now = DateTimeOffset.UtcNow;
 
-        var message =
-            BuildMessage(
-                attentionInstitutionNames);
-
-        var now =
-            DateTimeOffset.UtcNow;
-
-        if (existingAlerts.Count ==
-            0)
-        {
-            _dbContext.BillAlerts.Add(
-                new BillAlertEntity
+            if (existingAlerts.Count == 0)
+            {
+                candidate = new BillAlertEntity
                 {
-                    UserId =
-                        userId,
+                    UserId = userId,
+                    AlertType = BillAlertType.ConnectionIssue,
+                    Severity = BillAlertSeverity.Warning,
+                    Title = AlertTitle,
+                    Message = message,
+                    IsRead = false,
+                    IsDismissed = false,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+                _dbContext.BillAlerts.Add(candidate);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return;
+            }
 
-                    BillStreamId =
-                        null,
+            var primaryAlert = existingAlerts[0];
+            var changed = primaryAlert.Severity != BillAlertSeverity.Warning ||
+                !string.Equals(primaryAlert.Message, message, StringComparison.Ordinal);
 
-                    BillChangeId =
-                        null,
+            if (changed)
+            {
+                primaryAlert.Severity = BillAlertSeverity.Warning;
+                primaryAlert.Message = message;
+                // A materially changed connection set should surface the corrected alert again.
+                primaryAlert.IsRead = false;
+                primaryAlert.IsDismissed = false;
+                primaryAlert.UpdatedAtUtc = now;
+            }
 
-                    AlertType =
-                        BillAlertType.ConnectionIssue,
+            if (existingAlerts.Count > 1)
+            {
+                _dbContext.BillAlerts.RemoveRange(existingAlerts.Skip(1));
+            }
 
-                    Severity =
-                        BillAlertSeverity.Warning,
-
-                    Title =
-                        AlertTitle,
-
-                    Message =
-                        message,
-
-                    IsRead =
-                        false,
-
-                    IsDismissed =
-                        false,
-
-                    CreatedAtUtc =
-                        now,
-
-                    UpdatedAtUtc =
-                        now
-                });
-
-            await _dbContext.SaveChangesAsync(
-                cancellationToken);
-
-            return;
+            // A no-op reconciliation must not save unrelated caller changes.
+            if (changed || existingAlerts.Count > 1)
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
         }
-
-        var primaryAlert =
-            existingAlerts[0];
-
-        var changed =
-            primaryAlert.Severity !=
-                BillAlertSeverity.Warning ||
-            !string.Equals(
-                primaryAlert.Message,
-                message,
-                StringComparison.Ordinal);
-
-        if (changed)
+        catch
         {
-            primaryAlert.Severity =
-                BillAlertSeverity.Warning;
-
-            primaryAlert.Message =
-                message;
-
-            /*
-             * The affected connection set materially changed,
-             * so surface the corrected alert again.
-             */
-            primaryAlert.IsRead =
-                false;
-
-            primaryAlert.IsDismissed =
-                false;
-
-            primaryAlert.UpdatedAtUtc =
-                now;
+            // Remove only our unsaved insertion and restore only alerts we mutated.
+            // Keep caller-owned pending work and its original/modified values intact.
+            if (candidate is not null)
+            {
+                _dbContext.Entry(candidate).State = EntityState.Detached;
+            }
+            foreach (var snapshot in snapshots)
+            {
+                snapshot.Restore();
+            }
+            throw;
         }
+    }
 
-        if (existingAlerts.Count >
-            1)
-        {
-            _dbContext.BillAlerts.RemoveRange(
-                existingAlerts.Skip(
-                    1));
-        }
+    private sealed class AlertSnapshot(EntityEntry<BillAlertEntity> entry)
+    {
+        private readonly PropertyValues _current = entry.CurrentValues.Clone();
+        private readonly PropertyValues _original = entry.OriginalValues.Clone();
+        private readonly EntityState _state = entry.State;
+        private readonly HashSet<string> _modified = entry.Properties
+            .Where(property => property.IsModified).Select(property => property.Metadata.Name).ToHashSet();
 
-        if (_dbContext.ChangeTracker
-            .HasChanges())
+        public void Restore()
         {
-            await _dbContext.SaveChangesAsync(
-                cancellationToken);
+            entry.State = EntityState.Unchanged;
+            entry.CurrentValues.SetValues(_current);
+            entry.OriginalValues.SetValues(_original);
+            entry.State = _state;
+            if (_state is EntityState.Unchanged or EntityState.Modified)
+            {
+                foreach (var property in entry.Properties)
+                {
+                    property.IsModified = _modified.Contains(property.Metadata.Name);
+                }
+            }
         }
     }
 

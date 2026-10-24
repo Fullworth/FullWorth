@@ -30,8 +30,30 @@ public sealed class BillStatementPersistenceService
             paymentDueAlertService;
     }
 
-    public async Task<BillStatementPersistenceResult>
-        PersistAsync(
+    public async Task<BillStatementPersistenceResult> PersistAsync(
+        BillStatementUploadEntity upload,
+        BillStatementStructuredData parsedStatement,
+        IReadOnlyList<BillStatementStructuredLineItem> parsedLineItems,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(upload);
+        cancellationToken.ThrowIfCancellationRequested();
+        var attempt = new StatementUnitOfWorkAttempt(_dbContext, upload);
+        try
+        {
+            return await PersistCoreAsync(upload, parsedStatement, parsedLineItems, cancellationToken);
+        }
+        catch
+        {
+            // Statements, line items, changes, alerts and completion are one
+            // attempt. A later status/caller save must not flush a failed graph.
+            attempt.Restore();
+            throw;
+        }
+    }
+
+    private async Task<BillStatementPersistenceResult>
+        PersistCoreAsync(
             BillStatementUploadEntity upload,
             BillStatementStructuredData parsedStatement,
             IReadOnlyList<BillStatementStructuredLineItem> parsedLineItems,

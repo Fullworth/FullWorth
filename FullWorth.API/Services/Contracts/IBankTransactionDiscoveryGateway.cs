@@ -11,6 +11,9 @@ public sealed record BankTransactionDiscoveryRecord(
     string? CategoryDetailed)
 {
     public string? CurrencyCode { get; init; }
+
+    // Opaque internal owner-scoped evidence, never part of public diagnostics.
+    public Guid? BankAccountId { get; init; }
 }
 
 public interface IBankTransactionDiscoveryGateway

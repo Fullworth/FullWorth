@@ -90,4 +90,5 @@
   <data name="No recognized bills yet" xml:space="preserve"><value>Aún no hay facturas reconocidas</value></data>
   <data name="No active recurring bills were returned. This does not prove that you have no bills or that every transaction has been imported. Review your bills, connections, and transaction history." xml:space="preserve"><value>No se recibieron facturas recurrentes activas. Esto no demuestra que no tengas facturas ni que se hayan importado todas las transacciones. Revisa tus facturas, conexiones e historial de transacciones.</value></data>
   <data name="Review bills and history" xml:space="preserve"><value>Revisar facturas e historial</value></data>
+  <data name="At least one active bank connection has not reported a successful sync. Recognized bills may be incomplete." xml:space="preserve"><value>Al menos una conexión bancaria activa no ha informado una sincronización correcta. Es posible que falten facturas reconocidas.</value></data>
 </root>

@@ -6,6 +6,7 @@ using FullWorth.API.Services.Plaid;
 using FullWorth.Tests.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 
 namespace FullWorth.Tests.Services;
@@ -15,8 +16,9 @@ public sealed class PlaidHostedLinkCompletionServiceTests
     [Fact]
     public async Task CompletedHostedLink_ExchangesTokenServerSideAndClearsSessionCredential()
     {
+        var observer = new CombinedInitialLinkSaveObserver();
         await using var dbContext =
-            CreateDbContext();
+            CreateDbContext(observer);
 
         var userId =
             Guid.NewGuid();
@@ -140,6 +142,10 @@ public sealed class PlaidHostedLinkCompletionServiceTests
             tokenProtector.Unprotect(
                 connection.ProtectedPlaidAccessToken!));
 
+        // Terminal session and newly added bank must share one database write.
+        Assert.Equal(connection.Id, session.BankConnectionId);
+        Assert.Equal(1, observer.CombinedWrites);
+
         Assert.Collection(
             handler.Requests,
             request =>
@@ -154,6 +160,11 @@ public sealed class PlaidHostedLinkCompletionServiceTests
                 Assert.Equal(
                     "/item/get",
                     request.Uri.AbsolutePath));
+
+        var replay = await service.CheckAndCompleteAsync(userId, session.Id);
+        Assert.Equal("Completed", replay.Status);
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Equal(1, observer.CombinedWrites);
     }
 
     [Fact]
@@ -373,6 +384,247 @@ public sealed class PlaidHostedLinkCompletionServiceTests
                 connection.ProtectedPlaidAccessToken!));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MixedHostedSessions_DoNotExchangePublicTokenWhileAnySessionIsUnfinished(
+        bool completedSessionFirst)
+    {
+        await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var tokenProtector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var protectedLinkToken = tokenProtector.ProtectLinkToken(
+            "link-mixed-provider-sessions");
+        var session = new PlaidLinkSessionEntity
+        {
+            UserId = userId,
+            ProtectedLinkToken = protectedLinkToken,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+        };
+        db.PlaidLinkSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        // Both arrays describe the same provider state. The first finished
+        // session has a public token, but another session is not finished.
+        var response = completedSessionFirst
+            ? """
+              {"link_sessions":[
+                {"finished_at":"2026-08-30T18:00:00Z",
+                 "results":{"item_add_results":[{"public_token":"public-mixed-token"}]}},
+                {"results":{}}
+              ]}
+              """
+            : """
+              {"link_sessions":[
+                {"results":{}},
+                {"finished_at":"2026-08-30T18:00:00Z",
+                 "results":{"item_add_results":[{"public_token":"public-mixed-token"}]}}
+              ]}
+              """;
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK, response));
+        using var http = new HttpClient(handler);
+        var api = CreateApiClient(http);
+        var service = new PlaidHostedLinkCompletionService(
+            db, api, tokenProtector,
+            new PlaidConnectionExchangeService(api, tokenProtector, db));
+
+        var result = await service.CheckAndCompleteAsync(userId, session.Id);
+
+        Assert.Equal("Pending", result.Status);
+        Assert.Null(result.Connection);
+        Assert.Equal(PlaidLinkSessionStatus.Pending, session.Status);
+        Assert.Equal(protectedLinkToken, session.ProtectedLinkToken);
+        Assert.Null(session.BankConnectionId);
+        Assert.Empty(await db.BankConnections.ToListAsync());
+        Assert.Collection(handler.Requests,
+            request => Assert.Equal("/link/token/get", request.Uri.AbsolutePath));
+    }
+
+    [Fact]
+    public async Task FinishedProviderSession_DoesNotHideMalformedLaterSession()
+    {
+        await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var tokenProtector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var protectedToken = tokenProtector.ProtectLinkToken("link-malformed-later");
+        var session = new PlaidLinkSessionEntity
+        {
+            UserId = userId,
+            ProtectedLinkToken = protectedToken,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+        };
+        db.PlaidLinkSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK,
+                """
+                {"link_sessions":[
+                  {"finished_at":"2026-08-30T18:00:00Z",
+                   "results":{"item_add_results":[{"public_token":"public-first"}]}},
+                  42
+                ]}
+                """));
+        using var http = new HttpClient(handler);
+        var api = CreateApiClient(http);
+        var service = new PlaidHostedLinkCompletionService(
+            db, api, tokenProtector,
+            new PlaidConnectionExchangeService(api, tokenProtector, db));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CheckAndCompleteAsync(userId, session.Id));
+
+        Assert.Equal(PlaidLinkSessionStatus.Pending, session.Status);
+        Assert.Equal(protectedToken, session.ProtectedLinkToken);
+        Assert.Empty(await db.BankConnections.ToListAsync());
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("conflicting-sessions")]
+    [InlineData("conflicting-fields")]
+    [InlineData("conflicting-item-add-results")]
+    [InlineData("malformed-trailing-results")]
+    public async Task HostedLinkMultipleTokenSources_RejectsConflictingOrMalformedEvidence(
+        string mode)
+    {
+        await using var db = CreateDbContext();
+        var owner = Guid.NewGuid();
+        var protector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var originalLinkToken = protector.ProtectLinkToken("link-token-conflicts");
+        var session = new PlaidLinkSessionEntity
+        {
+            UserId = owner,
+            ProtectedLinkToken = originalLinkToken,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+        };
+        db.PlaidLinkSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var body = mode switch
+        {
+            "conflicting-sessions" => """
+                {"link_sessions":[
+                  {"finished_at":"2026-08-30T18:00:00Z",
+                   "results":{"item_add_results":[{"public_token":"token-one"}]}},
+                  {"finished_at":"2026-08-30T18:01:00Z",
+                   "results":{"item_add_results":[{"public_token":"token-two"}]}}
+                ]}
+                """,
+            "conflicting-fields" => """
+                {"link_sessions":[{
+                  "finished_at":"2026-08-30T18:00:00Z",
+                  "results":{"item_add_results":[{"public_token":"token-one"}]},
+                  "on_success":{"public_token":"token-two"}
+                }]}
+                """,
+            "conflicting-item-add-results" => """
+                {"link_sessions":[{
+                  "finished_at":"2026-08-30T18:00:00Z",
+                  "results":{"item_add_results":[
+                    {"public_token":"token-one"},
+                    {"public_token":"token-two"}
+                  ]}
+                }]}
+                """,
+            _ => """
+                {"link_sessions":[
+                  {"finished_at":"2026-08-30T18:00:00Z",
+                   "results":{"item_add_results":[{"public_token":"token-one"}]}},
+                  {"finished_at":"2026-08-30T18:01:00Z",
+                   "results":{"item_add_results":42}}
+                ]}
+                """
+        };
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK, body));
+        using var http = new HttpClient(handler);
+        var api = CreateApiClient(http);
+        var service = new PlaidHostedLinkCompletionService(
+            db, api, protector,
+            new PlaidConnectionExchangeService(api, protector, db));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CheckAndCompleteAsync(owner, session.Id));
+
+        Assert.Equal(PlaidLinkSessionStatus.Pending, session.Status);
+        Assert.Equal(originalLinkToken, session.ProtectedLinkToken);
+        Assert.Null(session.BankConnectionId);
+        Assert.Empty(await db.BankConnections.ToListAsync());
+        Assert.Collection(handler.Requests,
+            request => Assert.Equal("/link/token/get", request.Uri.AbsolutePath));
+    }
+
+    [Theory]
+    [InlineData("exit-first")]
+    [InlineData("token-first")]
+    [InlineData("exit-with-token")]
+    public async Task InitialHostedLink_ExitedProviderEvidenceNeverExchangesPublicToken(
+        string mode)
+    {
+        await using var db = CreateDbContext();
+        var owner = Guid.NewGuid();
+        var protector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var session = new PlaidLinkSessionEntity
+        {
+            UserId = owner,
+            ProtectedLinkToken = protector.ProtectLinkToken("link-exit-conflict"),
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+        };
+        db.PlaidLinkSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var providerState = mode switch
+        {
+            "exit-first" => """
+                {"link_sessions":[
+                    {"finished_at":"2026-08-30T18:00:00Z","exit":{}},
+                    {"finished_at":"2026-08-30T18:01:00Z",
+                     "results":{"item_add_results":[{"public_token":"public-exited"}]}}
+                ]}
+                """,
+            "token-first" => """
+                {"link_sessions":[
+                    {"finished_at":"2026-08-30T18:00:00Z",
+                     "results":{"item_add_results":[{"public_token":"public-exited"}]}},
+                    {"finished_at":"2026-08-30T18:01:00Z","exit":{}}
+                ]}
+                """,
+            _ => """
+                {"link_sessions":[{
+                    "finished_at":"2026-08-30T18:00:00Z","exit":{},
+                    "results":{"item_add_results":[{"public_token":"public-exited"}]}
+                }]}
+                """
+        };
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK, providerState));
+        using var http = new HttpClient(handler);
+        var api = CreateApiClient(http);
+        var service = new PlaidHostedLinkCompletionService(
+            db, api, protector,
+            new PlaidConnectionExchangeService(api, protector, db));
+
+        var result = await service.CheckAndCompleteAsync(owner, session.Id);
+
+        Assert.Equal("Exited", result.Status);
+        Assert.Null(result.Connection);
+        Assert.Equal(PlaidLinkSessionStatus.Exited, session.Status);
+        Assert.Equal(string.Empty, session.ProtectedLinkToken);
+        Assert.Null(session.BankConnectionId);
+        Assert.Empty(await db.BankConnections.ToListAsync());
+        Assert.Collection(handler.Requests,
+            request => Assert.Equal("/link/token/get", request.Uri.AbsolutePath));
+        var repeated = await service.CheckAndCompleteAsync(owner, session.Id);
+        Assert.Equal("Exited", repeated.Status);
+        Assert.Single(handler.Requests);
+    }
+
     private static PlaidApiClient CreateApiClient(
         HttpClient httpClient)
     {
@@ -392,15 +644,44 @@ public sealed class PlaidHostedLinkCompletionServiceTests
                 }));
     }
 
-    private static FullWorthDbContext CreateDbContext()
+    private sealed class CombinedInitialLinkSaveObserver : SaveChangesInterceptor
     {
-        return new FullWorthDbContext(
-            new DbContextOptionsBuilder<FullWorthDbContext>()
-                .UseInMemoryDatabase(
-                    Guid.NewGuid()
-                        .ToString(
-                            "N"))
-                .Options);
+        public int CombinedWrites { get; private set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            var context = eventData.Context!;
+            var sessions = context.ChangeTracker.Entries<PlaidLinkSessionEntity>()
+                .Where(entry => entry.State == EntityState.Modified &&
+                    entry.Entity.Status == PlaidLinkSessionStatus.Completed)
+                .ToArray();
+
+            if (sessions.Length > 0)
+            {
+                var session = Assert.Single(sessions).Entity;
+                Assert.Contains(context.ChangeTracker.Entries<BankConnectionEntity>(),
+                    entry => entry.State == EntityState.Added &&
+                        entry.Entity.Id == session.BankConnectionId &&
+                        entry.Entity.UserId == session.UserId);
+                CombinedWrites++;
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private static FullWorthDbContext CreateDbContext(
+        SaveChangesInterceptor? observer = null)
+    {
+        var builder = new DbContextOptionsBuilder<FullWorthDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"));
+
+        if (observer is not null)
+            builder.AddInterceptors(observer);
+
+        return new FullWorthDbContext(builder.Options);
     }
 
     private static HttpResponseMessage JsonResponse(

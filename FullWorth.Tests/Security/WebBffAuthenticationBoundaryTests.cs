@@ -31,6 +31,46 @@ public sealed class WebBffAuthenticationBoundaryTests
     }
 
     [Fact]
+    public async Task PasskeyContinuation_RequiresAuthenticatedSession()
+    {
+        using var factory = new FullWorthWebFactory();
+        using var client = factory.CreateHttpsClient();
+        client.DefaultRequestHeaders.Add("X-FullWorth-Test-Anonymous", "true");
+
+        using var response = await client.GetAsync(
+            "/auth/passkeys/continue?returnUrl=%2Fapp");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+    }
+
+    [Theory]
+    [InlineData("/app", "/app")]
+    [InlineData("/app/bills?tab=history", "/app/bills?tab=history")]
+    [InlineData("//outside.example", "/app")]
+    [InlineData("/%2f%2foutside.example", "/app")]
+    [InlineData("/%252f%252foutside.example", "/app")]
+    [InlineData("/%5coutside.example", "/app")]
+    [InlineData("/%0d%0aLocation:outside", "/app")]
+    [InlineData("/incomplete%", "/app")]
+    [InlineData("/auth/passkeys/continue?returnUrl=%2Fapp", "/app")]
+    public async Task PasskeyContinuation_AllowsOnlyAuthenticatedLocalRedirects(
+        string untrustedDestination, string expectedDestination)
+    {
+        using var factory = new FullWorthWebFactory();
+        using var client = factory.CreateHttpsClient();
+
+        using var response = await client.GetAsync(
+            "/auth/passkeys/continue?returnUrl=" +
+            Uri.EscapeDataString(untrustedDestination));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(expectedDestination, response.Headers.Location?.OriginalString);
+        Assert.True(response.Headers.CacheControl?.NoStore,
+            "The server must not cache an authenticated completion redirect.");
+    }
+
+    [Fact]
     public async Task AccountExport_RequiresAuthenticatedSession()
     {
         using var factory =

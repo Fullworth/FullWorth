@@ -94,17 +94,30 @@ public sealed class BillTransactionAssociationGateway(
             assignmentsByTransactionId.Keys
                 .ToArray();
 
-        var existingAssociations =
+        var persistedAssociations =
             await dbContext.BillTransactionAssociations
                 .Where(
                     association =>
                         association.UserId == userId &&
                         transactionIds.Contains(
                             association.BankTransactionId))
-                .ToDictionaryAsync(
-                    association =>
-                        association.BankTransactionId,
-                    cancellationToken);
+                .ToListAsync(cancellationToken);
+
+        // Repeated staging must observe this unit of work, including new
+        // assignments and pending removals, without a hidden SaveChanges.
+        var trackedAssociations = dbContext.ChangeTracker
+            .Entries<BillTransactionAssociationEntity>()
+            .Where(entry => entry.Entity.UserId == userId &&
+                transactionIds.Contains(entry.Entity.BankTransactionId))
+            .ToArray();
+        var removedAssociations = trackedAssociations
+            .Where(entry => entry.State == EntityState.Deleted)
+            .ToDictionary(entry => entry.Entity.BankTransactionId, entry => entry.Entity);
+        var existingAssociations = persistedAssociations
+            .Concat(trackedAssociations.Select(entry => entry.Entity))
+            .Where(association => dbContext.Entry(association).State != EntityState.Deleted)
+            .DistinctBy(association => association.BankTransactionId)
+            .ToDictionary(association => association.BankTransactionId);
 
         var requestedBillStreamIds =
             assignments
@@ -150,8 +163,11 @@ public sealed class BillTransactionAssociationGateway(
                         .Select(stream => stream.Id)
                         .ToListAsync(cancellationToken);
 
+                var deletedBillIds = dbContext.ChangeTracker.Entries<BillStreamEntity>()
+                    .Where(entry => entry.State == EntityState.Deleted && entry.Entity.UserId == userId)
+                    .Select(entry => entry.Entity.Id).ToHashSet();
                 trackedOwnedBillStreamIds.UnionWith(
-                    persistedOwnedBillStreamIds);
+                    persistedOwnedBillStreamIds.Where(id => !deletedBillIds.Contains(id)));
             }
 
             if (trackedOwnedBillStreamIds.Count !=
@@ -193,6 +209,18 @@ public sealed class BillTransactionAssociationGateway(
                 }
 
                 continue;
+            }
+
+            if (existingAssociation is null &&
+                removedAssociations.TryGetValue(assignment.BankTransactionId, out var removed))
+            {
+                // Reuse the composite key already tracked for deletion. EF
+                // cannot track a replacement instance with the same key.
+                var removedEntry = dbContext.Entry(removed);
+                var original = removedEntry.OriginalValues.Clone();
+                removedEntry.State = EntityState.Unchanged;
+                removedEntry.OriginalValues.SetValues(original);
+                existingAssociation = removed;
             }
 
             if (existingAssociation is null)

@@ -76,6 +76,16 @@
         </div>
     }
 
+    @if (_pendingUploadId.HasValue)
+    {
+        <button type="button"
+                class="statement-upload-button"
+                disabled="@(_isBusy || _isCheckingPending || _isDisposed)"
+                @onclick="CheckPendingStatusAsync">
+            @(_isCheckingPending ? L["Checking status…"] : L["Check statement status"])
+        </button>
+    }
+
     <div class="statement-upload-footnote">
         @L["FullWorth verifies the document server-side before storing or using extracted facts."]
     </div>
@@ -91,6 +101,9 @@
     private SelectedStatementFileViewModel? _selectedFile;
     private bool _isBusy;
     private bool _isDisposed;
+    private bool _componentRendered;
+    private Guid? _pendingUploadId;
+    private bool _isCheckingPending;
     private string _state = string.Empty;
     private string _buttonText = string.Empty;
     private string _statusHeading = string.Empty;
@@ -107,9 +120,12 @@
 
     private bool CanUpload =>
         !_isBusy &&
+        !_isDisposed &&
+        !_pendingUploadId.HasValue &&
         _selectedFile is not null &&
         _selectedFile.Size > 0 &&
         _selectedFile.Size <= MaximumFileSize &&
+        IsSupportedFileName(_selectedFile.Name) &&
         BillStreamId != Guid.Empty;
 
     protected override void OnInitialized()
@@ -127,6 +143,101 @@
         return _bffModule;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _componentRendered = true;
+    }
+
+    // RenderHandle does not exist for a component abandoned before first render.
+    // Preserve recovered upload state without scheduling a render after disposal.
+    private void RequestRenderIfAvailable()
+    {
+        if (_componentRendered && !_isDisposed)
+            StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _isDisposed || BillStreamId == Guid.Empty)
+            return;
+
+        try
+        {
+            var module = await GetBffModuleAsync();
+            var latest = await module.InvokeAsync<BillStatementUploadStatusViewModel?>(
+                "getLatestBillStatementUpload",
+                _disposeCancellation.Token,
+                BillStreamId.ToString("D"));
+
+            if (_isDisposed || latest is null ||
+                latest.Id == Guid.Empty || latest.BillStreamId != BillStreamId ||
+                FullWorth.Web.Services.StatementUploadStatusSemantics.IsTerminal(latest.Status))
+                return;
+
+            _pendingUploadId = latest.Id;
+            _state = "working";
+            _statusHeading = L["Statement still processing"];
+            _message = L["Check the status of this saved upload. You do not need to send the document again."];
+            RequestRenderIfAvailable();
+        }
+        catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+            // An optional status read must never block selecting or uploading a file.
+            if (!_isDisposed)
+            {
+                _state = "error";
+                _statusHeading = L["Previous upload status unavailable"];
+                _message = L["We could not check previous statement processing. Your saved bill records were not changed."];
+                RequestRenderIfAvailable();
+            }
+        }
+    }
+
+    private async Task CheckPendingStatusAsync()
+    {
+        if (_isCheckingPending || _isBusy || _isDisposed || !_pendingUploadId.HasValue)
+            return;
+
+        var expectedId = _pendingUploadId.Value;
+        _isCheckingPending = true;
+        try
+        {
+            var module = await GetBffModuleAsync();
+            var status = await module.InvokeAsync<BillStatementUploadStatusViewModel?>(
+                "getBillStatementUploadStatus",
+                _disposeCancellation.Token,
+                BillStreamId.ToString("D"), expectedId.ToString("D"));
+
+            if (_isDisposed || status is null || status.Id != expectedId ||
+                status.BillStreamId != BillStreamId)
+                throw new InvalidOperationException("Unexpected statement status identity.");
+
+            if (!await CompleteTerminalStatusAsync(module, expectedId, status.Status))
+            {
+                SetProcessingStatus(status.Status);
+                _statusHeading = L["Still processing"];
+                _message = L["The existing upload is not finished. Choose Check statement status later; no new upload is needed."];
+            }
+        }
+        catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+            if (!_isDisposed)
+                SetError(L["Status unavailable"],
+                    L["We could not check this saved upload. Try Check statement status again; do not re-upload unless needed."]);
+        }
+        finally
+        {
+            _isCheckingPending = false;
+            RequestRenderIfAvailable();
+        }
+    }
+
     private async Task HandleFileChangedAsync()
     {
         if (_isBusy || _isDisposed)
@@ -137,6 +248,9 @@
         _message = null;
         _state = string.Empty;
         _statusHeading = string.Empty;
+        // The previous selection must not remain actionable if inspecting the
+        // newly selected file fails or the picker was cleared.
+        _selectedFile = null;
 
         try
         {
@@ -204,6 +318,7 @@
                 throw new InvalidOperationException("The upload did not return a valid identifier.");
             }
 
+            _pendingUploadId = upload.Id;
             _buttonText = L["Processing…"];
             SetProcessingStatus(upload.Status);
             StateHasChanged();
@@ -221,11 +336,11 @@
         }
         catch (JSException)
         {
-            SetError(L["Upload failed"], L["FullWorth could not upload this statement."]);
+            SetUploadOrStatusError();
         }
         catch (Exception)
         {
-            SetError(L["Upload failed"], L["FullWorth could not upload this statement."]);
+            SetUploadOrStatusError();
         }
         finally
         {
@@ -235,6 +350,22 @@
                 _buttonText = L["Uploading…"];
                 StateHasChanged();
             }
+        }
+    }
+
+    private void SetUploadOrStatusError()
+    {
+        if (_pendingUploadId.HasValue)
+        {
+            SetError(
+                L["Statement status unavailable"],
+                L["FullWorth received the file, but its current processing status could not be verified. Use Check statement status; do not send the document again."]);
+        }
+        else
+        {
+            SetError(
+                L["Upload not confirmed"],
+                L["FullWorth could not confirm whether the file was accepted. Check bill history or refresh this page before trying another upload."]);
         }
     }
 
@@ -271,7 +402,7 @@
 
         _state = "working";
         _statusHeading = L["Still processing"];
-        _message = L["The upload is secure and processing is continuing in the background. The bill will update when processing finishes."];
+        _message = L["This upload is still processing. Use Check statement status later; do not send the document again."];
     }
 
     private async Task<bool> CompleteTerminalStatusAsync(
@@ -285,6 +416,7 @@
         }
 
         SetProcessingStatus(status);
+        _pendingUploadId = null;
 
         if (!FullWorth.Web.Services.StatementUploadStatusSemantics.IsProcessed(status))
         {

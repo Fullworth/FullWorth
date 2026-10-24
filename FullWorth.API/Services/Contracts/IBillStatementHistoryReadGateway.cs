@@ -7,7 +7,11 @@ public sealed record BillStatementHistoryReadRecord(
     DateOnly? StatementDate,
     DateOnly? DueDate,
     decimal TotalAmount,
-    string CurrencyCode);
+    string CurrencyCode)
+{
+    // Opaque, owner-validated upload ID. Never a physical storage path.
+    public Guid? SourceUploadId { get; init; }
+}
 
 public sealed record BillChangeHistoryReadRecord(
     Guid Id,

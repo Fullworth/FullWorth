@@ -26,6 +26,10 @@
                 <input name="keyName" maxlength="80" placeholder="My iPhone or security key" /></label>
             <button class="primary-action" type="button" data-passkey-action="register">Add passkey or security key</button>
             <p data-passkey-status role="status" aria-live="polite"></p>
+            <button class="secondary-action security-keys-retry" type="button"
+                    data-passkey-action="retry" hidden>
+                Retry loading saved keys
+            </button>
             <ul data-passkey-list></ul>
         </section>
     }

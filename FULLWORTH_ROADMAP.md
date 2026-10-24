@@ -1,9 +1,9 @@
 ## Verified production release — 2026-10-21 UTC
 
-- The `master` release branch at candidate `ba9ba588c6b0a4a1abb195e0a4c1f10406521604` is independently verified deployed by [guarded deployment #39566294070](https://github.com/Fullworth/FullWorth/actions/runs/39566294070).
-Currently verified live production release: `ba9ba588c6b0a4a1abb195e0a4c1f10406521604`.
+- The `master` release branch at candidate `dd31836703bd110a30f303ed3ce9fd13c0f61d82` is independently verified deployed by [guarded deployment #39665707749](https://github.com/Fullworth/FullWorth/actions/runs/39665707749).
+Currently verified live production release: `dd31836703bd110a30f303ed3ce9fd13c0f61d82`.
 
-[Same-release authenticated smoke #39566759876](https://github.com/Fullworth/FullWorth/actions/runs/39566759876) passed. Remaining launch blockers: real protected off-host/clean-host statement and both key-ring recovery, controlled two-user/provider/document acceptance, physical device testing and qualified legal review. Development PR #801 prepares opt-in Face ID/passkey first-step login but does **not** enable passkeys in production or change account MFA.
+[Same-release authenticated smoke #39666163983](https://github.com/Fullworth/FullWorth/actions/runs/39666163983) passed. Remaining launch blockers: real protected off-host/clean-host statement and both key-ring recovery, controlled two-user/provider/document acceptance, physical device testing and qualified legal review. Deployed PR #801 (via release PR #804) provides opt-in Face ID/passkey first-step login but does **not** enable passkeys in production or change account MFA.
 
 ---
 
@@ -204,7 +204,7 @@ The following queue takes precedence over speculative expansion. IDs are durable
 | MV-02 / P0 | Same-release trust acceptance — engineering + operator; qualified reviewer for legal | Exact candidate and evidence bundle; #291, #669, #251, #258, applicable #293 | Remaining recovery/security gates plus controlled two-user, provider, statement, deletion, alert-receipt, and relevant installed-device proof; qualified Terms/Privacy/license review. Preserve the approved solo-maintainer governance policy. |
 | MV-03 / P1 | Problem and first-value validation — founder + consented reviewers | Interview consent; secure handling before documents | Initial target: 20 opt-in problem interviews and 10 consented known-truth bill comparisons, with recruitment/exclusions, error cases, and disagreements recorded privately. Seek at least 5 recent matching problems and 3 concrete pilot commitments as directional signals; revise the offer if absent. |
 | MV-04 / P1 | Actual cost and supplier lifecycle — founder + engineering | Authorized contracts/invoices and provider lifecycle review | Reconcile costs for paid, trial, dormant and errored connections; test disconnect separately from archive/delete. Record payment, infrastructure, usage and support costs. Actual costs replace scenario assumptions; no free connected tier or lifetime commitment is approved by this roadmap. |
-| MV-05 / P1 | Controlled paid pilot — founder + engineering | MV-01/02/03/04 and REVENUE_READINESS.md gates | Initial aim: 5–10 independent paying pilot customers, not staff/test/free accounts; complete signed-webhook/entitlement/cancellation/refund/failure proof, clear offer/support, reviewed terms and controlled cohort rollout. Proposed prices remain experiments, not enabled offers. |
+| MV-05 / P1 | Controlled paid pilot — founder + engineering | MV-01/02/03/04 and REVENUE_READINESS.md gates | Initial aim: 5–10 independent paying pilot customers, not staff/test/free accounts; complete signed-webhook/entitlement/cancellation/refund/failure proof, clear offer/support, reviewed terms and controlled cohort rollout. The intended USD 7.99/month and USD 59.99/year prices remain unverified live offers; no billing enablement is implied. |
 | MV-06 / P1 | Repeat value and retained contribution — founder + engineering | Mature MV-05 cohorts and authoritative payments/costs | Observe second monthly payment opportunities, 30/60/90-day contribution as cohorts mature, reasons for loss, quiet-month usefulness, and support burden. Include pre-renewal cancellations in the denominator; annual activity is not annual renewal. |
 | MV-07 / P2 | One repeatable acquisition channel — founder | Reliable first value, positive measured contribution, acceptable retention/support, approved cash budget | Test a bounded opt-in community/content/educator channel; measure qualified activation, independent paid conversion, retained contribution and fully loaded acquisition cost. No scraping, mass DMs, paid-positive reviews or spending authorization implied. |
 
@@ -216,13 +216,31 @@ Use synthetic fixtures in Git and separately consented private real-world cases.
 
 A payment-amount change is not necessarily a rate increase. A one-time credit is not recurring savings. Annualized impact requires a supported period and explicit assumptions. No-data or no-history must not turn into a reassuring green state. A known unresolved critical money or unsupported-cause defect blocks the affected release/paid workflow until fixed and retested.
 
-### Pricing and cost hypotheses, not commitments
+### Intended pricing and unresolved cost evidence
 
-After the gates pass, consider sequential small-cohort tests of USD 5.99/month versus USD 7.99/month; USD 59/year versus USD 79/year are optional later hypotheses. Record recruitment differences rather than claiming a causal price result from a tiny sample. Disclose actual renewal, currency, refund and trial terms. A trial must allow the promised job to occur; 14 days is only a starting hypothesis, not evidence that a complete billing cycle fits.
+Owner-selected intended offer, updated 2026-10-24: **USD 7.99/month or USD 59.99/year**. This supersedes the earlier USD 5.99/7.99 monthly and USD 59/79 annual experiments as the current planning price; it does not prove configured live Stripe Prices, production availability or authorization to charge. Validate billing currency, exact Price IDs, interval and displayed totals before activation. Disclose actual renewal, refund and trial terms. A trial must allow the promised job to occur; 14 days remains an unvalidated hypothesis. The annual offer is USD 35.89 (approximately 37.43%) below twelve monthly payments; upfront cash is not immediate profit.
 
 [Plaid billing documentation](https://plaid.com/docs/account/billing/) describes subscriptions that can remain billable for errored or unused Items; [Item removal](https://plaid.com/docs/api/items/) has a separate lifecycle. Hiding a connection is not cost/access termination. Verify the actual contract and products.
 
-A planning example only: USD 5.99 minus assumed standard domestic web-card processing/Billing fees of 3.6% + USD 0.30 minus an assumed USD 2 monthly variable cost leaves USD 3.47436 contribution before fixed overhead, acquisition, founder pay, taxes and omitted costs. The USD 2 is not a Plaid quote or a measured FullWorth cost. See current [Payments](https://stripe.com/pricing) and [Billing](https://stripe.com/billing/pricing) schedules; actual agreements control. Annual cash collection is not immediate profit; App Store and web fees must not be stacked on the same sale.
+Measure actual payment/Billing fees, provider usage, trial/dormant-connection costs, support and infrastructure before concluding that the intended offer is viable. Earlier fee/variable-cost scenarios are not current contracts or measured costs. See [Payments](https://stripe.com/pricing) and [Billing](https://stripe.com/billing/pricing); actual agreements control. Keep annual cash and service-period revenue separate, and do not stack App Store and web fees on the same sale.
+
+### Creator referral acquisition — planned after trust and revenue gates
+
+Owner request, 2026-10-24: plan creator codes/links, attributed subscription collections, commission liabilities and monitoring. The [creator referral specification](CREATOR_REFERRAL_PROGRAM.md) defines the proposed rules, data boundaries, reporting and acceptance cases. Writing this plan does not implement the feature, enable billing, authorize outreach, select a payout provider or move funds.
+
+| ID / sequence | Deliverable | Completion evidence |
+| --- | --- | --- |
+| CR-0 | Confirm intended pricing; record proposed terms, actual costs and launch decisions | Reviewed specification; no invented fee/cost assumptions or live configuration claim |
+| CR-1 | Default-off creator/code administration and server-bound customer attribution | Deterministic code/link precedence, expiry, frozen attribution, owner isolation and audit-correction tests |
+| CR-2 | Collected-payment allocations and immutable commission ledger | Durable financial uniqueness; real relational rollback; signed-event retry/order/refund/dispute and 12-month service-boundary tests |
+| CR-3 | Founder dashboard and reviewed payout previews | Payment-to-ledger reconciliation; pending/available/reserved/paid balances; concurrency, stale-data and duplicate-payout negatives |
+| CR-4 | Scoped creator view, disclosure/terms and operational acceptance | No customer bank/bill data; creator isolation, mobile/accessibility and non-live payout reconciliation evidence |
+| CR-5 | Small approved pilot after MV/revenue gates | Exact-release lifecycle/legal/product acceptance, actual configured Prices and separate outreach/payment authorization |
+| CR-6 | Evidence-based expansion | Mature retained contribution and funded obligations; no assumed conversion/annual-renewal result |
+
+Proposed pilot: 20% of eligible collected subscription consideration after discounts, excluding tax/refunded/lost-dispute amounts; eligible service only within the first 12 calendar months, USD-only initial scope, 30-day referral window, minimum 30-day hold and USD 25 payout threshold. These are recommendations pending accepted terms. One annual service year may qualify; a late monthly-to-annual switch must prorate to the original earning-window end. No lifetime commission or automatic customer discount is included.
+
+At the proposed rate, the monthly payment leaves USD 6.39 and the annual payment USD 47.99 before processor, refund and service costs. Record actual costs before interpreting those as margin or profit. Codes measure attribution; they do not establish incremental acquisition causally or recover every cross-device visit. CR work must not displace financial truth, #934, #291/#669 or other unresolved release-safety gates.
 
 ### Scope held back until evidence supports it
 

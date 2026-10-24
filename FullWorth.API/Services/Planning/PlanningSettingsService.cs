@@ -3,6 +3,7 @@ using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Models.Planning;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace FullWorth.API.Services.Planning;
 
@@ -62,32 +63,42 @@ public sealed class PlanningSettingsService(
                     candidate => candidate.UserId == userId,
                     cancellationToken);
 
-        if (schedule is null)
+        var previous = schedule is null ? null : new SettingsSnapshot(dbContext.Entry(schedule));
+        try
         {
-            schedule =
-                new PlanningPayScheduleEntity
-                {
-                    UserId = userId,
-                    Frequency = frequency,
-                    AnchorPayDate = anchorPayDate,
-                    SecondaryDayOfMonth = secondaryDayOfMonth,
-                    DefaultPaychecksAhead = defaultPaychecksAhead,
-                    CreatedAtUtc = now,
-                    UpdatedAtUtc = now
-                };
-
-            dbContext.PlanningPaySchedules.Add(schedule);
+            if (schedule is null)
+            {
+                schedule =
+                    new PlanningPayScheduleEntity
+                    {
+                        UserId = userId,
+                        Frequency = frequency,
+                        AnchorPayDate = anchorPayDate,
+                        SecondaryDayOfMonth = secondaryDayOfMonth,
+                        DefaultPaychecksAhead = defaultPaychecksAhead,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    };
+    
+                dbContext.PlanningPaySchedules.Add(schedule);
+            }
+            else
+            {
+                schedule.Frequency = frequency;
+                schedule.AnchorPayDate = anchorPayDate;
+                schedule.SecondaryDayOfMonth = secondaryDayOfMonth;
+                schedule.DefaultPaychecksAhead = defaultPaychecksAhead;
+                schedule.UpdatedAtUtc = now;
+            }
+    
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-        else
+        catch
         {
-            schedule.Frequency = frequency;
-            schedule.AnchorPayDate = anchorPayDate;
-            schedule.SecondaryDayOfMonth = secondaryDayOfMonth;
-            schedule.DefaultPaychecksAhead = defaultPaychecksAhead;
-            schedule.UpdatedAtUtc = now;
+            if (previous is not null) previous.Restore();
+            else if (schedule is not null) dbContext.Entry(schedule).State = EntityState.Detached;
+            throw;
         }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         return new PlanningPayScheduleSnapshot(
             schedule.Frequency,
@@ -153,27 +164,38 @@ public sealed class PlanningSettingsService(
                         candidate.BillStreamId == billStreamId,
                     cancellationToken);
 
-        if (preference is null)
+        var previous = preference is null ? null : new SettingsSnapshot(dbContext.Entry(preference));
+        try
         {
-            preference =
-                new PlanningBillFundingPreferenceEntity
-                {
-                    UserId = userId,
-                    BillStreamId = billStreamId,
-                    PaychecksAheadOverride = paychecksAheadOverride,
-                    CreatedAtUtc = now,
-                    UpdatedAtUtc = now
-                };
-
-            dbContext.PlanningBillFundingPreferences.Add(preference);
+            if (preference is null)
+            {
+                preference =
+                    new PlanningBillFundingPreferenceEntity
+                    {
+                        UserId = userId,
+                        BillStreamId = billStreamId,
+                        PaychecksAheadOverride = paychecksAheadOverride,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    };
+    
+                dbContext.PlanningBillFundingPreferences.Add(preference);
+            }
+            else
+            {
+                preference.PaychecksAheadOverride = paychecksAheadOverride;
+                preference.UpdatedAtUtc = now;
+            }
+    
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-        else
+        catch
         {
-            preference.PaychecksAheadOverride = paychecksAheadOverride;
-            preference.UpdatedAtUtc = now;
+            if (previous is not null) previous.Restore();
+            else if (preference is not null) dbContext.Entry(preference).State = EntityState.Detached;
+            throw;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -206,11 +228,42 @@ public sealed class PlanningSettingsService(
 
         if (preference is not null)
         {
-            dbContext.PlanningBillFundingPreferences.Remove(preference);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            var previous = new SettingsSnapshot(dbContext.Entry(preference));
+            try
+            {
+                dbContext.PlanningBillFundingPreferences.Remove(preference);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                previous.Restore();
+                throw;
+            }
         }
 
         return true;
+    }
+
+    // Restore only the settings row owned by this attempt, including pending
+    // caller edits. Other tracked work remains available to the caller.
+    private sealed class SettingsSnapshot(EntityEntry entry)
+    {
+        private readonly PropertyValues _current = entry.CurrentValues.Clone();
+        private readonly PropertyValues _original = entry.OriginalValues.Clone();
+        private readonly EntityState _state = entry.State;
+        private readonly HashSet<string> _modified = entry.Properties
+            .Where(property => property.IsModified).Select(property => property.Metadata.Name).ToHashSet();
+
+        public void Restore()
+        {
+            entry.State = EntityState.Unchanged;
+            entry.CurrentValues.SetValues(_current);
+            entry.OriginalValues.SetValues(_original);
+            entry.State = _state;
+            if (_state is EntityState.Modified or EntityState.Unchanged)
+                foreach (var property in entry.Properties)
+                    property.IsModified = _modified.Contains(property.Metadata.Name);
+        }
     }
 
     private static void ValidateSchedule(
@@ -233,7 +286,7 @@ public sealed class PlanningSettingsService(
 
         if (frequency == PayScheduleFrequency.SemiMonthly)
         {
-            if (secondaryDayOfMonth is < 1 or > 31)
+            if (secondaryDayOfMonth is null or < 1 or > 31)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(secondaryDayOfMonth),

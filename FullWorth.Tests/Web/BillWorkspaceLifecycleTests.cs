@@ -273,4 +273,89 @@ public sealed class BillWorkspaceLifecycleTests
         Assert.Null(Get<BillDetail.BillStreamDetailViewModel?>(page, "_detail"));
         Assert.Null(Get<string?>(page, "_keepMessage"));
     }
+
+    [Fact]
+    public void Detail_LatestChangeFollowsStatementPeriodNotBackfillDetectionTime()
+    {
+        var page = new BillDetail();
+        var olderId = Guid.NewGuid();
+        var newerId = Guid.NewGuid();
+        var historicalBackfill = new BillDetail.BillChangeViewModel
+        {
+            Id = Guid.NewGuid(), CurrentStatementId = olderId,
+            DetectedAtUtc = new DateTimeOffset(2026, 10, 22, 12, 0, 0, TimeSpan.Zero)
+        };
+        var latestBillingChange = new BillDetail.BillChangeViewModel
+        {
+            Id = Guid.NewGuid(), CurrentStatementId = newerId,
+            DetectedAtUtc = new DateTimeOffset(2026, 7, 1, 12, 0, 0, TimeSpan.Zero)
+        };
+        Set(page, "_detail", new BillDetail.BillStreamDetailViewModel
+        {
+            Id = Guid.NewGuid(),
+            Statements =
+            [
+                new() { Id = olderId, PeriodStart = new DateOnly(2026, 2, 1), PeriodEnd = new DateOnly(2026, 2, 28) },
+                new() { Id = newerId, PeriodStart = new DateOnly(2026, 6, 1), PeriodEnd = new DateOnly(2026, 6, 30) }
+            ],
+            Changes = [historicalBackfill, latestBillingChange]
+        });
+
+        var selected = (BillDetail.BillChangeViewModel?)typeof(BillDetail)
+            .GetProperty("LatestChange", Flags)!.GetValue(page);
+        Assert.Same(latestBillingChange, selected);
+
+        var ordered = (IReadOnlyList<BillDetail.BillChangeViewModel>)typeof(BillDetail)
+            .GetProperty("StatementChangesByPeriod", Flags)!.GetValue(page)!;
+        Assert.Equal(new[] { latestBillingChange, historicalBackfill }, ordered);
+    }
+
+    [Fact]
+    public void Detail_UnknownStatementLinkCannotBecomeProminentVerifiedChange()
+    {
+        var page = new BillDetail();
+        Set(page, "_detail", new BillDetail.BillStreamDetailViewModel
+        {
+            Id = Guid.NewGuid(),
+            Changes =
+            [
+                new()
+                {
+                    Id = Guid.NewGuid(), CurrentStatementId = Guid.NewGuid(),
+                    DetectedAtUtc = DateTimeOffset.UtcNow
+                }
+            ]
+        });
+        Assert.Null(typeof(BillDetail).GetProperty("LatestChange", Flags)!.GetValue(page));
+    }
+
+    [Fact]
+    public void Detail_CorrectedSamePeriodUsesMostRecentlyDetectedEvidence()
+    {
+        var page = new BillDetail();
+        var firstId = Guid.NewGuid();
+        var correctionId = Guid.NewGuid();
+        var older = new BillDetail.BillChangeViewModel
+        {
+            Id = Guid.NewGuid(), CurrentStatementId = firstId,
+            DetectedAtUtc = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero)
+        };
+        var corrected = new BillDetail.BillChangeViewModel
+        {
+            Id = Guid.NewGuid(), CurrentStatementId = correctionId,
+            DetectedAtUtc = new DateTimeOffset(2026, 8, 2, 0, 0, 0, TimeSpan.Zero)
+        };
+        Set(page, "_detail", new BillDetail.BillStreamDetailViewModel
+        {
+            Id = Guid.NewGuid(),
+            Statements =
+            [
+                new() { Id = firstId, PeriodStart = new DateOnly(2026, 7, 1), PeriodEnd = new DateOnly(2026, 7, 31) },
+                new() { Id = correctionId, PeriodStart = new DateOnly(2026, 7, 1), PeriodEnd = new DateOnly(2026, 7, 31) }
+            ],
+            Changes = [older, corrected]
+        });
+        Assert.Same(corrected,
+            typeof(BillDetail).GetProperty("LatestChange", Flags)!.GetValue(page));
+    }
 }

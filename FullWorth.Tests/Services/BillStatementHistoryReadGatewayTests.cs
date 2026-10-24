@@ -255,6 +255,52 @@ public sealed class BillStatementHistoryReadGatewayTests
         Assert.Equal(new[] { high, low }, result.Changes.Select(change => change.Id));
     }
 
+    [Fact]
+    public async Task GetAsync_SourceUploadIsLatestProcessedOwnedRecord()
+    {
+        await using var db = CreateDbContext();
+        var owner = Guid.NewGuid();
+        var foreign = Guid.NewGuid();
+        var bill = Guid.NewGuid();
+        var otherBill = Guid.NewGuid();
+        var statement = CreateStatement(owner, bill,
+            new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), 85m);
+        db.BillStatements.Add(statement);
+
+        var olderId = Guid.NewGuid();
+        var latestId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        FullWorth.API.Data.Entities.BillStatementUploadEntity Upload(
+            Guid uploadId, Guid userId, Guid streamId,
+            BillStatementUploadStatus status, int minutesAgo) => new()
+        {
+            Id = uploadId,
+            UserId = userId,
+            BillStreamId = streamId,
+            BillStatementId = statement.Id,
+            Status = status,
+            StorageKey = Guid.NewGuid().ToString("N"),
+            MediaType = "application/pdf",
+            FileExtension = ".pdf",
+            SizeBytes = 24,
+            CreatedAtUtc = now.AddMinutes(-minutesAgo),
+            UpdatedAtUtc = now.AddMinutes(-minutesAgo)
+        };
+
+        db.BillStatementUploads.AddRange(
+            Upload(olderId, owner, bill, BillStatementUploadStatus.Processed, 30),
+            Upload(latestId, owner, bill, BillStatementUploadStatus.Processed, 10),
+            Upload(Guid.NewGuid(), owner, bill, BillStatementUploadStatus.Failed, 1),
+            Upload(Guid.NewGuid(), foreign, bill, BillStatementUploadStatus.Processed, 0),
+            Upload(Guid.NewGuid(), owner, otherBill, BillStatementUploadStatus.Processed, 0));
+        await db.SaveChangesAsync();
+
+        var gateway = new BillStatementHistoryReadGateway(db);
+        var snapshot = await gateway.GetAsync(owner, bill);
+        Assert.Equal(latestId, Assert.Single(snapshot.Statements).SourceUploadId);
+        Assert.Empty((await gateway.GetAsync(foreign, bill)).Statements);
+    }
+
     private static FullWorthDbContext
         CreateDbContext()
     {

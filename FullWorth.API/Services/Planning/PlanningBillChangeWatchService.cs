@@ -64,37 +64,23 @@ public sealed class PlanningBillChangeWatchService(
                         bill.BillStreamId)
                 .ToArray();
 
-        var billFactsTask =
-            billPlanningFactsGateway.GetLatestAsync(
-                userId,
-                billIds,
-                cancellationToken);
-
-        var changeFactsTask =
-            billChangeFactsGateway.GetLatestConfirmedAsync(
-                userId,
-                billIds,
-                cancellationToken);
-
-        var plannedTotalsTask =
-            allocationStore.GetCycleTotalsAsync(
-                userId,
-                billIds,
-                cancellationToken);
-
-        await Task.WhenAll(
-            billFactsTask,
-            changeFactsTask,
-            plannedTotalsTask);
-
-        var billFacts =
-            await billFactsTask;
-
-        var changeFacts =
-            await changeFactsTask;
-
-        var plannedTotals =
-            await plannedTotalsTask;
+        // All adapters share the scoped FullWorthDbContext. Await each read
+        // before starting another, and respect the adapters' 500-bill bound.
+        var billFacts = new Dictionary<Guid, BillPlanningFact>();
+        var changeFacts = new Dictionary<Guid, BillPlanningChangeFact>();
+        var plannedTotals = new List<PlanningBillCyclePlannedTotal>();
+        foreach (var batch in billIds.Distinct().Chunk(500))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (var fact in await billPlanningFactsGateway.GetLatestAsync(
+                         userId, batch, cancellationToken))
+                billFacts.Add(fact.Key, fact.Value);
+            foreach (var fact in await billChangeFactsGateway.GetLatestConfirmedAsync(
+                         userId, batch, cancellationToken))
+                changeFacts.Add(fact.Key, fact.Value);
+            plannedTotals.AddRange(await allocationStore.GetCycleTotalsAsync(
+                userId, batch, cancellationToken));
+        }
 
         var totalsByCycle =
             plannedTotals

@@ -41,4 +41,5 @@
   <data name="Enter a valid current authenticator code if two-factor authentication is enabled." xml:space="preserve"><value>Introduce un código actual válido del autenticador si la autenticación en dos pasos está activada.</value></data>
 
   <data name="Enter your current password before granting access." xml:space="preserve"><value>Introduce tu contraseña actual antes de otorgar acceso.</value></data>
+  <data name="The grant could not be confirmed. Retry this confirmation with fresh credentials to recover the same grant, or cancel and review the account." xml:space="preserve"><value>No se pudo confirmar la concesión. Reintenta esta confirmación con credenciales actuales para recuperar la misma concesión, o cancela y revisa la cuenta.</value></data>
 </root>

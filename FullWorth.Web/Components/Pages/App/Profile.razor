@@ -34,7 +34,14 @@
     {
         <div class="app-error-state settings-banner" role="alert">
             <div class="state-symbol">!</div>
-            <div><p>@_error</p></div>
+            <div><p>@_error</p>
+                @if (_loadFailed || _writeUncertain)
+                {
+                    <button type="button" class="secondary-action" disabled="@(_loading || _isBusy)" @onclick="LoadProfileAsync">
+                        @(_writeUncertain ? L["Check saved profile"] : L["Retry profile"])
+                    </button>
+                }
+            </div>
         </div>
     }
 
@@ -61,20 +68,25 @@
             </div>
         </div>
 
-        @if (_security is null)
+        @if (_security is null && !_loadFailed)
         {
-            <p class="fw-profile-loading">@L["Loading profile…"]</p>
+            <p class="fw-profile-loading" role="status" aria-busy="true">@L["Loading profile…"]</p>
         }
-        else
+        else if (_security is not null)
         {
+            <form @onsubmit="SaveProfileAsync" @onsubmit:preventDefault="true">
             <div class="settings-grid two-column fw-profile-grid">
                 <label class="settings-field">
-                    <span>@L["Display name"]</span>
+                    <span id="profile-display-name-label">@L["Display name"]</span>
                     <input type="text"
+                           aria-labelledby="profile-display-name-label"
+                           aria-describedby="profile-saved-name"
                            autocomplete="name"
                            maxlength="80"
+                           disabled="@(_isBusy || _loading || _writeUncertain)"
                            placeholder="@L["How should FullWorth address you?"]"
-                           @bind="_displayName" />
+                           @bind="_displayName" @bind:event="oninput" />
+                    <small id="profile-saved-name">@L["Saved display name"]: @(string.IsNullOrWhiteSpace(_security.DisplayName) ? L["Not set"].Value : _security.DisplayName)</small>
                 </label>
 
                 <div class="settings-field">
@@ -85,9 +97,9 @@
             </div>
 
             <div class="settings-actions fw-profile-actions">
-                <button type="button"
+                <button type="submit"
                         class="primary-action"
-                        disabled="@_isBusy"
+                        disabled="@(_isBusy || _loading || _writeUncertain || _loadFailed)"
                         @onclick="SaveProfileAsync">
                     @L["Save profile"]
                 </button>
@@ -101,6 +113,7 @@
             <p class="security-note fw-profile-note">
                 @L["FullWorth deliberately keeps this profile small. Your bank data remains separate and is not used as profile information."]
             </p>
+            </form>
         }
     </section>
 </div>
@@ -113,44 +126,62 @@
     private string? _success;
     private bool _isBusy;
 
+    private bool _loading, _loadFailed, _writeUncertain, _disposed;
+    private string? _attemptedDisplayName;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
+        if (firstRender) await LoadProfileAsync();
+    }
 
+    private static bool ValidProfile([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] AccountSecurityViewModel? profile) =>
+        profile is not null && profile.DisplayName is not null && !string.IsNullOrWhiteSpace(profile.Email);
+
+    private async Task LoadProfileAsync()
+    {
+        if (_loading || _isBusy || _disposed) return;
+        _loading = true;
+        _loadFailed = false;
+        _error = null;
         try
         {
-            _securityModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./js/account-security.js");
-
-            _security = await _securityModule.InvokeAsync<AccountSecurityViewModel>(
-                "getAccountSecurity");
-
-            _displayName = _security.DisplayName;
+            _securityModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/account-security.js");
+            var profile = await _securityModule.InvokeAsync<AccountSecurityViewModel>("getAccountSecurity");
+            if (!ValidProfile(profile)) throw new JSException("Invalid profile response.");
+            if (_disposed) return;
+            if (_security is null) _displayName = profile.DisplayName;
+            _security = profile;
+            if (_writeUncertain)
+            {
+                if (string.Equals(profile.DisplayName, _attemptedDisplayName, StringComparison.Ordinal))
+                {
+                    _displayName = profile.DisplayName;
+                    _success = L["Your saved profile has been confirmed."];
+                }
+                else
+                {
+                    _error = L["The saved profile was checked. Your draft is kept; review it before saving again."];
+                }
+                _writeUncertain = false;
+                _attemptedDisplayName = null;
+            }
         }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        catch (JSException)
         {
-            _error = L["FullWorth could not load your profile."];
+            if (!_disposed)
+            {
+                _loadFailed = true;
+                _error = L["FullWorth could not load your profile."];
+            }
         }
-        finally
-        {
-            StateHasChanged();
-        }
+        finally { _loading = false; if (!_disposed) StateHasChanged(); }
     }
 
     private async Task SaveProfileAsync()
     {
-        if (_securityModule is null || _isBusy)
-        {
-            return;
-        }
-
-        var normalizedDisplayName =
-            _displayName.Trim();
-
+        if (_securityModule is null || _security is null || _isBusy || _loading ||
+            _loadFailed || _writeUncertain || _disposed) return;
+        var normalizedDisplayName = _displayName.Trim();
         if (normalizedDisplayName.Length > 80)
         {
             _error = L["Display name must be 80 characters or fewer."];
@@ -161,33 +192,33 @@
         _isBusy = true;
         _error = null;
         _success = null;
-
+        _attemptedDisplayName = normalizedDisplayName;
         try
         {
-            _security = await _securityModule.InvokeAsync<AccountSecurityViewModel>(
-                "updateProfile",
-                normalizedDisplayName);
-
-            _displayName = _security.DisplayName;
-            _success = string.IsNullOrWhiteSpace(_displayName)
-                ? L["Display name cleared."]
-                : L["Profile saved."];
+            var profile = await _securityModule.InvokeAsync<AccountSecurityViewModel>("updateProfile", normalizedDisplayName);
+            if (!ValidProfile(profile) ||
+                !string.Equals(profile.DisplayName, normalizedDisplayName, StringComparison.Ordinal))
+                throw new JSException("Profile update was not confirmed.");
+            if (_disposed) return;
+            _security = profile;
+            _displayName = profile.DisplayName;
+            _attemptedDisplayName = null;
+            _success = string.IsNullOrWhiteSpace(_displayName) ? L["Display name cleared."] : L["Profile saved."];
         }
-        catch (JSException ex)
+        catch (JSException)
         {
-            _error = string.IsNullOrWhiteSpace(ex.Message)
-                ? L["FullWorth could not update your profile."]
-                : ex.Message;
+            if (!_disposed)
+            {
+                _writeUncertain = true;
+                _error = L["The profile update could not be confirmed. Check the saved profile before trying again."];
+            }
         }
-        finally
-        {
-            _isBusy = false;
-            StateHasChanged();
-        }
+        finally { _isBusy = false; if (!_disposed) StateHasChanged(); }
     }
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         if (_securityModule is null)
         {
             return;
@@ -204,8 +235,11 @@
 
     private sealed class AccountSecurityViewModel
     {
+        [System.Text.Json.Serialization.JsonRequired]
         public string DisplayName { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonRequired]
         public string Email { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonRequired]
         public bool EmailConfirmed { get; set; }
         public bool TwoFactorEnabled { get; set; }
         public bool HasAuthenticatorKey { get; set; }

@@ -314,7 +314,8 @@ public sealed record AdminGrantEntitlementRequest(
     int? DurationDays,
     bool GrantsLifetimeAccess,
     string CurrentPassword,
-    string? TwoFactorCode);
+    string? TwoFactorCode,
+    Guid? OperationId = null);
 
 public sealed record AdminProgramMembershipRequest(
     bool IsActive,

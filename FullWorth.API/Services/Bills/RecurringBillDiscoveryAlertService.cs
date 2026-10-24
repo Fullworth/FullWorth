@@ -40,6 +40,7 @@ public sealed class RecurringBillDiscoveryAlertService
 
         ArgumentNullException.ThrowIfNull(
             billStream);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (billStream.Id ==
             Guid.Empty)
@@ -120,6 +121,13 @@ public sealed class RecurringBillDiscoveryAlertService
         }
         else
         {
+            var pendingDeletionIds = _dbContext.ChangeTracker.Entries<BillAlertEntity>()
+                .Where(entry => entry.State == EntityState.Deleted &&
+                    entry.Entity.UserId == userId && entry.Entity.BillStreamId == billStream.Id &&
+                    entry.Entity.AlertType == BillAlertType.NewBill)
+                .Select(entry => entry.Entity.Id)
+                .ToArray();
+
             var alreadyPersisted =
                 await _dbContext.BillAlerts
                     .AsNoTracking()
@@ -130,7 +138,8 @@ public sealed class RecurringBillDiscoveryAlertService
                             alert.BillStreamId ==
                                 billStream.Id &&
                             alert.AlertType ==
-                                BillAlertType.NewBill,
+                                BillAlertType.NewBill &&
+                            !pendingDeletionIds.Contains(alert.Id),
                         cancellationToken);
 
             if (alreadyPersisted)

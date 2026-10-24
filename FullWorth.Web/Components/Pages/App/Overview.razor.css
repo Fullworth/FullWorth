@@ -40,3 +40,11 @@
         align-self: flex-start;
     }
 }
+
+.overview-page .fw-watchlist-scope {
+    margin: 0 0 12px;
+    color: var(--bw-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}

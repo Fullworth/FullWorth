@@ -113,4 +113,9 @@
   <data name="Enter your current password before creating an access key." xml:space="preserve"><value>Introduce tu contraseña actual antes de crear una clave de acceso.</value></data>
   <data name="Your current password is incorrect." xml:space="preserve"><value>Tu contraseña actual es incorrecta.</value></data>
   <data name="Enter a valid current authenticator code if two-factor authentication is enabled." xml:space="preserve"><value>Introduce un código actual válido del autenticador si la autenticación en dos pasos está activada.</value></data>
+  <data name="Page controls" xml:space="preserve"><value>Controles de página</value></data>
+  <data name="Records {0}–{1}" xml:space="preserve"><value>Registros {0}–{1}</value></data>
+  <data name="Previous page" xml:space="preserve"><value>Página anterior</value></data>
+  <data name="Next page" xml:space="preserve"><value>Página siguiente</value></data>
+  <data name="That page could not be loaded. The previous page is still shown; try the page control again." xml:space="preserve"><value>No se pudo cargar esa página. Se sigue mostrando la página anterior; vuelve a intentarlo con el control de página.</value></data>
 </root>

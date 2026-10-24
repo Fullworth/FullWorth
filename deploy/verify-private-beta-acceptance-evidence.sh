@@ -12,6 +12,28 @@ ios_device=${BILLWATCH_IOS_DEVICE_EVIDENCE_FILE:-}
 output=${BILLWATCH_ACCEPTANCE_EVIDENCE_FILE:-}
 
 fail(){ printf '%s\n' "Private-beta acceptance evidence failed: $1" >&2; exit "${2:-64}"; }
+
+# Resolve the existing parent physically before checking containment. The final
+# component stays unresolved so symbolic-link destinations can still be refused.
+outside_checkout_path()
+{
+    path=$1
+    label=$2
+    case "$path" in /*) ;; *) fail "$label path must be absolute." ;; esac
+    parent=$(CDPATH= cd -P -- "$(dirname -- "$path")" 2>/dev/null && pwd -P) ||
+        fail "$label directory does not exist or is inaccessible." 66
+    name=$(basename -- "$path")
+    case "$name" in ''|.|..) fail "$label path must name a file." ;; esac
+    resolved="${parent%/}/$name"
+    [ "$deployment_directory" != / ] || fail "$label must live outside the deployment checkout."
+    case "$resolved" in
+        "$deployment_directory"|"$deployment_directory"/*)
+            fail "$label must live outside the deployment checkout."
+            ;;
+    esac
+    printf '%s\n' "$resolved"
+}
+
 [ -d "$deployment_directory" ] || fail "usage: $0 <deployment-directory>" 66
 deployment_directory=$(cd "$deployment_directory" && pwd -P)
 release_file="$deployment_directory/.billwatch-release"
@@ -25,8 +47,7 @@ read_value(){ count=$(grep -c "^${2}=" "$1" || true); [ "$count" = 1 ] || fail "
 verify(){
     file=$1; phases=$2; label=$3
     [ -n "$file" ] || fail "$label evidence path is required."
-    case "$file" in /*) ;; *) fail "$label evidence path must be absolute." ;; esac
-    case "$file" in "$deployment_directory"|"$deployment_directory"/*) fail "$label evidence must live outside the checkout." ;; esac
+    file=$(outside_checkout_path "$file" "$label evidence")
     [ -f "$file" ] && [ ! -L "$file" ] || fail "$label evidence is missing or unsafe." 66
     [ "$(stat -c '%a' "$file" 2>/dev/null || true)" = 600 ] || fail "$label evidence must have mode 600." 77
     [ "$(read_value "$file" VERSION)" = 1 ] || fail "$label evidence version is unsupported." 65
@@ -53,8 +74,7 @@ if [ -n "$ios_device" ]; then
 fi
 
 if [ -n "$output" ]; then
-    case "$output" in /*) ;; *) fail "acceptance evidence output must be absolute." ;; esac
-    case "$output" in "$deployment_directory"|"$deployment_directory"/*) fail "acceptance evidence output must live outside the checkout." ;; esac
+    output=$(outside_checkout_path "$output" "acceptance evidence output")
     [ ! -L "$output" ] && [ ! -e "$output" ] || fail "acceptance evidence output already exists or is unsafe." 73
     [ -d "$(dirname "$output")" ] || fail "acceptance evidence output directory does not exist." 66
     temporary=$(mktemp "${output}.tmp.XXXXXX")

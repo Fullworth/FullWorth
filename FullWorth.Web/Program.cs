@@ -376,6 +376,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseFullWorthWebSecurityHeaders();
+app.UseFullWorthHtmlNotFoundPages();
 
 app.UseWhen(
     context =>
@@ -383,6 +384,8 @@ app.UseWhen(
             "/health"),
     branch =>
         branch.UseHttpsRedirection());
+
+app.UseRouting();
 
 /*
  * Auth and BFF mutations intentionally consume JSON, HTML form, or multipart

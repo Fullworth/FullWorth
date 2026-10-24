@@ -112,7 +112,7 @@
                     @if (GoogleSignInConfigured)
                     {
                         <a class="external-signin-button"
-                           href="/auth/external/google">
+                           href="@($"/auth/external/google?ReturnUrl={Uri.EscapeDataString(LocalReturnUrl)}")">
                             <span class="external-provider-mark provider-google"
                                   aria-hidden="true">G</span>
 
@@ -123,7 +123,7 @@
                     @if (AppleSignInConfigured)
                     {
                         <a class="external-signin-button"
-                           href="/auth/external/apple">
+                           href="@($"/auth/external/apple?ReturnUrl={Uri.EscapeDataString(LocalReturnUrl)}")">
                             <span class="external-provider-mark provider-apple"
                                   aria-hidden="true">A</span>
 
@@ -134,7 +134,7 @@
                     @if (MicrosoftSignInConfigured)
                     {
                         <a class="external-signin-button"
-                           href="/auth/external/microsoft">
+                           href="@($"/auth/external/microsoft?ReturnUrl={Uri.EscapeDataString(LocalReturnUrl)}")">
                             <span class="external-provider-mark provider-microsoft"
                                   aria-hidden="true">
                                 <span></span>
@@ -160,6 +160,7 @@
                       class="auth-form">
 
                     <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="@LocalReturnUrl" />
 
                     <input type="hidden"
                            name="provider"
@@ -221,6 +222,7 @@
 
                 <form method="post" action="/auth/login" class="auth-form">
                     <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="@LocalReturnUrl" />
                     <input type="hidden" name="twoFactor" value="true" />
                     <label class="field">
                         <span>@L["Authenticator code"]</span>
@@ -234,6 +236,7 @@
                     <summary>@L["Use a recovery code instead"]</summary>
                     <form method="post" action="/auth/login" class="auth-form">
                         <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="@LocalReturnUrl" />
                         <input type="hidden" name="twoFactor" value="true" />
                         <label class="field">
                             <span>@L["Recovery code"]</span>
@@ -248,6 +251,7 @@
             {
                 <form method="post" action="/auth/login" class="auth-form">
                     <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="@LocalReturnUrl" />
                     <label class="field">
                         <span>@L["Email address"]</span>
                         <input type="email" name="email" autocomplete="email" inputmode="email"
@@ -301,6 +305,10 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "ReturnUrl")]
+    public string? ReturnUrl { get; set; }
+    private string LocalReturnUrl => FullWorth.Web.Services.LocalLoginDestination.Normalize(ReturnUrl);
+
     [SupplyParameterFromQuery(
         Name = "error")]
     public string? Error { get; set; }

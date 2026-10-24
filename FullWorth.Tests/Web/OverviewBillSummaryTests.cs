@@ -85,6 +85,35 @@ public sealed class OverviewBillSummaryTests
     }
 
     [Fact]
+    public async Task OverviewSpotlight_PromotesOnlySupportedIncreaseWithOwnedBillLink()
+    {
+        var bill = OverviewBillCoverageTests.Bill() with
+        {
+            ProviderName = "<script>Untrusted bank label</script>"
+        };
+        var summary = OverviewBillCoverage.Create([bill]);
+        var html = await RenderAsync("en", summary, decode: false);
+
+        Assert.Contains("fw-pulse-spotlight", html);
+        Assert.Contains($"/app/bills/{bill.Id:D}", html);
+        Assert.Contains("$9.00", html);
+        Assert.Contains("prior transaction average", html);
+        Assert.Contains("Review evidence", html);
+        Assert.DoesNotContain("<script>", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<form", html, StringComparison.OrdinalIgnoreCase);
+
+        var noIncrease = await RenderAsync("en",
+            OverviewBillCoverage.Create([OverviewBillCoverageTests.Bill(29m, 29m)]));
+        Assert.DoesNotContain("fw-pulse-spotlight", noIncrease);
+        var multipleCurrencies = await RenderAsync("en",
+            OverviewBillCoverage.Create([
+                OverviewBillCoverageTests.Bill(),
+                OverviewBillCoverageTests.Bill(50m, 40m, "EUR")
+            ]));
+        Assert.DoesNotContain("fw-pulse-spotlight", multipleCurrencies);
+    }
+
+    [Fact]
     public async Task MixedCurrencies_KeepIncreasesUnranked()
     {
         var summary = OverviewBillCoverage.Create([
@@ -119,8 +148,46 @@ public sealed class OverviewBillSummaryTests
         Assert.DoesNotContain("Comparison history needed", html);
     }
 
+    [Fact]
+    public void MultiBankSyncCoverage_DoesNotResetFirstScanAfterAnySuccessfulSync()
+    {
+        var sync = DateTimeOffset.Parse("2026-10-18T12:00:00Z", CultureInfo.InvariantCulture);
+        var partial = OverviewConnectionCoverage.Create([
+            new(0, sync), new(0, null), new(1, sync), new(2, null)]);
+        Assert.Equal(2, partial.ActiveCount);
+        Assert.Equal(1, partial.SyncedCount);
+        Assert.Equal(1, partial.NeverSyncedCount);
+        Assert.True(partial.MixedSyncCoverage);
+        Assert.False(partial.WaitingForInitialSync);
+        Assert.Equal(sync, partial.MostRecentSuccessfulSync);
+
+        var first = OverviewConnectionCoverage.Create([new(0, null), new(0, null)]);
+        Assert.True(first.WaitingForInitialSync);
+        Assert.False(first.MixedSyncCoverage);
+        Assert.Null(first.MostRecentSuccessfulSync);
+
+        var disconnected = OverviewConnectionCoverage.Create([new(1, sync), new(2, sync)]);
+        Assert.Equal(0, disconnected.ActiveCount);
+        Assert.False(disconnected.WaitingForInitialSync);
+        Assert.Null(disconnected.MostRecentSuccessfulSync);
+    }
+
+    [Theory]
+    [InlineData("en", "1 of 2 active bank connections have reported a successful sync.")]
+    [InlineData("es", "1 de 2 conexiones bancarias activas han informado una sincronización correcta.")]
+    public async Task PartialBankCoverage_VisibleWithoutImplyingAllBanksCurrent(
+        string culture, string expected)
+    {
+        var summary = OverviewBillCoverage.Create([OverviewBillCoverageTests.Bill(29m, 0m)]);
+        var html = await RenderAsync(culture, summary, activeConnectionCount: 2, syncedConnectionCount: 1);
+        Assert.Contains(expected, html);
+        Assert.Contains("1", html);
+        Assert.DoesNotContain("2 of 2 active bank connections", html);
+    }
+
     private static async Task<string> RenderAsync(string culture, OverviewBillCoverage summary,
-        bool statusOnly = false, bool decode = true)
+        bool statusOnly = false, bool decode = true,
+        int activeConnectionCount = 0, int syncedConnectionCount = 0)
     {
         var previous = CultureInfo.CurrentUICulture;
         try
@@ -137,7 +204,9 @@ public sealed class OverviewBillSummaryTests
                     ParameterView.FromDictionary(new Dictionary<string, object?>
                     {
                         ["Summary"] = summary, ["StatusOnly"] = statusOnly,
-                        ["LatestSuccessfulSync"] = DateTimeOffset.Parse("2026-10-18T12:00:00Z", CultureInfo.InvariantCulture)
+                        ["LatestSuccessfulSync"] = DateTimeOffset.Parse("2026-10-18T12:00:00Z", CultureInfo.InvariantCulture),
+                        ["ActiveConnectionCount"] = activeConnectionCount,
+                        ["SyncedConnectionCount"] = syncedConnectionCount
                     }));
                 return output.ToHtmlString();
             });

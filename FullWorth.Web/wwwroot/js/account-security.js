@@ -109,6 +109,14 @@ async function getJson(path, fallback) {
         },
         fallback);
 
+    if (response.status === 401) {
+        // A read cannot reject a submitted password or MFA proof. This is the
+        // same expired-session boundary used by the other authenticated BFF reads.
+        // Credential-verification POSTs deliberately keep their existing 401 path.
+        window.location.assign("/login");
+        throw new Error("Session expired.");
+    }
+
     if (!response.ok) {
         throw new Error(await readSafeError(response, fallback));
     }

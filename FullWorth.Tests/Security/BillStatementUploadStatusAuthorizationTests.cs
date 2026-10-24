@@ -159,6 +159,45 @@ public sealed class BillStatementUploadStatusAuthorizationTests
     }
 
     [Fact]
+    public async Task Latest_CannotReadAnotherUsersUpload()
+    {
+        // Keep new registration traffic independent of the shared fixture's
+        // intentionally strict authentication rate limiter.
+        using var fixture = new FullWorthApiFactory();
+        using var client = fixture.CreateHttpsClient();
+        var owner = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        var attacker = await TestUserAuthentication.RegisterAndLoginAsync(client);
+        TestUserAuthentication.Authorize(client, owner);
+        var stream = await CreateBillStreamAsync(client);
+        var upload = await UploadStatementAsync(client, stream.Id);
+
+        using var owned = await client.GetAsync(
+            $"/api/bill-streams/{stream.Id}/statement-uploads/latest");
+        Assert.Equal(HttpStatusCode.OK, owned.StatusCode);
+        var result = await owned.Content.ReadFromJsonAsync<BillStatementUploadStatusPayload>();
+        Assert.NotNull(result);
+        Assert.Equal(upload.Id, result.Id);
+        Assert.Equal(stream.Id, result.BillStreamId);
+        var body = await owned.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("storageKey", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("physicalPath", body, StringComparison.OrdinalIgnoreCase);
+
+        TestUserAuthentication.Authorize(client, attacker);
+        using var foreign = await client.GetAsync(
+            $"/api/bill-streams/{stream.Id}/statement-uploads/latest");
+        Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
+    }
+
+    [Fact]
+    public async Task Latest_RequiresAuthentication()
+    {
+        using var client = _factory.CreateHttpsClient();
+        using var response = await client.GetAsync(
+            $"/api/bill-streams/{Guid.NewGuid()}/statement-uploads/latest");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task
         Status_ReturnsNotFoundWhenBillStreamDoesNotMatch()
     {

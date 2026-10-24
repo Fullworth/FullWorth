@@ -11,6 +11,9 @@ public enum PlaidLinkSessionStatus
 
 public sealed class PlaidLinkSessionEntity
 {
+    // Keep provider ciphertext within the persisted column limit.
+    public const int MaxProtectedLinkTokenLength = 4000;
+
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid UserId { get; set; }

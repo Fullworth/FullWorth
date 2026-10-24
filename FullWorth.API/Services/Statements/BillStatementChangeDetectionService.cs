@@ -66,8 +66,29 @@ public sealed class BillStatementChangeDetectionService
             billAlertGateway;
     }
 
-    public async Task<BillStatementChangeReconciliationResult>
-        ReconcileAsync(
+    public async Task<BillStatementChangeReconciliationResult> ReconcileAsync(
+        Guid userId,
+        Guid billStreamId,
+        BillStatementEntity? pendingStatement = null,
+        IReadOnlyList<BillLineItemEntity>? pendingLineItems = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var attempt = new StatementUnitOfWorkAttempt(_dbContext);
+        try
+        {
+            return await ReconcileCoreAsync(userId, billStreamId,
+                pendingStatement, pendingLineItems, cancellationToken);
+        }
+        catch
+        {
+            attempt.Restore();
+            throw;
+        }
+    }
+
+    private async Task<BillStatementChangeReconciliationResult>
+        ReconcileCoreAsync(
             Guid userId,
             Guid billStreamId,
             BillStatementEntity? pendingStatement = null,
@@ -129,6 +150,12 @@ public sealed class BillStatementChangeDetectionService
                             billStreamId)
                 .ToListAsync(
                     cancellationToken);
+
+        statements = _dbContext.BillStatements.Local
+            .Where(item => item.UserId == userId && item.BillStreamId == billStreamId)
+            .Concat(statements)
+            .Where(item => _dbContext.Entry(item).State != EntityState.Deleted)
+            .DistinctBy(item => item.Id).ToList();
 
         if (pendingStatement is not null &&
             statements.All(
@@ -206,6 +233,15 @@ public sealed class BillStatementChangeDetectionService
                         cancellationToken);
         }
 
+        var removedLineItemIds = _dbContext.ChangeTracker.Entries<BillLineItemEntity>()
+            .Where(entry => entry.State == EntityState.Deleted)
+            .Select(entry => entry.Entity.Id).ToHashSet();
+        lineItems = _dbContext.BillLineItems.Local
+            .Where(item => item.UserId == userId && statementIds.Contains(item.BillStatementId))
+            .Concat(lineItems)
+            .Where(item => !removedLineItemIds.Contains(item.Id))
+            .DistinctBy(item => item.Id).ToList();
+
         if (pendingLineItems is not null)
         {
             foreach (var pendingLineItem in
@@ -265,6 +301,14 @@ public sealed class BillStatementChangeDetectionService
                         ))
                 .ToListAsync(
                     cancellationToken);
+
+        existingChanges = _dbContext.BillChanges.Local
+            .Where(item => item.UserId == userId && item.BillStreamId == billStreamId &&
+                (item.ChangeType == BillChangeType.TotalIncrease || item.ChangeType == BillChangeType.TotalDecrease))
+            .Concat(existingChanges)
+            .Where(item => _dbContext.Entry(item).State != EntityState.Deleted)
+            .DistinctBy(item => item.Id)
+            .OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id).ToList();
 
         var desiredChanges =
             BuildDesiredChanges(

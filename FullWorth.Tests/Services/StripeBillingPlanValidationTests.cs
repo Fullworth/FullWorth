@@ -89,7 +89,7 @@ public sealed class StripeBillingPlanValidationTests
                         active = true,
                         unit_amount = 900,
                         currency = "usd",
-                        recurring = new { interval = providerInterval }
+                        recurring = new { interval = providerInterval, interval_count = 1 }
                     }),
                 "/v1/prices/price_billwatch_yearly_test" =>
                     JsonSerializer.Serialize(new
@@ -98,7 +98,7 @@ public sealed class StripeBillingPlanValidationTests
                         active = true,
                         unit_amount = 9000,
                         currency = "usd",
-                        recurring = new { interval = "year" }
+                        recurring = new { interval = "year", interval_count = 1 }
                     }),
                 _ => throw new InvalidOperationException("Unexpected Stripe request.")
             });
@@ -131,7 +131,7 @@ public sealed class StripeBillingPlanValidationTests
                         active = false,
                         unit_amount = 900,
                         currency = "usd",
-                        recurring = new { interval = "month" }
+                        recurring = new { interval = "month", interval_count = 1 }
                     }),
                 _ => throw new InvalidOperationException(
                     "Checkout must stop before creating a customer or session.")
@@ -143,6 +143,82 @@ public sealed class StripeBillingPlanValidationTests
                 "person@example.com",
                 "monthly",
                 CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("monthly", null)]
+    [InlineData("monthly", "null")]
+    [InlineData("monthly", "0")]
+    [InlineData("monthly", "-1")]
+    [InlineData("monthly", "3")]
+    [InlineData("monthly", "12")]
+    [InlineData("monthly", "\"1\"")]
+    [InlineData("monthly", "true")]
+    [InlineData("monthly", "1.5")]
+    [InlineData("yearly", null)]
+    [InlineData("yearly", "null")]
+    [InlineData("yearly", "0")]
+    [InlineData("yearly", "-1")]
+    [InlineData("yearly", "2")]
+    [InlineData("yearly", "\"1\"")]
+    [InlineData("yearly", "false")]
+    [InlineData("yearly", "1.5")]
+    public async Task NonSinglePeriodPrice_IsRejectedForDisplayAndCheckoutBeforeCustomerAccess(
+        string billingInterval,
+        string? intervalCountJson)
+    {
+        var rejectedPriceId = billingInterval == "yearly" ? YearlyPriceId : MonthlyPriceId;
+        var priceReads = 0;
+
+        using var service = CreateService(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            if (path != $"/v1/prices/{MonthlyPriceId}" &&
+                path != $"/v1/prices/{YearlyPriceId}")
+            {
+                throw new InvalidOperationException(
+                    "Invalid cadence must stop before customer, subscription or checkout access.");
+            }
+
+            priceReads++;
+            var id = path.EndsWith(YearlyPriceId, StringComparison.Ordinal)
+                ? YearlyPriceId
+                : MonthlyPriceId;
+            var recurring = new Dictionary<string, object?>
+            {
+                ["interval"] = id == YearlyPriceId ? "year" : "month"
+            };
+            var countJson = id == rejectedPriceId ? intervalCountJson : "1";
+            if (countJson is not null)
+            {
+                using var countDocument = JsonDocument.Parse(countJson);
+                recurring["interval_count"] = countDocument.RootElement.Clone();
+            }
+
+            return JsonSerializer.Serialize(new
+            {
+                id,
+                active = true,
+                unit_amount = id == YearlyPriceId ? 5999 : 799,
+                currency = "usd",
+                recurring
+            });
+        });
+
+        await Assert.ThrowsAsync<StripeBillingException>(
+            () => service.Billing.GetPlansAsync(CancellationToken.None));
+        var displayReads = priceReads;
+        Assert.Equal(billingInterval == "yearly" ? 2 : 1, displayReads);
+
+        await Assert.ThrowsAsync<StripeBillingException>(
+            () => service.Billing.CreateCheckoutUrlAsync(
+                Guid.NewGuid(),
+                "person@example.com",
+                billingInterval,
+                CancellationToken.None));
+        Assert.Equal(displayReads + 1, priceReads);
+        Assert.Empty(await service.Db.SubscriptionEntitlements.ToListAsync());
+        Assert.Empty(await service.Db.StripeWebhookEvents.ToListAsync());
     }
 
     [Fact]

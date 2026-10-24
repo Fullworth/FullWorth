@@ -1,0 +1,16 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<Admin> L
+
+<div class="admin-page-controls" role="group" aria-label="@L["Page controls"]">
+    <span>@L["Records {0}–{1}", Count == 0 ? 0 : Offset + 1, Offset + Count]</span>
+    <button type="button" class="admin-secondary-button" disabled="@(Busy || Offset == 0)" @onclick="Previous">@L["Previous page"]</button>
+    <button type="button" class="admin-secondary-button" disabled="@(Busy || !CanNext)" @onclick="Next">@L["Next page"]</button>
+</div>
+
+@code {
+    [Parameter] public int Offset { get; set; }
+    [Parameter] public int Count { get; set; }
+    [Parameter] public bool CanNext { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback Previous { get; set; }
+    [Parameter] public EventCallback Next { get; set; }
+}

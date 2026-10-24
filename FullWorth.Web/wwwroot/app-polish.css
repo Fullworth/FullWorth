@@ -254,3 +254,125 @@
         flex: 1 1 6em; min-width: min(100%, 6em);
     }
 }
+
+
+/*
+ * vNext responsive composition.
+ * Keep real controls, long account/provider labels, and supported money values
+ * inside the viewport. We intentionally do NOT hide document overflow: browser
+ * acceptance must still detect genuine layout defects instead of masking them.
+ */
+.app-shell.app-shell .app-main,
+.app-shell.app-shell .app-content,
+.app-shell.app-shell .app-page,
+.app-shell.app-shell .app-page > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.app-shell.app-shell .page-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.app-shell.app-shell .page-heading > div {
+    min-width: 0;
+    flex: 1 1 18rem;
+}
+
+.app-shell.app-shell .page-heading :is(h1, p),
+.app-shell.app-shell :is(.fw-pulse-amount, .fw-bills-total strong, .transaction-summary-grid strong) {
+    overflow-wrap: anywhere;
+}
+
+.app-shell.app-shell .page-heading > :is(a, button) {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.app-shell.app-shell :is(
+    .fw-overview-grid,
+    .fw-destination-row,
+    .fw-bills-pulse,
+    .fw-bills-stats,
+    .fw-activity-pulse,
+    .fw-activity-pulse-stats,
+    .bill-workspace-tools,
+    .planning-workspace,
+    .planning-card,
+    .transaction-summary-grid,
+    .transaction-toolbar,
+    .transaction-list,
+    .account-panel,
+    .detail-grid,
+    .statement-upload-panel
+) {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ordinary desktop columns remain roomy. On mobile they must never carry
+   a desktop-sized minimum into the page's horizontal scroll dimension. */
+@media (max-width: 680px) {
+    /* Premium-app uses a vertical header below 720px. Wrapping a column
+       produces a second off-screen COLUMN, not another row. */
+    .app-shell.app-shell .page-heading {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .app-shell.app-shell .page-heading > div {
+        flex: none;
+        width: 100%;
+    }
+
+    .app-shell.app-shell .page-heading > :is(a, button) {
+        flex: 0 1 auto;
+        min-height: 44px;
+        align-self: flex-start;
+    }
+
+    .app-shell.app-shell .page-heading h1 {
+        font-size: clamp(1.9rem, 8vw, 2.55rem);
+        line-height: 1.12;
+    }
+
+    .app-shell.app-shell :is(.transaction-toolbar, .planning-workspace, .detail-grid) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-shell.app-shell :is(.transaction-summary-grid, .evidence-metadata) {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 152px), 1fr));
+    }
+
+    .app-shell.app-shell :is(.transaction-result-line, .bill-filter-bar) {
+        flex-wrap: wrap;
+    }
+
+    .app-shell.app-shell :is(input, select, textarea) {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* Touch targets and long account names should remain usable at 320px
+   and under 200%-text zoom rather than shrinking labels to tiny fonts. */
+@media (max-width: 390px) {
+    .app-shell.app-shell .app-content {
+        width: calc(100% - 24px);
+    }
+
+    .app-shell.app-shell :is(.fw-pulse, .fw-bills-pulse, .fw-activity-pulse) {
+        padding: 18px;
+    }
+
+    .app-shell.app-shell :is(.fw-pulse-stat, .fw-bills-stat, .fw-activity-pulse-stats > div) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}

@@ -11,7 +11,12 @@ let filterState = { searchText: "", selectedAccountId: "" };
 const pendingWorkerRequests = new Map();
 
 function getExecutionMode() {
-    return globalThis.FullWorthPerformance?.getExecutionMode?.() ?? "server";
+    try {
+        return globalThis.FullWorthPerformance?.getExecutionMode?.() ?? "server";
+    } catch {
+        // A crashed optional device profiler cannot block a real transaction read.
+        return "server";
+    }
 }
 
 function normalize(value) {

@@ -1125,6 +1125,11 @@
     public async ValueTask DisposeAsync()
     {
         _isDisposed = true;
+        if (_bffModule is not null)
+        {
+            try { await _bffModule.InvokeVoidAsync("cancelBankConnectionFlows"); }
+            catch (JSException) { }
+        }
         await DisposeModuleAsync(
             _localTimeModule);
 

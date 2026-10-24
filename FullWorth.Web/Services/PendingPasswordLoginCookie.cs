@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace FullWorth.Web.Services;
 
 public sealed record PendingWebPasswordLogin(
-    string LoginId, DateTimeOffset ExpiresAt, string Email, bool RememberMe, bool CanUsePasskey);
+    string LoginId, DateTimeOffset ExpiresAt, string Email, bool RememberMe, bool CanUsePasskey, string ReturnUrl = "/app");
 
 // Opaque, short-lived password-proof cookie, never a normal authenticated session.
 // No password, access token, refresh token or MFA secret is carried here.

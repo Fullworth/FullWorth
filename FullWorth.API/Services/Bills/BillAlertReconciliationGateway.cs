@@ -339,6 +339,9 @@ public sealed class BillAlertReconciliationGateway(
             persistedAlerts
                 .Concat(
                     trackedAlerts)
+                // A database query can return an entity already marked Deleted
+                // in this unit of work. It cannot satisfy a later desired state.
+                .Where(alert => dbContext.Entry(alert).State != EntityState.Deleted)
                 .DistinctBy(
                     alert =>
                         alert.Id)

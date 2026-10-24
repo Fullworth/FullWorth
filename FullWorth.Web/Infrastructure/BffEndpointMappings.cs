@@ -245,6 +245,11 @@ public static class BffEndpointMappings
             }).RequireRateLimiting(
                 StatementUploadRateLimitPolicy);
 
+        bff.MapGet("/bill-streams/{billStreamId:guid}/statement-uploads/latest", async (HttpContext context, FullWorthBffProxyService proxy, Guid billStreamId) =>
+            billStreamId == Guid.Empty
+                ? Results.NotFound()
+                : await proxy.ForwardGetAsync(context, $"/api/bill-streams/{billStreamId}/statement-uploads/latest", context.RequestAborted));
+
         bff.MapGet("/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}", async (HttpContext context, FullWorthBffProxyService proxy, Guid billStreamId, Guid uploadId) =>
             billStreamId == Guid.Empty || uploadId == Guid.Empty
                 ? Results.NotFound()

@@ -2,6 +2,7 @@ using FullWorth.API.Data;
 using FullWorth.API.Data.Entities;
 using FullWorth.API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace FullWorth.API.Services.Plaid;
 
@@ -225,14 +226,21 @@ public sealed class PlaidConnectionSyncCoordinator(
             return false;
         }
 
-        connection.Status =
-            BankConnectionStatus.RequiresAttention;
-
-        connection.UpdatedAtUtc =
-            DateTimeOffset.UtcNow;
-
-        await dbContext.SaveChangesAsync(
-            cancellationToken);
+        var snapshot = new AttentionEntrySnapshot(dbContext.Entry(connection));
+        try
+        {
+            connection.Status = BankConnectionStatus.RequiresAttention;
+            connection.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Failed/canceled saves retain tracked values. A later caller save
+            // must not commit an attention transition that was never recorded,
+            // and retry must still attempt the transition and its security event.
+            snapshot.Restore();
+            throw;
+        }
 
         return true;
     }
@@ -251,21 +259,47 @@ public sealed class PlaidConnectionSyncCoordinator(
                     candidate.UserId == userId,
                 cancellationToken);
 
-        if (connection is null ||
-            connection.Status != BankConnectionStatus.Active)
+        if (connection is null)
         {
             return false;
         }
 
-        connection.Status =
-            BankConnectionStatus.RequiresAttention;
+        return await PersistRequiresAttentionAsync(userId, connection, cancellationToken);
+    }
 
-        connection.UpdatedAtUtc =
-            DateTimeOffset.UtcNow;
+    private sealed class AttentionEntrySnapshot
+    {
+        private readonly EntityEntry _entry;
+        private readonly PropertyValues _current;
+        private readonly PropertyValues _original;
+        private readonly EntityState _state;
+        private readonly HashSet<string> _modified;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        public AttentionEntrySnapshot(EntityEntry entry)
+        {
+            _entry = entry;
+            _current = entry.CurrentValues.Clone();
+            _original = entry.OriginalValues.Clone();
+            _state = entry.State;
+            _modified = entry.Properties
+                .Where(property => property.IsModified)
+                .Select(property => property.Metadata.Name)
+                .ToHashSet(StringComparer.Ordinal);
+        }
 
-        return true;
+        public void Restore()
+        {
+            _entry.CurrentValues.SetValues(_current);
+            _entry.OriginalValues.SetValues(_original);
+            _entry.State = _state;
+            if (_state == EntityState.Modified)
+            {
+                foreach (var property in _entry.Properties)
+                {
+                    property.IsModified = _modified.Contains(property.Metadata.Name);
+                }
+            }
+        }
     }
 
     private static void ValidateIdentifiers(

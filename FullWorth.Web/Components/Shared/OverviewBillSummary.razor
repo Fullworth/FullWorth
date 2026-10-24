@@ -37,6 +37,20 @@ else
             <span class="fw-pulse-label">@L["Latest recognized bill charges"]</span>
             <strong class="fw-pulse-amount">@(Summary.RecognizedTotal ?? L["Amount unavailable"].Value)</strong>
             <p class="fw-pulse-summary">@L["Only active recognized bills are included. This is not total spending or a monthly budget; billing periods may differ."]</p>
+            @if (Summary.LargestIncrease is { } highlightedBill)
+            {
+                <div class="fw-pulse-spotlight" role="group" aria-label="@L["Bills need review"]">
+                    <div class="fw-pulse-spotlight-copy">
+                        <span class="fw-pulse-spotlight-eyebrow">@L["Bills need review"]</span>
+                        <strong class="fw-pulse-spotlight-change">+@FinancialAmountFormatter.FormatOrUnspecified(OverviewBillCoverage.Difference(highlightedBill), highlightedBill.CurrencyCode)</strong>
+                        <span class="fw-pulse-spotlight-provider">@highlightedBill.ProviderName</span>
+                        <p>@L["Above its prior transaction average; this does not establish a provider rate increase or its cause."]</p>
+                    </div>
+                    <a class="fw-pulse-spotlight-action" href="@($"/app/bills/{highlightedBill.Id:D}")">
+                        @L["Review evidence"] <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+            }
             <p>@L["{0} of {1} active bills have a usable amount and currency.", Summary.KnownAmountCount, Summary.ActiveCount]</p>
             @if (Summary.MissingAmountCount > 0)
             {
@@ -81,6 +95,10 @@ else
                     <strong>@L["Not yet available"]</strong>
                 }
             </div>
+            @if (ActiveConnectionCount > 0)
+            {
+                <small class="fw-coverage-note">@L["{0} of {1} active bank connections have reported a successful sync.", SyncedConnectionCount, ActiveConnectionCount]</small>
+            }
             <small class="fw-coverage-note">@L["A sync timestamp does not confirm every connection is current or every transaction was imported."]</small>
         </div>
     </section>
@@ -95,6 +113,12 @@ else
 
     [Parameter]
     public bool StatusOnly { get; set; }
+
+    [Parameter]
+    public int ActiveConnectionCount { get; set; }
+
+    [Parameter]
+    public int SyncedConnectionCount { get; set; }
 
     private string StatusHeading => Summary.IncreaseCount > 0
         ? L["Bills need review"].Value

@@ -78,7 +78,7 @@ public sealed class PlanningController(
 
         if (frequency == PayScheduleFrequency.SemiMonthly)
         {
-            if (request.SecondaryDayOfMonth is < 1 or > 31 ||
+            if (request.SecondaryDayOfMonth is null or < 1 or > 31 ||
                 request.SecondaryDayOfMonth == request.AnchorPayDate.Day)
             {
                 return BadRequest(
@@ -295,8 +295,9 @@ public sealed class PlanningController(
         if (billIds.Count > 0)
         {
             var ownedBills =
-                await billStreamGateway.ListOwnedActiveAsync(
+                await billStreamGateway.ListOwnedByIdsAsync(
                     userId,
+                    billIds,
                     cancellationToken);
 
             billNameById =
@@ -337,7 +338,10 @@ public sealed class PlanningController(
                                             allocation.BillDueDate,
                                             allocation.PlannedAmount,
                                             allocation.CurrencyCode))
-                                .ToList()))
+                                .ToList())
+                        {
+                            Coverage = plan.Run.Coverage
+                        })
                 .ToList());
     }
 
@@ -475,7 +479,10 @@ public sealed class PlanningController(
                             item.BillStreamId,
                             item.ProviderName,
                             item.Reason.ToString()))
-                .ToList());
+                .ToList())
+        {
+            Coverage = plan.Coverage
+        };
     }
 }
 
@@ -526,7 +533,10 @@ public sealed record PlanningPaydayPlanSummaryResponse(
     decimal PaycheckRemainingAfterPlan,
     decimal Shortfall,
     DateTimeOffset CreatedAtUtc,
-    IReadOnlyList<PlanningPaydayPlanHistoryItemResponse> Items);
+    IReadOnlyList<PlanningPaydayPlanHistoryItemResponse> Items)
+{
+    public PlanningPaycheckPlanCoverage? Coverage { get; init; }
+}
 
 public sealed record PlanningPaydayPlanHistoryItemResponse(
     string? ProviderName,
@@ -547,7 +557,10 @@ public sealed record PlanningPaydayPlanResponse(
     decimal PaycheckRemainingAfterPlan,
     decimal Shortfall,
     IReadOnlyList<PlanningPaydayPlanItemResponse> Items,
-    IReadOnlyList<PlanningPaydayPlanSkippedBillResponse> SkippedBills);
+    IReadOnlyList<PlanningPaydayPlanSkippedBillResponse> SkippedBills)
+{
+    public PlanningPaycheckPlanCoverage? Coverage { get; init; }
+}
 
 public sealed record PlanningPaydayPlanItemResponse(
     Guid BillStreamId,

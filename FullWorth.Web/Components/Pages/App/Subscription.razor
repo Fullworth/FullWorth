@@ -40,8 +40,23 @@
             </div>
         </section>
     }
+    else if (_statusLoadFailed || _status is null)
+    {
+        <section class="subscription-card" data-subscription-read="status" role="alert">
+            <h2>@L["Your access status could not be checked"]</h2>
+            <p>@L["Your current access is unknown. Checking again does not redeem a key or start a payment."]</p>
+            <button type="button" class="subscription-action secondary" disabled="@_reading" @onclick="RefreshAsync">@L["Retry access status"]</button>
+        </section>
+    }
     else
     {
+        @if (_redemptionUncertain)
+        {
+            <section class="subscription-card" data-subscription-read="redemption" role="alert">
+                <p>@L["The access-key result could not be confirmed. Check current access before trying another key or checkout."]</p>
+                <button type="button" class="subscription-action secondary" disabled="@(_working || _reading)" @onclick="RefreshAsync">@L["Check current access"]</button>
+            </section>
+        }
         @if (_status?.IsActive == true)
         {
             <section class="subscription-card subscription-status-card fw-subscription-hero">
@@ -109,12 +124,20 @@
                     @if (_status.IsPaid && _status.BillingAvailable)
                     {
                         <button class="subscription-action"
-                                disabled="@_working"
+                                disabled="@(_working || _reading || _redemptionUncertain)"
                                 @onclick="OpenBillingPortalAsync">
-                            @(_working ? L["Opening…"] : L["Manage billing"])
+                            @(_operation == SubscriptionOperation.BillingPortal ? L["Opening…"] : L["Manage billing"])
                         </button>
                     }
                 </div>
+            </section>
+        }
+
+        @if (_status?.IsActive != true && _status?.BillingAvailable == true && _plans.Count == 0)
+        {
+            <section class="subscription-card" data-subscription-read="plans" role="@(_plansLoadFailed ? "alert" : "status")">
+                <p>@(_plansLoadFailed ? L["FullWorth could not load paid plans. Your access status is still available."] : L["No paid plans are available right now."])</p>
+                <button type="button" class="subscription-action secondary" disabled="@(_working || _plansLoading || _redemptionUncertain)" @onclick="LoadPlansAsync">@L["Retry paid plans"]</button>
             </section>
         }
 
@@ -166,9 +189,9 @@
                             </div>
 
                             <button class="subscription-action subscription-plan-action"
-                                    disabled="@_working"
+                                    disabled="@(_working || _reading || _redemptionUncertain)"
                                     @onclick="() => StartCheckoutAsync(plan.BillingInterval)">
-                                @(_working ? L["Opening secure checkout…"] : L["Choose {0}", isYearly ? L["yearly"] : L["monthly"]])
+                                @(_operation == SubscriptionOperation.Checkout ? L["Opening secure checkout…"] : L["Choose {0}", isYearly ? L["yearly"] : L["monthly"]])
                             </button>
                         </article>
                     }
@@ -216,28 +239,30 @@
                     </div>
                 </div>
 
-                <div class="subscription-key-panel">
+                <form class="subscription-key-panel" @onsubmit="RedeemAsync" @onsubmit:preventDefault="true">
                     <label for="access-key">@L["Access key"]</label>
 
                     <div class="subscription-key-entry">
                         <input id="access-key"
-                               @bind="_accessKey"
+                               @bind="_accessKey" @bind:event="oninput"
+                               disabled="@(_working || _reading || _redemptionUncertain)"
                                autocomplete="off"
                                spellcheck="false"
                                placeholder="BW-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" />
 
-                        <button class="subscription-action secondary"
-                                disabled="@_working"
-                                @onclick="RedeemAsync">
-                            @(_working ? L["Activating…"] : L["Redeem key"])
+                        <button type="submit" class="subscription-action secondary"
+                                disabled="@(_working || _reading || _redemptionUncertain)">
+                            @(_operation == SubscriptionOperation.Redemption ? L["Activating…"] : L["Redeem key"])
                         </button>
                     </div>
 
                     <small>@L["Access keys are redeemed once and attached securely to your FullWorth account."]</small>
-                </div>
+                </form>
             </section>
         }
 
+
+    }
         <footer class="subscription-footer">
             <span>@L["Account export and deletion controls remain available regardless of subscription status."]</span>
             <div>
@@ -246,7 +271,6 @@
                 <a href="/privacy">@L["Privacy"]</a>
             </div>
         </footer>
-    }
 </div>
 
 @code {
@@ -260,7 +284,9 @@
     private string? _message;
     private bool _messageSucceeded;
     private bool _loading = true;
-    private bool _working;
+    private SubscriptionOperation _operation;
+    private bool _working => _operation != SubscriptionOperation.None;
+    private bool _reading, _plansLoading, _statusLoadFailed, _plansLoadFailed, _redemptionUncertain, _disposed;
 
     private bool YearlyOffersSavings
     {
@@ -280,162 +306,139 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        if (!firstRender) return;
         try
         {
-            _module = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./js/subscription-bff.js");
-
-            var query = new Uri(Navigation.Uri).Query;
-            var refreshed = false;
-
-            if (query.Contains("checkout=success", StringComparison.OrdinalIgnoreCase))
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/subscription-bff.js");
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+            var checkout = query.TryGetValue("checkout", out var values) && values.Count == 1 ? values[0] : null;
+            if (string.Equals(checkout, "success", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    await _module.InvokeAsync<object>("syncPaidSubscription");
-                    await RefreshAsync();
-                    refreshed = true;
-
-                    if (_status?.IsActive == true && _status.IsPaid)
-                    {
-                        SetMessage(L["Your paid FullWorth access is active."], succeeded: true);
-                    }
-                    else
-                    {
-                        SetMessage(
-                            L["Checkout returned, but paid access is not confirmed yet. Refresh this page shortly."],
-                            succeeded: false);
-                    }
-                }
-                catch (JSException)
-                {
-                    SetMessage(
-                        L["FullWorth could not confirm paid access yet. Refresh this page shortly."],
-                        succeeded: false);
-                }
+                try { await _module.InvokeAsync<object>("syncPaidSubscription"); }
+                catch (JSException) { /* A fresh status read is authoritative, not the callback or sync response. */ }
+                await ReadStatusAsync();
+                if (!_disposed && !_statusLoadFailed)
+                    SetMessage(_status is { IsActive: true, IsPaid: true }
+                        ? L["Your paid FullWorth access is active."]
+                        : L["Checkout returned, but paid access is not confirmed yet. Refresh this page shortly."],
+                        succeeded: _status is { IsActive: true, IsPaid: true });
             }
-            else if (query.Contains("checkout=cancelled", StringComparison.OrdinalIgnoreCase))
+            else
             {
-                SetMessage(L["Checkout was cancelled. You were not subscribed by FullWorth."], succeeded: false);
-            }
-
-            if (!refreshed)
-            {
-                await RefreshAsync();
+                await ReadStatusAsync();
+                if (string.Equals(checkout, "cancelled", StringComparison.OrdinalIgnoreCase))
+                    SetMessage(L["Checkout was cancelled. You were not subscribed by FullWorth."], succeeded: false);
             }
         }
-        catch (JSException ex)
+        catch (JSException)
         {
-            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not load your subscription status."]), succeeded: false);
+            if (!_disposed) _statusLoadFailed = true;
         }
-        finally
-        {
-            _loading = false;
-            StateHasChanged();
-        }
+        finally { _loading = false; if (!_disposed) StateHasChanged(); }
     }
 
-    private async Task RefreshAsync()
+    private Task RefreshAsync() => _working ? Task.CompletedTask : ReadStatusAsync();
+
+    private async Task ReadStatusAsync()
     {
-        if (_module is null)
+        if (_reading || _disposed) return;
+        _reading = true;
+        _loading = true;
+        _statusLoadFailed = false;
+        try
         {
-            return;
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/subscription-bff.js");
+            var status = await _module.InvokeAsync<SubscriptionStatus>("getSubscription");
+            if (status is null) throw new JSException("Invalid access status.");
+            if (_disposed) return;
+            _status = status;
+            if (_redemptionUncertain)
+            {
+                _redemptionUncertain = false;
+                SetMessage(status.IsActive ? L["Your FullWorth access is active."]
+                    : L["Current access was checked. Review it before redeeming a key again."], status.IsActive);
+            }
+            if (status.BillingAvailable && !status.IsActive) await LoadPlansAsync();
+            else { _plans.Clear(); _plansLoadFailed = false; }
         }
+        catch (JSException)
+        {
+            if (!_disposed) _statusLoadFailed = true;
+        }
+        finally { _reading = false; _loading = false; if (!_disposed) StateHasChanged(); }
+    }
 
-        _status = await _module.InvokeAsync<SubscriptionStatus>("getSubscription");
-
-        if (_status.BillingAvailable)
+    private async Task LoadPlansAsync()
+    {
+        if (_plansLoading || _disposed || _module is null || _status is not { BillingAvailable: true, IsActive: false }) return;
+        _plansLoading = true;
+        _plansLoadFailed = false;
+        try
         {
             var plans = await _module.InvokeAsync<SubscriptionPlan[]>("getSubscriptionPlans");
-            _plans = plans.ToList();
+            if (plans is null) throw new JSException("Invalid paid plan response.");
+            if (!_disposed) _plans = plans.ToList();
         }
-        else
+        catch (JSException)
         {
-            _plans.Clear();
+            if (!_disposed) { _plans.Clear(); _plansLoadFailed = true; }
         }
+        finally { _plansLoading = false; if (!_disposed) StateHasChanged(); }
     }
 
     private async Task StartCheckoutAsync(string billingInterval)
     {
-        if (_working || _module is null)
-        {
-            return;
-        }
-
-        _working = true;
+        if (_disposed || _working || _reading || _redemptionUncertain || _statusLoadFailed || _module is null ||
+            _status is not { BillingAvailable: true, IsActive: false } ||
+            !_plans.Any(plan => string.Equals(plan.BillingInterval, billingInterval, StringComparison.Ordinal))) return;
+        _operation = SubscriptionOperation.Checkout;
         _message = null;
-
-        try
+        try { await _module.InvokeVoidAsync("startCheckout", billingInterval); }
+        catch (JSException)
         {
-            await _module.InvokeVoidAsync("startCheckout", billingInterval);
-        }
-        catch (JSException ex)
-        {
-            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not start secure checkout."]), succeeded: false);
-            _working = false;
-            StateHasChanged();
+            if (!_disposed) SetMessage(L["FullWorth could not start secure checkout."], succeeded: false);
+            _operation = SubscriptionOperation.None;
+            if (!_disposed) StateHasChanged();
         }
     }
 
     private async Task OpenBillingPortalAsync()
     {
-        if (_working || _module is null)
-        {
-            return;
-        }
-
-        _working = true;
+        if (_disposed || _working || _reading || _redemptionUncertain || _statusLoadFailed || _module is null ||
+            _status is not { IsActive: true, IsPaid: true, BillingAvailable: true }) return;
+        _operation = SubscriptionOperation.BillingPortal;
         _message = null;
-
-        try
+        try { await _module.InvokeVoidAsync("openBillingPortal"); }
+        catch (JSException)
         {
-            await _module.InvokeVoidAsync("openBillingPortal");
-        }
-        catch (JSException ex)
-        {
-            SetMessage(GetSafeJsMessage(ex, L["FullWorth could not open subscription management."]), succeeded: false);
-            _working = false;
-            StateHasChanged();
+            if (!_disposed) SetMessage(L["FullWorth could not open subscription management."], succeeded: false);
+            _operation = SubscriptionOperation.None;
+            if (!_disposed) StateHasChanged();
         }
     }
 
     private async Task RedeemAsync()
     {
-        if (_working ||
-            string.IsNullOrWhiteSpace(_accessKey) ||
-            _module is null)
-        {
-            return;
-        }
-
-        _working = true;
+        if (_working || _reading || _redemptionUncertain || _statusLoadFailed || _disposed ||
+            string.IsNullOrWhiteSpace(_accessKey) || _module is null || _status is not { IsActive: false }) return;
+        _operation = SubscriptionOperation.Redemption;
         _message = null;
-
+        var key = _accessKey.Trim();
+        _accessKey = string.Empty;
         try
         {
-            await _module.InvokeAsync<object>(
-                "redeemAccessKey",
-                _accessKey.Trim());
-
-            _accessKey = string.Empty;
-            await RefreshAsync();
-            SetMessage(L["Your FullWorth access is active."], succeeded: true);
+            await _module.InvokeAsync<object>("redeemAccessKey", key);
+            await ReadStatusAsync();
+            if (_disposed) return;
+            if (!_statusLoadFailed && _status?.IsActive == true)
+                SetMessage(L["Your FullWorth access is active."], succeeded: true);
+            else _redemptionUncertain = true;
         }
-        catch (JSException ex)
+        catch (JSException)
         {
-            SetMessage(GetSafeJsMessage(ex, L["That access key could not be redeemed."]), succeeded: false);
+            if (!_disposed) _redemptionUncertain = true;
         }
-        finally
-        {
-            _working = false;
-            StateHasChanged();
-        }
+        finally { _operation = SubscriptionOperation.None; if (!_disposed) StateHasChanged(); }
     }
 
     private void SetMessage(string message, bool succeeded)
@@ -447,18 +450,6 @@
     private void DismissMessage()
     {
         _message = null;
-    }
-
-    private static string GetSafeJsMessage(JSException exception, string fallback)
-    {
-        var message = exception.Message?
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault()?
-            .Trim();
-
-        return string.IsNullOrWhiteSpace(message)
-            ? fallback
-            : message;
     }
 
     private static string FormatDate(DateTimeOffset value) =>
@@ -486,6 +477,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+        _accessKey = string.Empty;
         if (_module is null)
         {
             return;
@@ -500,24 +493,33 @@
         }
     }
 
+    private enum SubscriptionOperation { None, Checkout, BillingPortal, Redemption }
+
     private sealed class SubscriptionStatus
     {
+        [System.Text.Json.Serialization.JsonRequired]
         public bool IsActive { get; set; }
         public string? Tier { get; set; }
         public DateTimeOffset? StartsAtUtc { get; set; }
         public DateTimeOffset? EndsAtUtc { get; set; }
         public string? Source { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public bool BillingAvailable { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public bool IsPaid { get; set; }
         public string? BillingInterval { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public bool CancelAtPeriodEnd { get; set; }
         public string? ProviderStatus { get; set; }
     }
 
     private sealed class SubscriptionPlan
     {
+        [System.Text.Json.Serialization.JsonRequired]
         public string BillingInterval { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonRequired]
         public long UnitAmount { get; set; }
+        [System.Text.Json.Serialization.JsonRequired]
         public string Currency { get; set; } = "USD";
     }
 }

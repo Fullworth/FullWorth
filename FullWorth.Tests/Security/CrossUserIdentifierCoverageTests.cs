@@ -30,6 +30,12 @@ public sealed class CrossUserIdentifierCoverageTests
                         nameof(
                             BillStreamOwnershipTests
                                 .Detail_ForAnotherUsersStream_ReturnsNotFound)),
+                ["GET|/api/bill-streams/{billStreamId:guid}/statement-uploads/latest"] =
+                    new(
+                        typeof(BillStatementUploadStatusAuthorizationTests),
+                        nameof(
+                            BillStatementUploadStatusAuthorizationTests
+                                .Latest_CannotReadAnotherUsersUpload)),
                 ["GET|/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}"] =
                     new(
                         typeof(BillStatementUploadStatusAuthorizationTests),

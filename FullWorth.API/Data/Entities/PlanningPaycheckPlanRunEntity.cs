@@ -34,6 +34,19 @@ public sealed class PlanningPaycheckPlanRunEntity
 
     public decimal Shortfall { get; set; }
 
+    // Nullable for legacy runs; never backfill using today's bill evidence.
+    public int? CoverageEligibleBillCount { get; set; }
+
+    public int? CoverageMissingStatementFactCount { get; set; }
+
+    public int? CoverageMissingDueDateCount { get; set; }
+
+    public int? CoverageCurrencyMismatchCount { get; set; }
+
+    public int? CoverageInvalidStatementAmountCount { get; set; }
+
+    public int? CoveragePriorCurrencyConflictCount { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; } =
         DateTimeOffset.UtcNow;
 

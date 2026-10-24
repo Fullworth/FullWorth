@@ -15,7 +15,8 @@ public sealed class AdminSubscriptionMutationGateway(
         int? durationDays,
         bool grantsLifetimeAccess,
         Guid actorUserId,
-        DateTimeOffset nowUtc)
+        DateTimeOffset nowUtc,
+        Guid? operationId = null)
     {
         if (targetUserId == Guid.Empty ||
             actorUserId == Guid.Empty)
@@ -45,6 +46,7 @@ public sealed class AdminSubscriptionMutationGateway(
         var entitlement =
             new SubscriptionEntitlementEntity
             {
+                Id = operationId ?? Guid.NewGuid(),
                 UserId = targetUserId,
                 Tier = parsedTier,
                 Source = SubscriptionEntitlementSource.Complimentary,
@@ -61,6 +63,15 @@ public sealed class AdminSubscriptionMutationGateway(
             entitlement);
 
         return entitlement.Id;
+    }
+
+    public async Task<AdminGrantOperationSnapshot?> ReadGrantOperationAsync(
+        Guid targetUserId, Guid operationId, CancellationToken cancellationToken = default)
+    {
+        var row = await dbContext.SubscriptionEntitlements.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.UserId == targetUserId && item.Id == operationId, cancellationToken);
+        return row is null ? null : new(row.Id, row.GrantedByUserId, row.Tier.ToString(),
+            row.Source == SubscriptionEntitlementSource.Complimentary, row.StartsAtUtc, row.EndsAtUtc);
     }
 
     public async Task<AdminSubscriptionMutationResult>

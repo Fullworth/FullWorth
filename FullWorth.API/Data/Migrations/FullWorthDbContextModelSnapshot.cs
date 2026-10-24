@@ -966,6 +966,24 @@ namespace FullWorth.API.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("CoverageEligibleBillCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CoverageMissingStatementFactCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CoverageMissingDueDateCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CoverageCurrencyMismatchCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CoverageInvalidStatementAmountCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CoveragePriorCurrencyConflictCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -1009,6 +1027,8 @@ namespace FullWorth.API.Data.Migrations
                     b.ToTable("PlanningPaycheckPlanRuns", null, t =>
                         {
                             t.HasCheckConstraint("CK_PlanningPaycheckPlanRuns_Amounts", "\"PaycheckAmount\" >= 0 AND \"RecommendedSetAside\" >= 0 AND \"PaycheckRemainingAfterPlan\" >= 0 AND \"Shortfall\" >= 0");
+
+                            t.HasCheckConstraint("CK_PlanningPaycheckPlanRuns_Coverage", "(\"CoverageEligibleBillCount\" IS NULL AND \"CoverageMissingStatementFactCount\" IS NULL AND \"CoverageMissingDueDateCount\" IS NULL AND \"CoverageCurrencyMismatchCount\" IS NULL AND \"CoverageInvalidStatementAmountCount\" IS NULL AND \"CoveragePriorCurrencyConflictCount\" IS NULL) OR (\"CoverageEligibleBillCount\" IS NOT NULL AND \"CoverageEligibleBillCount\" >= 0 AND \"CoverageEligibleBillCount\" <= 500 AND \"CoverageMissingStatementFactCount\" IS NOT NULL AND \"CoverageMissingStatementFactCount\" >= 0 AND \"CoverageMissingStatementFactCount\" <= 500 AND \"CoverageMissingDueDateCount\" IS NOT NULL AND \"CoverageMissingDueDateCount\" >= 0 AND \"CoverageMissingDueDateCount\" <= 500 AND \"CoverageCurrencyMismatchCount\" IS NOT NULL AND \"CoverageCurrencyMismatchCount\" >= 0 AND \"CoverageCurrencyMismatchCount\" <= 500 AND \"CoverageInvalidStatementAmountCount\" IS NOT NULL AND \"CoverageInvalidStatementAmountCount\" >= 0 AND \"CoverageInvalidStatementAmountCount\" <= 500 AND \"CoveragePriorCurrencyConflictCount\" IS NOT NULL AND \"CoveragePriorCurrencyConflictCount\" >= 0 AND \"CoveragePriorCurrencyConflictCount\" <= 500 AND CAST(\"CoverageEligibleBillCount\" AS bigint) + CAST(\"CoverageMissingStatementFactCount\" AS bigint) + CAST(\"CoverageMissingDueDateCount\" AS bigint) + CAST(\"CoverageCurrencyMismatchCount\" AS bigint) + CAST(\"CoverageInvalidStatementAmountCount\" AS bigint) + CAST(\"CoveragePriorCurrencyConflictCount\" AS bigint) <= 500)");
 
                             t.HasCheckConstraint("CK_PlanningPaycheckPlanRuns_CurrencyCode", "char_length(\"CurrencyCode\") = 3");
                         });

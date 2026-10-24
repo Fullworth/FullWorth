@@ -65,6 +65,7 @@
             <div>
                 <label for="bill-sort">@L["Sort active bills"]</label>
                 <select id="bill-sort" @bind="_sort">
+                    <option value="@BillLedgerSort.Attention">@L["Changes and evidence gaps first"]</option>
                     <option value="@BillLedgerSort.Name">@L["Provider name"]</option>
                     <option value="@BillLedgerSort.LatestCharge">@L["Latest charge within currency"]</option>
                     <option value="@BillLedgerSort.Increase">@L["Change within currency"]</option>
@@ -421,7 +422,7 @@
     private int _decreasedCount => _snapshot.DecreasedCount;
     private int _noHistoryCount => _snapshot.NoHistoryCount;
     private BillLedgerFilter _filter = BillLedgerFilter.All;
-    private BillLedgerSort _sort = BillLedgerSort.Name;
+    private BillLedgerSort _sort = BillLedgerSort.Attention;
     private string _search = string.Empty;
     private string _currency = string.Empty;
     private bool _hasSnapshot;
@@ -442,7 +443,7 @@
         _search = string.Empty;
         _currency = string.Empty;
         _filter = BillLedgerFilter.All;
-        _sort = BillLedgerSort.Name;
+        _sort = BillLedgerSort.Attention;
     }
 
     private async Task ToggleDiscoveryAsync()

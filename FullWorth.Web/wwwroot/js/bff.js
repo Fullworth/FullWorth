@@ -1,6 +1,14 @@
+import { loginRedirectUrl } from "./login-redirect.js";
+import { pollPlaidCompletion, isActiveLinkResult } from "./plaid-completion.js";
 import { confirmAction } from "./confirmation-dialog.js";
 
 let antiforgeryToken = null;
+const bankFlows = new Set();
+export function cancelBankConnectionFlows() {
+    for (const flow of bankFlows) flow.abort();
+    bankFlows.clear();
+}
+
 
 const statementFileSizeLimit =
     15 * 1024 * 1024;
@@ -175,17 +183,22 @@ async function handleResponse(
     response) {
 
     if (response.status === 401) {
-        window.location.assign(
-            "/login");
+        window.location.assign(loginRedirectUrl(window.location));
 
         throw new Error(
             "FullWorth session expired.");
     }
 
     if (!response.ok) {
-        throw new Error(
-            await getSafeErrorMessage(
-                response));
+        const error = new Error(await getSafeErrorMessage(response));
+        error.status = response.status;
+        if (response.status === 429) {
+            const value = response.headers.get("Retry-After");
+            const seconds = value === null ? NaN : Number(value);
+            error.retryAfterMs = Number.isFinite(seconds) && seconds >= 0
+                ? seconds * 1000 : Math.max(0, Date.parse(value ?? "") - Date.now());
+        }
+        throw error;
     }
 
     if (response.status === 204) {
@@ -269,16 +282,19 @@ async function getAntiforgeryToken() {
 
 async function mutateJson(
     url,
-    method) {
+    method,
+    signal) {
 
     const requestToken =
         await getAntiforgeryToken();
 
+    signal?.throwIfAborted();
     const response =
         await fetch(
             url,
             {
                 method,
+                signal,
 
                 credentials:
                     "same-origin",
@@ -428,131 +444,34 @@ function openPlaidWindow() {
 }
 
 async function waitForPlaidCompletion(
-    sessionId,
-    plaidWindow,
-    statusElement,
-    completedMessage,
-    completedDestination) {
-
-    const text =
-        getPlaidUiText();
-
-    const deadline =
-        Date.now() +
-        (10 * 60 * 1000);
-
-    let popupClosedPendingChecks =
-        0;
-
-    while (Date.now() <
-        deadline) {
-
-        await delay(
-            2000);
-
-        const result =
-            await completePlaidLinkSession(
-                sessionId);
-
-        const state =
-            String(
-                result?.status ?? "")
-                .toLowerCase();
-
-        if (state ===
-            "pending") {
-            let popupClosed =
-                false;
-
-            try {
-                popupClosed =
-                    plaidWindow.closed;
-            } catch {
-            }
-
-            if (popupClosed) {
-                popupClosedPendingChecks +=
-                    1;
-
-                if (popupClosedPendingChecks >=
-                    5) {
-                    setConnectStatus(
-                        statusElement,
-                        text.popupClosed,
-                        "neutral");
-
-                    return;
-                }
-            } else {
-                popupClosedPendingChecks =
-                    0;
-            }
-
-            continue;
-        }
-
-        if (state ===
-            "completed") {
-
-            const institution =
-                result?.connection
-                    ?.institutionName ??
-                text.defaultInstitution;
-
-            setConnectStatus(
-                statusElement,
-                completedMessage(
-                    institution),
-                "success");
-
-            try {
-                if (!plaidWindow.closed) {
-                    plaidWindow.close();
-                }
-            } catch {
-            }
-
-            await delay(
-                900);
-
-            window.location.assign(
-                completedDestination);
-
-            return;
-        }
-
-        if (state ===
-            "exited") {
-            setConnectStatus(
-                statusElement,
-                text.canceled,
-                "neutral");
-
-            return;
-        }
-
-        if (state ===
-            "expired") {
-            setConnectStatus(
-                statusElement,
-                text.expired,
-                "error");
-
-            return;
-        }
-
-        setConnectStatus(
-            statusElement,
-            text.completionFailed,
-            "error");
-
-        return;
+    sessionId, plaidWindow, statusElement, completedMessage, completedDestination, flow, button) {
+    const text = getPlaidUiText();
+    const isCurrent = () => !flow.signal.aborted && button.isConnected && statusElement?.isConnected;
+    const result = await pollPlaidCompletion({
+        signal: flow.signal, isCurrent,
+        isPopupClosed: () => { try { return plaidWindow.closed; } catch { return false; } },
+        readStatus: signal => completePlaidLinkSession(sessionId, signal)
+    });
+    if (!result || !isCurrent()) return;
+    const state = String(result.status ?? "").toLowerCase();
+    if (state === "completed" && isActiveLinkResult(result)) {
+        setConnectStatus(statusElement, completedMessage(
+            result.connection?.institutionName ?? text.defaultInstitution), "success");
+        await delay(900);
+        if (!isCurrent()) return;
+        try { if (!plaidWindow.closed) plaidWindow.close(); } catch { }
+        window.location.assign(completedDestination);
+    } else if (state === "pending" || state === "timedout") {
+        setConnectStatus(statusElement, text.waitTimedOut, "neutral");
+    } else if (state === "popupclosed") {
+        setConnectStatus(statusElement, text.popupClosed, "neutral");
+    } else if (state === "exited") {
+        setConnectStatus(statusElement, text.canceled, "neutral");
+    } else if (state === "expired") {
+        setConnectStatus(statusElement, text.expired, "error");
+    } else {
+        setConnectStatus(statusElement, text.completionFailed, "error");
     }
-
-    setConnectStatus(
-        statusElement,
-        text.waitTimedOut,
-        "error");
 }
 
 export async function getExperiencePreferences() {
@@ -804,14 +723,14 @@ export async function deleteFullWorthAccount(
     return true;
 }
 
-export async function createPlaidLinkSession() {
+export async function createPlaidLinkSession(signal) {
     return await mutateJson(
         "/bff/plaid/link-session",
-        "POST");
+        "POST", signal);
 }
 
 export async function createPlaidUpdateLinkSession(
-    connectionId) {
+    connectionId, signal) {
 
     if (!connectionId) {
         throw new Error(
@@ -820,11 +739,11 @@ export async function createPlaidUpdateLinkSession(
 
     return await mutateJson(
         `/bff/plaid/connections/${encodeURIComponent(connectionId)}/update-link-session`,
-        "POST");
+        "POST", signal);
 }
 
 export async function completePlaidLinkSession(
-    sessionId) {
+    sessionId, signal) {
 
     if (!sessionId) {
         throw new Error(
@@ -833,7 +752,7 @@ export async function completePlaidLinkSession(
 
     return await mutateJson(
         `/bff/plaid/link-session/${encodeURIComponent(sessionId)}/complete`,
-        "POST");
+        "POST", signal);
 }
 
 export async function disconnectBankConnection(
@@ -976,6 +895,15 @@ export async function uploadBillStatement(
         response);
 }
 
+export async function getLatestBillStatementUpload(billStreamId) {
+    if (!billStreamId) {
+        throw new Error("Bill stream ID is required.");
+    }
+
+    return await getJson(
+        `/bff/bill-streams/${encodeURIComponent(billStreamId)}/statement-uploads/latest`);
+}
+
 export async function getBillStatementUploadStatus(
     billStreamId,
     uploadId) {
@@ -1053,10 +981,13 @@ export function wirePlaidConnectButton(
                 text.preparingConnection,
                 "working");
 
+            const flow = new AbortController();
+            bankFlows.add(flow);
             try {
                 const session =
-                    await createPlaidLinkSession();
+                    await createPlaidLinkSession(flow.signal);
 
+                if (flow.signal.aborted || !button.isConnected) return;
                 if (!session?.sessionId ||
                     !session?.hostedLinkUrl) {
                     throw new Error(
@@ -1084,8 +1015,9 @@ export function wirePlaidConnectButton(
                     institution =>
                         text.connected(
                             institution),
-                    "/app");
+                    "/app", flow, button);
             } catch {
+                if (flow.signal.aborted || !button.isConnected) return;
                 try {
                     if (!plaidWindow.closed) {
                         plaidWindow.close();
@@ -1098,6 +1030,7 @@ export function wirePlaidConnectButton(
                     text.connectionFailed,
                     "error");
             } finally {
+                bankFlows.delete(flow);
                 button.dataset.busy =
                     "false";
 
@@ -1180,11 +1113,14 @@ export function wirePlaidReconnectButton(
                     displayInstitution),
                 "working");
 
+            const flow = new AbortController();
+            bankFlows.add(flow);
             try {
                 const session =
                     await createPlaidUpdateLinkSession(
-                        connectionId);
+                        connectionId, flow.signal);
 
+                if (flow.signal.aborted || !button.isConnected) return;
                 if (!session?.sessionId ||
                     !session?.hostedLinkUrl) {
                     throw new Error(
@@ -1212,8 +1148,9 @@ export function wirePlaidReconnectButton(
                     institution =>
                         text.reconnected(
                             institution),
-                    "/app/account");
+                    "/app/account", flow, button);
             } catch {
+                if (flow.signal.aborted || !button.isConnected) return;
                 try {
                     if (!plaidWindow.closed) {
                         plaidWindow.close();
@@ -1227,6 +1164,7 @@ export function wirePlaidReconnectButton(
                         displayInstitution),
                     "error");
             } finally {
+                bankFlows.delete(flow);
                 button.dataset.busy =
                     "false";
 

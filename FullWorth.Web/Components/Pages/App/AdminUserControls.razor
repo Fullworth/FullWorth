@@ -254,7 +254,7 @@
         }
         catch (Exception)
         {
-            _errorMessage = L["FullWorth could not complete that administrative change."];
+            _errorMessage = UnconfirmedMutationMessage();
         }
         finally
         {
@@ -329,6 +329,7 @@
             UserId.ToString("D"),
             new AdminEntitlementRequest
             {
+                OperationId = mutation.OperationId,
                 Tier = "Standard",
                 DurationDays = mutation.DurationDays,
                 GrantsLifetimeAccess = mutation.GrantsLifetimeAccess,
@@ -363,8 +364,13 @@
             }
         }
 
-        return L["FullWorth could not complete that administrative change."];
+        return UnconfirmedMutationMessage();
     }
+
+    private string UnconfirmedMutationMessage() =>
+        _pending?.Kind == AdminMutationKind.Entitlement
+            ? L["The grant could not be confirmed. Retry this confirmation with fresh credentials to recover the same grant, or cancel and review the account."].Value
+            : L["FullWorth could not complete that administrative change."].Value;
 
     private void ClearPrivilegeGrantReauthentication()
     {
@@ -442,7 +448,10 @@
         string? Name,
         bool MakeActive,
         int? DurationDays,
-        bool GrantsLifetimeAccess);
+        bool GrantsLifetimeAccess)
+    {
+        public Guid OperationId { get; } = Guid.NewGuid();
+    }
 
     private sealed class AdminFetchResult<T>
     {
@@ -468,6 +477,7 @@
 
     private sealed class AdminEntitlementRequest
     {
+        public Guid OperationId { get; set; }
         public string Tier { get; set; } = string.Empty;
         public int? DurationDays { get; set; }
         public bool GrantsLifetimeAccess { get; set; }

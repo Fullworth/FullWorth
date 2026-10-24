@@ -12,7 +12,7 @@ public sealed class PlanningWorkspaceTests
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private const string Schedule = """{"frequency":"Biweekly","anchorPayDate":"2026-10-16","defaultPaychecksAhead":2}""";
     private const string BillId = "d8d88252-55c1-444c-9496-e0b63a941a61";
-    private const string Bills = """[{"id":"d8d88252-55c1-444c-9496-e0b63a941a61","providerName":"Example Utility","isActive":true,"currentAmount":89.25,"currencyCode":"USD"}]""";
+    private const string Bills = """[{"id":"d8d88252-55c1-444c-9496-e0b63a941a61","providerName":"Example Utility","isActive":true,"currentAmount":89.25,"currencyCode":"USD","hasTransactionEvidence":true}]""";
     private const string Prefs = """[{"billStreamId":"d8d88252-55c1-444c-9496-e0b63a941a61","paychecksAheadOverride":3}]""";
     private sealed class Module : IJSObjectReference
     {
@@ -262,6 +262,87 @@ public sealed class PlanningWorkspaceTests
         var page = Page(module); await Run(page, "LoadAsync");
         Assert.Equal(panel, Assert.Single(Get<HashSet<string>>(page, "_loadErrors")));
         Assert.False(Get<bool>(page, "_isInitializing"));
+    }
+
+    private static bool RequiresReview(object plan) =>
+        (bool)typeof(Planning)
+            .GetMethod("RequiresPlanReview", BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, [plan])!;
+
+    private static string History(string? coverage) =>
+        """[{"id":"a53b2252-52be-4748-974d-243b2a3b82d8","paycheckPostedDate":"2026-10-02","paycheckAmount":1000,"currencyCode":"USD","recommendedSetAside":0,"paycheckRemainingAfterPlan":1000,"shortfall":0,"items":[],"coverage":"""
+        + (coverage ?? "null") + "}]";
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("{\"eligibleBillCount\":1,\"missingStatementFactCount\":0,\"missingDueDateCount\":0,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}", false)]
+    [InlineData("{\"eligibleBillCount\":0,\"missingStatementFactCount\":1,\"missingDueDateCount\":1,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}", true)]
+    public async Task SavedPaydayCoverage_DistinguishesLegacyCompleteAndExcludedPlans(
+        string? coverage, bool needsReview)
+    {
+        var module = new Module(); var normal = module.Reply;
+        module.Reply = (name, args) => name == "getRecentPaydayPlans"
+            ? Task.FromResult<string?>(History(coverage)) : normal(name, args);
+        var page = Page(module);
+        await Run(page, "LoadAsync");
+
+        Assert.Empty(Get<HashSet<string>>(page, "_loadErrors"));
+        var plan = Assert.Single(Get<IList>(page, "_recentPlans").Cast<object>());
+        Assert.Equal(needsReview, RequiresReview(plan));
+        var storedCoverage = Get<object?>(plan, "Coverage");
+        if (coverage is null) Assert.Null(storedCoverage);
+        else
+        {
+            Assert.NotNull(storedCoverage);
+            Assert.Equal(needsReview ? 2 : 0, Get<int>(storedCoverage, "SkippedBillCount"));
+        }
+
+        await page.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData("{\"eligibleBillCount\":-1,\"missingStatementFactCount\":0,\"missingDueDateCount\":0,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}")]
+    [InlineData("{\"eligibleBillCount\":501,\"missingStatementFactCount\":0,\"missingDueDateCount\":0,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}")]
+    [InlineData("{\"eligibleBillCount\":499,\"missingStatementFactCount\":2,\"missingDueDateCount\":0,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}")]
+    public async Task InvalidCoverageRefresh_PreservesLastVerifiedPaydayHistory(string invalid)
+    {
+        var module = new Module(); var normal = module.Reply;
+        var valid = "{\"eligibleBillCount\":1,\"missingStatementFactCount\":0,\"missingDueDateCount\":0,\"currencyMismatchCount\":0,\"invalidStatementAmountCount\":0,\"priorCurrencyConflictCount\":0}";
+        module.Reply = (name, args) => name == "getRecentPaydayPlans"
+            ? Task.FromResult<string?>(History(valid)) : normal(name, args);
+        var page = Page(module);
+        await Run(page, "LoadAsync");
+        Assert.Empty(Get<HashSet<string>>(page, "_loadErrors"));
+        var oldPlan = Assert.Single(Get<IList>(page, "_recentPlans").Cast<object>());
+
+        module.Reply = (name, args) => name == "getRecentPaydayPlans"
+            ? Task.FromResult<string?>(History(invalid)) : normal(name, args);
+        await Run(page, "RetryRecentAsync");
+        Assert.Contains("recent", Get<HashSet<string>>(page, "_loadErrors"));
+        Assert.Same(oldPlan, Assert.Single(Get<IList>(page, "_recentPlans").Cast<object>()));
+        await page.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BillAmount_KeepsTransactionEvidenceDistinctFromZero(bool evidenced)
+    {
+        var module = new Module();
+        var normal = module.Reply;
+        var evidenceJson = evidenced ? "true" : "false";
+        module.Reply = (name, args) => name == "getBillStreams"
+            ? Task.FromResult<string?>(Bills.Replace("\"hasTransactionEvidence\":true",
+                "\"hasTransactionEvidence\":" + evidenceJson).Replace("89.25", "0"))
+            : normal(name, args);
+        var page = Page(module);
+        await Run(page, "LoadAsync");
+        var row = Bill(page);
+        Assert.Equal(0m, Get<decimal>(row, "CurrentAmount"));
+        Assert.Equal(evidenced, Get<bool>(row, "HasTransactionEvidence"));
+        Assert.Empty(Get<HashSet<string>>(page, "_loadErrors"));
+        Assert.DoesNotContain(module.Calls, call => call.Name.StartsWith("put") || call.Name.StartsWith("delete"));
+        await page.DisposeAsync();
     }
 
     [Fact]

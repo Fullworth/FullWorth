@@ -146,4 +146,8 @@ if sh "$root_dir/deploy/verify-subscription-safety.sh" "$subscription_root" >/de
     fail "subscription safety verifier accepted enabled enforcement."
 fi
 
+# Evidence recorders and aggregation are part of the release-readiness contract.
+sh "$root_dir/deploy/tests/installed-device-acceptance-tests.sh"
+sh "$root_dir/deploy/tests/private-beta-acceptance-evidence-tests.sh"
+
 printf '%s\n' 'Beta readiness operation tests passed.'

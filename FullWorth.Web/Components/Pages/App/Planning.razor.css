@@ -533,3 +533,26 @@
     }
 }
 
+
+/* Saved evidence coverage is distinct from a paycheck's arithmetic shortfall. */
+.planning-coverage-warning,
+.planning-coverage-summary {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--bw-border);
+    color: var(--bw-text-muted);
+    line-height: 1.5;
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
+}
+.planning-coverage-summary {
+    display: grid;
+    gap: 5px;
+}
+.planning-coverage-summary strong {
+    color: var(--bw-text);
+}
+.planning-coverage-summary.needs-review {
+    border-inline-start: 3px solid #d59b35;
+}

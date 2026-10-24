@@ -98,4 +98,5 @@
   <data name="Previously loaded discovery counts are shown and may be out of date." xml:space="preserve"><value>Se muestran los recuentos de detección cargados anteriormente; pueden estar desactualizados.</value></data>
   <data name="Bills could not be refreshed. Previously loaded records are still shown and may be out of date. Refresh bills to retry." xml:space="preserve"><value>No se pudieron actualizar las facturas. Se siguen mostrando los registros anteriores y pueden estar desactualizados. Pulsa Actualizar facturas para reintentar.</value></data>
   <data name="Refresh discovery details" xml:space="preserve"><value>Actualizar detalles de detección</value></data>
+  <data name="Changes and evidence gaps first" xml:space="preserve"><value>Primero los cambios y los datos por revisar</value></data>
 </root>

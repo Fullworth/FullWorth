@@ -124,8 +124,27 @@ export async function verifyUiPolish(page, outputDir) {
           assert.deepEqual(await amounts.allTextContents(), financialBefore,
             "The presentation layer must not change financial content.");
         }
-        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false,
-          "Polish must not introduce horizontal page scrolling: " + label + " " + width + " " + language + " large=" + enlarged);
+        const pageGeometry = await page.evaluate(() => {
+          const viewport = document.documentElement.clientWidth;
+          const scrollWidth = document.documentElement.scrollWidth;
+          const offenders = [...document.querySelectorAll(".app-shell, .app-shell *")]
+            .filter(element => {
+              const r = element.getBoundingClientRect();
+              const style = getComputedStyle(element);
+              return style.display !== "none" && style.position !== "fixed" &&
+                r.width > 0 && r.right > viewport + 1;
+            })
+            .slice(0, 12)
+            .map(element => ({
+              tag: element.tagName.toLowerCase(),
+              classes: [...element.classList].slice(0, 4),
+              right: Math.round(element.getBoundingClientRect().right)
+            }));
+          return { viewport, scrollWidth, offenders };
+        });
+        assert.ok(pageGeometry.scrollWidth <= pageGeometry.viewport + 1,
+          "Polish must not introduce horizontal page scrolling: " + label + " " +
+          width + " " + language + " large=" + enlarged + " " + JSON.stringify(pageGeometry));
 
         if (width <= 900) {
           const links = await page.locator(".mobile-bottom-link").all();

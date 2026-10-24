@@ -763,7 +763,7 @@ builder.Services
         "Plaid:Environment must be either 'sandbox' or 'production'.")
     .ValidateOnStart();
 
-builder.Services.AddHttpClient<PlaidApiClient>();
+builder.Services.AddPlaidApiClient();
 
 builder.Services.AddScoped<
     PlaidTokenProtector>();
@@ -785,6 +785,8 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     PlaidConnectionSyncCoordinator>();
+
+builder.Services.AddScoped<PlaidBankDataSyncGateway>();
 
 builder.Services.AddScoped<
     IBankDataSyncGateway,
@@ -1031,6 +1033,16 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     BillStatementPaymentDueAlertService>();
+
+builder.Services.AddScoped<
+    IBillDueReminderMaintenanceReadGateway,
+    BillDueReminderMaintenanceReadGateway>();
+
+builder.Services.AddScoped<
+    BillStatementDueAlertMaintenance>();
+
+builder.Services.AddHostedService<
+    BillStatementDueAlertMaintenanceWorker>();
 
 builder.Services.AddScoped<
     BillStatementPersistenceService>();

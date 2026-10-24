@@ -28,6 +28,7 @@ public sealed class EndpointSecurityInventoryTests
         "API|GET|/api/bank-connections|authenticated|global:300-per-minute",
         "API|GET|/api/bank-transactions|authenticated|global:300-per-minute",
         "API|GET|/api/bill-discovery/diagnostics|authenticated|named:financial-refresh",
+        "API|GET|/api/bill-streams/{billStreamId:guid}/statement-uploads/latest|authenticated|global:300-per-minute",
         "API|GET|/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}/file|authenticated|named:statement-download",
         "API|GET|/api/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}|authenticated|global:300-per-minute",
         "API|GET|/api/bill-streams/{billStreamId:guid}|authenticated|global:300-per-minute",
@@ -130,6 +131,7 @@ public sealed class EndpointSecurityInventoryTests
         "WEB|GET|/auth/external/{provider}/link|authenticated|none",
         "WEB|GET|/auth/external/{provider}/register|anonymous-explicit|none",
         "WEB|GET|/auth/external/{provider}|anonymous-explicit|none",
+        "WEB|GET|/auth/passkeys/continue|authenticated|named:web-authentication",
         "WEB|GET|/bff/account/external|authenticated|none",
         "WEB|GET|/bff/account/preferences/|authenticated|none",
         "WEB|GET|/bff/account/security/passkeys|authenticated|none",
@@ -143,6 +145,7 @@ public sealed class EndpointSecurityInventoryTests
         "WEB|GET|/bff/bank-connections|authenticated|none",
         "WEB|GET|/bff/bank-transactions|authenticated|none",
         "WEB|GET|/bff/bill-discovery/diagnostics|authenticated|named:financial-refresh",
+        "WEB|GET|/bff/bill-streams/{billStreamId:guid}/statement-uploads/latest|authenticated|none",
         "WEB|GET|/bff/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}/file|authenticated|none",
         "WEB|GET|/bff/bill-streams/{billStreamId:guid}/statement-uploads/{uploadId:guid}|authenticated|none",
         "WEB|GET|/bff/bill-streams/{billStreamId:guid}|authenticated|none",
@@ -275,11 +278,11 @@ public sealed class EndpointSecurityInventoryTests
     public void Snapshot_CoversEveryReviewedAccessAndRateLimitClass()
     {
         Assert.Equal(
-            225,
+            228,
             ExpectedInventory.Length);
 
         Assert.Equal(
-            96,
+            97,
             ExpectedInventory.Count(
                 row =>
                     row.StartsWith(
@@ -287,7 +290,7 @@ public sealed class EndpointSecurityInventoryTests
                         StringComparison.Ordinal)));
 
         Assert.Equal(
-            129,
+            131,
             ExpectedInventory.Count(
                 row =>
                     row.StartsWith(
@@ -323,7 +326,7 @@ public sealed class EndpointSecurityInventoryTests
                     StringComparison.Ordinal));
 
         Assert.Equal(
-            61,
+            62,
             ExpectedInventory.Count(
                 row =>
                     row.Contains(

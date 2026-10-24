@@ -1,0 +1,11 @@
+.security-keys-retry {
+    min-height: 44px;
+    max-width: 100%;
+    margin: 0.75rem 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.security-keys-retry[hidden] {
+    display: none !important;
+}

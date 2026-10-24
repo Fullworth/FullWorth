@@ -31,4 +31,11 @@
   <data name="Display name cleared." xml:space="preserve"><value>Nombre para mostrar eliminado.</value></data>
   <data name="Profile saved." xml:space="preserve"><value>Perfil guardado.</value></data>
   <data name="FullWorth could not update your profile." xml:space="preserve"><value>FullWorth no pudo actualizar tu perfil.</value></data>
+  <data name="Retry profile" xml:space="preserve"><value>Reintentar perfil</value></data>
+  <data name="Check saved profile" xml:space="preserve"><value>Comprobar perfil guardado</value></data>
+  <data name="Your saved profile has been confirmed." xml:space="preserve"><value>Se ha confirmado tu perfil guardado.</value></data>
+  <data name="The saved profile was checked. Your draft is kept; review it before saving again." xml:space="preserve"><value>Se ha comprobado el perfil guardado. Se conserva tu borrador; revísalo antes de volver a guardar.</value></data>
+  <data name="The profile update could not be confirmed. Check the saved profile before trying again." xml:space="preserve"><value>No se pudo confirmar la actualización del perfil. Comprueba el perfil guardado antes de volver a intentarlo.</value></data>
+  <data name="Saved display name" xml:space="preserve"><value>Nombre guardado</value></data>
+  <data name="Not set" xml:space="preserve"><value>Sin definir</value></data>
 </root>

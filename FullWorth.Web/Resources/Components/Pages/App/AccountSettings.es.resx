@@ -96,4 +96,9 @@
   <data name="Two-factor authentication is already enabled. Reload settings and choose New recovery codes if you need replacements." xml:space="preserve">
     <value>La autenticación de dos factores ya está habilitada. Vuelve a cargar Configuración y elige Nuevos códigos de recuperación si necesitas reemplazarlos.</value>
   </data>
+  <data name="Retry security settings" xml:space="preserve"><value>Reintentar configuración de seguridad</value></data>
+  <data name="FullWorth could not load your timestamp preference." xml:space="preserve"><value>FullWorth no pudo cargar tu preferencia de fecha y hora.</value></data>
+  <data name="Retry timestamp preference" xml:space="preserve"><value>Reintentar preferencia de fecha y hora</value></data>
+  <data name="FullWorth could not load this device's performance preference." xml:space="preserve"><value>FullWorth no pudo cargar la preferencia de rendimiento de este dispositivo.</value></data>
+  <data name="Retry performance preference" xml:space="preserve"><value>Reintentar preferencia de rendimiento</value></data>
 </root>

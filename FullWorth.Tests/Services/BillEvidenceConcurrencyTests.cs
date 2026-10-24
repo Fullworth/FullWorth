@@ -18,20 +18,24 @@ public sealed class BillEvidenceConcurrencyTests
             .UseInMemoryDatabase($"bill-concurrency-{Guid.NewGuid():N}").Options;
         var owner = Guid.NewGuid();
         var id = Guid.NewGuid();
+        var sourceAccountId = Guid.NewGuid();
         await using (var seed = new FullWorthDbContext(options))
         {
             seed.BillStreams.Add(new BillStreamEntity { Id = id, UserId = owner,
                 ProviderName = "Synthetic bill", Source = BillStreamSource.AutomaticDiscovery, IsActive = active });
-            var transaction = new BankTransactionEntity { UserId = owner, Name = "Synthetic bill", Amount = 10m,
+            var transaction = new BankTransactionEntity { UserId = owner, BankAccountId = sourceAccountId,
+                Name = "Synthetic bill", Amount = 10m,
                 PostedDate = new DateOnly(2026, 1, 5), IsoCurrencyCode = "USD" };
             seed.BankTransactions.Add(transaction);
             // Deactivation now requires a sufficient owner-specific posted
             // history window. Preserve that prerequisite so this test still
             // exercises concurrent confirmation versus actual deactivation.
             seed.BankTransactions.Add(new BankTransactionEntity { UserId = owner,
+                BankAccountId = sourceAccountId,
                 Name = "Synthetic unrelated first", MerchantName = "Synthetic unrelated first",
                 Amount = 3m, PostedDate = new DateOnly(2026, 1, 1), IsoCurrencyCode = "USD" });
             seed.BankTransactions.Add(new BankTransactionEntity { UserId = owner,
+                BankAccountId = sourceAccountId,
                 Name = "Synthetic unrelated last", MerchantName = "Synthetic unrelated last",
                 Amount = 4m, PostedDate = new DateOnly(2026, 3, 8), IsoCurrencyCode = "USD" });
             seed.BillTransactionAssociations.Add(new BillTransactionAssociationEntity

@@ -8,6 +8,8 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>FullWorth</RootNamespace>
     <UseMaui>true</UseMaui>
+    <!-- 10.0.120 includes the upstream Resizetizer SVG text/filter compatibility fix. -->
+    <MauiVersion>10.0.120</MauiVersion>
     <SingleProject>true</SingleProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -70,16 +72,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <!-- Temporary build-only workaround: MAUI Resizetizer 10.0.101/10.0.110
-         loads incompatible SkiaSharp/System.Memory types while rasterizing
-         SVG <text> elements (see dotnet/maui#38319 and #38507).
-         Pin only Resizetizer; keep the MAUI runtime at $(MauiVersion).
-         NU1605 is expected solely for this one intentional build-tool pin.
-         Remove this reference after a fixed Resizetizer ships. -->
-    <PackageReference Include="Microsoft.Maui.Resizetizer"
-                      Version="10.0.100"
-                      PrivateAssets="all"
-                      NoWarn="NU1605" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>
 

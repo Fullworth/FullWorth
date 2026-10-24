@@ -1,3 +1,4 @@
+import { verifyAccountPageRecovery } from "./account-page-recovery.test.mjs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
@@ -181,4 +182,5 @@ export async function verifyPrivacyControls(page, outputDir) {
     page.off("download", recordDownload);
     await page.evaluate(() => document.documentElement.style.fontSize = "");
   }
+  await verifyAccountPageRecovery(page, outputDir);
 }

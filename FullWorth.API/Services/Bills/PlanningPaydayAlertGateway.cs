@@ -59,7 +59,7 @@ public sealed class PlanningPaydayAlertGateway(
             return;
         }
 
-        dbContext.BillAlerts.Add(
+        var pending =
             new BillAlertEntity
             {
                 UserId =
@@ -87,7 +87,9 @@ public sealed class PlanningPaydayAlertGateway(
                     now,
                 UpdatedAtUtc =
                     now
-            });
+            };
+
+        dbContext.BillAlerts.Add(pending);
 
         try
         {
@@ -101,7 +103,9 @@ public sealed class PlanningPaydayAlertGateway(
              * concurrency boundary. If a competing request created the same
              * immutable alert first, accept it only when the content matches.
              */
-            dbContext.ChangeTracker.Clear();
+            // Only this failed candidate belongs to this operation. Preserve
+            // other pending caller changes in the shared monitoring context.
+            dbContext.Entry(pending).State = EntityState.Detached;
 
             existing =
                 await FindAsync(
@@ -118,6 +122,13 @@ public sealed class PlanningPaydayAlertGateway(
                 return;
             }
 
+            throw;
+        }
+        catch
+        {
+            // Cancellation and other pre-commit failures retain Added entries
+            // too; an unrelated health-alert save must not commit this one.
+            dbContext.Entry(pending).State = EntityState.Detached;
             throw;
         }
     }

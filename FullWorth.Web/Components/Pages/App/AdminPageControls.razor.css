@@ -1,0 +1,36 @@
+.admin-page-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: .875rem;
+}
+
+.admin-page-controls span {
+    overflow-wrap: anywhere;
+}
+
+button {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 8px 14px;
+    border: 1px solid var(--border-color, rgba(127, 127, 127, .22));
+    border-radius: 12px;
+    background: var(--surface-elevated, rgba(127, 127, 127, .08));
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}

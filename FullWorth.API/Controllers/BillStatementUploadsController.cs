@@ -48,6 +48,31 @@ public sealed class BillStatementUploadsController
             billStreamGateway;
     }
 
+    // Recovery is read-only and owner-scoped. A separate upload ID is not
+    // needed to reopen the latest pending attempt after browser navigation.
+    [HttpGet("latest")]
+    public async Task<ActionResult<BillStatementUploadStatusResult>>
+        GetLatestUpload(Guid billStreamId, CancellationToken cancellationToken = default)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized();
+
+        if (billStreamId == Guid.Empty ||
+            await _billStreamGateway.GetOwnedAsync(userId, billStreamId, cancellationToken) is null)
+            return NotFound();
+
+        var latest = await _dbContext.BillStatementUploads.AsNoTracking()
+            .Where(upload => upload.UserId == userId && upload.BillStreamId == billStreamId)
+            .OrderByDescending(upload => upload.CreatedAtUtc)
+            .ThenByDescending(upload => upload.Id)
+            .Select(upload => new BillStatementUploadStatusResult(
+                upload.Id, upload.BillStreamId, upload.Status.ToString(),
+                upload.CreatedAtUtc, upload.UpdatedAtUtc))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return latest is null ? NoContent() : Ok(latest);
+    }
+
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxMultipartBodyLength)]
@@ -172,6 +197,9 @@ public sealed class BillStatementUploadsController
         }
         catch
         {
+            // The file is removed below; its failed metadata insert must not
+            // survive in this context and later reference a deleted file.
+            _dbContext.Entry(upload).State = EntityState.Detached;
             _storageService.Delete(
                 storedFile.StorageKey);
 

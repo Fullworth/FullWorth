@@ -274,6 +274,15 @@ validate_optional_credential_pair \
     FULLWORTH_APPLE_CLIENT_ID \
     FULLWORTH_APPLE_CLIENT_SECRET
 
+# One flag controls API and Web; the API origin is bound to the public Web host
+# by Compose rather than independently configurable RP/origin settings.
+passkeys_enabled=$(read_optional_value BILLWATCH_PASSKEYS_ENABLED)
+[ -n "$passkeys_enabled" ] || passkeys_enabled=false
+case "$passkeys_enabled" in
+    true|false) ;;
+    *) fail "BILLWATCH_PASSKEYS_ENABLED must be true or false when present." ;;
+esac
+
 identity_email_enabled=$(read_optional_value BILLWATCH_IDENTITY_EMAIL_ENABLED)
 [ -n "$identity_email_enabled" ] || identity_email_enabled=false
 case "$identity_email_enabled" in true|false) ;; *) fail "BILLWATCH_IDENTITY_EMAIL_ENABLED must be true or false when present." ;; esac

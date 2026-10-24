@@ -30,4 +30,13 @@
   <data name="FullWorth could not load your subscription status." xml:space="preserve"><value>FullWorth no pudo cargar el estado de tu suscripción.</value></data>
   <data name="Your FullWorth access is active." xml:space="preserve"><value>Tu acceso a FullWorth está activo.</value></data>
   <data name="That access key could not be redeemed." xml:space="preserve"><value>No se pudo canjear esa clave de acceso.</value></data>
+  <data name="Your access status could not be checked" xml:space="preserve"><value>No se pudo comprobar tu estado de acceso</value></data>
+  <data name="Your current access is unknown. Checking again does not redeem a key or start a payment." xml:space="preserve"><value>Se desconoce tu acceso actual. Volver a comprobarlo no canjea una clave ni inicia un pago.</value></data>
+  <data name="Retry access status" xml:space="preserve"><value>Reintentar estado de acceso</value></data>
+  <data name="The access-key result could not be confirmed. Check current access before trying another key or checkout." xml:space="preserve"><value>No se pudo confirmar el resultado de la clave de acceso. Comprueba el acceso actual antes de intentar otra clave o un pago.</value></data>
+  <data name="Check current access" xml:space="preserve"><value>Comprobar acceso actual</value></data>
+  <data name="FullWorth could not load paid plans. Your access status is still available." xml:space="preserve"><value>FullWorth no pudo cargar los planes de pago. Tu estado de acceso sigue disponible.</value></data>
+  <data name="No paid plans are available right now." xml:space="preserve"><value>No hay planes de pago disponibles en este momento.</value></data>
+  <data name="Retry paid plans" xml:space="preserve"><value>Reintentar planes de pago</value></data>
+  <data name="Current access was checked. Review it before redeeming a key again." xml:space="preserve"><value>Se ha comprobado el acceso actual. Revísalo antes de volver a canjear una clave.</value></data>
 </root>

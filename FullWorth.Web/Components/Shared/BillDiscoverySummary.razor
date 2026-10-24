@@ -28,8 +28,10 @@
         <div><dt>@L["Two-payment candidates needing stronger evidence"]</dt><dd>@Data.RejectedInsufficientTwoObservationEvidence</dd></div>
         <div><dt>@L["Other unclassified candidates with weak or variable evidence"]</dt><dd>@Data.RejectedOtherWeakOrVariableEvidence</dd></div>
         <div><dt>@L["Candidates accepted by current rules"]</dt><dd>@Data.AcceptedCandidates</dd></div>
+        <div><dt>@L["Accepted candidates blocked by existing bill or transaction associations"]</dt><dd>@Data.BlockedByExistingBillAmbiguity</dd></div>
     </dl>
 
+    <p>@L["Existing-bill conflicts are intentionally held for review to avoid attaching a payment to the wrong recurring obligation. This count does not identify which private transaction is affected."]</p>
     <p>@L["Discovery currently supports monthly timing. Weekly, biweekly, annual, and irregular payments may be missing. Accepted candidates are not the same as your active bill count or total spending."]</p>
     <p>@L["If an expected bill is missing, privately check whether its payments appear in imported transactions. Do not post bank details or screenshots in public issues."]</p>
     <nav aria-label="@L["Investigate missing bills"]">
@@ -62,5 +64,6 @@
         public int RejectedOtherWeakOrVariableEvidence { get; set; }
         public int AcceptedCandidates { get; set; }
         public int RejectedCurrencyAmbiguity { get; set; }
+        public int BlockedByExistingBillAmbiguity { get; set; }
     }
 }

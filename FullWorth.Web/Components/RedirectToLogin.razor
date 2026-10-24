@@ -10,7 +10,8 @@
         }
 
         Navigation.NavigateTo(
-            "/login",
+            "/login?ReturnUrl=" + Uri.EscapeDataString(FullWorth.Web.Services.LocalLoginDestination.Normalize(
+                "/" + Navigation.ToBaseRelativePath(Navigation.Uri))),
             forceLoad: true);
     }
 }

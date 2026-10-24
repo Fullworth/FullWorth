@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import { verifyInPageNavigation } from "./in-page-navigation.test.mjs";
+import { verifyNavigationRecovery } from "./navigation-recovery.test.mjs";
 
 // Real authenticated components; all planning/bill reads and writes below are intercepted synthetic fixtures.
 export async function verifyPlanningWorkspace(page, outputDir) {
@@ -80,11 +82,19 @@ export async function verifyPlanningWorkspace(page, outputDir) {
     }
   };
   try {
+    await verifyNavigationRecovery(page, outputDir);
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await verifyInPageNavigation(page, "/terms", ".legal-toc", 15, outputDir, "terms-section-navigation");
+    await verifyInPageNavigation(page, "/privacy", ".legal-toc", 11, outputDir, "privacy-section-navigation");
     for (const [width, theme, large, language] of [[390,"dark",false,"en-US"],[1440,"dark",false,"en-US"],[320,"dark",false,"en-US"],[390,"light",false,"en-US"],[390,"dark",true,"en-US"],[390,"dark",false,"es"]]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(t => localStorage.setItem("billwatch-theme", t), theme);
       await page.context().addCookies([{ name: ".AspNetCore.Culture", value: encodeURIComponent("c=en-US|uic=" + language), url: new URL(page.url()).origin, secure: true, sameSite: "Lax" }]);
       await goto();
+      if (width === 390 && theme === "dark" && !large && language === "en-US") {
+        await verifyInPageNavigation(page, "/app/planning", ".planning-jump-links", 4, outputDir, "planning-section-navigation");
+        await goto();
+      }
       if (large) await page.evaluate(() => document.documentElement.style.fontSize = "200%");
       assert.equal(await page.locator(".planning-bill-row").count(), 2, "Inactive bills must stay excluded.");
       assert.equal(await panel("recent").locator(".planning-shortfall-note").count(), 1);

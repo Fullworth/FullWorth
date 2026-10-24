@@ -86,11 +86,70 @@ try {
   await page.locator(".whats-new-dialog").waitFor({ state: "visible" });
   await page.locator(".whats-new-primary").click();
   await page.locator(".whats-new-dialog").waitFor({ state: "hidden" });
+  checkpoint("passkey list read recovery");
+  // Intercept only an authenticated read on the disposable CI host.
+  // Never synthesize registration/removal or change real saved credentials.
+  let readMode = "error";
+  const keyReadPattern = "**/bff/account/security/passkeys";
+  const mockedRead = async route => {
+    assert.equal(route.request().method(), "GET");
+    if (readMode === "error")
+      return route.fulfill({ status: 503, body: "{}" });
+    if (readMode === "expired")
+      return route.fulfill({ status: 401, body: "{}" });
+    if (readMode === "malformed")
+      return route.fulfill({ json: { unexpected: "object instead of array" } });
+    return route.fulfill({ json: [{
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      name: "Synthetic recoverable key", createdAt: "2026-10-01T00:00:00Z"
+    }] });
+  };
+  await page.route(keyReadPattern, mockedRead);
   await page.goto("/app/account/security-keys");
   const management = page.locator('[data-passkeys="manage"]');
-  // Match the existing visual harness's hydration settling period.
+  const retryKeys = management.locator('[data-passkey-action="retry"]');
+  await page.waitForTimeout(900);
+  await retryKeys.waitFor({ state: "visible" });
+  assert.equal(await management.getAttribute("data-loaded"), "error");
+  assert.equal(await management.locator("[data-passkey-list] li").count(), 0);
+
+  readMode = "malformed";
+  await retryKeys.click();
+  await management.getByText("FullWorth returned an invalid key list.", { exact: false }).waitFor();
+  await retryKeys.waitFor({ state: "visible" });
+  assert.equal(await management.locator("[data-passkey-list] li").count(), 0);
+
+  readMode = "success";
+  await retryKeys.click();
+  await management.getByText("Synthetic recoverable key", { exact: false }).waitFor();
+  await retryKeys.waitFor({ state: "hidden" });
+  assert.equal(await management.getAttribute("data-loaded"), "true");
+
+  // Simulate a later read on a replacement/hydrated management root.
+  // A failed refresh must not erase the last verified list.
+  readMode = "error";
+  await page.evaluate(() => {
+    const current = document.querySelector('[data-passkeys="manage"]');
+    const replacement = current.cloneNode(true);
+    replacement.removeAttribute("data-loaded");
+    current.replaceWith(replacement);
+  });
+  await retryKeys.waitFor({ state: "visible" });
+  assert.equal(await management.locator("[data-passkey-list] li").count(), 1);
+  assert.ok((await management.locator("[data-passkey-list]").innerText())
+    .includes("Synthetic recoverable key"));
+
+  readMode = "expired";
+  await retryKeys.click();
+  await management.getByText("Your session expired. Sign in again", { exact: false }).waitFor();
+  assert.equal(await management.locator("[data-passkey-list] li").count(), 1);
+  await page.unroute(keyReadPattern, mockedRead);
+
+  // Resume the real, owner-scoped API before virtual authenticator enrollment.
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(900);
   await page.locator('[data-passkeys="manage"][data-loaded="true"]').waitFor();
+  assert.equal(await management.getByText("Synthetic recoverable key", { exact: false }).count(), 0);
   await management.locator('input[name="currentPassword"]').fill(password);
   await management.locator('input[name="keyName"]').fill("CI virtual platform passkey");
   // Deterministically reproduce SSR/hydration replacing the management region

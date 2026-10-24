@@ -60,47 +60,63 @@ public sealed class PlaidBankConnectionReadGateway(
             throw new ArgumentOutOfRangeException(nameof(offset));
         }
 
-        if (refreshCadence <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(refreshCadence),
-                "Refresh cadence must be greater than zero.");
-        }
-
         if (maxUsers <= 0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(maxUsers),
-                "Maximum users must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(maxUsers));
         }
 
-        var cutoff =
-            now -
-            refreshCadence;
-
-        return await dbContext.BankConnections
-            .AsNoTracking()
-            .Where(
-                connection =>
-                    connection.Status ==
-                        BankConnectionStatus.Active &&
-                    connection.ProtectedPlaidAccessToken != null &&
-                    connection.ProtectedPlaidAccessToken != string.Empty &&
-                    (
-                        !connection.LastSuccessfulSyncAtUtc.HasValue ||
-                        connection.LastSuccessfulSyncAtUtc.Value <= cutoff
-                    ))
-            .Select(
-                connection =>
-                    connection.UserId)
-            .Distinct()
-            .OrderBy(
-                userId =>
-                    userId)
+        return await QueryDueUserIds(now, refreshCadence)
+            .OrderBy(userId => userId)
             .Skip(offset)
-            .Take(
-                maxUsers)
-            .ToListAsync(
-                cancellationToken);
+            .Take(maxUsers)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetDueUserIdsAfterAsync(
+        DateTimeOffset now,
+        TimeSpan refreshCadence,
+        int maxUsers,
+        Guid? afterUserId,
+        CancellationToken cancellationToken = default) =>
+        await QueryDueUserIdsAfter(now, refreshCadence, maxUsers, afterUserId)
+            .ToListAsync(cancellationToken);
+
+    // Keep the production query inspectable by provider-translation tests.
+    internal IQueryable<Guid> QueryDueUserIdsAfter(
+        DateTimeOffset now, TimeSpan refreshCadence, int maxUsers, Guid? afterUserId)
+    {
+        if (maxUsers <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxUsers));
+        }
+
+        var query = QueryDueUserIds(now, refreshCadence);
+        if (afterUserId.HasValue)
+        {
+            var previous = afterUserId.Value;
+            query = query.Where(userId => userId.CompareTo(previous) > 0);
+        }
+
+        return query.OrderBy(userId => userId).Take(maxUsers);
+    }
+
+    private IQueryable<Guid> QueryDueUserIds(DateTimeOffset now, TimeSpan refreshCadence)
+    {
+        if (refreshCadence <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(refreshCadence));
+        }
+
+        var cutoff = now - refreshCadence;
+        return dbContext.BankConnections
+            .AsNoTracking()
+            .Where(connection =>
+                connection.Status == BankConnectionStatus.Active &&
+                connection.ProtectedPlaidAccessToken != null &&
+                connection.ProtectedPlaidAccessToken != string.Empty &&
+                (!connection.LastSuccessfulSyncAtUtc.HasValue ||
+                    connection.LastSuccessfulSyncAtUtc.Value <= cutoff))
+            .Select(connection => connection.UserId)
+            .Distinct();
     }
 }

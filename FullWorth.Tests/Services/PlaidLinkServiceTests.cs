@@ -268,6 +268,93 @@ public sealed class PlaidLinkServiceTests
             dbContext.PlaidLinkSessions);
     }
 
+    [Theory]
+    [InlineData("short")]
+    [InlineData("long")]
+    [InlineData("missing")]
+    public async Task LinkSessionExpiration_IsBoundedByProviderAndLocalRetention(string mode)
+    {
+        await using var db = CreateDbContext();
+        var protector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var owner = Guid.NewGuid();
+        var start = DateTimeOffset.UtcNow;
+        var providerExpiration = mode == "short"
+            ? start.AddMinutes(20)
+            : mode == "long"
+                ? start.AddDays(90)
+                : (DateTimeOffset?)null;
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new
+                {
+                    link_token = "expiry-test-link",
+                    hosted_link_url = "https://secure.plaid.com/session",
+                    expiration = providerExpiration?.ToString("O")
+                })));
+        using var http = new HttpClient(handler);
+        var service = new PlaidLinkService(CreateApiClient(http), protector, db);
+
+        await service.CreateLinkSessionAsync(owner);
+
+        var session = await db.PlaidLinkSessions.AsNoTracking().SingleAsync();
+        Assert.Equal(owner, session.UserId);
+        Assert.Equal(PlaidLinkSessionStatus.Pending, session.Status);
+        Assert.InRange(session.ExpiresAtUtc,
+            mode == "short" ? start.AddMinutes(19) : start.AddHours(3).AddMinutes(59),
+            mode == "short" ? start.AddMinutes(21) : start.AddHours(4).AddSeconds(3));
+        if (providerExpiration.HasValue)
+            Assert.True(session.ExpiresAtUtc <= providerExpiration.Value);
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(5000)]
+    [InlineData(7000)]
+    public async Task ProviderLinkTokenMustFitEncryptedDatabaseColumn_BeforeTrackingSession(
+        int rawLength)
+    {
+        await using var db = CreateDbContext();
+        var protector = new PlaidTokenProtector(
+            new EphemeralDataProtectionProvider());
+        var providerToken = new string('z', rawLength);
+        using var handler = new ScriptedHttpMessageHandler(
+            JsonResponse(HttpStatusCode.OK,
+                JsonSerializer.Serialize(new
+                {
+                    link_token = providerToken,
+                    hosted_link_url = "https://secure.plaid.com/test",
+                    expiration = DateTimeOffset.UtcNow.AddMinutes(20).ToString("O")
+                })));
+        using var http = new HttpClient(handler);
+        var service = new PlaidLinkService(CreateApiClient(http), protector, db);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateLinkSessionAsync(Guid.NewGuid()));
+
+        Assert.Contains("too large for secure storage", error.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(providerToken, error.Message,
+            StringComparison.Ordinal);
+        Assert.Empty(await db.PlaidLinkSessions.ToListAsync());
+        Assert.DoesNotContain(db.ChangeTracker.Entries<PlaidLinkSessionEntity>(),
+            entry => entry.State == EntityState.Added);
+        Assert.Collection(handler.Requests,
+            request => Assert.Equal("/link/token/create", request.Uri.AbsolutePath));
+    }
+
+    [Fact]
+    public void LinkCredentialColumnBoundMatchesModel()
+    {
+        using var db = CreateDbContext();
+        var entity = db.Model.FindEntityType(typeof(PlaidLinkSessionEntity));
+        Assert.NotNull(entity);
+        var property = entity.FindProperty(nameof(PlaidLinkSessionEntity.ProtectedLinkToken));
+        Assert.NotNull(property);
+        Assert.Equal(PlaidLinkSessionEntity.MaxProtectedLinkTokenLength,
+            property.GetMaxLength());
+    }
+
     private static PlaidApiClient CreateApiClient(
         HttpClient httpClient)
     {

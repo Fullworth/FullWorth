@@ -4,6 +4,7 @@ using FullWorth.API.Data.Entities;
 using FullWorth.API.Services.Contracts;
 using FullWorth.Core.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 using BillCategory =
     FullWorth.Core.Models.BillCategory;
@@ -119,7 +120,43 @@ public sealed class RecurringBillDiscoveryPersistenceService
             .Select(transaction => new DiscoveryTransaction(transaction, null))
             .ToList();
 
-        return AnalyzeDiscovery(transactions, transactionSnapshots.Count).Diagnostics;
+        var analysis = AnalyzeDiscovery(transactions, transactionSnapshots.Count);
+
+        // Cadence/category acceptance is not the same as permission to
+        // associate transactions to an existing bill. Read owner-scoped
+        // relationships solely to report the count of safety conflicts.
+        var ownedStreams = await _dbContext.BillStreams.AsNoTracking()
+            .Where(stream => stream.UserId == userId)
+            .Select(stream => new { stream.Id, stream.ProviderName })
+            .ToListAsync(cancellationToken);
+        var associations = await _associationGateway.GetAsync(
+            userId,
+            transactionSnapshots.Select(item => item.TransactionId).ToArray(),
+            cancellationToken);
+        var priorLinks = associations.ToDictionary(
+            item => item.BankTransactionId, item => item.BillStreamId);
+        var existingByNormalizedProvider = ownedStreams
+            .GroupBy(stream => _merchantNormalizer.Normalize(stream.ProviderName),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Select(item => item.Id).ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var blocked = analysis.AcceptedDiscoveries.Count(discovery =>
+        {
+            existingByNormalizedProvider.TryGetValue(
+                discovery.ProviderName, out var matchingIds);
+            var existingId = matchingIds is { Length: 1 }
+                ? (Guid?)matchingIds[0] : null;
+            return matchingIds is { Length: > 1 } ||
+                discovery.Transactions.Any(transaction =>
+                    priorLinks.TryGetValue(transaction.Id, out var linkedId) &&
+                    linkedId != existingId);
+        });
+
+        return analysis.Diagnostics with
+        {
+            BlockedByExistingBillAmbiguity = blocked
+        };
     }
 
     public async Task<RecurringBillDiscoveryPersistenceResult>
@@ -135,6 +172,24 @@ public sealed class RecurringBillDiscoveryPersistenceService
                 nameof(userId));
         }
 
+        // Preserve the caller's unit of work while discarding all work first
+        // tracked or changed by this discovery attempt if any stage fails.
+        var snapshot = new DiscoveryTrackingSnapshot(_dbContext);
+        try
+        {
+            return await DiscoverAndSaveCoreAsync(userId, cancellationToken);
+        }
+        catch
+        {
+            snapshot.Restore();
+            throw;
+        }
+    }
+
+    private async Task<RecurringBillDiscoveryPersistenceResult> DiscoverAndSaveCoreAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
         var transactionSnapshots =
             await _transactionGateway
                 .GetDiscoveryTransactionsAsync(
@@ -245,33 +300,43 @@ public sealed class RecurringBillDiscoveryPersistenceService
         var newBillAlertCount =
             0;
 
+        // Accepted by cadence/category does not guarantee safe persistence.
+        var blockedByExistingBillAmbiguity = 0;
+
         var now =
             DateTimeOffset.UtcNow;
 
-        // Incomplete bank imports can include some unrelated posted charges.
-        // A partial window does not establish that an older recurring bill
-        // ended. Require at least two approximate monthly cycles of eligible,
-        // user-owned posted-debit history before considering deactivation.
-        // This is a minimum coverage guard, not proof of provider cancellation.
-        var firstEligibleDate = analysis.Diagnostics.FirstEligiblePostedDate;
-        var lastEligibleDate = analysis.Diagnostics.LastEligiblePostedDate;
-        var hasDeactivationCoverage =
-            firstEligibleDate.HasValue &&
-            lastEligibleDate.HasValue &&
-            lastEligibleDate.Value.DayNumber - firstEligibleDate.Value.DayNumber >= 60;
+        // A wide window on another account cannot establish coverage of a
+        // bill's source account. Retain links unless every known source account
+        // has at least two approximate monthly cycles of eligible owned debits.
+        // This minimum guard does not prove cancellation or a complete import.
+        var accountsWithDeactivationCoverage = persistedTransactions
+            .Where(transaction =>
+                transaction.BankAccountId.HasValue &&
+                transaction.BankAccountId.Value != Guid.Empty &&
+                !transaction.IsPending && transaction.Amount > 0m &&
+                !string.IsNullOrWhiteSpace(GetNormalizedMerchantName(transaction)))
+            .GroupBy(transaction => transaction.BankAccountId!.Value)
+            .Where(group => group.Max(transaction => transaction.PostedDate.DayNumber) -
+                group.Min(transaction => transaction.PostedDate.DayNumber) >= 60)
+            .Select(group => group.Key)
+            .ToHashSet();
 
         foreach (var existingStream in
                  existingStreams)
         {
-            // Empty, pending-only, credit-only, and short-history syncs are
-            // insufficient to deactivate streams or unlink prior evidence.
-            if (!hasDeactivationCoverage)
+            if (existingStream.Source !=
+                BillStreamSource.AutomaticDiscovery)
             {
                 continue;
             }
 
-            if (existingStream.Source !=
-                BillStreamSource.AutomaticDiscovery)
+            if (!linkedTransactionsByStreamId.TryGetValue(
+                    existingStream.Id, out var linkedTransactions) ||
+                linkedTransactions.Count == 0 ||
+                linkedTransactions.Any(transaction =>
+                    !transaction.BankAccountId.HasValue ||
+                    !accountsWithDeactivationCoverage.Contains(transaction.BankAccountId.Value)))
             {
                 continue;
             }
@@ -297,14 +362,6 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     now;
 
                 deactivatedCount++;
-            }
-
-            if (!linkedTransactionsByStreamId
-                .TryGetValue(
-                    existingStream.Id,
-                    out var linkedTransactions))
-            {
-                continue;
             }
 
             // Even an already-inactive stream must validate its source before
@@ -336,6 +393,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
                     transaction.OriginalBillStreamId.HasValue &&
                     transaction.OriginalBillStreamId != persistedStream?.Id))
             {
+                blockedByExistingBillAmbiguity++;
                 continue;
             }
 
@@ -488,20 +546,10 @@ public sealed class RecurringBillDiscoveryPersistenceService
                             transaction.BillStreamId))
                 .ToArray();
 
-        try
-        {
-            await _associationGateway.StageAssignmentsAsync(
-                userId, linkAssignments, now, cancellationToken);
-            // Bill streams, alerts, and links commit in the same owning unit of work.
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch
-        {
-            // Secondary reconciliation must never replay staged writes after a
-            // failed assignment, cancellation, database error, or concurrency conflict.
-            _dbContext.ChangeTracker.Clear();
-            throw;
-        }
+        await _associationGateway.StageAssignmentsAsync(
+            userId, linkAssignments, now, cancellationToken);
+        // Bill streams, alerts, and links commit in the same owning unit of work.
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new RecurringBillDiscoveryPersistenceResult(
             TransactionsAnalyzed:
@@ -534,8 +582,68 @@ public sealed class RecurringBillDiscoveryPersistenceService
             NewBillAlertsCreated:
                 newBillAlertCount)
         {
-            Diagnostics = analysis.Diagnostics
+            Diagnostics = analysis.Diagnostics with
+            {
+                BlockedByExistingBillAmbiguity = blockedByExistingBillAmbiguity
+            }
         };
+    }
+
+    private sealed class DiscoveryTrackingSnapshot
+    {
+        private readonly FullWorthDbContext _context;
+        private readonly TrackedEntrySnapshot[] _entries;
+        private readonly HashSet<object> _entities;
+
+        public DiscoveryTrackingSnapshot(FullWorthDbContext context)
+        {
+            _context = context;
+            _entries = context.ChangeTracker.Entries()
+                .Select(entry => new TrackedEntrySnapshot(entry)).ToArray();
+            _entities = _entries.Select(entry => entry.Entity)
+                .ToHashSet(ReferenceEqualityComparer.Instance);
+        }
+
+        public void Restore()
+        {
+            foreach (var entry in _context.ChangeTracker.Entries().ToArray())
+                if (!_entities.Contains(entry.Entity))
+                    entry.State = EntityState.Detached;
+
+            foreach (var entry in _entries)
+                entry.Restore();
+        }
+    }
+
+    private sealed class TrackedEntrySnapshot
+    {
+        private readonly EntityEntry _entry;
+        private readonly PropertyValues _current;
+        private readonly PropertyValues _original;
+        private readonly EntityState _state;
+        private readonly HashSet<string> _modified;
+
+        public object Entity => _entry.Entity;
+
+        public TrackedEntrySnapshot(EntityEntry entry)
+        {
+            _entry = entry;
+            _current = entry.CurrentValues.Clone();
+            _original = entry.OriginalValues.Clone();
+            _state = entry.State;
+            _modified = entry.Properties.Where(property => property.IsModified)
+                .Select(property => property.Metadata.Name).ToHashSet(StringComparer.Ordinal);
+        }
+
+        public void Restore()
+        {
+            _entry.CurrentValues.SetValues(_current);
+            _entry.OriginalValues.SetValues(_original);
+            _entry.State = _state;
+            if (_state == EntityState.Modified)
+                foreach (var property in _entry.Properties)
+                    property.IsModified = _modified.Contains(property.Metadata.Name);
+        }
     }
 
     private DiscoveryAnalysis AnalyzeDiscovery(
@@ -1013,6 +1121,7 @@ public sealed class RecurringBillDiscoveryPersistenceService
             CategoryPrimary = source.CategoryPrimary;
             CategoryDetailed = source.CategoryDetailed;
             CurrencyCode = source.CurrencyCode;
+            BankAccountId = source.BankAccountId;
         }
 
         public Guid Id { get; }
@@ -1036,6 +1145,8 @@ public sealed class RecurringBillDiscoveryPersistenceService
         public string? CategoryDetailed { get; }
 
         public string? CurrencyCode { get; }
+
+        public Guid? BankAccountId { get; }
     }
 }
 
@@ -1072,4 +1183,9 @@ public sealed record RecurringBillDiscoveryDiagnostics(
     int AcceptedCandidates)
 {
     public int RejectedCurrencyAmbiguity { get; init; }
+
+    // Counts category/cadence-eligible candidates that cannot be attached
+    // safely because multiple owned streams share a provider identity or
+    // some transactions already belong to a different owned stream.
+    public int BlockedByExistingBillAmbiguity { get; init; }
 }

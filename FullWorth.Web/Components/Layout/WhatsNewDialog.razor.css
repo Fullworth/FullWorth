@@ -42,8 +42,13 @@ html[data-theme="dark"] .whats-new-backdrop {
 .whats-new-dialog {
     position: relative;
     width: min(620px, 100%);
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     max-height: min(720px, calc(100dvh - 2.5rem));
-    overflow: auto;
+    /* Keep release notes vertically scrollable without permitting sideways panning. */
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: clamp(1.2rem, 2.6vw, 1.55rem);
     border: 1px solid var(--whats-new-line);
     border-radius: 26px;
@@ -66,9 +71,10 @@ html[data-theme="dark"] .whats-new-backdrop {
 .whats-new-glow {
     position: absolute;
     top: -8rem;
-    right: -6rem;
+    right: 0;
     z-index: -1;
-    width: 19rem;
+    /* Decorative glow must never increase the dialog's scrollable width. */
+    width: min(19rem, 100%);
     height: 19rem;
     border-radius: 50%;
     background: radial-gradient(

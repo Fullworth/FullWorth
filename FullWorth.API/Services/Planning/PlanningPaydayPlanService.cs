@@ -46,7 +46,11 @@ public sealed record PlanningPaydayPlanSnapshot(
     decimal PaycheckRemainingAfterPlan,
     decimal Shortfall,
     IReadOnlyList<PlanningPaydayPlanItem> Items,
-    IReadOnlyList<PlanningPaydayPlanSkippedBill> SkippedBills);
+    IReadOnlyList<PlanningPaydayPlanSkippedBill> SkippedBills)
+{
+    // Authoritative saved coverage; SkippedBills is first-generation detail only.
+    public PlanningPaycheckPlanCoverage? Coverage { get; init; }
+}
 
 public sealed class PlanningPaydayPlanService(
     PlanningSettingsService settingsService,
@@ -90,9 +94,18 @@ public sealed class PlanningPaydayPlanService(
 
         if (persistedPlan is not null)
         {
-            var replayBills =
-                await billStreamGateway.ListOwnedActiveAsync(
+            var savedBillIds = persistedPlan.Allocations
+                .Select(allocation => allocation.BillStreamId)
+                .Distinct()
+                .ToArray();
+
+            // Replay is historical: inactive owned streams still supply names.
+            // Resolve only the saved identities, without reading live payroll/facts.
+            var replayBills = savedBillIds.Length == 0
+                ? Array.Empty<BillStreamReadRecord>()
+                : await billStreamGateway.ListOwnedByIdsAsync(
                     userId,
+                    savedBillIds,
                     cancellationToken);
 
             return ReadyFromSaved(
@@ -149,7 +162,11 @@ public sealed class PlanningPaydayPlanService(
                 userId,
                 cancellationToken);
 
-        if (schedule is null)
+        // Older versions could persist SemiMonthly without its second day.
+        // Require explicit reconfiguration before creating another immutable plan;
+        // historical saved-plan replay above remains independent of live settings.
+        if (schedule is null ||
+            (schedule.Frequency == PayScheduleFrequency.SemiMonthly && schedule.SecondaryDayOfMonth is null))
         {
             return Empty(
                 PlanningPaydayPlanStatus.PayScheduleRequired,
@@ -174,7 +191,10 @@ public sealed class PlanningPaydayPlanService(
                         PaycheckRemainingAfterPlan:
                             RoundMoney(
                                 payroll.Amount),
-                        Shortfall: 0m),
+                        Shortfall: 0m)
+                    {
+                        Coverage = new PlanningPaycheckPlanCoverage(0, 0, 0, 0, 0, 0)
+                    },
                     allocations: [],
                     cancellationToken);
 
@@ -397,7 +417,16 @@ public sealed class PlanningPaydayPlanService(
                     plan.CurrencyCode,
                     plan.RecommendedSetAside,
                     plan.PaycheckRemainingAfterPlan,
-                    plan.Shortfall),
+                    plan.Shortfall)
+                {
+                    Coverage = new PlanningPaycheckPlanCoverage(
+                        generatorInputs.Count,
+                        skipped.Count(bill => bill.Reason == PlanningPaydayPlanSkipReason.MissingStatementFact),
+                        skipped.Count(bill => bill.Reason == PlanningPaydayPlanSkipReason.MissingDueDate),
+                        skipped.Count(bill => bill.Reason == PlanningPaydayPlanSkipReason.CurrencyMismatch),
+                        skipped.Count(bill => bill.Reason == PlanningPaydayPlanSkipReason.InvalidStatementAmount),
+                        skipped.Count(bill => bill.Reason == PlanningPaydayPlanSkipReason.PriorCurrencyConflict))
+                },
                 drafts,
                 cancellationToken);
 
@@ -461,7 +490,10 @@ public sealed class PlanningPaydayPlanService(
             run.PaycheckRemainingAfterPlan,
             run.Shortfall,
             items,
-            skippedBills);
+            skippedBills)
+        {
+            Coverage = run.Coverage
+        };
     }
 
     private static PlanningPaydayPlanSnapshot Ready(

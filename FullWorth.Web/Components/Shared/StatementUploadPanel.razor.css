@@ -1,4 +1,5 @@
 ﻿.statement-upload-panel {
+    min-width: 0;
     padding: 23px;
     display: grid;
     gap: 18px;
@@ -9,6 +10,7 @@
 }
 
 .statement-upload-heading {
+    min-width: 0;
     display: flex;
     align-items: flex-start;
     gap: 13px;
@@ -53,7 +55,12 @@
     line-height: 1.55;
 }
 
+.statement-upload-heading > div:last-child {
+    min-width: 0;
+}
+
 .statement-upload-body {
+    min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -187,6 +194,9 @@
 }
 
 .statement-upload-status {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 11px 13px;
     display: flex;
     align-items: flex-start;
@@ -230,16 +240,20 @@
 }
 
 .statement-upload-status > div {
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    overflow-wrap: anywhere;
 }
 
 .statement-upload-status strong {
+    overflow-wrap: anywhere;
     color: var(--bw-text-secondary);
     font-size: 0.64rem;
 }
 
 .statement-upload-status span:last-child {
+    overflow-wrap: anywhere;
     margin-top: 3px;
     color: var(--bw-text-muted);
     font-size: 0.58rem;

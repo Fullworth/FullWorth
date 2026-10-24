@@ -186,9 +186,10 @@ public sealed class AdminUserManagementService(
         FullWorthSubscriptionTier tier,
         int? durationDays,
         bool grantsLifetimeAccess,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? operationId = null)
     {
-        if (!Enum.IsDefined(tier) ||
+        if (operationId == Guid.Empty || !Enum.IsDefined(tier) ||
             grantsLifetimeAccess == durationDays.HasValue ||
             durationDays is <= 0 or > 3650)
         {
@@ -209,6 +210,19 @@ public sealed class AdminUserManagementService(
             return AdminUserMutationResult.Forbidden;
         }
 
+        bool Matches(AdminGrantOperationSnapshot previous) =>
+            previous.ActorUserId == actorUserId && previous.Complimentary &&
+            string.Equals(previous.Tier, tier.ToString(), StringComparison.Ordinal) &&
+            (grantsLifetimeAccess ? previous.EndsAtUtc is null :
+                previous.EndsAtUtc == previous.StartsAtUtc.AddDays(durationDays!.Value));
+
+        if (operationId is Guid previousId)
+        {
+            var previous = await subscriptionGateway.ReadGrantOperationAsync(targetUserId, previousId, cancellationToken);
+            if (previous is not null)
+                return Matches(previous) ? AdminUserMutationResult.SuccessWithId(previous.Id) : AdminUserMutationResult.Invalid;
+        }
+
         var nowUtc =
             timeProvider.GetUtcNow();
 
@@ -219,7 +233,8 @@ public sealed class AdminUserManagementService(
                 durationDays,
                 grantsLifetimeAccess,
                 actorUserId,
-                nowUtc);
+                nowUtc,
+                operationId);
 
         AddAudit(
             actorUserId,
@@ -227,8 +242,19 @@ public sealed class AdminUserManagementService(
             "SubscriptionEntitlementGranted",
             entitlementId);
 
-        await dbContext.SaveChangesAsync(
-            cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException) when (operationId is not null)
+        {
+            // The existing entitlement primary key arbitrates concurrent requests.
+            // Only acknowledge a persisted, same-actor/target/payload operation.
+            var previous = await subscriptionGateway.ReadGrantOperationAsync(targetUserId, operationId.Value, cancellationToken);
+            if (previous is not null && Matches(previous))
+                return AdminUserMutationResult.SuccessWithId(previous.Id);
+            throw;
+        }
 
         SecuritySensitiveActionLog.AdminMutationCompleted(
             _securityLogger,

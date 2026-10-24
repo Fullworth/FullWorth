@@ -15,6 +15,27 @@ fail()
     exit "${2:-64}"
 }
 
+# Resolve the existing parent physically before checking containment. The final
+# component stays unresolved so symbolic-link destinations can still be refused.
+outside_checkout_path()
+{
+    path=$1
+    label=$2
+    case "$path" in /*) ;; *) fail "$label path must be absolute." ;; esac
+    parent=$(CDPATH= cd -P -- "$(dirname -- "$path")" 2>/dev/null && pwd -P) ||
+        fail "$label directory does not exist or is inaccessible." 66
+    name=$(basename -- "$path")
+    case "$name" in ''|.|..) fail "$label path must name a file." ;; esac
+    resolved="${parent%/}/$name"
+    [ "$deployment_directory" != / ] || fail "$label must live outside the deployment checkout."
+    case "$resolved" in
+        "$deployment_directory"|"$deployment_directory"/*)
+            fail "$label must live outside the deployment checkout."
+            ;;
+    esac
+    printf '%s\n' "$resolved"
+}
+
 [ -n "$deployment_directory" ] || fail "usage: $0 <deployment-directory>"
 [ -d "$deployment_directory" ] || fail "deployment directory does not exist: $deployment_directory" 66
 deployment_directory=$(cd "$deployment_directory" && pwd -P)
@@ -38,15 +59,7 @@ esac
     fail "set BILLWATCH_INSTALLED_DEVICE_ACCEPTANCE_CONFIRMATION to the exact platform confirmation phrase." 77
 
 [ -n "$evidence_file" ] || fail "BILLWATCH_INSTALLED_DEVICE_EVIDENCE_FILE is required."
-case "$evidence_file" in
-    /*) ;;
-    *) fail "installed-device evidence path must be absolute." ;;
-esac
-case "$evidence_file" in
-    "$deployment_directory"|"$deployment_directory"/*)
-        fail "installed-device evidence must live outside the deployment checkout."
-        ;;
-esac
+evidence_file=$(outside_checkout_path "$evidence_file" "installed-device evidence")
 [ ! -L "$evidence_file" ] || fail "installed-device evidence path must not be a symbolic link." 73
 [ ! -e "$evidence_file" ] || fail "installed-device evidence already exists; refusing to overwrite it." 73
 [ -d "$(dirname "$evidence_file")" ] || fail "installed-device evidence directory does not exist." 66

@@ -201,7 +201,10 @@ public sealed class BillStreamsController : ControllerBase
                             statement.StatementDate,
                             statement.DueDate,
                             statement.TotalAmount,
-                            statement.CurrencyCode))
+                            statement.CurrencyCode)
+                        {
+                            SourceUploadId = statement.SourceUploadId
+                        })
                 .ToList();
 
         var statementCurrencyById = statements.ToDictionary(statement => statement.Id,
@@ -535,7 +538,10 @@ public sealed record BillStatementHistoryResult(
     DateOnly? StatementDate,
     DateOnly? DueDate,
     decimal TotalAmount,
-    string CurrencyCode);
+    string CurrencyCode)
+{
+    public Guid? SourceUploadId { get; init; }
+}
 
 public sealed record BillChangeResult(
     Guid Id,

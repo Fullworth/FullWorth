@@ -58,6 +58,38 @@ public sealed class BillStatementHistoryReadGateway(
                 .ToListAsync(
                     cancellationToken);
 
+        // A single validated statement may have several duplicate uploads.
+        // Resolve its most recent processed source through both owner and bill
+        // boundaries; never return a raw storage key to Web clients.
+        var statementIds = statements.Select(statement => statement.Id).ToArray();
+        var sources = await dbContext.BillStatementUploads
+            .AsNoTracking()
+            .Where(upload => upload.UserId == userId &&
+                upload.BillStreamId == billStreamId &&
+                upload.Status == FullWorth.API.Data.Entities.BillStatementUploadStatus.Processed &&
+                upload.BillStatementId.HasValue &&
+                statementIds.Contains(upload.BillStatementId.Value))
+            .OrderByDescending(upload => upload.CreatedAtUtc)
+            .ThenByDescending(upload => upload.Id)
+            .Select(upload => new
+            {
+                StatementId = upload.BillStatementId!.Value,
+                UploadId = upload.Id
+            })
+            .ToListAsync(cancellationToken);
+
+        var uploadByStatement = sources
+            .GroupBy(source => source.StatementId)
+            .ToDictionary(group => group.Key, group => group.First().UploadId);
+
+        var linkedStatements = statements
+            .Select(statement => statement with
+            {
+                SourceUploadId = uploadByStatement.TryGetValue(statement.Id, out var uploadId)
+                    ? uploadId : null
+            })
+            .ToList();
+
         var changes =
             await dbContext.BillChanges
                 .AsNoTracking()
@@ -90,7 +122,7 @@ public sealed class BillStatementHistoryReadGateway(
                     cancellationToken);
 
         return new BillStatementHistorySnapshot(
-            statements,
+            linkedStatements,
             changes);
     }
 }

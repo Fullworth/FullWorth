@@ -107,6 +107,52 @@ public sealed class BillStreamReadGatewayTests
     }
 
     [Fact]
+    public async Task ListOwnedByIdsAsync_IncludesInactiveOwnedBillsButNeverForeignBills()
+    {
+        var options = new DbContextOptionsBuilder<FullWorthDbContext>()
+            .UseInMemoryDatabase($"bill-stream-history-{Guid.NewGuid():N}")
+            .Options;
+
+        var owner = Guid.NewGuid();
+        var otherOwner = Guid.NewGuid();
+        var active = Guid.NewGuid();
+        var inactive = Guid.NewGuid();
+        var foreign = Guid.NewGuid();
+
+        await using (var seed = new FullWorthDbContext(options))
+        {
+            seed.BillStreams.AddRange(
+                CreateStream(active, owner, "Active", BillCategory.Internet, true),
+                CreateStream(inactive, owner, "Inactive historical bill", BillCategory.Utility, false),
+                CreateStream(foreign, otherOwner, "Private provider", BillCategory.MobilePhone, true));
+            await seed.SaveChangesAsync();
+        }
+
+        await using var db = new FullWorthDbContext(options);
+        var gateway = new BillStreamReadGateway(db);
+        var result = await gateway.ListOwnedByIdsAsync(
+            owner, [active, inactive, foreign, inactive]);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, item => item.BillStreamId == inactive &&
+            item.ProviderName == "Inactive historical bill");
+        Assert.Contains(result, item => item.BillStreamId == active);
+        Assert.DoesNotContain(result, item => item.BillStreamId == foreign);
+    }
+
+    [Fact]
+    public async Task ListOwnedByIdsAsync_RejectsEmptyOwner()
+    {
+        var options = new DbContextOptionsBuilder<FullWorthDbContext>()
+            .UseInMemoryDatabase($"bill-history-owner-{Guid.NewGuid():N}")
+            .Options;
+        await using var db = new FullWorthDbContext(options);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            new BillStreamReadGateway(db).ListOwnedByIdsAsync(
+                Guid.Empty, [Guid.NewGuid()]));
+    }
+
+    [Fact]
     public async Task ListOwnedActiveAsync_RejectsEmptyUserId()
     {
         var options =

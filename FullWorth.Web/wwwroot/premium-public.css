@@ -622,6 +622,9 @@ html[data-theme="dark"] .site-shell .product-window {
 .site-shell .auth-page {
     position: relative;
     isolation: isolate;
+    /* This stylesheet is loaded persistently; clip decoration even when
+       route-local auth.css has not loaded after enhanced navigation. */
+    overflow: hidden;
 }
 
 .site-shell .auth-page::before {

@@ -13,7 +13,11 @@ public interface IAdminSubscriptionMutationGateway
         int? durationDays,
         bool grantsLifetimeAccess,
         Guid actorUserId,
-        DateTimeOffset nowUtc);
+        DateTimeOffset nowUtc,
+        Guid? operationId = null);
+
+    Task<AdminGrantOperationSnapshot?> ReadGrantOperationAsync(
+        Guid targetUserId, Guid operationId, CancellationToken cancellationToken = default);
 
     Task<AdminSubscriptionMutationResult> StageRevokeEntitlementAsync(
         Guid targetUserId,
@@ -30,3 +34,6 @@ public interface IAdminSubscriptionMutationGateway
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken = default);
 }
+
+public sealed record AdminGrantOperationSnapshot(Guid Id, Guid? ActorUserId, string Tier,
+    bool Complimentary, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc);

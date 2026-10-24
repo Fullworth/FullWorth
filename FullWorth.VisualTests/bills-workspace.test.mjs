@@ -46,6 +46,11 @@ export async function verifyBillsWorkspace(page, outputDir) {
       if (listMode === "fail") return route.fulfill({ status: 503, body: "{}" });
       return route.fulfill({ json: listMode === "empty" ? [] : bills });
     }
+    // The bill-detail upload panel can now read the most recent saved upload.
+    // These synthetic bills have none; do not treat the status GET as a bill GET.
+    if (bills.some(item =>
+      pathname === "/bff/bill-streams/" + item.id + "/statement-uploads/latest"))
+      return route.fulfill({ status: 204 });
     if (detailMode === "fail-once") {
       detailMode = "ok";
       return route.fulfill({ status: 503, body: "{}" });
@@ -81,6 +86,10 @@ export async function verifyBillsWorkspace(page, outputDir) {
       await page.setViewportSize({ width, height: 1100 });
       await page.evaluate(value => localStorage.setItem("billwatch-theme", value), theme);
       await reset();
+      assert.equal(await page.locator("#bill-sort").inputValue(), "Attention",
+        "Bill ledger should start with actionable comparison changes and evidence gaps.");
+      assert.ok((await page.locator(".fw-bills-row").first().innerText()).includes("Café utility"),
+        "The supported EUR increase should lead its currency group without ranking currencies by value.");
       if (enlarged) await page.evaluate(() => document.documentElement.style.fontSize = "200%");
       const total = page.locator(".fw-bills-total > strong");
       assert.equal((await total.innerText()).trim(), "EUR 20.00 · $34.00");
@@ -97,6 +106,8 @@ export async function verifyBillsWorkspace(page, outputDir) {
         document.querySelector(".fw-bills-row")?.textContent.includes("Synthetic Steady"));
       await page.locator(".bill-workspace-tools button").click();
       await waitRows(7);
+      assert.equal(await page.locator("#bill-sort").inputValue(), "Attention",
+        "Clear filters returns the ledger to the attention-first home view.");
       await page.locator(".bill-extra-filters button").filter({ hasText: "No change" }).click();
       await waitRows(1);
       assert.ok((await page.locator(".fw-bills-row").innerText()).includes("Synthetic Steady"));

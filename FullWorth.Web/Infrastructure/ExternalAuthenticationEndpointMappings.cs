@@ -24,6 +24,8 @@ public static class ExternalAuthenticationEndpointMappings
     private const string ExternalPurposeProperty =
         "billwatch:external-purpose";
 
+    private const string ExternalReturnUrlProperty = "fullworth:login-return-url";
+
     private const string LoginPurpose =
         "login";
 
@@ -182,6 +184,7 @@ public static class ExternalAuthenticationEndpointMappings
 
     private static Task<IResult>
         BeginExternalSignInAsync(
+            HttpContext context,
             string provider,
             IAuthenticationSchemeProvider schemeProvider)
     {
@@ -194,8 +197,8 @@ public static class ExternalAuthenticationEndpointMappings
             redirectUriBuilder:
                 normalizedProvider =>
                     "/auth/external/complete?provider=" +
-                    Uri.EscapeDataString(
-                        normalizedProvider));
+                    Uri.EscapeDataString(normalizedProvider),
+            returnUrl: LocalLoginDestination.Normalize(context.Request.Query["ReturnUrl"].ToString()));
     }
 
     private static Task<IResult>
@@ -240,7 +243,8 @@ public static class ExternalAuthenticationEndpointMappings
             string purpose,
             IAuthenticationSchemeProvider schemeProvider,
             Func<string, string> unavailableRedirectBuilder,
-            Func<string, string> redirectUriBuilder)
+            Func<string, string> redirectUriBuilder,
+            string returnUrl = "/app")
     {
         var providerDefinition =
             FindProvider(
@@ -280,6 +284,7 @@ public static class ExternalAuthenticationEndpointMappings
         properties.Items[
             ExternalPurposeProperty] =
             purpose;
+        properties.Items[ExternalReturnUrlProperty] = LocalLoginDestination.Normalize(returnUrl);
 
         return Results.Challenge(
             properties,
@@ -329,6 +334,7 @@ public static class ExternalAuthenticationEndpointMappings
                     "External sign-in could not be completed."));
         }
 
+        var returnUrl = ExternalReturnUrl(externalResult);
         var loginResult =
             await ExternalWebSignInFlow.LoginAsync(
                 context,
@@ -346,7 +352,7 @@ public static class ExternalAuthenticationEndpointMappings
             return Results.Redirect(
                 BuildExternalTwoFactorRedirect(
                     providerDefinition.Provider,
-                    factorError: false));
+                    factorError: false) + (returnUrl == "/app" ? "" : "&ReturnUrl=" + Uri.EscapeDataString(returnUrl)));
         }
 
         await ClearExternalSessionAsync(
@@ -360,8 +366,7 @@ public static class ExternalAuthenticationEndpointMappings
                     "External sign-in could not be completed."));
         }
 
-        return Results.Redirect(
-            "/app");
+        return Results.LocalRedirect(returnUrl);
     }
 
     private static async Task<IResult>
@@ -434,6 +439,7 @@ public static class ExternalAuthenticationEndpointMappings
         await ClearExternalSessionAsync(
             context);
 
+        var returnUrl = ExternalReturnUrl(externalResult);
         var loginResult =
             await ExternalWebSignInFlow.LoginAsync(
                 context,
@@ -454,8 +460,7 @@ public static class ExternalAuthenticationEndpointMappings
                     "External sign-in could not be completed."));
         }
 
-        return Results.Redirect(
-            "/app");
+        return Results.LocalRedirect(returnUrl);
     }
 
     private static async Task<IResult>
@@ -909,6 +914,13 @@ public static class ExternalAuthenticationEndpointMappings
     {
         await context.SignOutAsync(
             ExternalCookieScheme);
+    }
+
+    private static string ExternalReturnUrl(AuthenticateResult result)
+    {
+        string? value = null;
+        result.Properties?.Items.TryGetValue(ExternalReturnUrlProperty, out value);
+        return LocalLoginDestination.Normalize(value);
     }
 
     private static string BuildLoginErrorRedirect(

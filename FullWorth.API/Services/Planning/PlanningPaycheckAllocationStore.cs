@@ -36,7 +36,10 @@ public sealed record PlanningPaycheckPlanRunDraft(
     string CurrencyCode,
     decimal RecommendedSetAside,
     decimal PaycheckRemainingAfterPlan,
-    decimal Shortfall);
+    decimal Shortfall)
+{
+    public PlanningPaycheckPlanCoverage? Coverage { get; init; }
+}
 
 public sealed record PlanningPaycheckPlanRunSnapshot(
     Guid Id,
@@ -47,7 +50,10 @@ public sealed record PlanningPaycheckPlanRunSnapshot(
     decimal RecommendedSetAside,
     decimal PaycheckRemainingAfterPlan,
     decimal Shortfall,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public PlanningPaycheckPlanCoverage? Coverage { get; init; }
+}
 
 public sealed record PlanningSavedPaycheckPlan(
     PlanningPaycheckPlanRunSnapshot Run,
@@ -108,7 +114,16 @@ public sealed class PlanningPaycheckAllocationStore(
                         run.RecommendedSetAside,
                         run.PaycheckRemainingAfterPlan,
                         run.Shortfall,
-                        run.CreatedAtUtc))
+                        run.CreatedAtUtc)
+                        {
+                            Coverage = PlanningPaycheckPlanCoverage.FromStored(
+                                run.CoverageEligibleBillCount,
+                                run.CoverageMissingStatementFactCount,
+                                run.CoverageMissingDueDateCount,
+                                run.CoverageCurrencyMismatchCount,
+                                run.CoverageInvalidStatementAmountCount,
+                                run.CoveragePriorCurrencyConflictCount)
+                        })
             .ToListAsync(
                 cancellationToken);
     }
@@ -259,6 +274,14 @@ public sealed class PlanningPaycheckAllocationStore(
                         allocation.BillStreamId)
                 .ToArray();
 
+        if (normalizedRun.Coverage is { } coverage &&
+            normalizedAllocations.Select(allocation => allocation.BillStreamId).Distinct().Count() >
+                coverage.EligibleBillCount)
+        {
+            throw new InvalidOperationException(
+                "Allocated bill count cannot exceed the saved eligible bill count.");
+        }
+
         if (normalizedAllocations
             .GroupBy(
                 allocation =>
@@ -328,7 +351,9 @@ public sealed class PlanningPaycheckAllocationStore(
         var createdAtUtc =
             timeProvider.GetUtcNow();
 
-        dbContext.PlanningPaycheckPlanRuns.Add(
+        var pending = new List<object>();
+
+        pending.Add(
             new PlanningPaycheckPlanRunEntity
             {
                 UserId =
@@ -347,6 +372,12 @@ public sealed class PlanningPaycheckAllocationStore(
                     normalizedRun.PaycheckRemainingAfterPlan,
                 Shortfall =
                     normalizedRun.Shortfall,
+                CoverageEligibleBillCount = normalizedRun.Coverage?.EligibleBillCount,
+                CoverageMissingStatementFactCount = normalizedRun.Coverage?.MissingStatementFactCount,
+                CoverageMissingDueDateCount = normalizedRun.Coverage?.MissingDueDateCount,
+                CoverageCurrencyMismatchCount = normalizedRun.Coverage?.CurrencyMismatchCount,
+                CoverageInvalidStatementAmountCount = normalizedRun.Coverage?.InvalidStatementAmountCount,
+                CoveragePriorCurrencyConflictCount = normalizedRun.Coverage?.PriorCurrencyConflictCount,
                 CreatedAtUtc =
                     createdAtUtc
             });
@@ -354,7 +385,7 @@ public sealed class PlanningPaycheckAllocationStore(
         foreach (var allocation in
                  normalizedAllocations)
         {
-            dbContext.PlanningPaycheckAllocations.Add(
+            pending.Add(
                 new PlanningPaycheckAllocationEntity
                 {
                     UserId =
@@ -382,6 +413,7 @@ public sealed class PlanningPaycheckAllocationStore(
 
         try
         {
+            dbContext.AddRange(pending);
             /*
              * The immutable run row and every recommendation row are committed
              * by one SaveChanges call. A ready plan therefore cannot exist
@@ -392,7 +424,7 @@ public sealed class PlanningPaycheckAllocationStore(
         }
         catch (DbUpdateException)
         {
-            dbContext.ChangeTracker.Clear();
+            DetachCandidates(pending);
 
             existing =
                 await QuerySavedPaycheckPlanAsync(
@@ -413,6 +445,11 @@ public sealed class PlanningPaycheckAllocationStore(
                 };
             }
 
+            throw;
+        }
+        catch
+        {
+            DetachCandidates(pending);
             throw;
         }
 
@@ -724,10 +761,12 @@ public sealed class PlanningPaycheckAllocationStore(
         var createdAtUtc =
             timeProvider.GetUtcNow();
 
+        var pending = new List<object>();
+
         foreach (var allocation in
                  normalized)
         {
-            dbContext.PlanningPaycheckAllocations.Add(
+            pending.Add(
                 new PlanningPaycheckAllocationEntity
                 {
                     UserId = userId,
@@ -754,6 +793,7 @@ public sealed class PlanningPaycheckAllocationStore(
 
         try
         {
+            dbContext.AddRange(pending);
             await dbContext.SaveChangesAsync(
                 cancellationToken);
         }
@@ -764,7 +804,7 @@ public sealed class PlanningPaycheckAllocationStore(
              * boundary. If another request won the same-paycheck race, load
              * the persisted result and accept it only when it is identical.
              */
-            dbContext.ChangeTracker.Clear();
+            DetachCandidates(pending);
 
             existing =
                 await QueryPaycheckAsync(
@@ -784,11 +824,25 @@ public sealed class PlanningPaycheckAllocationStore(
 
             throw;
         }
+        catch
+        {
+            DetachCandidates(pending);
+            throw;
+        }
 
         return await QueryPaycheckAsync(
             userId,
             payrollTransactionId,
             cancellationToken);
+    }
+
+    private void DetachCandidates(IEnumerable<object> candidates)
+    {
+        // Only rows created by this attempt belong to this cleanup. Preserve
+        // unrelated caller work, and prevent a later monitoring save from
+        // committing a failed/canceled run or recommendation.
+        foreach (var candidate in candidates)
+            dbContext.Entry(candidate).State = EntityState.Detached;
     }
 
     private async Task<PlanningSavedPaycheckPlan?>
@@ -817,7 +871,16 @@ public sealed class PlanningPaycheckAllocationStore(
                             candidate.RecommendedSetAside,
                             candidate.PaycheckRemainingAfterPlan,
                             candidate.Shortfall,
-                            candidate.CreatedAtUtc))
+                            candidate.CreatedAtUtc)
+                            {
+                                Coverage = PlanningPaycheckPlanCoverage.FromStored(
+                                    candidate.CoverageEligibleBillCount,
+                                    candidate.CoverageMissingStatementFactCount,
+                                    candidate.CoverageMissingDueDateCount,
+                                    candidate.CoverageCurrencyMismatchCount,
+                                    candidate.CoverageInvalidStatementAmountCount,
+                                    candidate.CoveragePriorCurrencyConflictCount)
+                            })
                 .SingleOrDefaultAsync(
                     cancellationToken);
 
@@ -877,6 +940,8 @@ public sealed class PlanningPaycheckAllocationStore(
     private static PlanningPaycheckPlanRunDraft Normalize(
         PlanningPaycheckPlanRunDraft run)
     {
+        run.Coverage?.Validate();
+
         ValidateMoney(
             run.PaycheckAmount,
             nameof(run.PaycheckAmount));
@@ -1008,6 +1073,7 @@ public sealed class PlanningPaycheckAllocationStore(
                 requestedRun.PaycheckRemainingAfterPlan &&
             run.Shortfall ==
                 requestedRun.Shortfall &&
+            run.Coverage == requestedRun.Coverage &&
             Matches(
                 existing.Allocations,
                 requestedRun.PaycheckPostedDate,

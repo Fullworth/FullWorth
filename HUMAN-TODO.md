@@ -2,13 +2,13 @@
 
 Current release candidate on `master`:
 
-`ba9ba588c6b0a4a1abb195e0a4c1f10406521604`
+`dd31836703bd110a30f303ed3ce9fd13c0f61d82`
 
 Current verified live production release marker:
 
-`ba9ba588c6b0a4a1abb195e0a4c1f10406521604`
+`dd31836703bd110a30f303ed3ce9fd13c0f61d82`
 
-[Guarded deploy #39566294070](https://github.com/Fullworth/FullWorth/actions/runs/39566294070) completed on the exact `master` release and [same-release authenticated smoke #39566759876](https://github.com/Fullworth/FullWorth/actions/runs/39566759876) passed. The deploy verified image provenance/SPDX, pinned SSH, a pre-replacement encrypted snapshot and API/Web readiness. This is **not** a separate clean-host recovery of real statements and both key rings, provider immutability, physical-device acceptance or permission to enable passkeys/payments/AI. See #669/#291. The Face ID first-step login work in PR #801 is `development` only and remains gated.
+[Guarded deploy #39665707749](https://github.com/Fullworth/FullWorth/actions/runs/39665707749) completed on the exact `master` release and [same-release authenticated smoke #39666163983](https://github.com/Fullworth/FullWorth/actions/runs/39666163983) passed. The deploy verified image provenance/SPDX, pinned SSH, a pre-replacement encrypted snapshot and API/Web readiness. This is **not** a separate clean-host recovery of real statements and both key rings, provider immutability, physical-device acceptance or permission to enable passkeys/payments/AI. See #669/#291. The Face ID first-step login work in PR #801 is included via release PR #804 and remains disabled and gated.
 
 Earlier handoffs below are historical, not the current release identity.
 

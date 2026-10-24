@@ -102,6 +102,37 @@ public sealed class BillLedgerSnapshotTests
     }
 
     [Fact]
+    public void AttentionSort_ReviewsEvidenceBeforeCalmWithoutComparingCurrencyPurchasingPower()
+    {
+        var euroIncrease = Bill("Euro increase", 23m, 10m, "EUR");
+        var dollarIncrease = Bill("Dollar increase", 100m, 92m, "USD");
+        var absentAmount = Bill("Missing amount", 0m, 5m, null, evidence: false);
+        var historyPending = Bill("History pending", 30m, 0m);
+        var decrease = Bill("Decreased", 8m, 12m);
+        var unchanged = Bill("Unchanged", 8m, 8m);
+        var snapshot = BillLedgerSnapshot.Create([
+            unchanged, decrease, historyPending, absentAmount, dollarIncrease, euroIncrease
+        ]);
+
+        var ordered = snapshot.Select("", BillLedgerFilter.All, BillLedgerSort.Attention);
+        Assert.Equal(new[]
+        {
+            euroIncrease.Id, dollarIncrease.Id,
+            absentAmount.Id, historyPending.Id,
+            decrease.Id, unchanged.Id
+        }, ordered.Select(bill => bill.Id));
+
+        // A filter still has its own meaning; sorting never fabricates a
+        // comparison or moves a pending-history bill into "Increased".
+        Assert.Equal(new[] { euroIncrease.Id, dollarIncrease.Id },
+            snapshot.Select("", BillLedgerFilter.Increased, BillLedgerSort.Attention)
+                .Select(bill => bill.Id));
+        Assert.Equal(2, snapshot.IncreasedCount);
+        Assert.Equal(2, snapshot.Select("", BillLedgerFilter.All, BillLedgerSort.Attention)
+            .Count(bill => !BillLedgerSnapshot.CanCompare(bill)));
+    }
+
+    [Fact]
     public void SortingTies_UseStableIds()
     {
         var low = Bill("Same") with { Id = Guid.Parse("11111111-1111-1111-1111-111111111111") };

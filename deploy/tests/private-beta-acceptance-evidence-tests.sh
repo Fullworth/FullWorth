@@ -52,4 +52,67 @@ chmod 600 "$android"
 chmod 644 "$alerts"
 if run >/dev/null 2>&1; then fail "weak alert evidence permissions were accepted"; fi
 
+chmod 600 "$alerts"
+
+# Each input class must reject checkout files hidden behind either parent alias.
+ln -s "$deployment" "$temp/checkout-alias"
+for kind in technical alerts plaid android ios; do
+    case "$kind" in
+        technical) original=$technical ;;
+        alerts) original=$alerts ;;
+        plaid) original=$plaid ;;
+        android) original=$android ;;
+        ios) original=$ios ;;
+    esac
+    cp "$original" "$deployment/$kind"
+    chmod 600 "$deployment/$kind"
+    for prefix in "$evidence/../deployment" "$temp/checkout-alias"; do
+        case "$kind" in
+            technical) technical="$prefix/$kind" ;;
+            alerts) alerts="$prefix/$kind" ;;
+            plaid) plaid="$prefix/$kind" ;;
+            android) android="$prefix/$kind" ;;
+            ios) ios="$prefix/$kind" ;;
+        esac
+        if TEST_IOS_FILE="$ios" run >/dev/null 2>&1; then
+            fail "$kind checkout evidence was accepted through a parent alias"
+        fi
+        [ ! -e "$output" ] || fail "invalid input published combined evidence"
+    done
+    case "$kind" in
+        technical) technical=$original ;;
+        alerts) alerts=$original ;;
+        plaid) plaid=$original ;;
+        android) android=$original ;;
+        ios) ios=$original ;;
+    esac
+done
+
+original_output=$output
+for output in "$evidence/../deployment/combined" "$temp/checkout-alias/combined"; do
+    if run >/dev/null 2>&1; then fail "checkout output was accepted through a parent alias"; fi
+done
+[ ! -e "$deployment/combined" ] || fail "checkout output was written"
+[ -z "$(find "$deployment" -name '*.tmp.*' -print)" ] || fail "refused output left a temporary file"
+output=$original_output
+
+# Outside symlink parents and dot segments are safe when resolved outside.
+ln -s "$evidence" "$temp/outside-alias"
+technical="$temp/outside-alias/../evidence/technical"
+output="$temp/outside-alias/combined with spaces"
+run >/dev/null || fail "valid outside evidence aliases were rejected"
+[ -f "$evidence/combined with spaces" ] || fail "outside output alias was not published"
+
+# Resolving a parent must not turn a final-component symlink into trusted input.
+technical="$evidence/technical-link"
+ln -s "$evidence/technical" "$technical"
+output="$evidence/invalid-link-output"
+if run >/dev/null 2>&1; then fail "final-component input symlink was accepted"; fi
+[ ! -e "$output" ] || fail "symlink input published combined evidence"
+technical="$evidence/technical"
+output="$evidence/output-link"
+ln -s "$evidence/missing-output" "$output"
+if run >/dev/null 2>&1; then fail "final-component output symlink was accepted"; fi
+[ ! -e "$evidence/missing-output" ] || fail "symlink output target was written"
+
 printf '%s\n' 'Private-beta acceptance evidence regression tests passed.'

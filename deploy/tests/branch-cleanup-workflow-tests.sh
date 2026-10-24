@@ -46,6 +46,22 @@ grep -Fq 'if [[ "$protected" == "true" ]]' "$workflow" ||
     fail "protected branches are not preserved."
 grep -Fq 'state=open' "$workflow" ||
     fail "open pull requests are not checked."
+grep -Fq 'base="$branch"' "$workflow" ||
+    fail "an open pull request's base branch is not preserved."
+grep -Fq 'git/ref/heads/$branch' "$workflow" ||
+    fail "cleanup does not reread the exact branch head before deletion."
+grep -Fq 'expected_sha="$2"' "$workflow" ||
+    fail "cleanup does not bind deletion to the enumerated head."
+grep -Fq 'current_sha" != "$expected_sha"' "$workflow" ||
+    fail "cleanup does not reject changed branch heads."
+grep -Fq 'delete_branch_if_present "$branch" "$sha"' "$workflow" ||
+    fail "delete function does not receive its expected ref SHA."
+grep -Fq 'Keeping branch used by an open PR' "$workflow" ||
+    fail "late PR head/base changes are not handled."
+grep -Fq 'Keeping branch whose head changed' "$workflow" ||
+    fail "head-race skip is not visible in workflow output."
+grep -Fq 'Keeping missing or unverifiable branch ref' "$workflow" ||
+    fail "uncertain ref existence must not authorize deletion."
 grep -Fq 'compare/$sha...development' "$workflow" ||
     fail "cleanup does not prove whether a branch is fully contained in development."
 grep -Fq 'containment_behind" == "0"' "$workflow" ||

@@ -372,7 +372,7 @@
                         100);
 
             // Reject invalid responses without turning an existing feed into a false empty state.
-            if (result is null || result.Length > 100 || result.Any(alert => alert is null))
+            if (!IsValidActivitySnapshot(result))
                 throw new InvalidOperationException("Invalid activity response.");
 
             _alerts = result
@@ -394,6 +394,27 @@
             _isLoading = false;
             _isRefreshing = false;
         }
+    }
+
+    // A successful HTTP response is not proof that returned financial alerts are usable.
+    // Reject malformed identity/evidence before replacing the last verified activity feed.
+    private static bool IsValidActivitySnapshot(IReadOnlyList<BillAlertViewModel>? alerts)
+    {
+        if (alerts is null || alerts.Count > 100 ||
+            alerts.Any(alert =>
+                alert is null ||
+                alert.Id == Guid.Empty ||
+                string.IsNullOrWhiteSpace(alert.Title) ||
+                string.IsNullOrWhiteSpace(alert.Message) ||
+                string.IsNullOrWhiteSpace(alert.AlertType) ||
+                string.IsNullOrWhiteSpace(alert.Severity) ||
+                alert.CreatedAtUtc == default ||
+                alert.UpdatedAtUtc == default))
+        {
+            return false;
+        }
+
+        return alerts.Select(alert => alert.Id).Distinct().Count() == alerts.Count;
     }
 
     private void SetFilter(

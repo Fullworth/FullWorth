@@ -48,6 +48,10 @@ public sealed class BankTransactionsController : ControllerBase
                     transaction.PostedDate)
                 .ThenByDescending(transaction =>
                     transaction.CreatedAtUtc)
+                // A sync batch shares CreatedAtUtc; use identity to stabilize ties
+                // before applying the bounded transaction window.
+                .ThenByDescending(transaction =>
+                    transaction.Id)
                 .Take(take)
                 .Select(transaction =>
                     new BankTransactionResult(

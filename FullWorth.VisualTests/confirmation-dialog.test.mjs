@@ -7,7 +7,7 @@ import path from "node:path";
 const root = path.resolve("FullWorth.Web/wwwroot");
 const output = path.resolve("FullWorth.VisualTests/artifacts/confirmation");
 await mkdir(output, { recursive: true });
-const allowed = new Set(["/js/bff.js", "/js/confirmation-dialog.js", "/confirmation-dialog.css", "/theme.css"]);
+const allowed = new Set(["/js/bff.js", "/js/plaid-completion.js", "/js/login-redirect.js", "/js/confirmation-dialog.js", "/confirmation-dialog.css", "/theme.css"]);
 const fixture = `<!doctype html><html data-theme="dark"><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/confirmation-dialog.css">
