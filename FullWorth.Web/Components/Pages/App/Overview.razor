@@ -286,7 +286,7 @@
                 </h2>
 
                 <p>
-                    @L["Your connection is active and immediately eligible for the automatic monitoring pipeline. FullWorth will synchronize accounts and transactions, then run deterministic recurring-bill discovery."]
+                    @L["The bank connection reports an active state, but no successful transaction sync has been reported yet. FullWorth needs imported eligible transactions to identify recurring bills."]
                 </p>
 
                 <div class="automatic-monitoring-note">
@@ -294,33 +294,41 @@
 
                     <div>
                         <strong>
-                            @L["Automatic monitoring is active"]
+                            @L["First successful bank sync not yet reported"]
                         </strong>
 
                         <span>
-                            @L["You do not need to manually trigger a transaction refresh."]
+                            @L["Check progress here or review the bank connection if the scan remains pending."]
                         </span>
                     </div>
                 </div>
 
-                <button class="onboarding-secondary-action"
-                        type="button"
-                        disabled="@_isCheckingStatus"
-                        @onclick="CheckStatusAsync">
-
-                    @if (_isCheckingStatus)
-                    {
-                        <span class="status-spinner"></span>
-                        <span>@L["Checking status…"]</span>
-                    }
-                    else
-                    {
-                        <span>@L["Check for progress"]</span>
+                <div class="onboarding-progress-actions">
+                    <button class="onboarding-secondary-action"
+                            type="button"
+                            disabled="@_isCheckingStatus"
+                            @onclick="CheckStatusAsync">
+    
+                        @if (_isCheckingStatus)
+                        {
+                            <span class="status-spinner"></span>
+                            <span>@L["Checking status…"]</span>
+                        }
+                        else
+                        {
+                            <span>@L["Check for progress"]</span>
+                            <svg class="bw-sprite" aria-hidden="true">
+                                <use href="/assets/billwatch-sprites.svg#refresh"></use>
+                            </svg>
+                        }
+                    </button>
+                    <a class="onboarding-secondary-action" href="/app/account">
+                        @L["Review connection"]
                         <svg class="bw-sprite" aria-hidden="true">
-                            <use href="/assets/billwatch-sprites.svg#refresh"></use>
+                            <use href="/assets/billwatch-sprites.svg#arrow-right"></use>
                         </svg>
-                    }
-                </button>
+                    </a>
+                </div>
             </div>
 
             <div class="scan-visual">

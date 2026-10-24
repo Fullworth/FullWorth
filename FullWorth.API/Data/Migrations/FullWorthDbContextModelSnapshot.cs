@@ -265,9 +265,11 @@ namespace FullWorth.API.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("ProtectedPlaidAccessToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("text");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");

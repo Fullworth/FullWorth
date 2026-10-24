@@ -44,6 +44,9 @@ public sealed class PlanningPaydayAlertGateway(
             Normalize(
                 request);
 
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsureNoPendingImmutableChanges(userId, normalized.SourceEventId);
+
         var existing =
             await FindAsync(
                 userId,
@@ -57,6 +60,19 @@ public sealed class PlanningPaydayAlertGateway(
                 normalized);
 
             return;
+        }
+
+        // A pending acknowledgement refers to the old row, not a new
+        // replacement. If its durable identity disappeared, preserve the edit
+        // and require reconciliation before attempting any write.
+        if (dbContext.ChangeTracker.Entries<BillAlertEntity>().Any(entry =>
+                entry.State == EntityState.Modified &&
+                entry.Entity.UserId == userId &&
+                entry.Entity.AlertType == BillAlertType.PaydayPlan &&
+                entry.Entity.SourceEventId == normalized.SourceEventId))
+        {
+            throw new InvalidOperationException(
+                "Payday alert changed. Reload before retrying its acknowledgement.");
         }
 
         var pending =
@@ -133,12 +149,43 @@ public sealed class PlanningPaydayAlertGateway(
         }
     }
 
+    private void EnsureNoPendingImmutableChanges(Guid userId, Guid sourceEventId)
+    {
+        foreach (var entry in dbContext.ChangeTracker.Entries<BillAlertEntity>())
+        {
+            var currentMatch = entry.Entity.UserId == userId &&
+                entry.Entity.SourceEventId == sourceEventId &&
+                entry.Entity.AlertType == BillAlertType.PaydayPlan;
+            var originalMatch = entry.State != EntityState.Added &&
+                entry.OriginalValues.GetValue<Guid>(nameof(BillAlertEntity.UserId)) == userId &&
+                entry.OriginalValues.GetValue<Guid?>(nameof(BillAlertEntity.SourceEventId)) == sourceEventId &&
+                entry.OriginalValues.GetValue<BillAlertType>(nameof(BillAlertEntity.AlertType)) == BillAlertType.PaydayPlan;
+            if (!currentMatch && !originalMatch) continue;
+
+            // Read/dismiss acknowledgements belong to the caller. Immutable
+            // content, identity and pending inserts/deletes must not masquerade
+            // as a durable idempotent result.
+            if (entry.State is EntityState.Added or EntityState.Deleted ||
+                entry.Properties.Any(property => property.IsModified &&
+                    property.Metadata.Name is nameof(BillAlertEntity.UserId) or
+                        nameof(BillAlertEntity.SourceEventId) or nameof(BillAlertEntity.AlertType) or
+                        nameof(BillAlertEntity.BillStreamId) or nameof(BillAlertEntity.BillChangeId) or
+                        nameof(BillAlertEntity.Title) or nameof(BillAlertEntity.Message) or
+                        nameof(BillAlertEntity.Severity)))
+            {
+                throw new InvalidOperationException(
+                    "Payday alert has pending changes. Save or reload before retrying.");
+            }
+        }
+    }
+
     private async Task<BillAlertEntity?> FindAsync(
         Guid userId,
         Guid sourceEventId,
         CancellationToken cancellationToken)
     {
         return await dbContext.BillAlerts
+            .AsNoTracking()
             .SingleOrDefaultAsync(
                 alert =>
                     alert.UserId ==

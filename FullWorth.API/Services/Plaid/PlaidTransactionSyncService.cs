@@ -239,6 +239,9 @@ public sealed class PlaidTransactionSyncService
         var connectionId =
             connection.Id;
 
+        await PlaidSyncConnectionGuard.EnsureCurrentAsync(
+            _dbContext, userId, connection, cancellationToken);
+
         if (string.IsNullOrWhiteSpace(
                 connection.ProtectedPlaidAccessToken))
         {

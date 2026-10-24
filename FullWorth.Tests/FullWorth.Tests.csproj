@@ -59,4 +59,10 @@
     <Compile Include="../Services/AuthenticationService.cs" Link="Native/AuthenticationService.cs" />
     <Compile Include="../ViewModels/LoginPageViewModel.cs" Link="Native/LoginPageViewModel.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The disposable PostgreSQL executable is built separately. Link only
+         its reusable scenarios, never its generated obj/bin sources. -->
+    <Compile Remove="RelationalBankLifecycle/**" />
+    <Compile Include="RelationalBankLifecycle/BankLifecycleRaceChecks.cs" />
+  </ItemGroup>
 </Project>

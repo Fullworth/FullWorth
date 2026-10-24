@@ -64,4 +64,17 @@
   <data name="FullWorth could not load your activity. Try again." xml:space="preserve"><value>FullWorth no pudo cargar tu actividad. Inténtalo de nuevo.</value></data>
   <data name="Showing up to 100 recent active alerts, not your entire history. Counts describe loaded alerts only; no alerts does not prove that monitoring is complete." xml:space="preserve"><value>Se muestran hasta 100 alertas activas recientes, no todo tu historial. Los recuentos describen solo las alertas cargadas; la ausencia de alertas no demuestra que la supervisión sea completa.</value></data>
   <data name="Opening evidence does not mark an alert as read. Use Mark read when you have reviewed it; dismissing an alert does not fix a bank connection or bill." xml:space="preserve"><value>Abrir la evidencia no marca una alerta como leída. Usa Marcar como leída cuando la hayas revisado; descartar una alerta no corrige una conexión bancaria ni una factura.</value></data>
+  <data name="Connection issues" xml:space="preserve"><value>Problemas de conexión</value></data>
+  <data name="Connection alerts" xml:space="preserve"><value>Alertas de conexión</value></data>
+  <data name="Check your bank connections" xml:space="preserve"><value>Revisa tus conexiones bancarias</value></data>
+  <data name="{0} loaded alerts describe connection problems. Reading or dismissing an alert does not repair a bank or prove that transactions are current." xml:space="preserve"><value>{0} alertas cargadas describen problemas de conexión. Leer o descartar una alerta no repara un banco ni confirma que las transacciones estén actualizadas.</value></data>
+  <data name="Review bank connections" xml:space="preserve"><value>Revisar conexiones bancarias</value></data>
+  <data name="Financial signal feed" xml:space="preserve"><value>Novedades financieras</value></data>
+  <data name="Activity summary" xml:space="preserve"><value>Resumen de actividad</value></data>
+  <data name="Needs your attention" xml:space="preserve"><value>Requiere tu atención</value></data>
+  <data name="active alert worth reviewing" xml:space="preserve"><value>alerta activa que conviene revisar</value></data>
+  <data name="active alerts worth reviewing" xml:space="preserve"><value>alertas activas que conviene revisar</value></data>
+  <data name="FullWorth found financial activity that may need review. Open an item to see the evidence and next step." xml:space="preserve"><value>FullWorth encontró actividad financiera que puede necesitar revisión. Abre un elemento para ver la evidencia y el siguiente paso.</value></data>
+  <data name="Your financial feed" xml:space="preserve"><value>Tu actividad financiera</value></data>
+  <data name="Attention" xml:space="preserve"><value>Atención</value></data>
 </root>

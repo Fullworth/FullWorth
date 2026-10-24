@@ -1,0 +1,45 @@
+name: Backend Hosted Link durable replay
+on:
+  pull_request:
+    paths:
+      - 'FullWorth.API/**'
+      - 'FullWorth.Tests/Services/HostedLinkDurableReplayTests.cs'
+      - '.github/workflows/backend-hosted-replay-postgres-20261024.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hosted-replay-postgres-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres-replay:
+    name: PostgreSQL Hosted Link durable replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-ci-fixture-password
+          POSTGRES_DB: fullworth_hosted_replay_fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixture -d fullworth_hosted_replay_fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify durable replay against disposable PostgreSQL
+        env:
+          FULLWORTH_HOSTED_REPLAY_POSTGRES: ci-fixture-only
+          FULLWORTH_HOSTED_REPLAY_DATABASE: Host=127.0.0.1;Port=5432;Database=fullworth_hosted_replay_fixture;Username=fixture;Password=synthetic-ci-fixture-password;Include Error Detail=false
+        run: dotnet test FullWorth.Tests/FullWorth.Tests.csproj --configuration Release --filter FullyQualifiedName~HostedLinkDurableReplayTests --logger "console;verbosity=normal"

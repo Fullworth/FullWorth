@@ -499,6 +499,36 @@ try {
       }
     }
 
+    // A reported active connection without its first successful transaction
+    // sync is NOT proof that automatic monitoring has started.
+    overviewBills = [];
+    overviewConnections = [{
+      id: "88888888-8888-8888-8888-888888888888",
+      institutionName: "Synthetic unverified bank", status: 0,
+      lastSuccessfulSyncAtUtc: null
+    }];
+    for (const width of [320, 390]) {
+      await page.setViewportSize({width, height: 900});
+      await page.goto("/app", {waitUntil: "domcontentloaded"});
+      await settle(".sync-state");
+      const state = await page.locator(".sync-state").innerText();
+      assert.ok(state.includes("First successful bank sync not yet reported"));
+      assert.ok(!state.includes("Automatic monitoring is active"));
+      assert.ok(state.includes("no successful transaction sync has been reported yet"));
+      const actions = page.locator(".onboarding-progress-actions");
+      assert.equal(await actions.getByRole("link", { name: "Review connection" }).getAttribute("href"),
+        "/app/account", "An unverified first scan needs a real bank-status route.");
+      assert.ok(await actions.getByRole("button", { name: "Check for progress" }).isEnabled());
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+        false, "First-sync pending actions must fit the phone width.");
+      await page.screenshot({ path: path.join(outputDir,
+        "overview-first-sync-unverified-" + width + ".png"), fullPage: true });
+    }
+    overviewConnections = [{
+      id: "88888888-8888-8888-8888-888888888888",
+      institutionName: "Synthetic synced bank", status: 0,
+      lastSuccessfulSyncAtUtc: "2026-02-01T00:00:00Z"
+    }];
     overviewBills = overviewCases[0][1];
     await page.setViewportSize({width: 390, height: 844});
     await page.goto("/app", {waitUntil: "domcontentloaded"});
@@ -915,6 +945,16 @@ try {
     });
     assert.ok(actionStyle.height >= 44 && actionStyle.radius >= 8, JSON.stringify(actionStyle));
     assert.ok((await page.locator(".activity-scope-note").first().innerText()).includes("not your entire history"));
+    const guidance = page.locator(".activity-connection-guidance");
+    assert.ok((await guidance.innerText()).includes("1 loaded alerts describe connection problems"));
+    assert.equal(await guidance.getByRole("link", { name: /Review bank connections/ }).getAttribute("href"),
+      "/app/account", "Connection guidance must navigate to the real owner-scoped Account route.");
+    await page.locator(".activity-filters").getByRole("button", { name: /^Connection issues/ }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 1);
+    assert.ok((await page.locator(".alert-card").innerText()).includes("Synthetic connection repair"));
+    assert.equal(alertMutationRequests, 0, "Viewing the connection alert filter must never mutate a bank or alert.");
+    await page.locator(".activity-filters").getByRole("button", { name: /^All/ }).click();
+    await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 3);
     const search = page.getByRole("searchbox", { name: "Search activity", exact: true });
     await search.fill("CAFÉ");
     await page.waitForFunction(() => document.querySelectorAll(".alert-card").length === 1);
@@ -1004,11 +1044,18 @@ try {
   let syntheticDisconnected = false;
   let disconnectStatus = 503;
   let syntheticDeletes = 0;
-  const connectionsSnapshot = () => syntheticConnections.map((item, index) => ({
-    ...item, isArchived: index === 1 && syntheticArchived, status: snapshotMode === "ended" || syntheticDisconnected ? 2 :
-      snapshotMode === "unknown" && index === 0 ? 99 : item.status,
-    institutionName: snapshotMode === "partial" && index === 0 ? "Must not replace the old snapshot" : item.institutionName
-  }));
+  const connectionsSnapshot = () => [
+    ...syntheticConnections.map((item, index) => ({
+      ...item, isArchived: index === 1 && syntheticArchived, status: snapshotMode === "ended" || syntheticDisconnected ? 2 :
+        snapshotMode === "unknown" && index === 0 ? 99 : item.status,
+      institutionName: snapshotMode === "partial" && index === 0 ? "Must not replace the old snapshot" : item.institutionName
+    })),
+    ...(snapshotMode === "mixed" ? [{
+      id: "44444444-bbbb-bbbb-bbbb-444444444444", institutionName: "Synthetic previously synced bank",
+      status: 0, createdAtUtc: "2026-10-16T10:00:00Z",
+      lastSuccessfulSyncAtUtc: "2026-10-18T10:00:00Z"
+    }] : [])
+  ];
   await page.route("**/bff/bank-connections", route => {
     if (snapshotMode === "failed") return route.fulfill({ status: 503, json: {} });
     return route.fulfill({ json: snapshotMode === "empty" ? [] : connectionsSnapshot() });
@@ -1045,6 +1092,18 @@ try {
     await settle(".connection-row");
     assert.ok((await page.locator(".fw-account-stats").innerText()).includes("Awaiting first sync"));
     assert.equal(await page.locator(".financial-account-row").count(), 1);
+    snapshotMode = "mixed";
+    await refreshAccount();
+    const mixedCoverage = await page.locator(".fw-account-stats").innerText();
+    assert.ok(mixedCoverage.includes("Some banks have not synced"));
+    assert.ok(mixedCoverage.includes("1 of 2 active banks report a successful sync"));
+    assert.ok(!mixedCoverage.includes("Awaiting first sync") && !mixedCoverage.includes("Reported connected"),
+      "A previously synchronized bank must not send Account back to initial-scan messaging.");
+    assert.equal(await page.locator(".connection-row").count(), 3);
+    assert.equal(await page.locator(".financial-account-row").count(), 1,
+      "A bank status snapshot must not fabricate accounts or change financial ownership.");
+    snapshotMode = "good";
+    await refreshAccount();
     snapshotMode = "partial";
     await refreshAccount();
     await page.getByRole("alert").filter({ hasText: "Previously loaded data is still shown" }).waitFor();
