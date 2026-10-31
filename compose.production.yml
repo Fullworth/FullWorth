@@ -111,6 +111,10 @@ services:
     # before the HTTP worker starts.
     user: "0:0"
     cgroup: host
+    # Equal memory/memswap limits must also be owned by systemd. Older runc
+    # skips its zero-swap property, so daemon-reload can otherwise erase it.
+    annotations:
+      org.systemd.property.MemorySwapMax: "uint64 0"
     read_only: true
     pids_limit: 64
     cpus: ${BILLWATCH_PARSER_CPU_LIMIT:-1.0}
